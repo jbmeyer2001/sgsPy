@@ -1,5 +1,5 @@
 [build-system]
-#build backend may change
+#TODO build backend may change
 build-backend = "mesonpy"
 requires = [
 #	"meson-python>=VERSION" TODO add version
@@ -13,3 +13,5 @@ version = "0.0.0"
 #TODO add license
 #license = {file = "LICENSE.txt"}
 
+[tool.pytest.ini_options]
+pythonpath = "."
