@@ -1,6 +1,6 @@
 from . import calculate
-#from . import sample
-#from . import stratify
+from . import sample
+from . import stratify
 from . import utils
 
 from .calculate import (
@@ -31,13 +31,13 @@ from .stratify import (
     quantiles,
     map,
 )
-from .utils import (
-    useful_function
-)
+#from .utils import (
+#
+#)
 
 __all__ = list(
     set(calculate.__all__) |
     set(sample.__all__) |
-    set(stratify.__all__) |
-    set(utils.__all__)
+    set(stratify.__all__) #|
+#    set(utils.__all__)
 )
