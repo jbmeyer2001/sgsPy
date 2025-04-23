@@ -3,12 +3,16 @@
 build-backend = "mesonpy"
 requires = [
 #	"meson-python>=VERSION" TODO add version
-#	"GDAL>=VERSION" TODO add version
 ]
 
 [project]
 name = "sgs"
 version = "0.0.0"
+dependencies = [
+#	"gdal >= VERSION" TODO add version
+#	"numpy >= VERSION" TODO add version
+#	"matplotlib >= VERSION" TODO add version
+]
 
 #TODO add license
 #license = {file = "LICENSE.txt"}
