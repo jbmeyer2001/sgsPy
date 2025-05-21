@@ -33,6 +33,7 @@ from .stratify import (
 )
 from .utils import (
     SpatialRaster,
+    SpatialVector,
 )
 
 __all__ = list(
