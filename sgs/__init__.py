@@ -31,9 +31,10 @@ from .stratify import (
     quantiles,
     map,
 )
-#from .utils import (
-#
-#)
+
+from .utils import (
+    SpatialRaster,
+)
 
 __all__ = list(
     set(calculate.__all__) |
