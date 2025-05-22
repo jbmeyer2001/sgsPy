@@ -2,9 +2,11 @@ import pytest
 import sgs
 from osgeo import gdal
 
-mraster_path = '/home/jbmeyer/extdata/mraster.tif'
-mraster_small_path = '/home/jbmeyer/extdata/mraster_small.tif'
-sraster_path = '/home/jbmeyer/extdata/sraster.tif'
+from files import (
+    mraster_geotiff_path,
+    mraster_small_geotiff_path,
+    sraster_geotiff_path,
+)
 
 class TestSpatialRaster:
     def mraster_parameters_check(self, rast):
@@ -41,25 +43,25 @@ class TestSpatialRaster:
         assert rast.ymax == 5343240
 
     def test_construct_from_path(self):
-        rast = sgs.utils.raster.SpatialRaster(mraster_path)
+        rast = sgs.utils.raster.SpatialRaster(mraster_geotiff_path)
         self.mraster_parameters_check(rast)
 
-        rast = sgs.utils.raster.SpatialRaster(mraster_small_path)
+        rast = sgs.utils.raster.SpatialRaster(mraster_small_geotiff_path)
         self.mraster_small_parameters_check(rast)
 
-        rast = sgs.utils.raster.SpatialRaster(sraster_path)
+        rast = sgs.utils.raster.SpatialRaster(sraster_geotiff_path)
         self.sraster_parameters_check(rast)
 
     def test_construct_from_gdal_dataset(self):
-        dataset = gdal.Open(mraster_path, gdal.GA_ReadOnly)
+        dataset = gdal.Open(mraster_geotiff_path, gdal.GA_ReadOnly)
         rast = sgs.utils.raster.SpatialRaster(dataset)
         self.mraster_parameters_check(rast)
 
-        dataset = gdal.Open(mraster_small_path, gdal.GA_ReadOnly)
+        dataset = gdal.Open(mraster_small_geotiff_path, gdal.GA_ReadOnly)
         rast = sgs.utils.raster.SpatialRaster(dataset)
         self.mraster_small_parameters_check(rast)
 
-        dataset = gdal.Open(sraster_path, gdal.GA_ReadOnly)
+        dataset = gdal.Open(sraster_geotiff_path, gdal.GA_ReadOnly)
         rast = sgs.utils.raster.SpatialRaster(dataset)
         self.sraster_parameters_check(rast)
 
@@ -67,6 +69,5 @@ class TestSpatialRaster:
 TODO: 
  - use test image that has different pixel_width and pixel_height values
  - test the actual pixel values within the image
- - test different image input types
  - test image plotting?
 '''
