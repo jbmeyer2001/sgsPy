@@ -52,9 +52,18 @@ class SpatialRaster:
     def load_arr(self):
         self.arr = self.dataset.GetVirtualMemArray()
 
+        #array dimensions should always be 3, even for a single band raster
+        if self.arr.ndim == 2:
+            self.arr = np.array([self.arr])
+
+        if self.arr.ndim != 3:
+            raise ValueError("raster image array must have three dimensions.")
+
     def get_band_index(self, band):
         if type(band) == str:
             band = self.band_name_dict[band]
+        elif type(band) == int:
+            band = band - 1 #python has arrays 0-indexed, but conventionally bands are 1-indexed
         return band
 
     def __getitem__(self, index):
@@ -63,12 +72,16 @@ class SpatialRaster:
 
         if type(index) == tuple:
             index = (self.get_band_index(index[0]),) + index[1:]
-        else:
+        elif type(index) == slice:
+            index = slice(self.get_band_index(index.start), self.get_band_index(index.stop))
+        elif type(index) == int or type(index) == str:
             index = self.get_band_index(index)
+        else:
+            raise TypeError("__getitem__ index must be of type int, str, tuple, or slice")
 
         return self.arr[index]
 
-    def arrange_bands_from_list(bands_list):
+    def arrange_bands_from_list(self, bands_list):
         num_items = len(bands_list)
         if num_items != 1 and num_items != 3:
             raise ValueError("number of bands must be either 1 (for scalar iamges) or 3 (for RGB images).")
@@ -78,7 +91,7 @@ class SpatialRaster:
 
         return bands_list
 
-    def arrange_bands_from_dict(bands_dict):
+    def arrange_bands_from_dict(self, bands_dict):
         if len(bands_dict) != 3 or 'red' not in bands_dict or 'green' not in bands_dict or 'blue' not in bands_dict:
             raise ValueError("if bands is a dict, it must to have three items with the keys 'red', 'green', and 'blue'.")
 
@@ -88,7 +101,7 @@ class SpatialRaster:
             self.get_band_index(bands_dict["blue"])
         ]
 
-    def plot_image(self, bands=None, fname=None, show=True, **kwargs):
+    def plot_image(self, bands=None, **kwargs):
         if bands is None:
             bands = self.arrange_bands_from_list([*range(self.layers)])
         elif type(bands) == list:
@@ -105,7 +118,4 @@ class SpatialRaster:
 
         display_arr = np.moveaxis(self.arr[bands, :, :], 0, 2)
         plt.imshow(display_arr, **kwargs)
-        if fname is not None:
-            plt.savefig(fname)
-        if show:
-            plt.show()
+        plt.show()
