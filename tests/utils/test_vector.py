@@ -2,9 +2,13 @@ import pytest
 import sgs
 from osgeo import gdal
 
-access_path = '/home/jbmeyer/extdata/access.shp'
-existing_path = '/home/jbmeyer/extdata/existing.shp'
-inventory_polygons_path = '/home/jbmeyer/extdata/inventory_polygons.shp'
+from files import (
+    access_shapefile_path,
+    existing_shapefile_path,
+    existing_geodatabase_path,
+    existing_geojson_path,
+    inventory_polygons_shapefile_path,
+)
 
 class TestSpatialVector:
     def access_parameters_check(self, vec):
@@ -41,24 +45,31 @@ class TestSpatialVector:
         assert ymax == 5343240
 
     def test_construct_from_path(self):
-        vec = sgs.utils.vector.SpatialVector(access_path)
+        vec = sgs.utils.vector.SpatialVector(access_shapefile_path)
         self.access_parameters_check(vec)
 
-        vec = sgs.utils.vector.SpatialVector(existing_path)
+        vec = sgs.utils.vector.SpatialVector(existing_shapefile_path)
         self.existing_parameters_check(vec)
 
-        vec = sgs.utils.vector.SpatialVector(inventory_polygons_path)
+        vec = sgs.utils.vector.SpatialVector(inventory_polygons_shapefile_path)
         self.inventory_polygons_parameters_check(vec)
 
     def test_construct_from_gdal_dataset(self):
-        dataset = gdal.OpenEx(access_path, gdal.OF_VECTOR)
+        dataset = gdal.OpenEx(access_shapefile_path, gdal.OF_VECTOR)
         vec = sgs.utils.vector.SpatialVector(dataset)
         self.access_parameters_check(vec)
 
-        dataset = gdal.OpenEx(existing_path, gdal.OF_VECTOR)
+        dataset = gdal.OpenEx(existing_shapefile_path, gdal.OF_VECTOR)
         vec = sgs.utils.vector.SpatialVector(dataset)
         self.existing_parameters_check(vec)
 
-        dataset = gdal.OpenEx(inventory_polygons_path, gdal.OF_VECTOR)
+        dataset = gdal.OpenEx(inventory_polygons_shapefile_path, gdal.OF_VECTOR)
         vec = sgs.utils.vector.SpatialVector(dataset)
         self.inventory_polygons_parameters_check(vec)
+
+    def test_common_file_formats(self):
+        vec = sgs.utils.vector.SpatialVector(existing_geodatabase_path)
+        self.existing_parameters_check(vec)
+
+        vec = sgs.utils.vector.SpatialVector(existing_geojson_path)
+        self.existing_parameters_check(vec)
