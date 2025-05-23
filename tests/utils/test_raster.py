@@ -143,4 +143,3 @@ class TestSpatialRaster:
             rast.plot_image(bands={'red':1, 'green':2, 'b':3})
         with pytest.raises(ValueError):
             rast.plot_image(bands=[1,2])
-
