@@ -1,4 +1,3 @@
-import copy
 import json
 import os
 
@@ -165,7 +164,7 @@ class SpatialRaster:
         elif type(image) == gdal.Dataset:
             self.dataset = image
         else:
-            raise TypeError(f"SpatialRaster does not except input of type {type(image)}")
+            raise TypeError(f"SpatialRaster does not accept input of type {type(image)}")
 
         if not self.dataset:
             raise ValueError("dataset must exist")
