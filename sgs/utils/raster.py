@@ -233,8 +233,6 @@ class SpatialRaster:
         """
         if type(band) == str:
             band = self.band_name_dict[band]
-        elif type(band) == int:
-            band = band - 1 #python has arrays 0-indexed, but conventionally bands are 1-indexed
 
         return band
 
