@@ -22,7 +22,7 @@ def balanced(raster: sgs.utils.raster.SpatialRaster,
     """
 
     if algorithm not in ["lpm2_kdtree", "lcube", "lcubestratified"]:
-        print ValueError("algorithm parameter must specify one of: 'lpm2_kdtree', 'lcube', 'lcubestratified'.")
+        raise ValueError("algorithm parameter must specify one of: 'lpm2_kdtree', 'lcube', 'lcubestratified'.")
 
     if access:
         #TODO add when access has been implemented

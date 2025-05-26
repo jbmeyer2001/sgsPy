@@ -1,8 +1,15 @@
+from . import utils
 from . import calculate
 from . import sample
 from . import stratify
-from . import utils
 
+from .utils import (
+    access,
+    plot,
+    SpatialRaster,
+    SpatialVector,
+    write,
+)
 from .calculate import (
     allocation,
     coobs,
@@ -31,17 +38,9 @@ from .stratify import (
     map,
 )
 
-from .utils import (
-    access,
-    plot,
-    SpatialRaster,
-    SpatialVector,
-    write,
-)
-
 __all__ = list(
+    set(utils.__all__) |
     set(calculate.__all__) |
     set(sample.__all__) |
-    set(stratify.__all__) |
-    set(utils.__all__)
+    set(stratify.__all__)
 )
