@@ -1,12 +1,20 @@
 from typing import Optional
 
-import sgs
+from sgs.utils import (
+        access,
+        SpatialRaster,
+        SpatialVector,
+        plot,
+        write,
+)
 
-def balanced(raster: sgs.utils.raster.SpatialRaster,
+import test_module
+
+def balanced(raster: SpatialRaster,
              num_samples: int,
              algorithm: str = "lpm2_kdtree",
              prob: Optional[list[float]] = None,
-             access: Optional[sgs.utils.vector.SpatialVector] = None,
+             access: Optional[SpatialVector] = None,
              buf_inner: Optional[int | float] = None,
              buf_outer: Optional[int | float] = None,
              plot: bool = False,

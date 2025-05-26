@@ -38,6 +38,8 @@ from .stratify import (
     map,
 )
 
+balanced = balanced.balanced
+
 __all__ = list(
     set(utils.__all__) |
     set(calculate.__all__) |

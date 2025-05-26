@@ -1,9 +1,5 @@
-project('purelib-and-platlib', 'c')
+project('sgs', 'c')
 
 py = import('python').find_installation(pure: false)
 
-py.extension_module(
-    'test_module',
-    'test_module.c',
-    install: true,
-)
+subdir('sgs')
