@@ -30,9 +30,9 @@ class TestSpatialRaster:
         assert rast.xmax == 438560
         assert rast.ymin == 5337700
         assert rast.ymax == 5343240
-        assert np.array_equal(np.load(mraster_zq90_path), rast[1], equal_nan=True)
-        assert np.array_equal(np.load(mraster_pzabove2_path), rast[2], equal_nan=True)
-        assert np.array_equal(np.load(mraster_zsd_path), rast[3], equal_nan=True)
+        assert np.array_equal(np.load(mraster_zq90_path), rast[0], equal_nan=True)
+        assert np.array_equal(np.load(mraster_pzabove2_path), rast[1], equal_nan=True)
+        assert np.array_equal(np.load(mraster_zsd_path), rast[2], equal_nan=True)
 
     def mraster_small_check(self, rast):
         assert rast.width == 141
@@ -44,9 +44,9 @@ class TestSpatialRaster:
         assert rast.xmax == 435260
         assert rast.ymin == 5340000
         assert rast.ymax == 5342200
-        assert np.array_equal(np.load(mraster_small_zq90_path), rast[1], equal_nan=True)
-        assert np.array_equal(np.load(mraster_small_pzabove2_path), rast[2], equal_nan=True)
-        assert np.array_equal(np.load(mraster_small_zsd_path), rast[3], equal_nan=True)
+        assert np.array_equal(np.load(mraster_small_zq90_path), rast[0], equal_nan=True)
+        assert np.array_equal(np.load(mraster_small_pzabove2_path), rast[1], equal_nan=True)
+        assert np.array_equal(np.load(mraster_small_zsd_path), rast[2], equal_nan=True)
     
     def sraster_check(self, rast):
         assert rast.width == 373
@@ -58,7 +58,7 @@ class TestSpatialRaster:
         assert rast.xmax == 438560
         assert rast.ymin == 5337700
         assert rast.ymax == 5343240
-        assert np.array_equal(np.load(sraster_strata_path), rast[1], equal_nan=True)
+        assert np.array_equal(np.load(sraster_strata_path), rast[0], equal_nan=True)
 
     def sraster2_check(self, rast):
         assert rast.width == 861
@@ -70,7 +70,7 @@ class TestSpatialRaster:
         assert rast.xmax - -71.64773 == pytest.approx(0, abs=1e-4)
         assert rast.ymin - 45.4883 == pytest.approx(0, abs=1e-4)
         assert rast.ymax - 45.69332 == pytest.approx(0, abs=1e-4)
-        assert np.array_equal(np.load(sraster2_band_path), rast[1], equal_nan=True)
+        assert np.array_equal(np.load(sraster2_band_path), rast[0], equal_nan=True)
 
     def test_construct_from_path(self):
         rast = sgs.utils.raster.SpatialRaster(mraster_geotiff_path)
@@ -108,9 +108,9 @@ class TestSpatialRaster:
         pzabove2 = np.load(mraster_small_pzabove2_path)
         zsd = np.load(mraster_small_zsd_path)
 
-        assert np.array_equal(zq90, rast[1], equal_nan=True)
-        assert np.array_equal(pzabove2, rast[2], equal_nan=True)
-        assert np.array_equal(zsd, rast[3], equal_nan=True)
+        assert np.array_equal(zq90, rast[0], equal_nan=True)
+        assert np.array_equal(pzabove2, rast[1], equal_nan=True)
+        assert np.array_equal(zsd, rast[2], equal_nan=True)
 
         assert np.array_equal(zq90, rast['zq90'], equal_nan=True)
         assert np.array_equal(pzabove2, rast['pzabove2'], equal_nan=True)
@@ -118,7 +118,7 @@ class TestSpatialRaster:
 
         assert np.array_equal(zq90[0:10, 0:10], rast['zq90', 0:10, 0:10], equal_nan=True)
         assert np.array_equal(zq90[131:141, 100:110], rast['zq90', 131:141, 100:110], equal_nan=True)
-        assert np.array_equal([zq90, pzabove2], rast[1:3], equal_nan=True)
+        assert np.array_equal([zq90, pzabove2], rast[0:2], equal_nan=True)
         assert np.array_equal(zq90[73, 46], rast['zq90', 73, 46], equal_nan=True)
 
     def test_plotting(self):
@@ -127,19 +127,19 @@ class TestSpatialRaster:
         #testing correct / incorrect inputs to rast.plot_image(), not testing displayed image
         plt.ion()
         rast.plot_image()
-        rast.plot_image(bands=1)
-        rast.plot_image(bands=[1,2,3])
+        rast.plot_image(bands=0)
+        rast.plot_image(bands=[0,1,2])
         rast.plot_image(bands='zq90')
-        rast.plot_image(bands={'red':2, 'green':3, 'blue':1})
-        rast.plot_image(bands={'red':'pzabove2', 'blue':1, 'green':'zsd'})
+        rast.plot_image(bands={'red':1, 'green':2, 'blue':0})
+        rast.plot_image(bands={'red':'pzabove2', 'blue':0, 'green':'zsd'})
 
         with pytest.raises(TypeError):
-            rast.plot_image(bands=(1, 2, 3))
+            rast.plot_image(bands=(0, 1, 2))
         with pytest.raises(TypeError):
             rast.plot_image(bands=0.5)
         with pytest.raises(ValueError):
-            rast.plot_image(bands={'red':1, 'green':2})
+            rast.plot_image(bands={'red':0, 'green':1})
         with pytest.raises(ValueError):
-            rast.plot_image(bands={'red':1, 'green':2, 'b':3})
+            rast.plot_image(bands={'red':0, 'green':1, 'b':2})
         with pytest.raises(ValueError):
             rast.plot_image(bands=[1,2])

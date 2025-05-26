@@ -1,4 +1,3 @@
-import copy
 import json
 import os
 
@@ -165,7 +164,7 @@ class SpatialRaster:
         elif type(image) == gdal.Dataset:
             self.dataset = image
         else:
-            raise TypeError(f"SpatialRaster does not except input of type {type(image)}")
+            raise TypeError(f"SpatialRaster does not accept input of type {type(image)}")
 
         if not self.dataset:
             raise ValueError("dataset must exist")
@@ -233,8 +232,6 @@ class SpatialRaster:
         """
         if type(band) == str:
             band = self.band_name_dict[band]
-        elif type(band) == int:
-            band = band - 1 #python has arrays 0-indexed, but conventionally bands are 1-indexed
 
         return band
 
