@@ -1,1 +1,1 @@
-subdir('cpp')
+subdir('sample')

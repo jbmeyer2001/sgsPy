@@ -28,6 +28,8 @@ def balanced(raster: SpatialRaster,
 
     something about access
     """
+    
+    print(test_module.foo())
 
     if algorithm not in ["lpm2_kdtree", "lcube", "lcubestratified"]:
         raise ValueError("algorithm parameter must specify one of: 'lpm2_kdtree', 'lcube', 'lcubestratified'.")
