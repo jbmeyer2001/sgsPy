@@ -6,7 +6,6 @@ from . import utils
 from .calculate import (
     allocation,
     coobs,
-    distance,
     lhs_optimal,
     pop,
     principal_components,
@@ -33,13 +32,16 @@ from .stratify import (
 )
 
 from .utils import (
+    access,
+    plot,
     SpatialRaster,
     SpatialVector,
+    write,
 )
 
 __all__ = list(
     set(calculate.__all__) |
     set(sample.__all__) |
-    set(stratify.__all__) #|
-#    set(utils.__all__)
+    set(stratify.__all__) |
+    set(utils.__all__)
 )
