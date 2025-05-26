@@ -1,8 +1,7 @@
 [build-system]
-#TODO build backend may change
 build-backend = "mesonpy"
 requires = [
-#	"meson-python>=VERSION" TODO add version
+	"meson-python"
 ]
 
 [project]
