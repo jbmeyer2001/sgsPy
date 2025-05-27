@@ -30,10 +30,7 @@ def balanced(raster: SpatialRaster,
     something about access
     """
     
-    
-
-    data_type = raster.dataset.GetRasterBand(1).DataType
-    vmem = raster.dataset.GetVirtualMem(
+    vmemaddr = raster.dataset.GetVirtualMem(
         eRWFlag=gdal.GA_Update,
         nXOff=0,
         nYOff=0,
@@ -44,11 +41,47 @@ def balanced(raster: SpatialRaster,
         eBufType=raster.dataset.GetRasterBand(1).DataType,
         band_list=list(range(1, raster.layers + 1)),
         bIsBandSequential=True,
-        nCacheSize=10 * 1024 * 1024, #TODO this is from documentation, likely will be changedi
+        nCacheSize=10 * 1024 * 1024, #TODO this is from documentation, likely will be changed
         nPageSizeHint=0,
         options={}
-    )
-    print(vmem)
+    ).GetAddr()
+    
+    match raster.data_type:
+        case gdal.GDT_Int8:
+            cpp_type = 'int8_t'
+        case gdal.GDT_UInt16:
+            cpp_type = 'uint16_t'
+        case gdal.GDT_Int16:
+            cpp_type = 'int16_t'
+        case gdal.GDT_UInt32:
+            cpp_type = 'uint32_t'
+        case gdal.GDT_Int32:
+            cpp_type = 'int32_t'
+        case gdal.GDT_Float32:
+            cpp_type = 'float32_t'
+        case gdal.GDT_Float64:
+            cpp_type = 'float64_t'
+        case gdal.GDT_UInt64:
+            cpp_type = 'uint64_t'
+        case gdal.GDT_Int64:
+            cpp_type = 'int64_t'
+        case _:
+            raise TypeError("""
+            Raster pixel type is not one of the acceptable types. 
+            The acceptable types include: 
+                GDT_Int8
+                GDT_UInt16
+                GDT_Int16
+                GDT_UInt32
+                GDT_Int32
+                GDT_Float32
+                GDT_Float64
+                GDT_UInt64
+                GDT_Int64
+            """)
+
+    print('memory address: ' + str(vmemaddr))
+    print('cpp type: ' + str(cpp_type))
     return
 
     if algorithm not in ["lpm2_kdtree", "lcube", "lcubestratified"]:

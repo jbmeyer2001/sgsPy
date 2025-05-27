@@ -140,6 +140,7 @@ class SpatialRaster:
         self.arr
         self.bands
         self.bands_name_dict
+        self.data_type
 
         xmin, xmax, ymin, ymax, pixel_height, and pixel_width are only 
         set if geotransform exists.
@@ -191,6 +192,7 @@ class SpatialRaster:
             band_name = self.dataset.GetRasterBand(i + 1).GetDescription()
             self.band_name_dict[band_name] = i
             self.bands.append(band_name)
+        self.data_type = self.dataset.GetRasterBand(1).DataType
 
     def info(self):
         """
