@@ -1,4 +1,5 @@
 from typing import Optional
+from osgeo import gdal
 
 from sgs.utils import (
         access,
@@ -29,7 +30,26 @@ def balanced(raster: SpatialRaster,
     something about access
     """
     
-    print(test_module.foo())
+    
+
+    data_type = raster.dataset.GetRasterBand(1).DataType
+    vmem = raster.dataset.GetVirtualMem(
+        eRWFlag=gdal.GA_Update,
+        nXOff=0,
+        nYOff=0,
+        nXSize=raster.width,
+        nYSize=raster.height,
+        nBufXSize=raster.width,
+        nBufYSize=raster.height,
+        eBufType=raster.dataset.GetRasterBand(1).DataType,
+        band_list=list(range(1, raster.layers + 1)),
+        bIsBandSequential=True,
+        nCacheSize=10 * 1024 * 1024, #TODO this is from documentation, likely will be changedi
+        nPageSizeHint=0,
+        options={}
+    )
+    print(vmem)
+    return
 
     if algorithm not in ["lpm2_kdtree", "lcube", "lcubestratified"]:
         raise ValueError("algorithm parameter must specify one of: 'lpm2_kdtree', 'lcube', 'lcubestratified'.")

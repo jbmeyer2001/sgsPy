@@ -1,12 +1,13 @@
+#include <iostream>
 #include <Python.h>
 
-static PyObject* foo(PyObject* self) {
-	return PyUnicode_FromString("bar");
+static PyObject* foo(PyObject* self, PyObject* dataset) {
+	std::cout << dataset << std::endl;
+	return 0;
 }
 
 static PyMethodDef methods[] = {
-	{"foo", (PyCFunction)foo, METH_NOARGS, NULL},
-	{NULL, NULL, 0, NULL},
+	{"test", (PyCFunction)foo, METH_O, NULL}
 };
 
 static struct PyModuleDef module = {
