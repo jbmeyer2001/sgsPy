@@ -9,8 +9,6 @@ from sgs.utils import (
         write,
 )
 
-import test_module
-
 def balanced(raster: SpatialRaster,
              num_samples: int,
              algorithm: str = "lpm2_kdtree",
