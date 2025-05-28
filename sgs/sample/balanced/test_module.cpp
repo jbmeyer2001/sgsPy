@@ -1,11 +1,27 @@
-#include <boost/python.hpp>
+#include <iostream>
+
+#include <gdal.h>
+#include <gdal_priv.h>
 #include <Python.h>
 
-char const* greet() {
-	return "hello, world";
+static PyObject* foo(PyObject* self, PyObject* dataset) {
+	GDALAllRegister();
+	std::cout << dataset << std::endl;
+	return 0;
 }
 
-BOOST_PYTHON_MODULE(test_module) {
-	using namespace boost::python;
-	def("greet", greet);
+static PyMethodDef methods[] = {
+	{"test", (PyCFunction)foo, METH_O, NULL}
+};
+
+static struct PyModuleDef module = {
+	PyModuleDef_HEAD_INIT,
+	"test_module",
+	NULL,
+	-1,
+	methods,
+};
+
+PyMODINIT_FUNC PyInit_test_module(void) {
+	return PyModule_Create(&module);
 }
