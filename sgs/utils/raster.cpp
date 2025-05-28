@@ -79,10 +79,17 @@ class SpatialRaster {
 
 		//bands
 		for (int i; i < this->layers; i++) {
-			std::string bandName = std::string(this->p_dataset->GetRasterBand(i)->GetDescription());
+			std::string bandName = std::string(this->p_dataset->GetRasterBand(i + 1)->GetDescription());
 			this->bands.push_back(bandName);
 			this->bandNameMap.emplace(bandName, i);
 		}
+	}
+
+	/**
+	 *
+	 */
+	void info() {
+		//TODO prints info to console
 	}
 
 	/**
@@ -169,6 +176,7 @@ class SpatialRaster {
 PYBIND11_MODULE(SpatialRaster, m) {
 	py::class_<SpatialRaster>(m, "SpatialRaster")
 		.def(py::init<std::string>())
+		.def("info", &SpatialRaster::info)
 		.def("driver", &SpatialRaster::getDriver)
 		.def("crs", &SpatialRaster::getCRS)
 		.def("height", &SpatialRaster::getHeight)
