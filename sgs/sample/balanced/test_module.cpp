@@ -2,6 +2,7 @@
 
 #include <gdal.h>
 #include <gdal_priv.h>
+#include <pybind11/pybind11.h>
 #include <Python.h>
 
 static PyObject* foo(PyObject* self, PyObject* dataset) {
