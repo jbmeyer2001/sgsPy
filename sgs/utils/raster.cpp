@@ -9,19 +9,17 @@ SpatialRaster::SpatialRaster(std::string filename) {
 	GDALAllRegister();
 
 	//dataset
-	this->p_dataset = std::unique_ptr<GDALDataset>(GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly)));
+	p_dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly)));
 	
-	std::cout << this->geotransform[0] << " " << this->geotransform[1] << " " << this->geotransform[2] << std::endl;
+	if (!p_dataset) {
+		std::cout << "error opening dataset" << std::endl;
+	}
+	else {
+		std::cout << p_dataset.get() << std::endl;
+		std::cout << "WORKED WOOHOO" << std::endl;
+	}
 
-	//geotransfrom
-	CPLErr cplerr = this->p_dataset->GetGeoTransform(this->geotransform);
-	//if (cplerr) {
-	//	std::cout << cplerr << std::endl;
-	//	std::cout << CPLGetLastErrorMsg() << std::endl;
-	//	throw std::runtime_error("error getting geotransform from dataset.");
-	//}
-	
-	std::cout << this->geotransform[0] << " " << this->geotransform[1] << " " << this->geotransform[2] << std::endl;
+	std::cout << p_dataset->GetDriverName() << std::endl;
 }
 
 std::string SpatialRaster::getDriver() {

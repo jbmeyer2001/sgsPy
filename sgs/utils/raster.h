@@ -1,8 +1,6 @@
 #pragma once
 
-#include <gdal.h>
 #include <gdal_priv.h>
-#include <ogr_spatialref.h>
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;
@@ -13,7 +11,7 @@ using namespace pybind11::literals;
  */
 class SpatialRaster {
 	private:
-	std::unique_ptr<GDALDataset> p_dataset;
+	GDALDatasetUniquePtr p_dataset;
 	double geotransform[6];
 
 	public:
