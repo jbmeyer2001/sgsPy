@@ -1,6 +1,6 @@
 py.extension_module(
   'cpp_raster',
-  'raster.cpp',
+  ['raster.cpp', 'raster.h'],
   dependencies: [gdal_dep],
   include_directories: inc_dir,
   install: true,
