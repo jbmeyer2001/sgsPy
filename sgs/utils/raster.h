@@ -97,8 +97,8 @@ class SpatialRaster {
 	*/
 };
 
-PYBIND11_MODULE(SpatialRaster, m) {
-	py::class_<SpatialRaster>(m, "SpatialRaster")
+PYBIND11_MODULE(raster, m) {
+	py::class_<SpatialRaster>(m, "raster")
 		.def(py::init<std::string>())
 		.def("driver", &SpatialRaster::getDriver)
 		.def("crs", &SpatialRaster::getCRS)
