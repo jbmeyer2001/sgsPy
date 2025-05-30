@@ -11,15 +11,11 @@ SpatialRaster::SpatialRaster(std::string filename) {
 	//dataset
 	p_dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly)));
 	
-	if (!p_dataset) {
-		std::cout << "error opening dataset" << std::endl;
-	}
-	else {
-		std::cout << p_dataset.get() << std::endl;
-		std::cout << "WORKED WOOHOO" << std::endl;
-	}
-
-	std::cout << p_dataset->GetDriverName() << std::endl;
+	//geotransform
+	CPLErr cplerr = this->p_dataset->GetGeoTransform(this->geotransform);
+	if (cplerr) {
+		throw std::runtime_error("error getting geotransform from dataset");
+	}	
 }
 
 std::string SpatialRaster::getDriver() {
@@ -38,25 +34,20 @@ py::dict SpatialRaster::getCRS() {
 }
 
 int SpatialRaster::getWidth() {
-	//return this->p_dataset->GetRasterXSize();
-	return 0;
+	return this->p_dataset->GetRasterXSize();
 }
 
 int SpatialRaster::getHeight() {
-	//return this->p_dataset->GetRasterYSize();
-	return 0;
+	return this->p_dataset->GetRasterYSize();
 }
 
 int SpatialRaster::getLayers() {
-	//return this->p_dataset->GetRasterCount();
-	return 0;
+	return this->p_dataset->GetRasterCount();
 }
 
 double SpatialRaster::getXMax() {
-	//int width = this->p_dataset->GetRasterXSize();
-	//int height = this->p_dataset->GetRasterYSize();
-	int width = 1;
-	int height = 1;
+	int width = this->p_dataset->GetRasterXSize();
+	int height = this->p_dataset->GetRasterYSize();
 	return std::max(
 		this->geotransform[0], 
 		this->geotransform[0] + this->geotransform[1] * width + this->geotransform[2] * height
@@ -64,10 +55,8 @@ double SpatialRaster::getXMax() {
 }
 
 double SpatialRaster::getXMin() {
-	//int width = this->p_dataset->GetRasterXSize();
-	//int height = this->p_dataset->GetRasterYSize();
-	int width = 1;
-	int height = 1;
+	int width = this->p_dataset->GetRasterXSize();
+	int height = this->p_dataset->GetRasterYSize();
 	return std::min(
 		this->geotransform[0], 
 		this->geotransform[0] + this->geotransform[1] * width + this->geotransform[2] * height
@@ -75,10 +64,8 @@ double SpatialRaster::getXMin() {
 }
 
 double SpatialRaster::getYMax() {
-	//int width = this->p_dataset->GetRasterXSize();
-	//int height = this->p_dataset->GetRasterYSize();
-	int width = 1;
-	int height = 1;
+	int width = this->p_dataset->GetRasterXSize();
+	int height = this->p_dataset->GetRasterYSize();
 	return std::max(
 		this->geotransform[3],
 		this->geotransform[3] + this->geotransform[4] * width + this->geotransform[5] * height
@@ -86,10 +73,8 @@ double SpatialRaster::getYMax() {
 }
 
 double SpatialRaster::getYMin() {
-	//int width = this->p_dataset->GetRasterXSize();
-	//int height = this->p_dataset->GetRasterYSize();
-	int width = 1;
-	int height = 1;
+	int width = this->p_dataset->GetRasterXSize();
+	int height = this->p_dataset->GetRasterYSize();
 	return std::min(
 		this->geotransform[3],
 		this->geotransform[3] + this->geotransform[4] * width + this->geotransform[5] * height
