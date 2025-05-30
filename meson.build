@@ -7,17 +7,14 @@ run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:tr
 
 inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
 
-
 cxx = meson.get_compiler('cpp')
 libs = [
   'aec',
-  'bz2',
   'crypto',
   'curl',
   'ecpg',
   'ecpg_compat',
   'expat',
-  'ffi',
   'freexl',
   'gdal',
   'geos',
@@ -54,7 +51,6 @@ libs = [
   'png16',
   'pq',
   'proj',
-  'python3.12',
   'qhullcpp',
   'qhullstatic_r',
   'sharpyuv',
@@ -65,22 +61,19 @@ libs = [
   'tiff',
   'turbojpeg',
   'uriparser',
-  'uuid',
   'webp',
   'webpdecoder',
   'webpdemux',
+  'webpmux',
   'xml2',
   'z',
   'zstd',
   'mod_spatialite'
 ]
-
-libdir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
-message(libdir)
-
 lib_deps = []
+
 foreach lib : libs
-  lib_deps += cxx.find_library(lib, dirs : [libdir], static:true)
+  lib_deps += cxx.find_library(lib, dirs : [meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'], static:true)
 endforeach
 
 py = import('python').find_installation(pure: false)
