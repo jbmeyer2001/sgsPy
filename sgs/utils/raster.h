@@ -10,7 +10,7 @@ using namespace pybind11::literals;
 /**
  *
  */
-class SpatialRaster {
+class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
 	double geotransform[6];
@@ -19,7 +19,7 @@ class SpatialRaster {
 	/**
 	 *
 	 */
-	SpatialRaster(std::string filename);
+	GDALRasterWrapper(std::string filename);
 
 	/**
 	 *
@@ -97,19 +97,19 @@ class SpatialRaster {
 };
 
 PYBIND11_MODULE(raster, m) {
-	py::class_<SpatialRaster>(m, "raster")
+	py::class_<GDALRasterWrapper>(m, "GDALRasterWrapper")
 		.def(py::init<std::string>())
-		.def("driver", &SpatialRaster::getDriver)
-		.def("crs", &SpatialRaster::getCRS)
-		.def("height", &SpatialRaster::getHeight)
-		.def("width", &SpatialRaster::getWidth)
-		.def("layers", &SpatialRaster::getLayers)
-		.def("xmin", &SpatialRaster::getXMin)
-		.def("xmax", &SpatialRaster::getXMax)
-		.def("ymin", &SpatialRaster::getYMin)
-		.def("ymax", &SpatialRaster::getYMax)
-		.def("pixel_height", &SpatialRaster::getPixelHeight)
-		.def("pixel_width", &SpatialRaster::getPixelWidth)
-		.def("bands", &SpatialRaster::getBands);
+		.def("get_driver", &GDALRasterWrapper::getDriver)
+		.def("get_crs", &GDALRasterWrapper::getCRS)
+		.def("get_height", &GDALRasterWrapper::getHeight)
+		.def("get_width", &GDALRasterWrapper::getWidth)
+		.def("get_layers", &GDALRasterWrapper::getLayers)
+		.def("get_xmin", &GDALRasterWrapper::getXMin)
+		.def("get_xmax", &GDALRasterWrapper::getXMax)
+		.def("get_ymin", &GDALRasterWrapper::getYMin)
+		.def("get_ymax", &GDALRasterWrapper::getYMax)
+		.def("get_pixel_height", &GDALRasterWrapper::getPixelHeight)
+		.def("get_pixel_width", &GDALRasterWrapper::getPixelWidth)
+		.def("get_bands", &GDALRasterWrapper::getBands);
 		//.def( something for getting the raster as a numpy array
 }

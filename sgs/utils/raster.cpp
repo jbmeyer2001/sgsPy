@@ -4,7 +4,7 @@
 
 py::module_ json = py::module_::import("json");
 
-SpatialRaster::SpatialRaster(std::string filename) {
+GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	//must register drivers first
 	GDALAllRegister();
 
@@ -18,11 +18,11 @@ SpatialRaster::SpatialRaster(std::string filename) {
 	}	
 }
 
-std::string SpatialRaster::getDriver() {
+std::string GDALRasterWrapper::getDriver() {
 	return std::string(this->p_dataset->GetDriverName());
 }
 
-py::dict SpatialRaster::getCRS() {
+py::dict GDALRasterWrapper::getCRS() {
 	char *p_crs;
 
 	OGRErr ogrerr = OGRSpatialReference(this->p_dataset->GetProjectionRef()).exportToPROJJSON(&p_crs, nullptr);
@@ -33,19 +33,19 @@ py::dict SpatialRaster::getCRS() {
 	return json.attr("loads")(std::string(p_crs));
 }
 
-int SpatialRaster::getWidth() {
+int GDALRasterWrapper::getWidth() {
 	return this->p_dataset->GetRasterXSize();
 }
 
-int SpatialRaster::getHeight() {
+int GDALRasterWrapper::getHeight() {
 	return this->p_dataset->GetRasterYSize();
 }
 
-int SpatialRaster::getLayers() {
+int GDALRasterWrapper::getLayers() {
 	return this->p_dataset->GetRasterCount();
 }
 
-double SpatialRaster::getXMax() {
+double GDALRasterWrapper::getXMax() {
 	int width = this->p_dataset->GetRasterXSize();
 	int height = this->p_dataset->GetRasterYSize();
 	return std::max(
@@ -54,7 +54,7 @@ double SpatialRaster::getXMax() {
 	);
 }
 
-double SpatialRaster::getXMin() {
+double GDALRasterWrapper::getXMin() {
 	int width = this->p_dataset->GetRasterXSize();
 	int height = this->p_dataset->GetRasterYSize();
 	return std::min(
@@ -63,7 +63,7 @@ double SpatialRaster::getXMin() {
 	);
 }
 
-double SpatialRaster::getYMax() {
+double GDALRasterWrapper::getYMax() {
 	int width = this->p_dataset->GetRasterXSize();
 	int height = this->p_dataset->GetRasterYSize();
 	return std::max(
@@ -72,7 +72,7 @@ double SpatialRaster::getYMax() {
 	);
 }
 
-double SpatialRaster::getYMin() {
+double GDALRasterWrapper::getYMin() {
 	int width = this->p_dataset->GetRasterXSize();
 	int height = this->p_dataset->GetRasterYSize();
 	return std::min(
@@ -81,15 +81,15 @@ double SpatialRaster::getYMin() {
 	);
 }
 
-double SpatialRaster::getPixelHeight() {
+double GDALRasterWrapper::getPixelHeight() {
 	return std::abs(this->geotransform[1]);
 }
 
-double SpatialRaster::getPixelWidth() {
+double GDALRasterWrapper::getPixelWidth() {
 	return std::abs(this->geotransform[5]);
 }
 
-std::vector<std::string> SpatialRaster::getBands() {
+std::vector<std::string> GDALRasterWrapper::getBands() {
 	std::vector<std::string> retval;
 
 	for( auto&& p_band : this->p_dataset->GetBands() ){
