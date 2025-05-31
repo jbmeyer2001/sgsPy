@@ -37,6 +37,11 @@ class GDALRasterWrapper {
 	 */
 	void *getRasterPointer();
 
+	/**
+	 * Internal function which returns a pybuffer of the raster, using
+	 * the type specified.
+	 */
+	template <typename T> py::buffer getBuffer(size_t size);
 	public:
 	/**
 	 * Constructor for GDALRasterWrapper class. This method registers
@@ -146,7 +151,9 @@ class GDALRasterWrapper {
 
 	/**
 	 * Getter method for the raster image in virtual memory, used
-	 * by the python side of the application.
+	 * by the python side of the application. This function
+	 * uses the getBuffer() function to define the type of the
+	 * buffer.
 	 *
 	 * Python memory view is used to create a numpy array.
 	 *

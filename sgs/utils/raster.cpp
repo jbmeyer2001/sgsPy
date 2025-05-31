@@ -143,6 +143,15 @@ void *GDALRasterWrapper::getRasterPointer() {
 	return CPLVirtualMemGetAddr(this->p_CPLVirtualMemRaster);
 }
 
+template <typename T> py::buffer GDALRasterWrapper::getBuffer(size_t size) {
+	//see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
+	return py::memoryview::from_buffer(
+		(T*)this->getRasterPointer(), //buffer
+		{this->getLayers(), this->getHeight(), this->getWidth()}, //shape
+		{size * this->getHeight() * this->getWidth(), size * this->getWidth(), size} //stride
+	);
+}	
+
 py::buffer GDALRasterWrapper::getRasterAsMemView() {
 	size_t size;
 	std::string formatDescriptor;
@@ -150,30 +159,27 @@ py::buffer GDALRasterWrapper::getRasterAsMemView() {
 	//data size (bytes) and corresponding python type depends on the gdal data type
 	switch(this->type) {
 		case GDT_Int8:
-			size = 1;
-			break;
+			return getBuffer<int8_t>(1);
 		case GDT_UInt16:
+			return getBuffer<uint16_t>(2);
 		case GDT_Int16:
-			size = 2;
-			break;
+			return getBuffer<int16_t>(2);
 		case GDT_UInt32:
+			return getBuffer<uint32_t>(4);
 		case GDT_Int32:
+			return getBuffer<int32_t>(4);
 		case GDT_Float32:
-			size = 4;
-			break;
+			return getBuffer<float>(4);
 		case GDT_UInt64:
+			return getBuffer<uint64_t>(8);
 		case GDT_Int64:
+			return getBuffer<int64_t>(8);
 		case GDT_Float64:
-			size = 8;
-			break;
+			return getBuffer<double>(8);
 		default:
 			throw std::runtime_error("raster pixel data type not acceptable.");
 	}
-
-	//see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
-	return py::memoryview::from_memory(this->getRasterPointer(), size * this->getLayers() * this->getHeight() * this->getWidth());
 }
-
 void *GDALRasterWrapper::getRaster() {
 		return this->getRasterPointer();
 }

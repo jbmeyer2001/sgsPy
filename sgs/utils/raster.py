@@ -198,9 +198,7 @@ class SpatialRaster:
         """
         Loads the rasters gdal dataset into a numpy array.
         """
-        self.arr = self.cpp_raster.get_raster_as_memview()
-        print(type(self.arr))
-        print(self.arr)
+        self.arr = np.asarray(self.cpp_raster.get_raster_as_memoryview())
 
     def get_band_index(self, band):
         """
