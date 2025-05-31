@@ -148,12 +148,11 @@ class GDALRasterWrapper {
 	 * Getter method for the raster image in virtual memory, used
 	 * by the python side of the application.
 	 *
-	 * Python buffer protocol is used so that numpy does not need
-	 * to create a copy of the array.
+	 * Python memory view is used to create a numpy array.
 	 *
-	 * see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#buffer-protocol
+	 * see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
 	 */
-	py::buffer_info getRasterAsNumpy();
+	py::buffer getRasterAsMemView();
 
 	/**
 	 * Getter method for the raster image in virtual memory, used
@@ -180,5 +179,5 @@ PYBIND11_MODULE(raster, m) {
 		.def("get_pixel_height", &GDALRasterWrapper::getPixelHeight)
 		.def("get_pixel_width", &GDALRasterWrapper::getPixelWidth)
 		.def("get_bands", &GDALRasterWrapper::getBands)
-		.def("get_raster_as_numpy", &GDALRasterWrapper::getRasterAsNumpy);
+		.def("get_raster_as_memoryview", &GDALRasterWrapper::getRasterAsMemView);
 }
