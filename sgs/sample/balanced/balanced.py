@@ -1,5 +1,4 @@
 from typing import Optional
-from osgeo import gdal
 
 from sgs.utils import (
         access,

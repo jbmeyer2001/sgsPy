@@ -8,92 +8,161 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 /**
+ * Wrapper class for a GDAL dataset containing a raster image.
  *
+ * This class provides getter methods for important raster data and metadata, 
+ * as well as a way to access the raster as an array. 
+ *
+ * In Linux, memory will be virtually allocated using GDALs existing functionality 
+ * to allow for large images to be used without tiling or the use of scanlines. 
+ * Windows functionality has not been decided, as GDAL virtual memory only exists 
+ * on linux currently.
  */
 class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
+	CPLVirtualMem *p_CPLVirtualMemRaster;
 	double geotransform[6];
+	GDALDataType type;
+
+	/**
+	 * Internal function used to initialize the raster member variable.
+	 * uses GDALDatasetGetVirtualMemory()
+	 * see https://github.com/OSGeo/gdal/blob/9f4bc2d28f853d9e39a59656cb8f3318b51f9be2/gcore/gdalvirtualmem.cpp#L764
+	 */
+	void allocateRaster();
+
+	/**
+	 * Internal function which returns a void pointer to an allocated raster.
+	 */
+	void *getRasterPointer();
 
 	public:
 	/**
+	 * Constructor for GDALRasterWrapper class. This method registers
+	 * drivers, creates a GDALDataset object, and gets the geotransform
+	 * information from the GDALDataset object.
 	 *
+	 * @param filename an std::string
 	 */
 	GDALRasterWrapper(std::string filename);
 
 	/**
+	 * Deconstructor for GDALRasterWrapper class. This method calls
+	 * CPLVirtualMemFree() if virtual memory has been allocated.
+	 */
+	~GDALRasterWrapper();
+
+	/**
+	 * Getter method for the raster driver.
 	 *
+	 * @returns std::string of short and long names of the raster driver
 	 */
 	std::string getDriver();
 
 	/**
+	 * Getter method for the coordinate reference system.
 	 *
+	 * @returns python dict of the CRS.
 	 */
 	py::dict getCRS();
 
 	/**
+	 * Getter method for the raster width.
 	 *
+	 * @returns int raster width (x)
 	 */
 	int getWidth();
 
 	/**
+	 * Getter method for the raster height.
 	 *
+	 * @returns int raster height (y)
 	 */
 	int getHeight();
 
 	/**
+	 * Getter method for the number of raster bands/layers.
 	 *
+	 * @returns int number of raster layers
 	 */
 	int getLayers();
 
 	/**
+	 * Getter method for the maximum x value in georeferenced coordinate space.
+	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
+	 * @returns double max x value
 	 */
 	double getXMax();
 
 	/**
+	 * Getter method for the minimum x value in georeferenced coordinate space.
+	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
+	 * @returns double min x value
 	 */
 	double getXMin();
 
 	/**
+	 * Getter method for the maximum y value in georeferenced coordinate space.
+	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
+	 * @returns double max y value
 	 */
 	double getYMax();
 
 	/**
+	 * Getter method for the minimum y value in georeferenced coordinate space.
+	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
+	 * @returns double min y value
 	 */
 	double getYMin();
 
 	/**
+	 * Getter method for the pixel width. Scalar (absolute) value is given.
+	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
-	 */
-	double getPixelHeight();
-
-	/**
-	 *
+	 * @returns double pixel width
 	 */
 	double getPixelWidth();
 
 	/**
+	 * Getter method for the pixel height. Scalar (absolute) value is given.
+	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
+	 * @returns double pixel height
 	 */
-	std::vector<std::string> getBands();
-		
-	/*
-	template <typename T>
-	//TODO find some way to make this accessable by the python [] operator
-	std::vector<T> getRasterAsNumpy() {
-		//TODO add
-		return std::vector<int>;
-	}
+	double getPixelHeight();
 
-	std::vector<T> getVirtualMemoryRaster() {
-		//TODO add
-		return std::vector<int>;
-	}
-	*/
+	/**
+	 * Getter method for raster band names. Bands occur in order, meaning
+	 * bands[0] corrosponds to band 1, bands[1] to band 2, etc.
+	 *
+	 * @returns std::vector<std::string> vector of raster band names.
+	 */
+	std::vector<std::string> getBands();	
+
+	/**
+	 * Getter method for the raster image in virtual memory, used
+	 * by the python side of the application.
+	 *
+	 * Python buffer protocol is used so that numpy does not need
+	 * to create a copy of the array.
+	 *
+	 * see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#buffer-protocol
+	 */
+	py::buffer_info getRasterAsNumpy();
+
+	/**
+	 * Getter method for the raster image in virtual memory, used
+	 * by the C++ side of the application.
+	 *
+	 * This is a public method which used to expose the getRasterPointer()
+	 * functionality to external C++ functions.
+	 */
+	void *getRaster();
 };
 
 PYBIND11_MODULE(raster, m) {
@@ -110,6 +179,6 @@ PYBIND11_MODULE(raster, m) {
 		.def("get_ymax", &GDALRasterWrapper::getYMax)
 		.def("get_pixel_height", &GDALRasterWrapper::getPixelHeight)
 		.def("get_pixel_width", &GDALRasterWrapper::getPixelWidth)
-		.def("get_bands", &GDALRasterWrapper::getBands);
-		//.def( something for getting the raster as a numpy array
+		.def("get_bands", &GDALRasterWrapper::getBands)
+		.def("get_raster_as_numpy", &GDALRasterWrapper::getRasterAsNumpy);
 }

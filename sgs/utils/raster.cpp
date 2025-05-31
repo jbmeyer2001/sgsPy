@@ -1,6 +1,4 @@
 #include "raster.h"
-#include <iostream>
-
 
 py::module_ json = py::module_::import("json");
 
@@ -16,10 +14,21 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	if (cplerr) {
 		throw std::runtime_error("error getting geotransform from dataset");
 	}	
+
+	//gdal data type
+	this->type = this->p_dataset->GetRasterBand(1)->GetRasterDataType();	
+}
+
+GDALRasterWrapper::~GDALRasterWrapper() {
+	if (this->p_CPLVirtualMemRaster != nullptr) {
+		CPLVirtualMemFree(this->p_CPLVirtualMemRaster);
+	}
 }
 
 std::string GDALRasterWrapper::getDriver() {
-	return std::string(this->p_dataset->GetDriverName());
+	return std::string(this->p_dataset->GetDriverName()) 
+		+ "/" 
+		+ std::string(this->p_dataset->GetDriver()->GetMetadataItem(GDAL_DMD_LONGNAME));
 }
 
 py::dict GDALRasterWrapper::getCRS() {
@@ -81,12 +90,12 @@ double GDALRasterWrapper::getYMin() {
 	);
 }
 
-double GDALRasterWrapper::getPixelHeight() {
-	return std::abs(this->geotransform[1]);
-}
-
 double GDALRasterWrapper::getPixelWidth() {
 	return std::abs(this->geotransform[5]);
+}
+
+double GDALRasterWrapper::getPixelHeight() {
+	return std::abs(this->geotransform[1]);
 }
 
 std::vector<std::string> GDALRasterWrapper::getBands() {
@@ -97,4 +106,102 @@ std::vector<std::string> GDALRasterWrapper::getBands() {
 	}
 
 	return retval;
+}
+
+void GDALRasterWrapper::allocateRaster() {
+	if (this->p_CPLVirtualMemRaster != nullptr) {
+		throw std::runtime_error("raster already allocated, cannot call allocateRaster() again.");
+	}
+
+	//see https://github.com/OSGeo/gdal/blob/9f4bc2d28f853d9e39a59656cb8f3318b51f9be2/gcore/gdalvirtualmem.cpp#L764
+	//TODO dynamically get physical memory size to pass to nCacheSize parameter
+	this->p_CPLVirtualMemRaster = GDALDatasetGetVirtualMem(this->p_dataset.get(), 					//GDALDatasetH hDS
+		GF_Read,						//GDALRWFlag eRWFlag
+		0,									//int nXOff
+		0,									//int nYOff
+		this->p_dataset->GetRasterXSize(),	//int nXSize
+		this->p_dataset->GetRasterYSize(),	//int nYSize
+		this->p_dataset->GetRasterXSize(),	//int nBufXSize
+		this->p_dataset->GetRasterYSize(),	//int nBufYSize
+		this->type,							//GDALDataType eBufType
+		this->p_dataset->GetRasterCount(),	//int nBandCount
+		NULL,								//int *panBandMap
+		0,									//int nPixelSpace	
+		0,									//GIntBig nLineSpace
+		0,									//GIntBig nBandSpace
+		10485760, 							//size_t nCacheSize
+		0,									//size_t nPageSizeHint
+		(int)false,							//int bSingleThreadUsage
+		NULL);								//CSLConstList papszOptions
+}
+
+void *GDALRasterWrapper::getRasterPointer() {
+	if (this->p_CPLVirtualMemRaster == nullptr) {
+		throw std::runtime_error("cannot return pointer to unallocated data. Must call allocateRaster() first.");
+	}
+
+	return CPLVirtualMemGetAddr(this->p_CPLVirtualMemRaster);
+}
+
+py::buffer_info GDALRasterWrapper::getRasterAsNumpy() {
+	size_t size;
+	std::string formatDescriptor;
+
+	//data size (bytes) and corresponding python type depends on the gdal data type
+	switch(this->type) {
+		case GDT_Int8:
+			size = 1;
+			formatDescriptor = py::format_descriptor<int8_t>::format();
+			break;
+		case GDT_UInt16:
+			size = 2;
+			formatDescriptor = py::format_descriptor<uint16_t>::format();
+			break;
+		case GDT_Int16:
+			size = 2;
+			formatDescriptor = py::format_descriptor<int16_t>::format();
+			break;
+		case GDT_UInt32:
+			size = 4;
+			formatDescriptor = py::format_descriptor<uint32_t>::format();
+			break;
+		case GDT_Int32:
+			size = 4;
+			formatDescriptor = py::format_descriptor<int32_t>::format();
+			break;
+		case GDT_UInt64:
+			size = 8;
+			formatDescriptor = py::format_descriptor<uint64_t>::format();
+			break;
+		case GDT_Int64:
+			size = 8;
+			formatDescriptor = py::format_descriptor<int64_t>::format();
+			break;
+		case GDT_Float32:
+			size = 4;
+			formatDescriptor = py::format_descriptor<float>::format();
+			break;
+		case GDT_Float64:
+			size = 8;
+			formatDescriptor = py::format_descriptor<double>::format();
+			break;
+		default:
+			throw std::runtime_error("raster pixel data type not acceptable.");
+	}
+
+	//see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#buffer-protocol
+	return py::buffer_info(
+		this->getRasterPointer(),									//pointer to buffer
+		size,														//size of one scalar (pixel)
+		formatDescriptor,											//python format descriptor
+		3,															//number of dimensions
+		{ this->getLayers(), this->getHeight(), this->getWidth() },	//buffer dimensions
+		{ size * this->getHeight() * this->getWidth(),				//strides (in bytes) for each index
+		  size * this->getWidth(),
+		  size }	
+	);
+}
+
+void *GDALRasterWrapper::getRaster() {
+		return this->getRasterPointer();
 }
