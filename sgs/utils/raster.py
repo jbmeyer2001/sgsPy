@@ -1,15 +1,19 @@
 import json
 import os
 
-from osgeo import gdal, osr
 import numpy as np
 import matplotlib.pyplot as plt
 
+from raster import GDALRasterWrapper
+
 class SpatialRaster:
     """
-    A wrapper class of a GDAL raster dataset. 
-    This class is primarily used under the hood, although it has functions for plotting
-    and displaying raster info which are intended for the end-user.
+    A Python wrapper of the C++ class GDALRasterWrapper. GDAL is used on the C++ side rather
+    than the Python side, as it means gdal does not have to be a python dependency. It also
+    allows smoother integration with other C++ code.
+
+    This class is primarily used under the hood, although it contains raster metadata, and 
+    functions for displaying info and plotting images which are intended for the end-user.
 
     Accessing raster data:
 
@@ -122,15 +126,14 @@ class SpatialRaster:
         """
         Constructing method for the SpatialRaster class.
 
-        Has one required parameter to specify a gdal dataset. The following
-        attributes are populated using the given dataset:
-        self.dataset
+        Has one required parameter to specify a raster path. The following
+        attributes are populated using the given raster:
+        self.cpp_raster
         self.driver
         self.width
         self.height
         self.layers
         self.crs
-        self.geotransform
         self.xmin
         self.xmax
         self.ymin
@@ -140,6 +143,7 @@ class SpatialRaster:
         self.arr
         self.bands
         self.bands_name_dict
+        self.data_type
 
         xmin, xmax, ymin, ymax, pixel_height, and pixel_width are only 
         set if geotransform exists.
@@ -149,78 +153,52 @@ class SpatialRaster:
 
         Parameters
         --------------------
-        image : str OR gdal.Dataset
-            specifies either a gdal dataset, or a path to a gdal dataset
+        image : str
+            specifies a raster file path
 
         Raises
         --------------------
         TypeError: 
-            if 'image' parameter is not of type str or gdal.Dataset
-        ValueError:
-            if dataset is not loaded
+            if 'image' parameter is not of type str
         """
         if type(image) == str:
-            self.dataset = gdal.Open(image, gdal.GA_ReadOnly)
-        elif type(image) == gdal.Dataset:
-            self.dataset = image
+            self.cpp_raster = GDALRasterWrapper(image)
         else:
             raise TypeError(f"SpatialRaster does not accept input of type {type(image)}")
 
-        if not self.dataset:
-            raise ValueError("dataset must exist")
-
-        self.driver = f"{self.dataset.GetDriver().ShortName}/{self.dataset.GetDriver().LongName}"
-        self.width = self.dataset.RasterXSize
-        self.height = self.dataset.RasterYSize
-        self.layers = self.dataset.RasterCount
-        self.crs = json.loads(osr.SpatialReference(wkt=self.dataset.GetProjection()).ExportToPROJJSON())
-        self.geotransform = self.dataset.GetGeoTransform()
-        if self.geotransform:
-            xbounds = [self.geotransform[0], self.geotransform[0] + self.geotransform[1] * self.width + self.geotransform[2] * self.height]
-            ybounds = [self.geotransform[3], self.geotransform[3] + self.geotransform[4] * self.width + self.geotransform[5] * self.height]
-            self.xmin = np.min(xbounds)
-            self.xmax = np.max(xbounds)
-            self.ymin = np.min(ybounds)
-            self.ymax = np.max(ybounds)
-            self.pixel_height = np.abs(self.geotransform[1])
-            self.pixel_width = np.abs(self.geotransform[5])
+        self.driver = self.cpp_raster.get_driver()
+        self.width = self.cpp_raster.get_width()
+        self.height = self.cpp_raster.get_height()
+        self.layers = self.cpp_raster.get_layers()
+        self.crs = json.loads(self.cpp_raster.get_crs())
+        self.xmin = self.cpp_raster.get_xmin()
+        self.xmax = self.cpp_raster.get_xmax()
+        self.ymin = self.cpp_raster.get_ymin()
+        self.ymax = self.cpp_raster.get_ymax()
+        self.pixel_width = self.cpp_raster.get_pixel_width()
+        self.pixel_height = self.cpp_raster.get_pixel_height()
         self.arr = None
         self.band_name_dict = {}
-        self.bands = []
-        for i in range(0, self.layers): #raster bands are 1 indexed
-            band_name = self.dataset.GetRasterBand(i + 1).GetDescription()
-            self.band_name_dict[band_name] = i
-            self.bands.append(band_name)
+        self.bands = self.cpp_raster.get_bands()
+        for i in range(0, len(self.bands)):
+            self.band_name_dict[self.bands[i]] = i
 
     def info(self):
         """
-        Displays driver, band, size, pixel size, and bound information of the dataset.
+        Displays driver, band, size, pixel size, and bound information of the raster.
         """
         print("driver: {}".format(self.driver))
         print("bands: {}".format(*self.bands))
         print("size: {} x {} x {}".format(self.layers, self.width, self.height))
-        if self.geotransform:
-            print("pixel size: (x, y): ({}, {})".format(self.pixel_height, self.pixel_width))
-            print("bounds (xmin, xmax, ymin, ymax): ({}, {}, {}, {})".format(self.xmin, self.xmax, self.ymin, self.ymax))
+        print("pixel size: (x, y): ({}, {})".format(self.pixel_height, self.pixel_width))
+        print("bounds (xmin, xmax, ymin, ymax): ({}, {}, {}, {})".format(self.xmin, self.xmax, self.ymin, self.ymax))
 
     # TODO: add less naive implementation for resource-intensive tasks (tiling?, etc.)
     def load_arr(self):
         """
-        Loads the gdal datsaet into a NumPy array using GetVirtualMemArray().
-
-        Raises
-        --------------------
-        ValueError: 
-            if array does not have three dimensions [band][y][x]
+        Loads the rasters gdal dataset into a numpy array.
         """
-        self.arr = self.dataset.GetVirtualMemArray()
-
-        #array dimensions should always be 3, even for a single band raster
-        if self.arr.ndim == 2:
-            self.arr = np.array([self.arr])
-
-        if self.arr.ndim != 3:
-            raise ValueError("raster image array must have three dimensions.")
+        self.arr = np.asarray(self.cpp_raster.get_raster_as_memoryview().toreadonly(), copy=False)
 
     def get_band_index(self, band):
         """

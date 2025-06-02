@@ -1,4 +1,3 @@
-from osgeo import gdal, ogr
 import matplotlib.pyplot as plt
 
 class SpatialVector:

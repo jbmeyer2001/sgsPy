@@ -1,0 +1,96 @@
+import os
+
+import sgs
+from sgs.utils import SpatialRaster
+import numpy as np
+
+folder = os.path.join(os.path.dirname(__file__), 'tests', 'utils', 'files')
+access_shapefile_path = os.path.join(folder, 'access.shp')
+existing_shapefile_path = os.path.join(folder, 'existing.shp')
+existing_geodatabase_path = os.path.join(folder, 'existing.gdb')
+existing_geojson_path = os.path.join(folder, 'existing.geojson')
+inventory_polygons_shapefile_path = os.path.join(folder, 'inventory_polygons.shp')
+mraster_geotiff_path = os.path.join(folder, 'mraster.tif')
+mraster_small_geotiff_path = os.path.join(folder, 'mraster_small.tif')
+sraster_geotiff_path = os.path.join(folder, 'sraster.tif')
+sraster2_geotiff_path = os.path.join(folder, 'sraster2.tif')
+mraster_zq90_path = os.path.join(folder, 'mraster_zq90.npy')
+mraster_pzabove2_path = os.path.join(folder, 'mraster_pzabove2.npy')
+mraster_zsd_path = os.path.join(folder, 'mraster_zsd.npy')
+mraster_small_zq90_path = os.path.join(folder, 'mraster_small_zq90.npy')
+mraster_small_pzabove2_path = os.path.join(folder, 'mraster_small_pzabove2.npy')
+mraster_small_zsd_path = os.path.join(folder, 'mraster_small_zsd.npy')
+sraster_strata_path = os.path.join(folder, 'sraster_strata.npy')
+sraster2_band_path = os.path.join(folder, 'sraster2_band.npy')
+
+rast = SpatialRaster(mraster_geotiff_path)
+assert rast.width == 373
+assert rast.height == 277
+assert rast.layers == 3
+assert rast.pixel_width == 20
+assert rast.pixel_height == 20
+assert rast.xmin == 431100
+assert rast.xmax == 438560
+assert rast.ymin == 5337700
+assert rast.ymax == 5343240
+assert np.array_equal(np.load(mraster_zq90_path), rast[0], equal_nan=True)
+assert np.array_equal(np.load(mraster_pzabove2_path), rast[1], equal_nan=True)
+assert np.array_equal(np.load(mraster_zsd_path), rast[2], equal_nan=True)
+
+rast = SpatialRaster(mraster_small_geotiff_path)#    def mraster_small_check(self, rast):
+assert rast.width == 141
+assert rast.height == 110
+assert rast.layers == 3
+assert rast.pixel_width == 20
+assert rast.pixel_height == 20
+assert rast.xmin == 432440
+assert rast.xmax == 435260
+assert rast.ymin == 5340000
+assert rast.ymax == 5342200
+assert np.array_equal(np.load(mraster_small_zq90_path), rast[0], equal_nan=True)
+assert np.array_equal(np.load(mraster_small_pzabove2_path), rast[1], equal_nan=True)
+assert np.array_equal(np.load(mraster_small_zsd_path), rast[2], equal_nan=True)
+    
+rast = SpatialRaster(sraster_geotiff_path)#def sraster_check(self, rast):
+assert rast.width == 373
+assert rast.height == 277
+assert rast.layers == 1
+assert rast.pixel_width == 20
+assert rast.pixel_height == 20
+assert rast.xmin == 431100
+assert rast.xmax == 438560
+assert rast.ymin == 5337700
+assert rast.ymax == 5343240
+assert np.array_equal(np.load(sraster_strata_path), rast[0], equal_nan=True)
+
+rast = SpatialRaster(sraster2_geotiff_path)#    def sraster2_check(self, rast):
+assert rast.width == 861
+assert rast.height == 611
+assert rast.layers == 1
+assert abs(rast.pixel_width - 0.0003353943) < 1e-10# pytest.approx(0, abs=1e-10)
+assert abs(rast.pixel_height - 0.0003353943) < 1e-10#== pytest.approx(0, abs=1e-10)
+assert abs(rast.xmin - -71.9365) < 1e-4#== pytest.approx(0, abs=1e-4)
+assert abs(rast.xmax - -71.64773) < 1e-4#== pytest.approx(0, abs=1e-4)
+assert abs(rast.ymin - 45.4883) < 1e-4#== pytest.approx(0, abs=1e-4)
+assert abs(rast.ymax - 45.69332) <1e-4#== pytest.approx(0, abs=1e-4)
+assert np.array_equal(np.load(sraster2_band_path), rast[0], equal_nan=True)
+
+rast = sgs.utils.raster.SpatialRaster(mraster_small_geotiff_path)
+zq90 = np.load(mraster_small_zq90_path)
+pzabove2 = np.load(mraster_small_pzabove2_path)
+zsd = np.load(mraster_small_zsd_path)
+
+assert np.array_equal(zq90, rast[0], equal_nan=True)
+assert np.array_equal(pzabove2, rast[1], equal_nan=True)
+assert np.array_equal(zsd, rast[2], equal_nan=True)
+
+assert np.array_equal(zq90, rast['zq90'], equal_nan=True)
+assert np.array_equal(pzabove2, rast['pzabove2'], equal_nan=True)
+assert np.array_equal(zsd, rast['zsd'], equal_nan=True)
+
+assert np.array_equal(zq90[0:10, 0:10], rast['zq90', 0:10, 0:10], equal_nan=True)
+assert np.array_equal(zq90[131:141, 100:110], rast['zq90', 131:141, 100:110], equal_nan=True)
+assert np.array_equal([zq90, pzabove2], rast[0:2], equal_nan=True)
+assert np.array_equal(zq90[73, 46], rast['zq90', 73, 46], equal_nan=True)
+
+print("PASSED")
