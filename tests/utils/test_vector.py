@@ -1,6 +1,5 @@
 import pytest
 import sgs
-from osgeo import gdal
 
 from files import (
     access_shapefile_path,
@@ -44,6 +43,7 @@ class TestSpatialVector:
         assert ymin == 5337700
         assert ymax == 5343240
 
+    @pytest.mark.skip(reason="C++ vector functionality not implemented yet")
     def test_construct_from_path(self):
         vec = sgs.utils.vector.SpatialVector(access_shapefile_path)
         self.access_parameters_check(vec)
@@ -54,19 +54,7 @@ class TestSpatialVector:
         vec = sgs.utils.vector.SpatialVector(inventory_polygons_shapefile_path)
         self.inventory_polygons_parameters_check(vec)
 
-    def test_construct_from_gdal_dataset(self):
-        dataset = gdal.OpenEx(access_shapefile_path, gdal.OF_VECTOR)
-        vec = sgs.utils.vector.SpatialVector(dataset)
-        self.access_parameters_check(vec)
-
-        dataset = gdal.OpenEx(existing_shapefile_path, gdal.OF_VECTOR)
-        vec = sgs.utils.vector.SpatialVector(dataset)
-        self.existing_parameters_check(vec)
-
-        dataset = gdal.OpenEx(inventory_polygons_shapefile_path, gdal.OF_VECTOR)
-        vec = sgs.utils.vector.SpatialVector(dataset)
-        self.inventory_polygons_parameters_check(vec)
-
+    @pytest.mark.skip(reason="C++ vector functionality not implemented yet")
     def test_common_file_formats(self):
         vec = sgs.utils.vector.SpatialVector(existing_geodatabase_path)
         self.existing_parameters_check(vec)

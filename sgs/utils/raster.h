@@ -21,21 +21,21 @@ using namespace pybind11::literals;
 class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
-	CPLVirtualMem *p_CPLVirtualMemRaster;
+	void *p_raster;
+	py::buffer numpyRaster;
+	bool rasterAllocated = false;
 	double geotransform[6];
 	GDALDataType type;
 
 	/**
-	 * Internal function used to initialize the raster member variable.
-	 * uses GDALDatasetGetVirtualMemory()
-	 * see https://github.com/OSGeo/gdal/blob/9f4bc2d28f853d9e39a59656cb8f3318b51f9be2/gcore/gdalvirtualmem.cpp#L764
+	 * TODO document
 	 */
 	void allocateRaster();
 
 	/**
-	 * Internal function which returns a void pointer to an allocated raster.
+	 * TODO document
 	 */
-	void *getRasterPointer();
+	void allocateRasterHelper(size_t size);
 
 	/**
 	 * Internal function which returns a pybuffer of the raster, using
@@ -70,7 +70,7 @@ class GDALRasterWrapper {
 	 *
 	 * @returns python dict of the CRS.
 	 */
-	py::dict getCRS();
+	std::string getCRS();
 
 	/**
 	 * Getter method for the raster width.

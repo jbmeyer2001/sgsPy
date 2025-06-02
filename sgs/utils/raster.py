@@ -170,7 +170,7 @@ class SpatialRaster:
         self.width = self.cpp_raster.get_width()
         self.height = self.cpp_raster.get_height()
         self.layers = self.cpp_raster.get_layers()
-        self.crs = self.cpp_raster.get_crs()
+        self.crs = json.loads(self.cpp_raster.get_crs())
         self.xmin = self.cpp_raster.get_xmin()
         self.xmax = self.cpp_raster.get_xmax()
         self.ymin = self.cpp_raster.get_ymin()
@@ -198,7 +198,7 @@ class SpatialRaster:
         """
         Loads the rasters gdal dataset into a numpy array.
         """
-        self.arr = np.asarray(self.cpp_raster.get_raster_as_memoryview())
+        self.arr = np.asarray(self.cpp_raster.get_raster_as_memoryview().toreadonly(), copy=False)
 
     def get_band_index(self, band):
         """

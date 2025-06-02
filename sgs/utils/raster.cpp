@@ -1,7 +1,5 @@
 #include "raster.h"
 
-py::module_ json = py::module_::import("json");
-
 GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	//must register drivers first
 	GDALAllRegister();
@@ -20,8 +18,8 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 }
 
 GDALRasterWrapper::~GDALRasterWrapper() {
-	if (this->p_CPLVirtualMemRaster != nullptr) {
-		CPLVirtualMemFree(this->p_CPLVirtualMemRaster);
+	if (this->p_raster != nullptr) {
+		CPLFree(this->p_raster);
 	}
 }
 
@@ -31,7 +29,7 @@ std::string GDALRasterWrapper::getDriver() {
 		+ std::string(this->p_dataset->GetDriver()->GetMetadataItem(GDAL_DMD_LONGNAME));
 }
 
-py::dict GDALRasterWrapper::getCRS() {
+std::string GDALRasterWrapper::getCRS() {
 	char *p_crs;
 
 	OGRErr ogrerr = OGRSpatialReference(this->p_dataset->GetProjectionRef()).exportToPROJJSON(&p_crs, nullptr);
@@ -39,7 +37,7 @@ py::dict GDALRasterWrapper::getCRS() {
 		throw std::runtime_error("error getting coordinate reference system from dataset.");
 	}
 		
-	return json.attr("loads")(std::string(p_crs));
+	return std::string(p_crs);
 }
 
 int GDALRasterWrapper::getWidth() {
@@ -108,55 +106,80 @@ std::vector<std::string> GDALRasterWrapper::getBands() {
 	return retval;
 }
 
-void GDALRasterWrapper::allocateRaster() {
-	if (this->p_CPLVirtualMemRaster != nullptr) {
-		throw std::runtime_error("raster already allocated, cannot call allocateRaster() again.");
+void GDALRasterWrapper::allocateRasterHelper(size_t size) {
+	//allocate the whole raster
+	this->p_raster = CPLMalloc(size * this->getLayers() * this->getHeight() * this->getWidth());
+
+	//calculate the number of bytes that a single raster layer/band takes
+	size_t layerSize = size * this->getHeight() * this->getWidth();
+
+	//iterate and read the raster bands
+	//NOTE: GDALRasterBand::RasterIO takes care of windowing for us so we *should* be able
+	//to allocate a raster larger than the size of RAM... (should)
+	void *bufferLocation = this->p_raster;
+	for( auto&& p_band : this->p_dataset->GetBands() ) {
+		p_band->RasterIO(
+			GF_Read, 			//GDALRWFlag eRWFlag
+			0, 				//int nXOff
+			0,				//int nYOff
+			this->getWidth(),		//int nXSize
+			this->getHeight(),		//int nYSize
+			bufferLocation,			//void *pData
+			this->getWidth(),		//int nBufXSize
+			this->getHeight(),		//int nBufYSize
+			this->type,			//GDALDataType eBufType 
+			0,				//int nPixelSpace
+			0				//int nLineSpace
+		);
+		bufferLocation = (void *)((size_t)bufferLocation + layerSize);
 	}
 
-	//see https://github.com/OSGeo/gdal/blob/9f4bc2d28f853d9e39a59656cb8f3318b51f9be2/gcore/gdalvirtualmem.cpp#L764
-	//TODO dynamically get physical memory size to pass to nCacheSize parameter
-	this->p_CPLVirtualMemRaster = GDALDatasetGetVirtualMem(this->p_dataset.get(), 					//GDALDatasetH hDS
-		GF_Read,						//GDALRWFlag eRWFlag
-		0,									//int nXOff
-		0,									//int nYOff
-		this->p_dataset->GetRasterXSize(),	//int nXSize
-		this->p_dataset->GetRasterYSize(),	//int nYSize
-		this->p_dataset->GetRasterXSize(),	//int nBufXSize
-		this->p_dataset->GetRasterYSize(),	//int nBufYSize
-		this->type,							//GDALDataType eBufType
-		this->p_dataset->GetRasterCount(),	//int nBandCount
-		NULL,								//int *panBandMap
-		0,									//int nPixelSpace	
-		0,									//GIntBig nLineSpace
-		0,									//GIntBig nBandSpace
-		10485760, 							//size_t nCacheSize
-		0,									//size_t nPageSizeHint
-		(int)false,							//int bSingleThreadUsage
-		NULL);								//CSLConstList papszOptions
 }
 
-void *GDALRasterWrapper::getRasterPointer() {
-	if (this->p_CPLVirtualMemRaster == nullptr) {
-		this->allocateRaster();
+void GDALRasterWrapper::allocateRaster() {
+	if (this->rasterAllocated) {
+		throw std::runtime_error("cannot allocate an already allocated raster");
+	}
+	
+	switch(this->type) {
+		case GDT_Int8:
+			this->allocateRasterHelper(1);
+			break;
+		case GDT_UInt16:
+		case GDT_Int16:
+			this->allocateRasterHelper(2);
+			break;
+		case GDT_UInt32:
+		case GDT_Int32:
+		case GDT_Float32:
+			this->allocateRasterHelper(4);
+			break;
+		case GDT_UInt64:
+		case GDT_Int64:
+		case GDT_Float64:
+			this->allocateRasterHelper(8);
+			break;
+		default:
+			throw std::runtime_error("raster pixel data type not acceptable.");
 	}
 
-	return CPLVirtualMemGetAddr(this->p_CPLVirtualMemRaster);
+	this->rasterAllocated = true;
 }
 
 template <typename T> py::buffer GDALRasterWrapper::getBuffer(size_t size) {
 	//see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
 	return py::memoryview::from_buffer(
-		(T*)this->getRasterPointer(), //buffer
+		(T*)this->p_raster, //buffer
 		{this->getLayers(), this->getHeight(), this->getWidth()}, //shape
 		{size * this->getHeight() * this->getWidth(), size * this->getWidth(), size} //stride
 	);
 }	
 
 py::buffer GDALRasterWrapper::getRasterAsMemView() {
-	size_t size;
-	std::string formatDescriptor;
-
-	//data size (bytes) and corresponding python type depends on the gdal data type
+	if (!this->rasterAllocated) {
+		this->allocateRaster();
+	}
+	
 	switch(this->type) {
 		case GDT_Int8:
 			return getBuffer<int8_t>(1);
@@ -180,6 +203,11 @@ py::buffer GDALRasterWrapper::getRasterAsMemView() {
 			throw std::runtime_error("raster pixel data type not acceptable.");
 	}
 }
+
 void *GDALRasterWrapper::getRaster() {
-		return this->getRasterPointer();
+	if (!this->rasterAllocated) {
+		this->allocateRaster();
+	}
+
+	return this->p_raster;
 }
