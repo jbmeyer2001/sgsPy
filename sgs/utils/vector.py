@@ -1,42 +1,44 @@
-import matplotlib.pyplot as plt
+# ******************************************************************************
+#
+#  Project: sgs
+#  Purpose: GDALDataset wrapper for vector operations
+#  Author: Joseph Meyer
+#  Date: June, 2025
+#
+# ******************************************************************************
 
 from vector import GDALVectorWrapper
 
 class SpatialVector:
     """
     A wrapper class of a GDAL vector dataset.
-    This class is primarily used under the hood, althoufh it has a function
+    This class is primarily used under the hood, although it has a function
     for displaying vector information.
 
     Accessing vector info:
         
             vector metadata can be displayed using the info() function. All layers
             are displayed unless a specific layer is specified. The per-layer info
-            includes: name, number of features, number of fields, geomtypes, and bounds.
+            includes: name, number of features, number of fields, geomtype, and bounds.
 
     Public Attributes:
     --------------------
-    layer_count : int
-        the number of layers in the vector image
-    layers_info : list[dict]
-        a list of layers with dicts containing name, features, fields, geomtypes, and extent info
+    layer_names : list[str]
+        a list of layer names
     
     Public Methods:
     --------------------
     info()
-        takes no arguments, prints vector metadata to console
+        takes an optional argument specify the band, and prints vector metadata to console
     """
     def __init__(self, image):
         """
         Constructing method for the SpatialVector class.
 
         Has one required parameter to specify a gdal dataset. The following
-        attributes are populated using the given dataset:
-        self.dataset
-        self.layer_count
-        self.layers
-        self.layers_info
-        self.layer_name_to_index
+        attributes are populated:
+        self.cpp_vector
+        self.layer_names
 
         Parameters
         --------------------
@@ -47,25 +49,26 @@ class SpatialVector:
         --------------------
         TypeError:
             if 'image' parameter is not of type str
-        ValueError:
-            if dataset is not loaded
+        RuntimeError (from C++):
+            if dataset is not initialized correctly 
         """
         if type(image) == str:
             self.cpp_vector = GDALVectorWrapper(image)
         else:
             raise TypeError(f"SpatialVector does not accept input of type {type(image)}")
 
-
-        self.layers = self.cpp_vector.get_layers() 
+        self.layers = self.cpp_vector.get_layer_names() 
 
     def print_info(self, name, layer_info):
         """
-        prints layer information using the layer_info dict given.
+        prints layer information using the layer_info from self.cpp_vector.
 
         Parameters
         --------------------
+        name : str
+            str containing the layer name
         layer_info : dict
-            dict containing 'name', 'features', 'fields', 'geomtypes', and 'extent' items
+            dict containing 'feature_count', 'field_count', 'geometry_type', 'xmax', 'xmin', 'ymax', and 'ymin' items
         """
         print("{} layer info:".format(name))
         print("feature count: {}".format(layer_info['feature_count']))
@@ -103,9 +106,3 @@ class SpatialVector:
             self.print_info(layers[layer], self.cpp_vector.get_layer_info(layers[layer]))
         else:
               TypeError("layer parameter cannot be of type {}".format(type(layer)))
-
-'''
-TODO:
- - add a plotting function using matplotlib (specifically plt.Polygon and add patch)
-    stackoverflow.com/questions/30447790
-'''

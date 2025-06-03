@@ -1,5 +1,13 @@
+# ******************************************************************************
+#
+#  Project: sgs
+#  Purpose: GDALDataset wrapper for raster operations
+#  Author: Joseph Meyer
+#  Date: June, 2025
+#
+# ******************************************************************************
+
 import json
-import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -87,12 +95,12 @@ class SpatialRaster:
     Public Attributes
     --------------------
     driver : str
-        gdal datast driver, for info/display purposes
+        gdal dataset driver, for info/display purposes
     width : int
         the pixel width of the raster image
     height : int
         the pixel height of the raster image
-    layers : int
+    band_count : int
         the number of bands in the raster image
     bands : list[str]
         the raster band names
@@ -127,12 +135,12 @@ class SpatialRaster:
         Constructing method for the SpatialRaster class.
 
         Has one required parameter to specify a raster path. The following
-        attributes are populated using the given raster:
+        attributes are populated:
         self.cpp_raster
         self.driver
         self.width
         self.height
-        self.layers
+        self.band_count
         self.crs
         self.xmin
         self.xmax
@@ -142,14 +150,10 @@ class SpatialRaster:
         self.pixel_width
         self.arr
         self.bands
-        self.bands_name_dict
-        self.data_type
-
-        xmin, xmax, ymin, ymax, pixel_height, and pixel_width are only 
-        set if geotransform exists.
+        self.band_name_dict
         
-        arr is initally set to None, as the array is loaded into memory 
-        only if it is required.
+        arr is initally set to None, as the array is loaded into a NumPy 
+        array only if it is required.
 
         Parameters
         --------------------
@@ -160,6 +164,12 @@ class SpatialRaster:
         --------------------
         TypeError: 
             if 'image' parameter is not of type str
+        RuntimeError (from C++):
+            if dataset is not initialized correctly
+        RuntimeError (from C++):
+            if unable to getgeotransform
+        RuntimeError (from C++):
+            if unable to get coordinate reference system
         """
         if type(image) == str:
             self.cpp_raster = GDALRasterWrapper(image)
@@ -169,7 +179,7 @@ class SpatialRaster:
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
         self.height = self.cpp_raster.get_height()
-        self.layers = self.cpp_raster.get_layers()
+        self.band_count = self.cpp_raster.get_band_count()
         self.crs = json.loads(self.cpp_raster.get_crs())
         self.xmin = self.cpp_raster.get_xmin()
         self.xmax = self.cpp_raster.get_xmax()
@@ -189,14 +199,18 @@ class SpatialRaster:
         """
         print("driver: {}".format(self.driver))
         print("bands: {}".format(*self.bands))
-        print("size: {} x {} x {}".format(self.layers, self.width, self.height))
+        print("size: {} x {} x {}".format(self.band_count, self.width, self.height))
         print("pixel size: (x, y): ({}, {})".format(self.pixel_height, self.pixel_width))
         print("bounds (xmin, xmax, ymin, ymax): ({}, {}, {}, {})".format(self.xmin, self.xmax, self.ymin, self.ymax))
 
-    # TODO: add less naive implementation for resource-intensive tasks (tiling?, etc.)
     def load_arr(self):
         """
         Loads the rasters gdal dataset into a numpy array.
+
+        Raises
+        --------------------
+        RuntimeError (from C++):
+            if unable to read raster band
         """
         self.arr = np.asarray(self.cpp_raster.get_raster_as_memoryview().toreadonly(), copy=False)
 
@@ -221,12 +235,14 @@ class SpatialRaster:
         Parameters
         --------------------
         index : int, str, tuple, or slice
-            the index of the image desired, allowign bands to be specified as strings
+            the index of the image desired, allowing bands to be specified as strings
 
         Raises
         ---------------------
         TypeError: 
             if the index is not of type int, str, tuple, or slice.
+        RuntimeError (from C++):
+            if unable to read raster band
         """
         if self.arr is None:
             self.load_arr()
@@ -307,7 +323,7 @@ class SpatialRaster:
             if 'bands' is not of type int, str, list, or dict
         """
         if bands is None:
-            bands = self.arrange_bands_from_list([*range(self.layers)])
+            bands = self.arrange_bands_from_list([*range(self.band_count)])
         elif type(bands) == list:
             bands = self.arrange_bands_from_list(bands)
         elif type(bands) == dict:

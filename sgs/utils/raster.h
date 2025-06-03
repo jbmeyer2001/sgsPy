@@ -1,3 +1,12 @@
+/******************************************************************************
+ *
+ * Project: sgs
+ * Purpose: GDALDataset wrapper for raster operations
+ * Author: Joseph Meyer
+ * Date: June, 2025
+ *
+ ******************************************************************************/
+
 #pragma once
 
 #include <gdal_priv.h>
@@ -13,48 +22,59 @@ using namespace pybind11::literals;
  * This class provides getter methods for important raster data and metadata, 
  * as well as a way to access the raster as an array. 
  *
- * In Linux, memory will be virtually allocated using GDALs existing functionality 
- * to allow for large images to be used without tiling or the use of scanlines. 
- * Windows functionality has not been decided, as GDAL virtual memory only exists 
- * on linux currently.
+ * Memory is controlled using either a smart pointer (in the case of the dataset)
+ * or CPLMalloc and CPLFree (in the case of the raster image). The function
+ * GDALDataset::RasterIO() function should do the windowing for us behind the
+ * scenes, meaning we don't have to worry about physical memory size when
+ * allocating for large raster images.
+ *
+ * The raster buffer contains all of the raster bands and can be indexed
+ * in Python with: [band][y][x] 
+ * and in C++ with: [band * size * width * height + y * size * width + x * size] 
+ *
+ * The buffer is exposed to the Python side of the application using
+ * a py::buffer, and it's exposed to the C++ side of the application using
+ * a void *. The expectation is that this void pointer will be cast 
+ * to another data type pointer as required.
  */
 class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
-	void *p_raster;
+	void *p_raster = nullptr;
 	py::buffer numpyRaster;
 	bool rasterAllocated = false;
 	double geotransform[6];
-	GDALDataType type;
 
 	/**
-	 * TODO document
+	 * Internal function used to allocate the raster data. Memory
+	 * is allocated using CPLMalloc(). Rasters are read using
+	 * GDALDataset::RasterIO().
+	 *
+	 * @throws std::runtime_error if unable to read raster band
 	 */
 	void allocateRaster();
-
-	/**
-	 * TODO document
-	 */
-	void allocateRasterHelper(size_t size);
 
 	/**
 	 * Internal function which returns a pybuffer of the raster, using
 	 * the type specified.
 	 */
 	template <typename T> py::buffer getBuffer(size_t size);
+	
 	public:
 	/**
 	 * Constructor for GDALRasterWrapper class. This method registers
 	 * drivers, creates a GDALDataset object, and gets the geotransform
 	 * information from the GDALDataset object.
 	 *
-	 * @param filename an std::string
+	 * @param filename as std::string
+	 * @throws std::runtime_error if dataset is not initialized
+	 * @throws std::runtime_error if unable to get geotransform
 	 */
 	GDALRasterWrapper(std::string filename);
 
 	/**
 	 * Deconstructor for GDALRasterWrapper class. This method calls
-	 * CPLVirtualMemFree() if virtual memory has been allocated.
+	 * CPLFree() on the raster pointer if memory was allocated.
 	 */
 	~GDALRasterWrapper();
 
@@ -68,7 +88,8 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the coordinate reference system.
 	 *
-	 * @returns python dict of the CRS.
+	 * @returns std::string json string of the CRS.
+	 * @throws std::runtime_error if unable to acquire CRS
 	 */
 	std::string getCRS();
 
@@ -87,11 +108,11 @@ class GDALRasterWrapper {
 	int getHeight();
 
 	/**
-	 * Getter method for the number of raster bands/layers.
+	 * Getter method for the number of raster bands.
 	 *
-	 * @returns int number of raster layers
+	 * @returns int number of raster bands
 	 */
-	int getLayers();
+	int getBandCount();
 
 	/**
 	 * Getter method for the maximum x value in georeferenced coordinate space.
@@ -143,34 +164,38 @@ class GDALRasterWrapper {
 
 	/**
 	 * Getter method for raster band names. Bands occur in order, meaning
-	 * bands[0] corrosponds to band 1, bands[1] to band 2, etc.
+	 * bands[0] corresponds to band 1, bands[1] to band 2, etc.
 	 *
-	 * @returns std::vector<std::string> vector of raster band names.
+	 * @returns std::vector<std::string> vector of raster band names
 	 */
 	std::vector<std::string> getBands();	
 
 	/**
-	 * Getter method for the raster image in virtual memory, used
-	 * by the python side of the application. This function
-	 * uses the getBuffer() function to define the type of the
-	 * buffer.
+	 * Getter method for the raster image, used by the Python side 
+	 * of the application. This function uses py::memoryview::from_buffer() 
+	 * to create the buffer of the correct size/dimensions.
 	 *
-	 * Python memory view is used to create a numpy array.
+	 * The memory view is then used to initialize a NumPy array without
+	 * copying the data.
 	 *
 	 * see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
+	 *
+	 * @throws std::runtime_error if unable to read raster band during allocation
 	 */
 	py::buffer getRasterAsMemView();
 
 	/**
-	 * Getter method for the raster image in virtual memory, used
-	 * by the C++ side of the application.
+	 * Getter method for the raster image, used by the C++ side of the application.
 	 *
-	 * This is a public method which used to expose the getRasterPointer()
-	 * functionality to external C++ functions.
+	 * @throws std::runtime_error if unable to read raster band during allocation
 	 */
 	void *getRaster();
 };
 
+/** 
+ * pybind11 module for exposing GDALRasterWrapper data to Python.
+ * Define only constructor and relevant getter functions.
+ */
 PYBIND11_MODULE(raster, m) {
 	py::class_<GDALRasterWrapper>(m, "GDALRasterWrapper")
 		.def(py::init<std::string>())
@@ -178,7 +203,7 @@ PYBIND11_MODULE(raster, m) {
 		.def("get_crs", &GDALRasterWrapper::getCRS)
 		.def("get_height", &GDALRasterWrapper::getHeight)
 		.def("get_width", &GDALRasterWrapper::getWidth)
-		.def("get_layers", &GDALRasterWrapper::getLayers)
+		.def("get_band_count", &GDALRasterWrapper::getBandCount)
 		.def("get_xmin", &GDALRasterWrapper::getXMin)
 		.def("get_xmax", &GDALRasterWrapper::getXMax)
 		.def("get_ymin", &GDALRasterWrapper::getYMin)
