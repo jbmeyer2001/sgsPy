@@ -110,7 +110,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the number of raster bands.
 	 *
-	 * @returns int number of raster layers
+	 * @returns int number of raster bands
 	 */
 	int getBandCount();
 
@@ -203,7 +203,7 @@ PYBIND11_MODULE(raster, m) {
 		.def("get_crs", &GDALRasterWrapper::getCRS)
 		.def("get_height", &GDALRasterWrapper::getHeight)
 		.def("get_width", &GDALRasterWrapper::getWidth)
-		.def("get_layers", &GDALRasterWrapper::getBandCount)
+		.def("get_band_count", &GDALRasterWrapper::getBandCount)
 		.def("get_xmin", &GDALRasterWrapper::getXMin)
 		.def("get_xmax", &GDALRasterWrapper::getXMax)
 		.def("get_ymin", &GDALRasterWrapper::getYMin)

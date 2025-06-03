@@ -80,6 +80,6 @@ class GDALVectorWrapper {
 PYBIND11_MODULE(vector, m) {
 	py::class_<GDALVectorWrapper>(m, "GDALVectorWrapper")
 		.def(py::init<std::string>())
-		.def("get_layers", &GDALVectorWrapper::getLayerNames)
+		.def("get_layer_names", &GDALVectorWrapper::getLayerNames)
 		.def("get_layer_info", &GDALVectorWrapper::getLayerInfo);
 }
