@@ -1,15 +1,32 @@
-#include "vector.h"
-#include <iostream>
+/******************************************************************************
+ *
+ * Project: sgs
+ * Purpose: GDALDataset wrapper for vector operations
+ * Author: Joseph Meyer
+ * Date: June, 2025
+ *
+ ******************************************************************************/
 
+#include "vector.h"
+
+/******************************************************************************
+			      GDALVectorWrapper()
+******************************************************************************/
 GDALVectorWrapper::GDALVectorWrapper(std::string filename) {
-	//must register drivers first
+	//must register drivers before trying to open a dataset
 	GDALAllRegister();
 
 	//dataset
 	this->p_dataset = GDALDatasetUniquePtr(GDALDataset::Open(filename.c_str(), GDAL_OF_VECTOR));
+	if (!this->p_dataset) {
+		throw std::runtime_error("dataset pointer is null after initialization, dataset unable to be initialized.");
+	}
 }
 
-std::vector<std::string> GDALVectorWrapper::getLayers() {
+/******************************************************************************
+				getLayerNames()
+******************************************************************************/
+std::vector<std::string> GDALVectorWrapper::getLayerNames() {
 	std::vector<std::string> retval;
 
 	for (OGRLayer *p_layer : this->p_dataset->GetLayers()) {
@@ -19,6 +36,9 @@ std::vector<std::string> GDALVectorWrapper::getLayers() {
 	return retval;
 }
 
+/******************************************************************************
+				 getLayerInfo()
+******************************************************************************/
 std::unordered_map<std::string, std::string> GDALVectorWrapper::getLayerInfo(std::string layerName) {
 	std::unordered_map<std::string, std::string> retval;
 
@@ -37,6 +57,9 @@ std::unordered_map<std::string, std::string> GDALVectorWrapper::getLayerInfo(std
 	return retval;
 }
 
+/******************************************************************************
+				   getLayer()
+******************************************************************************/
 OGRLayer *GDALVectorWrapper::getLayer(std::string layerName) {
 	return this->p_dataset->GetLayerByName(layerName.c_str());
 }
