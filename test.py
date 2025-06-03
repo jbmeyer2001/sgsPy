@@ -26,7 +26,7 @@ sraster2_band_path = os.path.join(folder, 'sraster2_band.npy')
 rast = SpatialRaster(mraster_geotiff_path)
 assert rast.width == 373
 assert rast.height == 277
-assert rast.layers == 3
+assert rast.band_count == 3
 assert rast.pixel_width == 20
 assert rast.pixel_height == 20
 assert rast.xmin == 431100
@@ -40,7 +40,7 @@ assert np.array_equal(np.load(mraster_zsd_path), rast[2], equal_nan=True)
 rast = SpatialRaster(mraster_small_geotiff_path)#    def mraster_small_check(self, rast):
 assert rast.width == 141
 assert rast.height == 110
-assert rast.layers == 3
+assert rast.band_count == 3
 assert rast.pixel_width == 20
 assert rast.pixel_height == 20
 assert rast.xmin == 432440
@@ -54,7 +54,7 @@ assert np.array_equal(np.load(mraster_small_zsd_path), rast[2], equal_nan=True)
 rast = SpatialRaster(sraster_geotiff_path)#def sraster_check(self, rast):
 assert rast.width == 373
 assert rast.height == 277
-assert rast.layers == 1
+assert rast.band_count == 1
 assert rast.pixel_width == 20
 assert rast.pixel_height == 20
 assert rast.xmin == 431100
@@ -66,7 +66,7 @@ assert np.array_equal(np.load(sraster_strata_path), rast[0], equal_nan=True)
 rast = SpatialRaster(sraster2_geotiff_path)#    def sraster2_check(self, rast):
 assert rast.width == 861
 assert rast.height == 611
-assert rast.layers == 1
+assert rast.band_count == 1
 assert abs(rast.pixel_width - 0.0003353943) < 1e-10# pytest.approx(0, abs=1e-10)
 assert abs(rast.pixel_height - 0.0003353943) < 1e-10#== pytest.approx(0, abs=1e-10)
 assert abs(rast.xmin - -71.9365) < 1e-4#== pytest.approx(0, abs=1e-4)
