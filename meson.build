@@ -1,30 +1,79 @@
 project('sgs', 'cpp')
 
-run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
-run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
-run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
+#get build operating system
+if host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
+  WIN = true
+endif
 
-inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
+#install required dependencies using vcpkg
+if WIN
+  run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11:x64-windows-static', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-windows-static', '--recurse', check:true)
+else
+  run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
+endif
 
-cxx = meson.get_compiler('cpp')
-libs = [
+#define include directory
+if WIN
+  inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
+  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
+else
+  inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
+  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
+endif
+
+win_libs = [
+  'aec-static',
+  'charset',
+  'iconv',
+  'expatMT',
+  'qhullstatic',
+  'szip-static',
+  'zlib', 
+]
+
+linux_libs = [
   'aec',
+  'expat',
+  'pkgconf',
+  'png',
+  'sz',
+  'z',
+  'mod_spatialite',
+]
+
+common_libs = [
   'crypto',
   'curl',
   'ecpg',
   'ecpg_compat',
-  'expat',
+  'hdf5',
+  'hdf5_cpp',
+  'hdf5_hl',
+  'hdf5_hl_cpp',
+  'pgcommon',
+  'pgport',
+  'pgtypes',
+  'png16',
+  'pq',
+  'ssl',
+  'sharpyuv',
+  'webp',
+  'webpdecoder',
+  'webpdemux',
+  'webpmux',
+  'xml2',
   'freexl',
   'gdal',
   'geos',
   'geos_c',
   'geotiff',
   'gif',
-  'hdf5',
-  'hdf5_cpp',
-  'hdf5_hl',
-  'hdf5_hl_cpp',
   'jpeg',
   'json-c',
   'kmlbase',
@@ -43,38 +92,34 @@ libs = [
   'pcre2-16',
   'pcre2-32',
   'pcre2-posix',
-  'pgcommon',
-  'pgport',
-  'pgtypes',
-  'pkgconf',
-  'png',
-  'png16',
-  'pq',
   'proj',
   'qhullcpp',
   'qhullstatic_r',
-  'sharpyuv',
   'spatialite',
   'sqlite3',
-  'ssl',
-  'sz',
   'tiff',
   'turbojpeg',
   'uriparser',
-  'webp',
-  'webpdecoder',
-  'webpdemux',
-  'webpmux',
-  'xml2',
-  'z',
   'zstd',
-  'mod_spatialite'
 ]
+
 lib_deps = []
 
-foreach lib : libs
-  lib_deps += cxx.find_library(lib, dirs : [meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'], static:true)
+#get compiler, and use to find lib files in lib directory
+cxx = meson.get_compiler('cpp')
+foreach lib : common_libs
+  lib_deps += cxx.find_library(lib, dirs : lib_dir, static:true)
 endforeach
+
+if WIN
+  foreach lib : win_libs
+    lib_deps += cxx.find_library(lib, dirs : lib_dir, static:true)
+  endforeach
+else
+  foreach lib : linux_libs
+    lib_deps += cxx.find_library(lib, dirs : lib_dir, static:true)
+  endforeach
+endif
 
 py = import('python').find_installation(pure: false)
 
