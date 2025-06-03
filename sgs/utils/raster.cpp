@@ -5,7 +5,7 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	GDALAllRegister();
 
 	//dataset
-	p_dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly)));
+	this->p_dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly)));
 	
 	//geotransform
 	CPLErr cplerr = this->p_dataset->GetGeoTransform(this->geotransform);

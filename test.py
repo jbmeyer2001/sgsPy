@@ -93,4 +93,64 @@ assert np.array_equal(zq90[131:141, 100:110], rast['zq90', 131:141, 100:110], eq
 assert np.array_equal([zq90, pzabove2], rast[0:2], equal_nan=True)
 assert np.array_equal(zq90[73, 46], rast['zq90', 73, 46], equal_nan=True)
 
+vec = sgs.utils.vector.SpatialVector(access_shapefile_path)
+assert len(vec.layers) == 1
+assert vec.layers[0] == 'access'
+layer_info = vec.cpp_vector.get_layer_info('access')
+assert int(layer_info["feature_count"]) == 167
+assert int(layer_info["field_count"]) == 2
+assert layer_info["geometry_type"] == "Line String"
+assert float(layer_info["xmin"]) == 431100
+assert float(layer_info["xmax"]) == 438560
+assert float(layer_info["ymin"]) == 5337700
+assert float(layer_info["ymax"]) == 5343240
+
+vec = sgs.utils.vector.SpatialVector(existing_shapefile_path)
+assert len(vec.layers) == 1
+assert vec.layers[0] == 'existing'
+layer_info = vec.cpp_vector.get_layer_info('existing')
+assert int(layer_info["feature_count"]) == 200
+assert int(layer_info["field_count"]) == 1
+assert layer_info["geometry_type"] == "Point"
+assert float(layer_info["xmin"]) == 431110
+assert float(layer_info["xmax"]) == 438530
+assert float(layer_info["ymin"]) == 5337710
+assert float(layer_info["ymax"]) == 5343230
+
+vec = sgs.utils.vector.SpatialVector(inventory_polygons_shapefile_path)
+assert len(vec.layers) == 1
+assert vec.layers[0] == 'inventory_polygons'
+layer_info = vec.cpp_vector.get_layer_info('inventory_polygons')
+assert int(layer_info["feature_count"]) == 632
+assert int(layer_info["field_count"]) == 3
+assert layer_info["geometry_type"] == "Polygon"
+assert float(layer_info["xmin"]) == 431100
+assert float(layer_info["xmax"]) == 438560
+assert float(layer_info["ymin"]) == 5337700
+assert float(layer_info["ymax"]) == 5343240
+
+vec = sgs.utils.vector.SpatialVector(existing_geodatabase_path)
+assert len(vec.layers) == 1
+assert vec.layers[0] == 'existing'
+layer_info = vec.cpp_vector.get_layer_info('existing')
+assert int(layer_info["feature_count"]) == 200
+assert int(layer_info["field_count"]) == 1
+assert layer_info["geometry_type"] == "Point"
+assert float(layer_info["xmin"]) == 431110
+assert float(layer_info["xmax"]) == 438530
+assert float(layer_info["ymin"]) == 5337710
+assert float(layer_info["ymax"]) == 5343230
+
+vec = sgs.utils.vector.SpatialVector(existing_geojson_path)
+assert len(vec.layers) == 1
+assert vec.layers[0] == 'existing'
+layer_info = vec.cpp_vector.get_layer_info('existing')
+assert int(layer_info["feature_count"]) == 200
+assert int(layer_info["field_count"]) == 1
+assert layer_info["geometry_type"] == "Point"
+assert float(layer_info["xmin"]) == 431110
+assert float(layer_info["xmax"]) == 438530
+assert float(layer_info["ymin"]) == 5337710
+assert float(layer_info["ymax"]) == 5343230
+
 print("PASSED")
