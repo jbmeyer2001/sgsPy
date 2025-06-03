@@ -1,46 +1,42 @@
-#include <gdal_priv.h>
-#include <gdal.h>
-#include <pybind11/pybind11.h>
+#include "vector.h"
+#include <iostream>
 
-namespace py = pybind11;
-using namespace pybind11::literals;
+GDALVectorWrapper::GDALVectorWrapper(std::string filename) {
+	//must register drivers first
+	GDALAllRegister();
 
-/**
- *
- */
-class SpatialVector {
-	private:
-	typedef struct layerInfo {
-		std::unique_ptr<OGRLayer> layer;
-		std::string name;
-		int features;
-		int fields;
-		std::unordered_map<std::string, int>;
-		double extent[4];
-	};
-	std::unique_ptr<GDALDataset> p_dataset;
-	int numLayers;
-	std::vector<layerInfo> layers;
-	std::unordered_map<std::string, int> layerNameMap;
+	//dataset
+	this->p_dataset = GDALDatasetUniquePtr(GDALDataset::Open(filename.c_str(), GDAL_OF_VECTOR));
+}
 
-	public:
-	
-	/**
-	 *
-	 */	
-	SpatialVector(std::string filename) {
-		//dataset
-		this->p_dataset = std::unique_ptr<GDALDataset>(GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly)));
+std::vector<std::string> GDALVectorWrapper::getLayers() {
+	std::vector<std::string> retval;
 
-		//layers
-		this->numLayers = this->p_dataset->GetLayerCount();
-		for (int i = 0; i < this->numLayers; i++) {
-			layerInfo newLayer;
-			
-			newLayer.layer = std::unique_ptr<OGRLayer>(this->p_dataset->GetLayer(i));
-			newLayer.name = std::string(newLayer.layer->GetName());
-			
-			int featureCount	
-		}
+	for (OGRLayer *p_layer : this->p_dataset->GetLayers()) {
+		retval.push_back(std::string(p_layer->GetName()));
 	}
-};
+
+	return retval;
+}
+
+std::unordered_map<std::string, std::string> GDALVectorWrapper::getLayerInfo(std::string layerName) {
+	std::unordered_map<std::string, std::string> retval;
+
+	OGRLayer *p_layer = this->p_dataset->GetLayerByName(layerName.c_str());
+	std::unique_ptr<OGREnvelope> extent = std::unique_ptr<OGREnvelope>(new OGREnvelope);
+	p_layer->GetExtent(extent.get());
+
+	retval.emplace("feature_count", std::to_string(p_layer->GetFeatureCount()));
+	retval.emplace("field_count", std::to_string(p_layer->GetLayerDefn()->GetFieldCount()));
+	retval.emplace("geometry_type", OGRGeometryTypeToName(p_layer->GetGeomType()));
+	retval.emplace("xmin", std::to_string(extent->MinX));
+	retval.emplace("xmax", std::to_string(extent->MaxX));
+	retval.emplace("ymin", std::to_string(extent->MinY));
+	retval.emplace("ymax", std::to_string(extent->MaxY));
+	
+	return retval;
+}
+
+OGRLayer *GDALVectorWrapper::getLayer(std::string layerName) {
+	return this->p_dataset->GetLayerByName(layerName.c_str());
+}
