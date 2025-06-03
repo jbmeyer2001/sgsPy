@@ -93,4 +93,27 @@ assert np.array_equal(zq90[131:141, 100:110], rast['zq90', 131:141, 100:110], eq
 assert np.array_equal([zq90, pzabove2], rast[0:2], equal_nan=True)
 assert np.array_equal(zq90[73, 46], rast['zq90', 73, 46], equal_nan=True)
 
+vec = sgs.utils.vector.SpatialVector(access_shapefile_path)
+assert len(vec.layers) == 1
+assert vec.layers[0] == 'access'
+layer_info = vec.cpp_vector.get_layer_info('access')
+print(layer_info)
+assert int(layer_info["feature_count"]) == 167
+assert int(layer_info["field_count"]) == 2
+assert layer_info["geometry_type"] == "Line String"
+assert float(layer_info["xmin"]) == 431100
+assert float(layer_info["xmax"]) == 438560
+
+vec = sgs.utils.vector.SpatialVector(existing_shapefile_path)
+
+
+vec = sgs.utils.vector.SpatialVector(inventory_polygons_shapefile_path)
+
+
+vec = sgs.utils.vector.SpatialVector(existing_geodatabase_path)
+
+
+vec = sgs.utils.vector.SpatialVector(existing_geojson_path)
+
+
 print("PASSED")
