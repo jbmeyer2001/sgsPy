@@ -1,4 +1,11 @@
-import matplotlib.pyplot as plt
+# ******************************************************************************
+#
+#  Project: sgs
+#  Purpose: GDALDataset wrapper for vector operations
+#  Author: Joseph Meyer
+#  Date: June, 2025
+#
+# ******************************************************************************
 
 from vector import GDALVectorWrapper
 
