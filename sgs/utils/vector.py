@@ -57,7 +57,6 @@ class SpatialVector:
         else:
             raise TypeError(f"SpatialVector does not accept input of type {type(image)}")
 
-
         self.layers = self.cpp_vector.get_layer_names() 
 
     def print_info(self, name, layer_info):
