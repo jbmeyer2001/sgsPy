@@ -29,10 +29,10 @@ using namespace pybind11::literals;
  * allocating for large raster images.
  *
  * The raster buffer contains all of the raster bands and can be indexed
- * in python with: [band][y][x] 
+ * in Python with: [band][y][x] 
  * and in C++ with: [band * size * width * height + y * size * width + x * size] 
  *
- * The buffer is exposed to the python side of the application using
+ * The buffer is exposed to the Python side of the application using
  * a py::buffer, and it's exposed to the C++ side of the application using
  * a void *. The expectation is that this void pointer will be cast 
  * to another data type pointer as required.
@@ -66,7 +66,7 @@ class GDALRasterWrapper {
 	 * drivers, creates a GDALDataset object, and gets the geotransform
 	 * information from the GDALDataset object.
 	 *
-	 * @param filename an std::string
+	 * @param filename as std::string
 	 * @throws std::runtime_error if dataset is not initialized
 	 * @throws std::runtime_error if unable to get geotransform
 	 */
@@ -88,7 +88,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the coordinate reference system.
 	 *
-	 * @returns python dict of the CRS.
+	 * @returns std::string json string of the CRS.
 	 * @throws std::runtime_error if unable to acquire CRS
 	 */
 	std::string getCRS();
@@ -171,7 +171,7 @@ class GDALRasterWrapper {
 	std::vector<std::string> getBands();	
 
 	/**
-	 * Getter method for the raster image, used by the python side 
+	 * Getter method for the raster image, used by the Python side 
 	 * of the application. This function uses py::memoryview::from_buffer() 
 	 * to create the buffer of the correct size/dimensions.
 	 *
