@@ -20,7 +20,21 @@
 //#include "KDTreeClass.h"
 //#include "LpmClass.h"
 
+#include <iostream>
 
+#include "raster.h"
+#include "vector.h"
+
+void test_func(GDALRasterWrapper *raster) {
+	std::cout << raster << std::endl;
+}
+
+PYBIND11_MODULE(balanced, m) {
+	m.def("test_func", &test_func);
+}
+
+
+/*
 std::vector<size_t> lcube_cpp(
  	std::vector<double> prob,
   	Rcpp::NumericMatrix &xbal,
@@ -60,8 +74,9 @@ std::vector<size_t> lcube_cpp(
 
   return sample;
 }
+*/
 
-
+/*
 // [[Rcpp::export(.lcube_stratified_cpp)]]
 Rcpp::IntegerVector lcube_stratified_cpp(
   Rcpp::NumericVector &prob,
@@ -194,4 +209,4 @@ Rcpp::IntegerMatrix hlpm2_cpp(
 
   return sample;
 }
-
+*/

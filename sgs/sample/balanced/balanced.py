@@ -8,6 +8,8 @@ from sgs.utils import (
         write,
 )
 
+from balanced import test_func
+
 def balanced(raster: SpatialRaster,
              num_samples: int,
              algorithm: str = "lpm2_kdtree",
@@ -26,6 +28,11 @@ def balanced(raster: SpatialRaster,
 
     something about access
     """
+
+    print("calling test_func on raster")
+    test_func(raster)
+    print("called it")
+    return
 
     if algorithm not in ["lpm2_kdtree", "lcube", "lcubestratified"]:
         raise ValueError("algorithm parameter must specify one of: 'lpm2_kdtree', 'lcube', 'lcubestratified'.")

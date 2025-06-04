@@ -6,6 +6,7 @@ run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
 run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
 
 inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
+utils_inc_dir = include_directories('sgs/utils')
 lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
 
 #get the python lib name for any version of python
