@@ -26,7 +26,8 @@
 #include "vector.h"
 
 void test_func(GDALRasterWrapper *raster) {
-	std::cout << raster << std::endl;
+	std::cout << "raster memory location" << std::endl;
+	std::cout << raster->getRaster() << std::endl;
 }
 
 PYBIND11_MODULE(balanced, m) {
