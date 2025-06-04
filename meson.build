@@ -2,8 +2,8 @@ project('sgs', 'cpp')
 
 run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
 run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', check:true)
-run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', '--recurse', check:true)
+run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
+run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
 
 inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
 lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
