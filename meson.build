@@ -2,13 +2,18 @@ project('sgs', 'cpp')
 
 run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
 run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
-run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
+run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', check:true)
+run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', '--recurse', check:true)
 
 inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
+lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
+
+#get the python lib name for any version of python
+python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
 
 cxx = meson.get_compiler('cpp')
 libs = [
+  python_lib,
   'aec',
   'crypto',
   'curl',
@@ -73,7 +78,7 @@ libs = [
 lib_deps = []
 
 foreach lib : libs
-  lib_deps += cxx.find_library(lib, dirs : [meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'], static:true)
+  lib_deps += cxx.find_library(lib, dirs : [lib_dir], static:true)
 endforeach
 
 py = import('python').find_installation(pure: false)

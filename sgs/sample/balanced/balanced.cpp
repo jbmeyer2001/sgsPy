@@ -21,39 +21,42 @@
 //#include "LpmClass.h"
 
 
-// [[Rcpp::export(.lcube_cpp)]]
-Rcpp::IntegerVector lcube_cpp(
-  Rcpp::NumericVector &prob,
-  Rcpp::NumericMatrix &xbal,
-  Rcpp::NumericMatrix &xspread,
-  size_t treeBucketSize,
-  int treeMethod,
-  double eps
-) {
-  size_t N = xbal.nrow();
-  size_t pbal = xbal.ncol();
-  size_t pspread = xspread.nrow();
+std::vector<size_t> lcube_cpp(
+ 	std::vector<double> prob,
+  	Rcpp::NumericMatrix &xbal,
+  	Rcpp::NumericMatrix &xspread) 
+{
+	//set default parameters according to 
+	//https://github.com/envisim/BalancedSampling/blob/2.1.1/R/lcube.R
+	size_t treeBucketSize = 50;
+	double eps = 1e-12;
+	int treeMethod = kdtree_method_check("kdtree", treeBucketSize);
 
-  if (N != (size_t)xspread.ncol())
-    throw std::invalid_argument("xbal and xspread does not match");
-  if (N != (size_t)prob.length())
-    throw std::invalid_argument("prob and x does not match");
 
-  Cube cube(
-    REAL(prob),
-    REAL(xbal),
-    N,
-    pbal,
-    eps,
-    REAL(xspread),
-    pspread,
-    treeBucketSize,
-    treeMethod
-  );
+  	size_t N = xbal.nrow();
+  	size_t pbal = xbal.ncol();
+  	size_t pspread = xspread.nrow();
 
-  cube.Run();
+  	if (N != (size_t)xspread.ncol())
+   		throw std::invalid_argument("xbal and xspread does not match");
+  	if (N != (size_t)prob.length())
+    	throw std::invalid_argument("prob and x does not match");
 
-  Rcpp::IntegerVector sample(cube.sample.begin(), cube.sample.end());
+  	Cube cube(
+    	prob.data(), 	//const double*
+    	REAL(xbal), 	//double *
+    	N,				//const size_t
+    	pbal,			//const size_t
+    	eps,			//const double
+    	REAL(xspread), 	//double 8
+    	pspread,		//const size_t
+    	treeBucketSize,	//const size_t
+    	treeMethod		//const int
+  	);
+
+  	cube.Run();
+
+	std::vector<size_t> sample(cube.sample.begin(), cube.sample.end());
 
   return sample;
 }

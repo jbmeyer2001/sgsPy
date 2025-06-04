@@ -1,15 +1,17 @@
-#raster_lib = shared_library(
-#'raster_lib', 
-#sources: ['raster.cpp', 'raster.h'],
-#dependencies: [lib_deps],
-#include_directories: inc_dir,
-#)
+raster_lib = static_library(
+  'raster_lib', 'raster.cpp', 'raster.h',
+  dependencies: [lib_deps, py.dependency()],
+  include_directories: [inc_dir],
+)
+
+raster_obj = raster_lib.extract_objects('raster.cpp')
 
 py.extension_module(
   'raster',
-  ['raster.cpp', 'raster.h', 'raster_pybind.cpp'],
+  ['raster_pybind.cpp'],
   dependencies: [lib_deps],
   include_directories: inc_dir,
+  objects: [raster_obj],
   install: true,
 )
 
