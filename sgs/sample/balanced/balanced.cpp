@@ -14,32 +14,23 @@
  ******************************************************************************/
 
 
-//#include "CubeClass.h"
-//#include "CubeStratifiedClass.h"
-//#include "IndexListClass.h"
-//#include "KDTreeClass.h"
-//#include "LpmClass.h"
-
-#include <iostream>
-
+//sgs/utils cpp code
 #include "raster.h"
 #include "vector.h"
 
-void test_func(GDALRasterWrapper *raster) {
-	std::cout << "raster memory location" << std::endl;
-	std::cout << raster->getRaster() << std::endl;
-}
+//Balanced Sampling package
+#include "CubeClass.h"
+#include "CubeStratifiedClass.h"
+#include "IndexListClass.h"
+#include "KDTreeClass.h"
+#include "LpmClass.h"
 
-PYBIND11_MODULE(balanced, m) {
-	m.def("test_func", &test_func);
-}
-
-
-/*
 std::vector<size_t> lcube_cpp(
- 	std::vector<double> prob,
-  	Rcpp::NumericMatrix &xbal,
-  	Rcpp::NumericMatrix &xspread) 
+	GDALRasterWrapper *raster,
+	GDALVectorWrapper *access,
+ 	std::vector<double> prob)
+//  	Rcpp::NumericMatrix &xbal,
+//  	Rcpp::NumericMatrix &xspread
 {
 	//set default parameters according to 
 	//https://github.com/envisim/BalancedSampling/blob/2.1.1/R/lcube.R
@@ -50,32 +41,45 @@ std::vector<size_t> lcube_cpp(
 
   	size_t N = xbal.nrow();
   	size_t pbal = xbal.ncol();
-  	size_t pspread = xspread.nrow();
+  	size_t pspread = xspread.nrow(); //number of variables per pixel
 
   	if (N != (size_t)xspread.ncol())
    		throw std::invalid_argument("xbal and xspread does not match");
   	if (N != (size_t)prob.length())
     	throw std::invalid_argument("prob and x does not match");
 
-  	Cube cube(
-    	prob.data(), 	//const double*
-    	REAL(xbal), 	//double *
-    	N,				//const size_t
-    	pbal,			//const size_t
-    	eps,			//const double
-    	REAL(xspread), 	//double 8
-    	pspread,		//const size_t
-    	treeBucketSize,	//const size_t
-    	treeMethod		//const int
-  	);
+	std::cout << "create instance of Cube class" << std::endl;
+  	//Cube cube(
+    	//	prob.data(), 	//const double*
+    	//	REAL(xbal), 	//double *
+    	//	N,				//const size_t
+    	//	pbal,			//const size_t
+    	//	eps,			//const double
+    	//	REAL(xspread), 	//double 8
+    	//	pspread,		//const size_t
+    	//	treeBucketSize,	//const size_t
+    	//	treeMethod		//const int
+  	//);
 
-  	cube.Run();
+	std::cout << "call cube.Run()" << std::endl;
+  	//cube.Run();
 
-	std::vector<size_t> sample(cube.sample.begin(), cube.sample.end());
+	std::cout << "call sample()" << std::endl;
+	//std::vector<size_t> sample(cube.sample.begin(), cube.sample.end());
 
-  return sample;
+	std::cout << "return result of sample()" << std::endl;
+  	//return sample;
+
+	return {};
 }
-*/
+
+void lcube_stratified_cpp(
+	GDALRasterWrapper *raster,
+	GDALVectorWrapper *access,
+	std::vector<double> prob	
+) {
+	std::cout << "lcube_stratified_cpp() has not been implemented!!!" << std::endl;
+}
 
 /*
 // [[Rcpp::export(.lcube_stratified_cpp)]]
@@ -118,8 +122,17 @@ Rcpp::IntegerVector lcube_stratified_cpp(
 
   return sample;
 }
+*/
 
+void hlpm2_cpp(
+	GDALRasterWrapper *raster,
+	GDALVectorWrapper *vector,
+	std::vector<double> prob	
+) {
+	std::cout << "hlpm2_cpp() has not been implemented!!!" << std::endl;
+}
 
+/*
 // [[Rcpp::export(.hlpm2_cpp)]]
 Rcpp::IntegerMatrix hlpm2_cpp(
   Rcpp::NumericVector &prob,
@@ -211,3 +224,11 @@ Rcpp::IntegerMatrix hlpm2_cpp(
   return sample;
 }
 */
+
+PYBIND11_MODULE(balanced, m) {
+	m.def("lcube_cpp", &lcube_cpp);
+	m.def("lcube_stratified_cpp", &lcube_stratified_cpp);
+	m.def("hlpm2_cpp", &hlpm2_cpp);
+}
+
+

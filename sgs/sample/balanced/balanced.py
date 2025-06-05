@@ -8,7 +8,7 @@ from sgs.utils import (
         write,
 )
 
-from balanced import test_func
+from balanced import lcube_cpp, lcube_stratified_cpp, hlpm2_cpp
 
 def balanced(raster: SpatialRaster,
              num_samples: int,
@@ -29,34 +29,24 @@ def balanced(raster: SpatialRaster,
     something about access
     """
 
-    print("calling test_func on raster")
-    test_func(raster)
-    print("called it")
-    return
-
     if algorithm not in ["lpm2_kdtree", "lcube", "lcubestratified"]:
         raise ValueError("algorithm parameter must specify one of: 'lpm2_kdtree', 'lcube', 'lcubestratified'.")
 
     if access:
-        #TODO add when access has been implemented
-        sgs.utils.access()
-
-    num_pixels = raster.width * raster.height
-    if not prob:
-        prob = [num_samples / num_pixels] * num_pixels
+        access_vector = access.cpp_vector
+    else:
+        access_vector = None
 
     if algorithm == "lpm2_kdtree":
-        samples = None
-        #call C++ bound function
+        samples = hlpm2_cpp(raster.cpp_raster, access_vector, prob)
 
     if algorithm == "lcube":
-        samples = None
-        #call C++ bound function
+        samples = lcube_cpp(raster.cpp_raster, access_vector, prob)
 
     if algorithm == "lcubestratified":
-        samples = None
-        #call C++ bound function
-        #this one will likely require some checking to ensure there is a 'strata' layer in the raster
+        if 'strata' not in raster.bands:
+            raise ValueError("raster must have a band 'strata'")
+        samples = lcube_stratified_cpp(raster.cpp_raster, access_vector, prob)
     
     #TODO: convert coordinates to spatial points
 

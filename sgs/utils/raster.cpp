@@ -7,8 +7,6 @@
  *
  ******************************************************************************/
 
-#include <iostream>
-
 #include "raster.h"
 
 /******************************************************************************
@@ -232,9 +230,6 @@ py::buffer GDALRasterWrapper::getRasterAsMemView() {
 	if (!this->rasterAllocated) {
 		this->allocateRaster();
 	}
-
-	std::cout << "raster location in memory" << std::endl;
-	std::cout << this->p_raster << std::endl;
 
 	switch(this->p_dataset->GetRasterBand(1)->GetRasterDataType()) {
 		case GDT_Int8:
