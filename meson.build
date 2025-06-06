@@ -5,6 +5,7 @@ if host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
   WIN = true
 endif
 
+<<<<<<< HEAD
 #install required dependencies using vcpkg
 if WIN
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
@@ -18,7 +19,7 @@ else
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
 endif
 
-#define include directory
+#define directories
 if WIN
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
@@ -26,6 +27,12 @@ else
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
 endif
+utils_inc_dir = include_directories('sgs/utils')
+balanced_sampling_inc_dir = include_directories('sgs/extern/balancedSampling')
+
+#get the python lib name for any version of python
+python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
+
 
 win_libs = [
   'aec-static',
@@ -48,6 +55,7 @@ linux_libs = [
 ]
 
 common_libs = [
+  python_lib,
   'crypto',
   'curl',
   'ecpg',
