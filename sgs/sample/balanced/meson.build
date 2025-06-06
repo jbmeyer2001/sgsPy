@@ -7,7 +7,7 @@ py.extension_module(
     inc_dir, 
     utils_inc_dir, 
     balanced_sampling_inc_dir
-  ],
+    ],
   objects: [
     #from sgs/utils
     raster_obj,                 
@@ -23,6 +23,6 @@ py.extension_module(
     kdtree_class_obj,
     lpm_class_obj,
     rref_obj,
-  ],
-  install: true,
+    ],
+    install: true,
 )

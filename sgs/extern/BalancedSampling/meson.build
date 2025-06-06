@@ -1,5 +1,5 @@
 #build balanced sampling package as library
-balanced_sampling_lib = static_library(
+balanced_sampling_lib = shared_library(
   'balanced_sampling_lib',
   'CubeClass.cc',
   'CubeClass.h',
@@ -22,6 +22,7 @@ balanced_sampling_lib = static_library(
   'uniform.h',
   'utils.h',
   'utils-matrix.h',
+  install: true
 )
 
 cube_class_obj = balanced_sampling_lib.extract_objects('CubeClass.cc')

@@ -1,15 +1,17 @@
 #build GDALRasterWrapper as library
-raster_lib = static_library(
+raster_lib = shared_library(
   'raster_lib', 'raster.cpp', 'raster.h',
   dependencies: [lib_deps, py.dependency()],
   include_directories: [inc_dir],
+  install: true
 )
 
 #build GDALVectorWrapper as library
-vector_lib = static_library(
+vector_lib = shared_library(
   'vector_lib', 'vector.cpp', 'vector.h',
   dependencies: [lib_deps, py.dependency()],
   include_directories: [inc_dir],
+  install: true
 )
 
 #acquire objects to be used in python modules
