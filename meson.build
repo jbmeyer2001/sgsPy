@@ -1,4 +1,10 @@
-project('sgs', 'cpp')
+project(
+  'sgs', 
+  'cpp',
+  default_options: [
+      'b_vscrt=mt'
+  ],
+)
 
 #get build operating system
 if host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
