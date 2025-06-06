@@ -5,7 +5,6 @@ if host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
   WIN = true
 endif
 
-<<<<<<< HEAD
 #install required dependencies using vcpkg
 if WIN
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
@@ -31,8 +30,18 @@ utils_inc_dir = include_directories('sgs/utils')
 balanced_sampling_inc_dir = include_directories('sgs/extern/balancedSampling')
 
 #get the python lib name for any version of python
-python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
-
+if WIN
+  #the following is hacky meson build code to get a version agnostic python library name, run from either powershell or cmd
+  tree_output = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows-static/lib', '/f', '/a', check: true).stdout().strip().split('|')
+  foreach filename : tree_output
+    stripped_filename = filename.strip()
+    if stripped_filename.startswith('python') and stripped_filename.endswith('.lib')
+      python_lib = stripped_filename.split('.').get(0)
+    endif
+  endforeach
+else
+  python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
+endif
 
 win_libs = [
   'aec-static',
