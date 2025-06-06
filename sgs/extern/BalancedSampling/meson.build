@@ -24,9 +24,12 @@ balanced_sampling_lib = static_library(
   'utils-matrix.h',
 )
 
-#the classes which are included directly in balanced.cpp
 cube_class_obj = balanced_sampling_lib.extract_objects('CubeClass.cc')
 cube_stratified_class_obj = balanced_sampling_lib.extract_objects('CubeStratifiedClass.cc')
+cube_vector_in_null_space_obj = balanced_sampling_lib.extract_objects('CubeVectorInNullSpace.cc')
 index_list_class_obj = balanced_sampling_lib.extract_objects('IndexListClass.cc')
+kdnode_class_obj = balanced_sampling_lib.extract_objects('KDNodeClass.cc')
+kdstore_class_obj = balanced_sampling_lib.extract_objects('KDStoreClass.cc')
 kdtree_class_obj = balanced_sampling_lib.extract_objects('KDTreeClass.cc')
 lpm_class_obj = balanced_sampling_lib.extract_objects('LpmClass.cc')
+rref_obj = balanced_sampling_lib.extract_objects('ReducedRowEchelonForm.cc')

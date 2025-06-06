@@ -9,13 +9,20 @@ py.extension_module(
     balanced_sampling_inc_dir
   ],
   objects: [
-    raster_obj,                 #from sgs/utils
-    vector_obj,                 #from sgs/utils
-    cube_class_obj,             #from sgs/extern/BalancedSampling
-    cube_stratified_class_obj,  #form sgs/extern/BalancedSampling
-    index_list_class_obj,       #from sgs/extern/BalancedSampling
-    kdtree_class_obj,           #from sgs/extern/BalancedSampling
-    lpm_class_obj               #from sgs/extern/BalancedSampling
+    #from sgs/utils
+    raster_obj,                 
+    vector_obj,
+
+    #from sgs/extern/BalancedSampling
+    cube_class_obj,             
+    cube_stratified_class_obj,
+    cube_vector_in_null_space_obj,
+    index_list_class_obj,       
+    kdnode_class_obj,
+    kdstore_class_obj,
+    kdtree_class_obj,
+    lpm_class_obj,
+    rref_obj,
   ],
   install: true,
 )

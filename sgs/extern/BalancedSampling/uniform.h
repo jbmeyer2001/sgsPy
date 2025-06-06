@@ -1,9 +1,8 @@
 #ifndef STDUNIFORM_HEADER
 #define STDUNIFORM_HEADER
 
-//#include <uniform_int_distribution>
-//#include <uniform_real_distribution>
 #include <random>
+#include <iostream>
 
 //BAD CHANGE THIS IN FUTURE TO NOT USE GLOBAL VARS
 static std::random_device rd;
@@ -30,13 +29,19 @@ inline double stduniform(double v) {
 };
 
 inline int intuniform(int N) {
+	std::cout << "called with N: " << N << std::endl;
 	std::uniform_int_distribution<int> dist(0, N);
-	return dist(gen);
+	int retval = dist(gen);
+	std::cout << "returning " << retval << std::endl;
+	return retval;
 };
 
 inline size_t sizeuniform(size_t N) {
+	std::cout << "called with N: " << N << std::endl;
 	std::uniform_int_distribution<size_t> dist(0, N);
-  	return dist(gen);
+	int retval = dist(gen);
+	std::cout << "returning " << retval << std::endl;
+  	return retval;
 };
 
 #endif

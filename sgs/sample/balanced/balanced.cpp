@@ -13,6 +13,7 @@
  *
  ******************************************************************************/
 
+#include <iostream>
 
 //sgs/utils cpp code
 #include "raster.h"
@@ -25,59 +26,74 @@
 #include "KDTreeClass.h"
 #include "LpmClass.h"
 
+/**
+ *
+ */
 std::vector<size_t> lcube_cpp(
 	GDALRasterWrapper *raster,
-	GDALVectorWrapper *access,
- 	std::vector<double> prob)
-//  	Rcpp::NumericMatrix &xbal,
-//  	Rcpp::NumericMatrix &xspread
+	//GDALVectorWrapper *access,
+ 	py::buffer prob) 
 {
 	//set default parameters according to 
 	//https://github.com/envisim/BalancedSampling/blob/2.1.1/R/lcube.R
+	//https://github.com/envisim/BalancedSampling/blob/2.1.1/R/utils.R
 	size_t treeBucketSize = 50;
 	double eps = 1e-12;
-	int treeMethod = kdtree_method_check("kdtree", treeBucketSize);
+	int treeMethod = 2; //'kdtree2' method
 
+	std::cout << "initialized default params" << std::endl;
+		
+	//if (access) {
+		//implement later once access functionality is implemented
+	//}
 
-  	size_t N = xbal.nrow();
-  	size_t pbal = xbal.ncol();
-  	size_t pspread = xspread.nrow(); //number of variables per pixel
+	std::cout << "passed access stuff" << std::endl;
 
-  	if (N != (size_t)xspread.ncol())
-   		throw std::invalid_argument("xbal and xspread does not match");
-  	if (N != (size_t)prob.length())
-    	throw std::invalid_argument("prob and x does not match");
+	double *p_prob = (double *)prob.request().ptr;
+  	size_t N = (size_t)raster->getWidth() * (size_t)raster->getHeight();
+  	std::unique_ptr<double> xbal(new double[raster->getHeight() * raster->getWidth()]);
+	std::memcpy(xbal.get(), p_prob, sizeof(double) * N);
+	size_t pbal = 1;
+	double *xspread = (double *)raster->getRaster();
+  	size_t pspread = (size_t)raster->getBandCount();
 
-	std::cout << "create instance of Cube class" << std::endl;
-  	//Cube cube(
-    	//	prob.data(), 	//const double*
-    	//	REAL(xbal), 	//double *
-    	//	N,				//const size_t
-    	//	pbal,			//const size_t
-    	//	eps,			//const double
-    	//	REAL(xspread), 	//double 8
-    	//	pspread,		//const size_t
-    	//	treeBucketSize,	//const size_t
-    	//	treeMethod		//const int
-  	//);
+	std::cout << "probs: " << *p_prob << std::endl;
+	std::cout << "N: " << N << std::endl;
+	std::cout << "xbal first: " << *xbal.get() << std::endl;
+	std::cout << "pbal: " << pbal << std::endl;
+	std::cout << "pspread: " << pspread << std::endl;
+	std::cout << "defined remaining variables, calling Cube constructor" << std::endl;
 
-	std::cout << "call cube.Run()" << std::endl;
-  	//cube.Run();
+  	Cube cube(
+    		p_prob, 			//const double*
+    		xbal.get(), 	//double *
+    		N,				//const size_t
+    		pbal,			//const size_t
+    		eps,			//const double
+    		xspread, 		//double *
+    		pspread,		//const size_t
+    		treeBucketSize,	//const size_t
+    		treeMethod		//const int
+  	);
 
-	std::cout << "call sample()" << std::endl;
-	//std::vector<size_t> sample(cube.sample.begin(), cube.sample.end());
+	std::cout << "calling cube.Run()" << std::endl;
+  	cube.Run();
 
-	std::cout << "return result of sample()" << std::endl;
-  	//return sample;
+	std::cout << "getting vector" << std::endl;
+	std::vector<size_t> sample(cube.sample.begin(), cube.sample.end());
 
-	return {};
+	std::cout << "returning" << std::endl;
+  	return sample;
 }
 
+/**
+ *
+ */
 void lcube_stratified_cpp(
 	GDALRasterWrapper *raster,
-	GDALVectorWrapper *access,
-	std::vector<double> prob	
-) {
+	//GDALVectorWrapper *access,
+	double *prob) 
+{
 	std::cout << "lcube_stratified_cpp() has not been implemented!!!" << std::endl;
 }
 
@@ -126,9 +142,9 @@ Rcpp::IntegerVector lcube_stratified_cpp(
 
 void hlpm2_cpp(
 	GDALRasterWrapper *raster,
-	GDALVectorWrapper *vector,
-	std::vector<double> prob	
-) {
+	//GDALVectorWrapper *vector,
+	double *prob) 
+{
 	std::cout << "hlpm2_cpp() has not been implemented!!!" << std::endl;
 }
 

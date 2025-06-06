@@ -1,5 +1,7 @@
 from typing import Optional
 
+import numpy as np
+
 from sgs.utils import (
         access,
         SpatialRaster,
@@ -7,10 +9,13 @@ from sgs.utils import (
         plot,
         write,
 )
+from balanced import (
+        lcube_cpp, 
+        lcube_stratified_cpp, 
+        hlpm2_cpp
+)
 
-from balanced import lcube_cpp, lcube_stratified_cpp, hlpm2_cpp
-
-def balanced(raster: SpatialRaster,
+def balanced(rast: SpatialRaster,
              num_samples: int,
              algorithm: str = "lpm2_kdtree",
              prob: Optional[list[float]] = None,
@@ -32,21 +37,29 @@ def balanced(raster: SpatialRaster,
     if algorithm not in ["lpm2_kdtree", "lcube", "lcubestratified"]:
         raise ValueError("algorithm parameter must specify one of: 'lpm2_kdtree', 'lcube', 'lcubestratified'.")
 
-    if access:
-        access_vector = access.cpp_vector
+    if prob:
+        if len(prob) != rast.width * rast.height:
+            ValueError("length of probability list must be equal to the number of pixels in the image")
+        prob = np.ascontiguousarray(
+            prob, 
+            dtype=np.float64
+        )
     else:
-        access_vector = None
+        prob = np.full(
+            shape = rast.width * rast.height, 
+            fill_value = num_samples / (rast.width * rast.height),
+            dtype = np.float64,
+            order = 'C',
+        )
 
     if algorithm == "lpm2_kdtree":
-        samples = hlpm2_cpp(raster.cpp_raster, access_vector, prob)
-
-    if algorithm == "lcube":
-        samples = lcube_cpp(raster.cpp_raster, access_vector, prob)
-
-    if algorithm == "lcubestratified":
+        samples = hlpm2_cpp(rast.cpp_raster, prob.data)
+    elif algorithm == "lcube":
+        samples = lcube_cpp(rast.cpp_raster, prob.data)
+    else:
         if 'strata' not in raster.bands:
-            raise ValueError("raster must have a band 'strata'")
-        samples = lcube_stratified_cpp(raster.cpp_raster, access_vector, prob)
+            raise ValueError("raster must have a band 'strata' if using lcubestratified method.")
+        samples = lcube_stratified_cpp(rast.cpp_raster, prob.data)
     
     #TODO: convert coordinates to spatial points
 
@@ -58,5 +71,4 @@ def balanced(raster: SpatialRaster,
         #TODO add when write has been implemented
         sgs.utils.write(filename, overwrite)
 
-    print(__file__)
-    raise NotImplementedError
+    return samples
