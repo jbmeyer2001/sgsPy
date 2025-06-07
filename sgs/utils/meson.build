@@ -20,10 +20,10 @@ vector_obj = vector_lib.extract_objects('vector.cpp')
 py.extension_module(
   'raster',
   ['raster_pybind.cpp'],
-  link_with: [raster_lib],
+  #link_with: [raster_lib],
   dependencies: [lib_deps],
   include_directories: inc_dir,
-    objects: [raster_obj],
+  objects: [raster_obj],
   install: true,
 )
 
