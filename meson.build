@@ -29,6 +29,18 @@ endif
 utils_inc_dir = include_directories('sgs/utils')
 balanced_sampling_inc_dir = include_directories('sgs/extern/balancedSampling')
 
+#add to link args if necessary
+link_arguments = []
+if WIN
+  link_arguments += [
+    '-lws2_32', 
+    '-lcrypt32', 
+    '-lsecur32', 
+    '-lwldap32', 
+    '-lwbemuuid'
+  ]
+endif
+
 #get compiler, and use to find lib files in lib directory
 cxx = meson.get_compiler('cpp')
 

@@ -12,9 +12,16 @@ vector_lib = static_library(
   include_directories: [inc_dir],
 )
 
-#acquire objects to be used in python modules
-#raster_obj = raster_lib.extract_objects('raster.cpp')
-#vector_obj = vector_lib.extract_objects('vector.cpp')
+#acquire objects if necessary
+if not WIN
+  raster_obj = raster_lib.extract_objects('raster.cpp')
+  vector_obj = vector_lib.extract_objects('vector.cpp')
+  raster_module_objects = [raster_obj]
+  vector_module_objects = [vector_obj]
+else
+  raster_module_objects = []
+  vector_module_objects = []
+endif
 
 #create raster module
 py.extension_module(
@@ -23,9 +30,9 @@ py.extension_module(
   link_with: [raster_lib],
   dependencies: [lib_deps],
   include_directories: inc_dir,
-  #objects: [raster_obj],
+  objects: raster_module_objects, #only defined if linux
   install: true,
-  link_args: ['-lws2_32', '-lcrypt32', '-lsecur32', '-lwldap32', '-lwbemuuid'],
+  link_args: link_arguments,    #only defined if windows
 )
 
 #create vector module
@@ -35,6 +42,7 @@ py.extension_module(
   link_with: [vector_lib],
   dependencies: [lib_deps],
   include_directories: inc_dir,
+  objects: vector_module_objects, #only defined if linux
   install: true,
-  link_args: ['-lws2_32', '-lcrypt32', '-lsecur32', '-lwldap32', '-lwbemuuid'],
+  link_args: link_arguments,      #only defined if windows
 )
