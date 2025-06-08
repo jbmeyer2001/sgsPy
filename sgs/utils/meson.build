@@ -12,37 +12,56 @@ vector_lib = static_library(
   include_directories: [inc_dir],
 )
 
-#acquire objects if necessary
-if not WIN
+#both windows and linux builds need to be linked slightly differently.
+#windows requires the use of the link_with argument, whereas Linux
+#requires extracted objects to be added.
+#
+#Windows additionally requires linker arguments to search for .lib files
+#from the Windows SDK.
+if WIN
+  #create raster module
+  py.extension_module(
+    'raster',
+    ['raster_pybind.cpp'],
+    link_with: [raster_lib],
+    link_args: win_link_args, 
+    dependencies: [lib_deps],
+    include_directories: inc_dir,
+    install: true,
+  )
+
+  #create vector module
+  py.extension_module(
+    'vector',
+    ['vector_pybind.cpp'],
+    link_with: [vector_lib],
+    link_args: win_link_args,
+    dependencies: [lib_deps],
+    include_directories: inc_dir,
+    install: true,
+  )
+else #linux
+  #first, extract objects to be linked. These will be used elsewhere in the project as well
   raster_obj = raster_lib.extract_objects('raster.cpp')
   vector_obj = vector_lib.extract_objects('vector.cpp')
-  raster_module_objects = [raster_obj]
-  vector_module_objects = [vector_obj]
-else
-  raster_module_objects = []
-  vector_module_objects = []
+
+  #create raster module
+  #py.extension_module(
+    #'raster',
+    #['raster_pybind.cpp'],
+    #dependencies: [lib_deps],
+    #include_directories: inc_dir,
+    #objects: [raster_obj],
+    #install: true,
+    #)
+
+  #create vector module
+  #py.extension_module(
+    #'vector',
+    #['vector_pybind.cpp'],
+    #dependencies: [lib_deps],
+    #include_directories: inc_dir,
+    #objects: [vector_obj],
+    #install: true,
+    #  )
 endif
-
-#create raster module
-py.extension_module(
-  'raster',
-  ['raster_pybind.cpp'],
-  link_with: [raster_lib],
-  dependencies: [lib_deps],
-  include_directories: inc_dir,
-  objects: raster_module_objects, #only defined if linux
-  install: true,
-  link_args: link_arguments,    #only defined if windows
-)
-
-#create vector module
-py.extension_module(
-  'vector',
-  ['vector_pybind.cpp'],
-  link_with: [vector_lib],
-  dependencies: [lib_deps],
-  include_directories: inc_dir,
-  objects: vector_module_objects, #only defined if linux
-  install: true,
-  link_args: link_arguments,      #only defined if windows
-)
