@@ -46,22 +46,22 @@ else #linux
   vector_obj = vector_lib.extract_objects('vector.cpp')
 
   #create raster module
-  #py.extension_module(
-    #'raster',
-    #['raster_pybind.cpp'],
-    #dependencies: [lib_deps],
-    #include_directories: inc_dir,
-    #objects: [raster_obj],
-    #install: true,
-    #)
+  py.extension_module(
+    'raster',
+    ['raster_pybind.cpp'],
+    dependencies: [lib_deps],
+    include_directories: inc_dir,
+    objects: [raster_obj],
+    install: true,
+  )
 
   #create vector module
-  #py.extension_module(
-    #'vector',
-    #['vector_pybind.cpp'],
-    #dependencies: [lib_deps],
-    #include_directories: inc_dir,
-    #objects: [vector_obj],
-    #install: true,
-    #  )
+  py.extension_module(
+    'vector',
+    ['vector_pybind.cpp'],
+    dependencies: [lib_deps],
+    include_directories: inc_dir,
+    objects: [vector_obj],
+    install: true,
+  )
 endif

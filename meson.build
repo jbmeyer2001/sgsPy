@@ -3,9 +3,6 @@ project('sgs', 'cpp')
 #get build operating system
 WIN = host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
 
-message('WIN:')
-message(WIN)
-
 #install required dependencies using vcpkg
 if WIN
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
@@ -72,6 +69,8 @@ if WIN
 else #linux
   python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
   
+  #in linux list all of the libs rather than programatically finding them
+  #because of multiple definition errors. 
   libs = [
     python_lib,
     'aec',
@@ -139,15 +138,6 @@ else #linux
   foreach lib : libs
     lib_deps += cxx.find_library(lib, dirs : [lib_dir], static:true)
   endforeach
-
-  #use find and regex to return only the files which are libraries (.a)
-  #libs = run_command('find', lib_dir, '-regex', '.*\.a', check:true).stdout().strip().split('\n')
-  #foreach lib : libs
-  #
-  #  #remove 'lib' at the beginning and '.a' at the end to get just the lib name, and add it to dependencies
-  #  lib = lib.replace('./lib', '').replace('.a', '')
-  #  lib_deps += cxx.find_library(lib, dirs: lib_dir, static: true)
-  #endforeach
 endif
 
 py = import('python').find_installation(pure: false)
