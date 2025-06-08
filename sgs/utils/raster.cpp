@@ -230,7 +230,7 @@ py::buffer GDALRasterWrapper::getRasterAsMemView() {
 	if (!this->rasterAllocated) {
 		this->allocateRaster();
 	}
-	
+
 	switch(this->p_dataset->GetRasterBand(1)->GetRasterDataType()) {
 		case GDT_Int8:
 			return getBuffer<int8_t>(1);

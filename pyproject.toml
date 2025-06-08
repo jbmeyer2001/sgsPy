@@ -16,6 +16,9 @@ dependencies = [
 #TODO add license
 #license = {file = "LICENSE.txt"}
 
+[tool.meson-python.args]
+setup = ['-Db_vscrt=mt']
+
 [tool.pytest.ini_options]
 pythonpath = "."
 testpaths = [

@@ -72,14 +72,3 @@ class GDALVectorWrapper {
 	 */
 	OGRLayer *getLayer(std::string layerName);
 };
-
-/**
- * pybind11 module for exposting GDALVectorWrapper data to Python.
- * Define only constructor and relevant getter functions.
- */
-PYBIND11_MODULE(vector, m) {
-	py::class_<GDALVectorWrapper>(m, "GDALVectorWrapper")
-		.def(py::init<std::string>())
-		.def("get_layer_names", &GDALVectorWrapper::getLayerNames)
-		.def("get_layer_info", &GDALVectorWrapper::getLayerInfo);
-}

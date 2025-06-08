@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "CubeClass.h"
 #include "CubeVectorInNullSpace.h"
@@ -186,6 +187,9 @@ void Cube::Draw_lcube() {
   size_t maxSize = MaxSize() - 1;
   candidates.resize(1);
 
+  std::cout << "in Draw_lcube()" << std::endl;
+  std::cout << "maxSize = " << maxSize << std::endl;
+
   // Set the first unit
   size_t id = idx->Draw();
   candidates[0] = id;
@@ -194,6 +198,8 @@ void Cube::Draw_lcube() {
   store->maxSize = maxSize;
   tree->FindNeighbours(store, id);
   size_t size = store->GetSize();
+
+  std::cout << "size = " << size << std::endl;
 
   // If we have no equal dist units at the end, we can just return the candidates
   if (size == maxSize) {

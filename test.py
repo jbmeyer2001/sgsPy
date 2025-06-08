@@ -1,8 +1,15 @@
 import os
 
 import sgs
-from sgs.utils import SpatialRaster
+from sgs import SpatialRaster
 import numpy as np
+
+'''
+rast = SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
+samples = sgs.balanced(rast, 5, 'lcube')
+print(samples)
+print('ran sgs.balanced() to completion and printed samples')
+'''
 
 folder = os.path.join(os.path.dirname(__file__), 'tests', 'utils', 'files')
 access_shapefile_path = os.path.join(folder, 'access.shp')
