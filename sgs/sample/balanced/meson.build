@@ -6,7 +6,7 @@
 #from the Windows SDK.
 
 if WIN
-#create balanced module
+  #create balanced module
   py.extension_module(
     'balanced',
     ['balanced.cpp'],
@@ -22,7 +22,7 @@ if WIN
       balanced_sampling_inc_dir
     ],
     install: true,
-    link_args: link_arguments,                #only defined if windows
+    link_args: win_link_args,
   )
 else #linux
   #create balanced module

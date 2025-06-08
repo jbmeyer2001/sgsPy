@@ -62,7 +62,7 @@ if WIN
 
       #get just the lib name and add it to the dependencies
       lib = lib.split('.').get(0)
-      lib_deps += cxx.find_library(filename, dirs: lib_dir, static: true)
+      lib_deps += cxx.find_library(lib, dirs: lib_dir, static: true)
    
     endif
   endforeach
