@@ -30,15 +30,16 @@ utils_inc_dir = include_directories('sgs/utils')
 balanced_sampling_inc_dir = include_directories('sgs/extern/balancedSampling')
 
 #add to link args if necessary
-link_arguments = []
 if WIN
-  link_arguments += [
+  link_arguments = [
     '-lws2_32', 
     '-lcrypt32', 
     '-lsecur32', 
     '-lwldap32', 
     '-lwbemuuid'
   ]
+else
+  link_arguments = []
 endif
 
 #get compiler, and use to find lib files in lib directory
@@ -46,8 +47,7 @@ cxx = meson.get_compiler('cpp')
 
 lib_deps = []
 
-#TODO: look into just using find(GDAL) or something similar
-#get the python lib name for any version of python
+#add all libraries in the vcpkg lib directory to the project
 if WIN
   #the following is hacky meson build code to get a version agnostic python library name, run from either powershell or cmd
   tree_output = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows-static/lib', '/f', '/a', check: true).stdout().strip().split('|')
@@ -64,20 +64,6 @@ if WIN
 else
   python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
 endif
-
-#foreach lib : common_libs
-#  lib_deps += cxx.find_library(lib, dirs : lib_dir, static:true)
-#endforeach
-#
-#if WIN
-#  foreach lib : win_libs
-#    lib_deps += cxx.find_library(lib, dirs : lib_dir, static:true)
-#  endforeach
-#else
-#  foreach lib : linux_libs
-#    lib_deps += cxx.find_library(lib, dirs : lib_dir, static:true)
-#  endforeach
-#endif
 
 py = import('python').find_installation(pure: false)
 
