@@ -1,10 +1,15 @@
 #build GDALRasterWrapper as library
-raster_lib = shared_library(
-  'raster', 'raster.cpp', 'raster.h',
-  dependencies: [lib_deps, py.dependency()],
-  include_directories: [inc_dir],
-  install: true
-)
+
+#path_to_install = py.get_install_dir() + 'sgs/utils'
+#message(path_to_install)
+
+#raster_lib = shared_library(
+#  'raster', 'raster.cpp', 'raster.h',
+#  dependencies: [lib_deps, py.dependency()],
+#  include_directories: [inc_dir],
+#  link_args: [ '/IMPLIB:' + join_paths(meson.current_build_dir(), 'sgs/utils/raster.lib') ],
+#  install: true,
+#)
 
 #build GDALVectorWrapper as library
 #vector_lib = shared_library(
@@ -20,9 +25,9 @@ raster_lib = shared_library(
 
 #create raster module
 py.extension_module(
-  'sgs/utils/raster',
-  ['raster_pybind.cpp'],
-  link_with: [raster_lib],
+  'raster',
+  ['raster.h', 'raster.cpp', 'raster_pybind.cpp'],
+  #  link_with: [raster_lib],
   dependencies: [lib_deps],
   include_directories: inc_dir,
   install: true,
