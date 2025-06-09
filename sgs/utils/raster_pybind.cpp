@@ -25,6 +25,7 @@ PYBIND11_MODULE(raster, m) {
 		.def("get_xmax", &GDALRasterWrapper::getXMax)
 		.def("get_ymin", &GDALRasterWrapper::getYMin)
 		.def("get_ymax", &GDALRasterWrapper::getYMax)
+		.def("get_origin", &GDALRasterWrapper::getOrigin)
 		.def("get_pixel_height", &GDALRasterWrapper::getPixelHeight)
 		.def("get_pixel_width", &GDALRasterWrapper::getPixelWidth)
 		.def("get_bands", &GDALRasterWrapper::getBands)
