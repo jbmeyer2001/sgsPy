@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 def arrange_bands_from_list(raster, bands_list):
     """
     Used by plot_raster function. Converts all bands in initial list to int indexes
@@ -56,9 +59,9 @@ def plot_raster(raster, ax, target_width, target_height, bands=None, **kwargs):
         raster to plot
     ax : matplotlib axis
         the axis to plot the image on
-    max_width : int
+    target_width : int
         maximum width in pixels for the image (after downsampling)
-    max_height : int
+    target_height : int
         maximum height in pxeils for the image (after downsampling)
     bands (optional) : int or str or list or dict
         specification of which bands to plot
@@ -98,15 +101,17 @@ def plot_raster(raster, ax, target_width, target_height, bands=None, **kwargs):
     else:
         downsamlped_width = int(raster.width / 8)
         downsampled_heigth = int(raster.height / 8)
-    arr = raster.get_downsampled_arr(downsampled_width, downsampled_height)
+    arr = np.asarray(
+        raster.cpp_raster.get_raster_as_memoryview(downsampled_width, downsampled_height),
+        copy=False
+    )
 
     #get raster origin and raster extent
-    origin = raster.cpp_raster.get_origin()
     extent = (raster.xmin, raster.xmax, raster.ymin, raster.ymax) #(left, right, top, bottom)
 
     #add image to matplotlib
     display_arr = np.moveaxis(arr[bands, :, :], 0, 2)
-    ax.imshow(display_arr, origin=origin, extent=extent, **kwargs)
+    ax.imshow(display_arr, origin='upper', extent=extent, **kwargs)
 
 def plot_vector():
     pass

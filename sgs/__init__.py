@@ -6,8 +6,6 @@ from . import stratify
 from .utils import (
     access,
     plot,
-    plot_raster,
-    plot_vector,
     SpatialRaster,
     SpatialVector,
     write,

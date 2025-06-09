@@ -134,11 +134,6 @@ double GDALRasterWrapper::getYMin() {
 	);
 }
 
-std::vector<double> GDALRasterWrapper::getOrigin() {
-	std::vector<double> origin = {this->geotransform[0], this->geotransform[3]};
-	return origin;
-}
-
 /******************************************************************************
 				getPixelWidth()
 ******************************************************************************/

@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 
 from raster import GDALRasterWrapper
 
+from .import plot
+from .plot import plot_raster
+
 class SpatialRaster:
     """
     A Python wrapper of the C++ class GDALRasterWrapper. GDAL is used on the C++ side rather
@@ -59,9 +62,14 @@ class SpatialRaster:
 
     Plotting raster:
 
-        the plot_image() function provides a wrapper around matplotlibs imshow 
+        the plot() function provides a wrapper around matplotlibs imshow 
         functionality (matplotlib.pyplot.imshow). As such, either a single band 
-        can be plotted, or three bands can be plotted as an RGB image.
+        can be plotted, or three bands can be plotted as an RGB image. 
+
+        Target width and heights can be given in the parameters 
+        target_width and target_height. Default parameters are 1000 pixels for both. 
+        Information on the actual downsampling can be found here:
+        https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
 
         If no 'bands' argument is given, the function may throw an error if the
         image does not contain 1 or 3 bands.
@@ -263,13 +271,13 @@ class SpatialRaster:
 
     def plot(self, target_width=1000, target_height=1000, bands=None, **kwargs):
         """
-        Calls sgs.utils.plot_raster() on self.
+        Calls plot_raster() on self.
 
         Parameters
         --------------------
-        max_width : int
+        target_width : int
             maximum width in pixels for the image (after downsampling)
-        max_height : int
+        target_height : int
             maximum height in pxeils for the image (after downsampling)
         bands (optional) : int or str or list or dict
             specification of which bands to plot
@@ -283,6 +291,6 @@ class SpatialRaster:
         """
 
         fig, ax = plt.subplots()
-        sgs.utils.plot_raster(self, ax, max_width, max_height, bands, **kwargs)
+        plot_raster(self, ax, target_width, target_width, bands, **kwargs)
         plt.show()
         

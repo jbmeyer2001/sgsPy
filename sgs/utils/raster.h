@@ -172,13 +172,6 @@ class GDALRasterWrapper {
 	double getYMin();
 
 	/**
-	 * Getter method for the origin of the image, using geotransform.
-	 *
-	 * @returns std::vector<double> 
-	 */
-	std::vector<double> getOrigin();
-
-	/**
 	 * Getter method for the pixel width. Scalar (absolute) value is given.
 	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
