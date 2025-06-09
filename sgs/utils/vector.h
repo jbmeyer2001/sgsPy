@@ -71,4 +71,12 @@ class GDALVectorWrapper {
 	 * @returns OGRLayer * pointer to a created instance of OGRLayer
 	 */
 	OGRLayer *getLayer(std::string layerName);
+
+	/**
+	 * Getter method for the vector geometries as strings.
+	 *
+	 * @param std::string layer name
+	 * @returns std::vector<std::string> array of strings
+	 */
+	std::vector<std::string> getGeometries(std::string layerName);
 };

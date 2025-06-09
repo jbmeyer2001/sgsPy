@@ -63,3 +63,19 @@ std::unordered_map<std::string, std::string> GDALVectorWrapper::getLayerInfo(std
 OGRLayer *GDALVectorWrapper::getLayer(std::string layerName) {
 	return this->p_dataset->GetLayerByName(layerName.c_str());
 }
+
+/******************************************************************************
+				getGeometries()
+******************************************************************************/
+std::vector<std::string> GDALVectorWrapper::getGeometries(std::string layerName) {
+	std::vector<std::string> retval;
+
+	OGRLayer *p_layer = this->p_dataset->GetLayerByName(layerName.c_str());
+	for ( const auto& p_feature : *p_layer) {
+		char *wkt;
+		p_feature->GetGeometryRef()->exportToWkt(&wkt);
+		retval.push_back(std::string(wkt));
+	}
+
+	return retval;
+}
