@@ -18,5 +18,6 @@ PYBIND11_MODULE(vector, m) {
 		.def(py::init<std::string>())
 		.def("get_layer_names", &GDALVectorWrapper::getLayerNames)
 		.def("get_layer_info", &GDALVectorWrapper::getLayerInfo)
-		.def("get_geometries", &GDALVectorWrapper::getGeometries);
+		.def("get_points", &GDALVectorWrapper::getPoints)
+		.def("get_linestrings", &GDALVectorWrapper::getLineStrings);
 }
