@@ -175,14 +175,17 @@ def plot_vector(vector,
     
     if geomtype == "Point" or geomtype == "MultiPoint":
         points = vector.cpp_vector.get_points(layer_name)
-        if 'fmt' not in kwargs:
-            kwargs['fmt'] = '.r' #specify format as red points if format was not given
-        ax.plot(points[0], points[1], **kwargs)
+        if 'fmt' in kwargs:
+             ax.plot(points[0], points[1], **kwargs)
+        else:
+            ax.plot(points[0], points[1], '.r', **kwargs) #specify format as red points if format was not given
     elif geomtype == "LineString" or geomtype == "MultiLineString":
         lines = vector.cpp_vector.get_linestrings(layer_name)
-        if 'fmt' not in kwargs:
-            kwargs['fmt'] = '-k' #specify format as black line of format was not given
-        for line in lines:
-            ax.plot(line[0], line[1], **kwargs)
+        if 'fmt' in kwargs:
+            for line in lines:
+                ax.plot(line[0], line[1], **kwargs)
+        else:
+            for line in lines:
+                ax.plot(line[0], line[1], '-k', **kwargs) #specify format as black lines if format was not give
     else:
         raise ValueError("geomtype must be of type 'Point', 'MultiPoint', 'LineString', or 'MultiLineString'");
