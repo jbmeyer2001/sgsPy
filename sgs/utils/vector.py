@@ -7,7 +7,12 @@
 #
 # ******************************************************************************
 
+import matplotlib.pyplot as plt
+
 from vector import GDALVectorWrapper
+
+from.import plot
+from .plot import plot_vector
 
 class SpatialVector:
     """
@@ -106,3 +111,9 @@ class SpatialVector:
             self.print_info(layers[layer], self.cpp_vector.get_layer_info(layers[layer]))
         else:
               TypeError("layer parameter cannot be of type {}".format(type(layer)))
+
+    def plot(self, geomtype, layer=None, **kwargs):
+        fig, ax = plt.subplots()
+        plot_vector(self, ax, geomtype, layer, **kwargs)
+        plt.show()
+

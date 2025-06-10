@@ -113,9 +113,30 @@ def plot_raster(raster, ax, target_width, target_height, bands=None, **kwargs):
     display_arr = np.moveaxis(arr[bands, :, :], 0, 2)
     ax.imshow(display_arr, origin='upper', extent=extent, **kwargs)
 
-def plot_vector():
-    pass
+def plot_vector(vector, ax, geomtype, layer, **kwargs):
+    if layer is None:
+        if len(self.layers) == 1:
+            layer_name = self.layers[0]
+        else:
+            ValueError("no layer was specified, and there is more than one layer in the vector. Specify a layer to plot.");
+    elif type(layer) == str:
+        layer_name = layer
+    elif type(layer) == int:
+        layer_name = self.layers[layer]
 
-def plot():
-    print(__file__)
-    raise NotImplementedError
+    if geomtype == "Point" or geomtype == "MultiPoint":
+        points = vector.cpp_vector.get_points(layer_name)
+        if 'fmt' in kwargs:
+            ax.plot(points[0], points[1], **kwargs)
+        else:
+            ax.plot(points[0], points[1], '.r', **kwargs) #plot red points
+    elif geomtype == "LineString" or geomtype == "MultiLineString":
+        lines = vector.cpp_vector.get_linestrings(layer_name)
+        if 'fmt' in kwargs:
+            for line in lines:
+                ax.plot(line[0], line[1], **kwargs)
+        else:
+            for line in lines:
+                ax.plot(line[0], line[1], '-k', **kwargs) #plot solid black line
+    else:
+        raise ValueError("geomtype must be of type 'Point', 'MultiPoint', 'LineString', or 'MultiLineString'");
