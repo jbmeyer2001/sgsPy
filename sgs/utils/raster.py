@@ -288,6 +288,8 @@ class SpatialRaster:
         --------------------
         TypeError:
             if 'bands' is not of type int, str, list, or dict
+        RuntimeError (from C++)
+            if unable to read raster band
         """
 
         fig, ax = plt.subplots()

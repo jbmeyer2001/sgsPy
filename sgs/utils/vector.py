@@ -112,6 +112,11 @@ class SpatialVector:
         else:
               TypeError("layer parameter cannot be of type {}".format(type(layer)))
 
+    """
+    This function, at present, is only meant to be used for testing purposes.
+
+    In the future, either embellish documentation or delete.
+    """
     def plot(self, geomtype, layer=None, **kwargs):
         fig, ax = plt.subplots()
         plot_vector(self, ax, geomtype, layer, **kwargs)

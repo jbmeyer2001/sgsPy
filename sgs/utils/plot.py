@@ -114,22 +114,55 @@ def plot_raster(raster, ax, target_width, target_height, bands=None, **kwargs):
     ax.imshow(display_arr, origin='upper', extent=extent, **kwargs)
 
 def plot_vector(vector, ax, geomtype, layer, **kwargs):
+    """
+    Plots the specified layer using matplotlib.pyplot.plot.
+    The parameter give by geomtype must be one of:
+    'Point', 'MultiPoint', 'LineString', 'MultiLineString'.
+
+    The layer must contain only geometries of type Point and
+    MultiPoint in the case where 'Point' or 'MultiPoint is given,
+    or geometries of type LineString and MultiLineString 
+    in the case where 'LineString' or 'MultiLineString' is given.
+
+    Parameters
+    --------------------
+    vector : SpatialVector
+        vector to plot
+    ax : matplotlib axis
+        the axis to plot the image on
+    geomtype : str
+        geometry type of the layer
+    layer : None | int | str
+        layer to plot
+    **kwargs (optional)
+        any parameter which may be passed to matplotlib.pyplot.plot
+
+    Raises
+    --------------------
+    ValueError:
+        if no layer was specified, and the image contains more than one layer
+    ValueError:
+        if geomtype is not one of 'Point', 'MultiPoint', 'LineString', 'MultiLineString'
+    RuntimeError (from C++):
+        if the layer contains a geometry NOT of an acceptable type
+    """
+
     if layer is None:
-        if len(self.layers) == 1:
-            layer_name = self.layers[0]
+        if len(vector.layers) == 1:
+            layer_name = vector.layers[0]
         else:
             ValueError("no layer was specified, and there is more than one layer in the vector. Specify a layer to plot.");
     elif type(layer) == str:
         layer_name = layer
     elif type(layer) == int:
-        layer_name = self.layers[layer]
+        layer_name = vector.layers[layer]
 
     if geomtype == "Point" or geomtype == "MultiPoint":
         points = vector.cpp_vector.get_points(layer_name)
         if 'fmt' in kwargs:
             ax.plot(points[0], points[1], **kwargs)
         else:
-            ax.plot(points[0], points[1], '.r', **kwargs) #plot red points
+            ax.plot(points[0], points[1], '.r', **kwargs) #plot as red points
     elif geomtype == "LineString" or geomtype == "MultiLineString":
         lines = vector.cpp_vector.get_linestrings(layer_name)
         if 'fmt' in kwargs:
@@ -137,6 +170,6 @@ def plot_vector(vector, ax, geomtype, layer, **kwargs):
                 ax.plot(line[0], line[1], **kwargs)
         else:
             for line in lines:
-                ax.plot(line[0], line[1], '-k', **kwargs) #plot solid black line
+                ax.plot(line[0], line[1], '-k', **kwargs) #plot as solid black line
     else:
         raise ValueError("geomtype must be of type 'Point', 'MultiPoint', 'LineString', or 'MultiLineString'");
