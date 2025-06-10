@@ -1,7 +1,20 @@
+# ******************************************************************************
+#
+#  Project: sgs
+#  Purpose: Plotting rasters and vectors with matplotlib.pyplot
+#  Author: Joseph Meyer
+#  Date: June, 2025
+#
+# ******************************************************************************
+
+from typing import Optional
+
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib #for typing matplotlib.axes.Axes
 
-def arrange_bands_from_list(raster, bands_list):
+def arrange_bands_from_list(raster, 
+                            bands_list: list[str | int]):
     """
     Used by plot_raster function. Converts all bands in initial list to int indexes
     using SpatialRaster.get_band_index().
@@ -25,7 +38,8 @@ def arrange_bands_from_list(raster, bands_list):
 
     return bands_list
 
-def arrange_bands_from_dict(raster, bands_dict):
+def arrange_bands_from_dict(raster, 
+                            bands_dict: dict):
     """
     Used by plot_raster function. Converts a dict which specifies RGB values
     into a list of indexes using SpatialRaster.get_band_index().
@@ -49,7 +63,12 @@ def arrange_bands_from_dict(raster, bands_dict):
         raster.get_band_index(bands_dict["blue"])
     ]
 
-def plot_raster(raster, ax, target_width, target_height, bands=None, **kwargs):
+def plot_raster(raster, 
+                ax: matplotlib.axes.Axes, 
+                target_width: int = 1000, 
+                target_height: int = 1000, 
+                bands: Optional[int | str | list | dict] = None, 
+                **kwargs):
     """
     Plots the specified bands using matplotlib.pyplot.imshow function.
 
@@ -67,12 +86,8 @@ def plot_raster(raster, ax, target_width, target_height, bands=None, **kwargs):
         specification of which bands to plot
     **kwargs (optional)
         any parameters which may be passed to matplotlib.pyplot.imshow
-
-    Raises
-    --------------------
-    TypeError:
-        if 'bands' is not of type int, str, list, or dict
     """
+
     #get bands argument as list of int
     if bands is None:
         bands = arrange_bands_from_list(raster, [*range(raster.band_count)])
@@ -80,11 +95,9 @@ def plot_raster(raster, ax, target_width, target_height, bands=None, **kwargs):
         bands = arrange_bands_from_list(raster, bands)
     elif type(bands) == dict:
         bands = arrange_bands_from_dict(raster, bands)
-    elif type(bands) in [str, int]: 
+    else: 
         bands = [raster.get_band_index(bands)]
-    else:
-        raise TypeError("'bands' parameter must be of type None, list, dict, str, or int.")
-
+    
     #calculate downsampled resolution and get downsampled raster
     #for info on downsample resolution calculation:
     #https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
@@ -113,7 +126,11 @@ def plot_raster(raster, ax, target_width, target_height, bands=None, **kwargs):
     display_arr = np.moveaxis(arr[bands, :, :], 0, 2)
     ax.imshow(display_arr, origin='upper', extent=extent, **kwargs)
 
-def plot_vector(vector, ax, geomtype, layer, **kwargs):
+def plot_vector(vector, 
+                ax: matplotlib.axes.Axes, 
+                geomtype: str, 
+                layer: Optional[int | str] = None, 
+                **kwargs):
     """
     Plots the specified layer using matplotlib.pyplot.plot.
     The parameter give by geomtype must be one of:
@@ -147,22 +164,21 @@ def plot_vector(vector, ax, geomtype, layer, **kwargs):
         if the layer contains a geometry NOT of an acceptable type
     """
 
-    if layer is None:
-        if len(vector.layers) == 1:
-            layer_name = vector.layers[0]
-        else:
-            ValueError("no layer was specified, and there is more than one layer in the vector. Specify a layer to plot.");
-    elif type(layer) == str:
+    if type(layer) == str:
         layer_name = layer
     elif type(layer) == int:
         layer_name = vector.layers[layer]
-
+    elif len(vector.layers) == 1: #layer is None
+        layer_name = vector.layers[0]
+    else:
+        ValueError("no layer was specified, and there is more than one layer in the vector. Specify a layer to plot.");
+    
     if geomtype == "Point" or geomtype == "MultiPoint":
         points = vector.cpp_vector.get_points(layer_name)
         if 'fmt' in kwargs:
-            ax.plot(points[0], points[1], **kwargs)
+             ax.plot(points[0], points[1], **kwargs)
         else:
-            ax.plot(points[0], points[1], '.r', **kwargs) #plot as red points
+            ax.plot(points[0], points[1], '.r', **kwargs) #specify format as red points if format was not given
     elif geomtype == "LineString" or geomtype == "MultiLineString":
         lines = vector.cpp_vector.get_linestrings(layer_name)
         if 'fmt' in kwargs:
@@ -170,6 +186,6 @@ def plot_vector(vector, ax, geomtype, layer, **kwargs):
                 ax.plot(line[0], line[1], **kwargs)
         else:
             for line in lines:
-                ax.plot(line[0], line[1], '-k', **kwargs) #plot as solid black line
+                ax.plot(line[0], line[1], '-k', **kwargs) #specify format as black lines if format was not give
     else:
         raise ValueError("geomtype must be of type 'Point', 'MultiPoint', 'LineString', or 'MultiLineString'");

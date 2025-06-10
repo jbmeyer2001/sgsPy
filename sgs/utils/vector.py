@@ -7,6 +7,8 @@
 #
 # ******************************************************************************
 
+from typing import Optional
+
 import matplotlib.pyplot as plt
 
 from vector import GDALVectorWrapper
@@ -36,7 +38,8 @@ class SpatialVector:
     info()
         takes an optional argument specify the band, and prints vector metadata to console
     """
-    def __init__(self, image):
+    def __init__(self, 
+                 image: str):
         """
         Constructing method for the SpatialVector class.
 
@@ -52,19 +55,15 @@ class SpatialVector:
 
         Raises
         --------------------
-        TypeError:
-            if 'image' parameter is not of type str
         RuntimeError (from C++):
             if dataset is not initialized correctly 
         """
-        if type(image) == str:
-            self.cpp_vector = GDALVectorWrapper(image)
-        else:
-            raise TypeError(f"SpatialVector does not accept input of type {type(image)}")
-
+        self.cpp_vector = GDALVectorWrapper(image)
         self.layers = self.cpp_vector.get_layer_names() 
 
-    def print_info(self, name, layer_info):
+    def print_info(self, 
+                   layer_name: str, 
+                   layer_info: dict):
         """
         prints layer information using the layer_info from self.cpp_vector.
 
@@ -75,7 +74,7 @@ class SpatialVector:
         layer_info : dict
             dict containing 'feature_count', 'field_count', 'geometry_type', 'xmax', 'xmin', 'ymax', and 'ymin' items
         """
-        print("{} layer info:".format(name))
+        print("{} layer info:".format(layer_name))
         print("feature count: {}".format(layer_info['feature_count']))
         print("field count: {}".format(layer_info['field_count']))
         print("geometry type: {}".format(layer_info['geometry_type']))
@@ -87,7 +86,8 @@ class SpatialVector:
         ))
         print()
 
-    def info(self, layer=None):
+    def info(self, 
+             layer: Optional[int | str] = None):
         """
         calls self.print_info depending on layer parameter. If no layer is given,
         print all layers. A layer may be specified by either a str or an int.
@@ -96,28 +96,24 @@ class SpatialVector:
         --------------------
         layer (optional) : str or int
             specifies the layer to print information on
-
-        Raises
-        --------------------
-        TypeError:
-            if the layer parameter is not of type None, str, or int
         """
-        if layer is None:
+        if type(layer) == str:
+            self.pritn_info(layer, self.cpp_vector.get_layer_info(layer))
+        elif type(layer) == int:
+            self.print_info(self.layers[layer], self.cpp_vector.get_layer_info(self.layers[layer]))
+        else:
             for layer in self.layers:
                 self.print_info(layer, self.cpp_vector.get_layer_info(layer))
-        elif type(layer) == str:
-            self.print_info(layer, self.cpp_vector.get_layer_info(layer))
-        elif type(layer) == int:
-            self.print_info(layers[layer], self.cpp_vector.get_layer_info(layers[layer]))
-        else:
-              TypeError("layer parameter cannot be of type {}".format(type(layer)))
 
     """
     This function, at present, is only meant to be used for testing purposes.
 
     In the future, either embellish documentation or delete.
     """
-    def plot(self, geomtype, layer=None, **kwargs):
+    def plot(self, 
+             geomtype: str, 
+             layer: Optional[int | str] = None, 
+             **kwargs):
         fig, ax = plt.subplots()
         plot_vector(self, ax, geomtype, layer, **kwargs)
         plt.show()

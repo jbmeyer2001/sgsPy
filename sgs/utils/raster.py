@@ -8,6 +8,7 @@
 # ******************************************************************************
 
 import json
+from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -138,7 +139,8 @@ class SpatialRaster:
         can also be passed to plot_image().
     """
 
-    def __init__(self, image):
+    def __init__(self, 
+                 image: str):
         """
         Constructing method for the SpatialRaster class.
 
@@ -170,8 +172,6 @@ class SpatialRaster:
 
         Raises
         --------------------
-        TypeError: 
-            if 'image' parameter is not of type str
         RuntimeError (from C++):
             if dataset is not initialized correctly
         RuntimeError (from C++):
@@ -179,11 +179,7 @@ class SpatialRaster:
         RuntimeError (from C++):
             if unable to get coordinate reference system
         """
-        if type(image) == str:
-            self.cpp_raster = GDALRasterWrapper(image)
-        else:
-            raise TypeError(f"SpatialRaster does not accept input of type {type(image)}")
-
+        self.cpp_raster = GDALRasterWrapper(image)
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
         self.height = self.cpp_raster.get_height()
@@ -225,7 +221,8 @@ class SpatialRaster:
             copy=False
         )
 
-    def get_band_index(self, band):
+    def get_band_index(self, 
+                       band: str | int):
         """
         Utilizes the band_name_dict to convert a band name to an index if requried.
 
@@ -238,7 +235,8 @@ class SpatialRaster:
 
         return band
 
-    def __getitem__(self, index):
+    def __getitem__(self, 
+                    index: int | str | tuple | slice):
         """
         Implements numpy array accesses on self.arr attribute, allowing bands
         to be specified by their name as opposed to index if desired.
@@ -250,8 +248,6 @@ class SpatialRaster:
 
         Raises
         ---------------------
-        TypeError: 
-            if the index is not of type int, str, tuple, or slice.
         RuntimeError (from C++):
             if unable to read raster band
         """
@@ -262,14 +258,16 @@ class SpatialRaster:
             index = (self.get_band_index(index[0]),) + index[1:]
         elif type(index) == slice:
             index = slice(self.get_band_index(index.start), self.get_band_index(index.stop))
-        elif type(index) == int or type(index) == str:
-            index = self.get_band_index(index)
         else:
-            raise TypeError("index must be of type int, str, tuple, or slice")
+            index = self.get_band_index(index)
 
         return self.arr[index]
 
-    def plot(self, target_width=1000, target_height=1000, bands=None, **kwargs):
+    def plot(self, 
+             target_width: int = 1000, 
+             target_height: int = 1000, 
+             bands: Optional[int | str | list | dict] = None, 
+             **kwargs):
         """
         Calls plot_raster() on self.
 
@@ -286,8 +284,6 @@ class SpatialRaster:
 
         Raises
         --------------------
-        TypeError:
-            if 'bands' is not of type int, str, list, or dict
         RuntimeError (from C++)
             if unable to read raster band
         """
