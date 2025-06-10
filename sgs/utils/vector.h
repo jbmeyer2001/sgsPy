@@ -71,4 +71,47 @@ class GDALVectorWrapper {
 	 * @returns OGRLayer * pointer to a created instance of OGRLayer
 	 */
 	OGRLayer *getLayer(std::string layerName);
+
+	/**
+	 * Getter method for the layer Geometries. Note that every geometry 
+	 * within the layer must be of type Point or MultiPoint.
+	 *
+	 * The points are stored and returned as a 2d array of doubles
+	 * (std::vector<std::vector<double>>)
+	 * The X coordinates are stored in index 0, Y in 1.
+	 * 
+	 * The array should be indexed like so:
+	 * arr[0 if x or 1 if y][point_index]
+	 *
+	 * For example, to get the x and y coordinates of the 3rd point: 
+	 * x = arr[0][2]; 
+	 * y = arr[1][2]
+	 *
+	 * @param std::string layer name
+	 * @returns std::vector<std::vector<double>> 2D array of doubles representing points
+	 * @throws std::runtime_error if an incorrect geometry is encountered
+	 */
+	std::vector<std::vector<double>> getPoints(std::string layerName);
+
+	/**
+	 * Getter method for the layer Geometries. Note that every geometry
+	 * within the layer must be of type LineString or MultiLineString.
+	 *
+	 * The LineStrings are stored and returned as a 3d array of doubles.
+	 * (std::vector<std::vector<std::vector<double>>>)
+	 * Indexing the outer array gives the Line, which is a 2d array of points.
+	 * The X coordinates are stored in index 0, Y in 1.
+	 *
+	 * The array should be indexed like so:
+	 * arr[line_index][0 if x or 1 if y][point_index]
+	 *
+	 * For example, to get the x and y coordinates of the 2nd point in the 5th line:
+	 * x = arr[4][0][1]; 
+	 * y = arr[4][1][1];
+	 *
+	 * @param std::string layer name
+	 * @return std::vector<std::vector<std::vector<double>>> 3d array of doubles representing LineStrings.
+	 * @throws std::runtime_error if an incorrect geometry is encountered
+	 */
+	std::vector<std::vector<std::vector<double>>> getLineStrings(std::string layerName);
 };

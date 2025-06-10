@@ -40,25 +40,50 @@ using namespace pybind11::literals;
 class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
-	void *p_raster = nullptr;
-	py::buffer numpyRaster;
-	bool rasterAllocated = false;
+
+	void *p_fullRaster = nullptr;
+	bool fullRasterAllocated = false;
+
+	void *p_downsampledRaster = nullptr;
+	bool downsampledRasterAllocated = false;
+	int downsampledRasterWidth = -1;
+	int downsampledRasterHeight = -1;
+
 	double geotransform[6];
 
 	/**
-	 * Internal function used to allocate the raster data. Memory
-	 * is allocated using CPLMalloc(). Rasters are read using
-	 * GDALDataset::RasterIO().
+	 * Internal function used to allocate the raster data.
+	 * This function is used for allocating both full and 
+	 * downsampled rasters, which is why it takes the width and
+	 * height parameters. 
 	 *
+	 * Memory is allocated using CPLMalloc(). Rasters are read 
+	 * using GDALDataset::RasterIO().
+	 *
+	 * @param int width
+	 * @param int height
+	 * @returns void * allocated raster buffer
 	 * @throws std::runtime_error if unable to read raster band
 	 */
-	void allocateRaster();
+	void *allocateRaster(int width, int height);
 
 	/**
 	 * Internal function which returns a pybuffer of the raster, using
-	 * the type specified.
+	 * the type specified. The raster must have already been allocated
+	 * using allocateRaster(). 
+	 *
+	 * This function is used for getting the buffer to both the full
+	 * and downsampled rasters, which is why it takes the raster pointer,
+	 * width, and height parameters. 
+	 *
+	 * @param size_t size of data type for one pixel
+	 * @param void *p_raster pointer to allocated raster
+	 * @param int width 
+	 * @param int height
+	 * @returns py::buffer memoryview object of the data
 	 */
-	template <typename T> py::buffer getBuffer(size_t size);
+	template <typename T> 
+	py::buffer getBuffer(size_t size, void *p_raster, int width, int height);
 	
 	public:
 	/**
@@ -74,7 +99,7 @@ class GDALRasterWrapper {
 
 	/**
 	 * Deconstructor for GDALRasterWrapper class. This method calls
-	 * CPLFree() on the raster pointer if memory was allocated.
+	 * CPLFree() on any allocated raster buffers.
 	 */
 	~GDALRasterWrapper();
 
@@ -172,17 +197,31 @@ class GDALRasterWrapper {
 
 	/**
 	 * Getter method for the raster image, used by the Python side 
-	 * of the application. This function uses py::memoryview::from_buffer() 
-	 * to create the buffer of the correct size/dimensions.
+	 * of the application. This function allocates the raster if necessary, and
+	 * uses py::memoryview::from_buffer() to create the buffer of the 
+	 * correct size/dimensions without copying data unecessarily.
 	 *
-	 * The memory view is then used to initialize a NumPy array without
-	 * copying the data.
+	 * This function requires that width and height already be allocated according
+	 * to GDAL target_downscaling_factor rules. Otherwise, the incorrect amount
+	 * of memory will be allocated. Information on target_downsampling_factor
+	 * can be found here:
+	 * https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
 	 *
-	 * see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
+	 * A full raster will be allocated if the width and height correspond to the
+	 * full raster size, and the p_fullRaster pointer has yet to be allocated.
+	 * A downsampled raster will be allocated if a raster with the given width
+	 * and height has yet to be allocated. Note, this may require de-allocation
+	 * if a downsampled raster has been allocated with different width/height.
 	 *
+	 * for py::memoryview::from_buffer() information see:
+	 * https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
+	 *
+	 * @param int width
+	 * @param int height
 	 * @throws std::runtime_error if unable to read raster band during allocation
+	 * @returns py::buffer python memoryview of the raster
 	 */
-	py::buffer getRasterAsMemView();
+	py::buffer getRasterAsMemView(int width, int height);
 
 	/**
 	 * Getter method for the raster image, used by the C++ side of the application.
