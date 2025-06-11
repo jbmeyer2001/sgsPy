@@ -56,17 +56,29 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	//IN THE FUTURE, A MORE CONCRETE TESTING STRATEGY WILL HAVE TO BE EMPLOYED TO ENSURE CHANGES
 	//TO THE GDALRASTERWRAPPER CLASS DONT IMPEDE THE NODATA ADJUSTMENT FUNCTIONALITY
 	
+	std::cout << "pixelsize: " << this->pixelSize << std::endl;
 	std::cout << "RASTER:" << std::endl;
-	double *raster = (double *)this->getRaster();
-	for (size_t i = 0; i < this->getWidth() * this->getHeight(); i++) {
-		std::cout << "[" << i << "] = " << raster[i] << std::endl;
+	this->getRaster();
+	float *raster = (float *)CPLMalloc(this->getHeight() * this->getWidth() * this->pixelSize);
+	memcpy((void *)raster, this->p_raster, this->getHeight() * this->getWidth() * this->pixelSize);
+	
+
+	this->getNoDataRaster();
+	size_t ori = 0;
+	for (size_t i = 0; i < this->getHeight() * this->getWidth() - this->noDataCount; i++) {
+		while (((double)(((float *)raster)[ori]) == this->p_dataset->GetRasterBand(1)->GetNoDataValue()) || std::isnan(((float *)raster)[ori]))  {
+			std::cout << ori << " NO DATA" << std::endl;
+			ori++;
+		}
+
+
+		if (((float *)raster)[ori] != ((float *)this->p_raster)[i]) {
+			std::cout << "[" << i << "] = " << ((float *)this->p_raster)[i] << " NOT EQUAL TO [" << ori << "] = " << ((float *)raster)[ori] << std::endl;
+		}
+		ori++;
 	}
 
-	std::cout << std::endl << std::endl << std::endl << "ADJUSTED RASTER: " << std::endl;
-	raster = (double *)this->getNoDataRaster();
-	for (size_t i = 0; i < this->getWidth() * this->getHeight() - this->noDataCount; i++) {
-		std::cout << "[" << i << "] = " << raster[i] << std::endl;
-	}
+	CPLFree(raster);
 }
 
 /******************************************************************************
@@ -406,7 +418,7 @@ void *GDALRasterWrapper::getNoDataRaster() {
 				continue;
 			}
 
-			size_t dataBlockSize = (size_t)this->p_raster + ((i - 1) * this->pixelSize) - (size_t)dataBlockStart;
+			size_t dataBlockSize = (size_t)this->p_raster + (i * this->pixelSize) - (size_t)dataBlockStart;
 			copyInChunks(dataBlockStart, noDataBlockStart, dataBlockSize);
 
 			noDataBlockStart = (void *)((size_t)noDataBlockStart + dataBlockSize);
@@ -419,9 +431,12 @@ void *GDALRasterWrapper::getNoDataRaster() {
 	//if the last pixel was a data pixel, and there were any noData pixels in the image, we have
 	//one more block to copy
 	if (this->noDataCount > 0 && !prevNoData) {
-		size_t dataBlockSize = (size_t)this->p_raster + ((this->getHeight() * this->getWidth() - 1) * this->pixelSize) - (size_t)dataBlockStart;
+		size_t dataBlockSize = (size_t)this->p_raster + ((this->getHeight() * this->getWidth()) * this->pixelSize) - (size_t)dataBlockStart;
 		copyInChunks(dataBlockStart, noDataBlockStart, dataBlockSize);
 	}
+
+	this->noDataAdjusted = true;
+	return p_raster;
 }
 
 /******************************************************************************
