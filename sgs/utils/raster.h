@@ -41,13 +41,20 @@ class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
 
-	void *p_fullRaster = nullptr;
-	bool fullRasterAllocated = false;
+	size_t pixelSize;
 
-	void *p_downsampledRaster = nullptr;
-	bool downsampledRasterAllocated = false;
-	int downsampledRasterWidth = -1;
-	int downsampledRasterHeight = -1;
+	void *p_raster = nullptr;
+	bool rasterAllocated = false;
+	bool noDataAdjusted = false;
+	size_t noDataCount = 0;
+	template<typename T> noDataValue;
+	std::vector<size_t> originalIndexes;
+	std::vector<size_t> adjustedIndexes;
+
+	void *p_displayRaster = nullptr;
+	bool displayRasterAllocated = false;
+	size_t displayRasterWidth = 0;
+	size_t displayRasterHeight = 0;
 
 	double geotransform[6];
 
@@ -65,15 +72,15 @@ class GDALRasterWrapper {
 	 * @returns void * allocated raster buffer
 	 * @throws std::runtime_error if unable to read raster band
 	 */
-	void *allocateRaster(int width, int height);
+	void *allocateRaster(size_t width, size_t height);
 
 	/**
-	 * Internal function which returns a pybuffer of the raster, using
-	 * the type specified. The raster must have already been allocated
+	 * Internal function which returns a pybuffer of the display raster, 
+	 * using the type specified. The raster must have already been allocated
 	 * using allocateRaster(). 
 	 *
-	 * This function is used for getting the buffer to both the full
-	 * and downsampled rasters, which is why it takes the raster pointer,
+	 * This function is used for getting the buffer to the display
+	 * raster, which is why it takes the raster pointer,
 	 * width, and height parameters. 
 	 *
 	 * @param size_t size of data type for one pixel
@@ -83,8 +90,65 @@ class GDALRasterWrapper {
 	 * @returns py::buffer memoryview object of the data
 	 */
 	template <typename T> 
-	py::buffer getBuffer(size_t size, void *p_raster, int width, int height);
-	
+	py::buffer getBuffer(size_t size, void *p_raster, size_t width, size_t height);
+
+	/**
+	 * Internal functions to check whether a given pixel value is no data.
+	 *
+	 * For GDT_Int64 and GDT_UInt64 images, using the typical GetNoDataValue()
+	 * function which returns a double may be lossy, so int64_t and uint64_t
+	 * values should be used. That is the purpose of the function overloads.
+	 *
+	 * @param double/int64_t/uint64_t val pixel vaue
+	 * @returns true if noData, false if not noData
+	 */
+	inline bool isNoData(double val);
+	inline bool isNoData(int64_t val);
+	inline bool isNoData(uint64_t val);
+
+	/**
+	 * Internal helper function for getNoDataRaster(). 
+	 *
+	 * Due to the way
+	 * that getNoDataRaster() works by copying the data sections to
+	 * earlier indexes in the same raster previously occupied by noData,
+	 * it's possible that there will be overlaps between the destination
+	 * block and source block.
+	 *
+	 * When there is overlap between a src and dst chunk with std::memcpy
+	 * there is undefined behavior. 
+	 *
+	 * This function copies the src data block to the index at memcpyDst
+	 * in chunks to ensure there will be no overlap of src and dst in
+	 * the call to std::memcpy.
+	 */	
+	void copyInChunks(void *memcpySrc, void *memcpyDst, size_t memcpySize);
+
+	/**
+	 * Internal function which returns a pointer to a noData adjusted version
+	 * of the raster. The noData adjustd raster is the same raster except with
+	 * no noData pixels. The length of the new raster will be: 
+	 *
+	 * height * width - num_noDataPixels
+	 *
+	 * This behavior will be required by many of the algorithms.
+	 * TODO: explain more how function works, and how we can get the original index using the std::Vector
+	 */
+	void *getNoDataRaster();
+
+	/**
+	 * Takes the index of a pixel in the adjusted raster, and using the originalIndexes
+	 * and adjustedIndexes vector, calculates what the index would have been in the original
+	 * image before being noData adjusted.
+	 *
+	 * The function is necessary for getting the geographic coordinates of a particular adjusted
+	 * pixel, since the geotransform calculations are based on the original image containing noData values.
+	 *
+	 * @param size_t the index of a pixel in the noData adjusted raster
+	 * @param size_t the index that pixel would have been at in the original raster before noData adjustment.
+	 */
+	size_t getOriginalIndex(size_t adjustedIndex);
+
 	public:
 	/**
 	 * Constructor for GDALRasterWrapper class. This method registers
@@ -120,17 +184,21 @@ class GDALRasterWrapper {
 
 	/**
 	 * Getter method for the raster width.
+	 * Return is type size_t so when multiplying
+	 * with height, there is no danger of accidental overflow.
 	 *
-	 * @returns int raster width (x)
+	 * @returns size_t raster width (x)
 	 */
-	int getWidth();
+	size_t getWidth();
 
 	/**
 	 * Getter method for the raster height.
+	 * Return is type size_t so when multiplying
+	 * with width, there is no danger of accidental overflow.
 	 *
-	 * @returns int raster height (y)
+	 * @returns size_t raster height (y)
 	 */
-	int getHeight();
+	size_t getHeight();
 
 	/**
 	 * Getter method for the number of raster bands.
