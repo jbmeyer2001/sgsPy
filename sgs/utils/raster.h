@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <iostream> //TODO remove
+
 #include <gdal_priv.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -47,7 +49,6 @@ class GDALRasterWrapper {
 	bool rasterAllocated = false;
 	bool noDataAdjusted = false;
 	size_t noDataCount = 0;
-	template<typename T> noDataValue;
 	std::vector<size_t> originalIndexes;
 	std::vector<size_t> adjustedIndexes;
 
@@ -95,16 +96,10 @@ class GDALRasterWrapper {
 	/**
 	 * Internal functions to check whether a given pixel value is no data.
 	 *
-	 * For GDT_Int64 and GDT_UInt64 images, using the typical GetNoDataValue()
-	 * function which returns a double may be lossy, so int64_t and uint64_t
-	 * values should be used. That is the purpose of the function overloads.
-	 *
-	 * @param double/int64_t/uint64_t val pixel vaue
+	 * @param size_t pixel index
 	 * @returns true if noData, false if not noData
 	 */
-	inline bool isNoData(double val);
-	inline bool isNoData(int64_t val);
-	inline bool isNoData(uint64_t val);
+	inline bool isNoData(size_t index);
 
 	/**
 	 * Internal helper function for getNoDataRaster(). 
@@ -289,7 +284,7 @@ class GDALRasterWrapper {
 	 * @throws std::runtime_error if unable to read raster band during allocation
 	 * @returns py::buffer python memoryview of the raster
 	 */
-	py::buffer getRasterAsMemView(int width, int height);
+	py::buffer getRasterAsMemView(size_t width, size_t height);
 
 	/**
 	 * Getter method for the raster image, used by the C++ side of the application.

@@ -26,20 +26,9 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	CPLErr cplerr = this->p_dataset->GetGeoTransform(this->geotransform);
 	if (cplerr) {
 		throw std::runtime_error("error getting geotransform from dataset.");
-	}
+	}	
 
-	//noData representation
-	switch (this->p_dataset->GetRasterBand(1)->GetRasterDataType()) {
-		case GDT_Int64:
-			this->noDataValue<int64_t> = this->p_dataset->GetRasterBand(1)->GetNoDataValueAsInt64();
-			break;
-		case GDT_UInt64:
-			this->noDataValue<uint64_t> = this->p_dataset->GetRasterBand(1)->GetNoDataValueAsUInt64();
-			break;
-		default:
-			this->noDataValue<double> = this->p_dataset->GetRasterBand(1)->GetNoDataValue();
-	}
-
+	//pixel size
 	switch(this->p_dataset->GetRasterBand(1)->GetRasterDataType()) {
 		case GDT_Int8:
 			this->pixelSize = 1;
@@ -53,8 +42,6 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 		case GDT_Float32:
 			this->pixelSize = 4;
 			break;
-		case GDT_UInt64:
-		case GDT_Int64:
 		case GDT_Float64:
 			this->pixelSize = 8;
 			break;
@@ -86,12 +73,12 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 			      ~GDALRasterWrapper()
 ******************************************************************************/
 GDALRasterWrapper::~GDALRasterWrapper() {
-	if (this->p_fullRaster) {
-		CPLFree(this->p_fullRaster);
+	if (this->p_raster) {
+		CPLFree(this->p_raster);
 	}
 
-	if (this->p_downsampledRaster) {
-		CPLFree(this->p_downsampledRaster);
+	if (this->p_displayRaster) {
+		CPLFree(this->p_displayRaster);
 	}
 }
 
@@ -259,12 +246,13 @@ void *GDALRasterWrapper::allocateRaster(size_t width, size_t height) {
 /******************************************************************************
 				  getBuffer()
 ******************************************************************************/
+//TODO see if template argument can be removed here
 template <typename T> 
 py::buffer GDALRasterWrapper::getBuffer(size_t size, void *p_raster, size_t width, size_t height) {
 	//see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
 	return py::memoryview::from_buffer(
 		(T*)p_raster, 								//buffer
-		{this->getBandCount(), height, width}, 		//shape
+		{this->getBandCount(), (int)height, (int)width}, 		//shape
 		{size * height * width, size * width, size} //stride
 	);
 }	
@@ -275,10 +263,10 @@ py::buffer GDALRasterWrapper::getBuffer(size_t size, void *p_raster, size_t widt
 py::buffer GDALRasterWrapper::getRasterAsMemView(size_t width, size_t height) {
 	//allocate (or re-allocate) display raster if required
 	if (width != this->displayRasterWidth || height != this->displayRasterHeight) {
-		if (this->downsampledRasterAllocated) {
-			CPLFree(this->p_downsampledRaster);
+		if (this->displayRasterAllocated) {
+			CPLFree(this->p_displayRaster);
 		}
-		this->p_downsampledRaster = this->allocateRaster(width, height);
+		this->p_displayRaster = this->allocateRaster(width, height);
 		this->displayRasterAllocated = true;
 		this->displayRasterHeight = height;
 		this->displayRasterWidth = width;
@@ -297,10 +285,6 @@ py::buffer GDALRasterWrapper::getRasterAsMemView(size_t width, size_t height) {
 			return getBuffer<int32_t>(4, this->p_displayRaster, width, height);
 		case GDT_Float32:
 			return getBuffer<float>(4, this->p_displayRaster, width, height);
-		case GDT_UInt64:
-			return getBuffer<uint64_t>(8, this->p_displayRaster, width, height);
-		case GDT_Int64:
-			return getBuffer<int64_t>(8,  this->p_displayRaster, width, height);
 		case GDT_Float64:
 			return getBuffer<double>(8, this->p_displayRaster, width, height);
 		default:
@@ -312,27 +296,58 @@ py::buffer GDALRasterWrapper::getRasterAsMemView(size_t width, size_t height) {
 				  getRaster()				     
 ******************************************************************************/
 void *GDALRasterWrapper::getRaster() {
-	if (!this->fullRasterAllocated) {
-		this->p_fullRaster = this->allocateRaster(this->getWidth(), this->getHeight());
-		this->fullRasterAllocated = true;
+	if (!this->rasterAllocated) {
+		this->p_raster = this->allocateRaster(this->getWidth(), this->getHeight());
+		this->rasterAllocated = true;
 	}
 
-	return this->p_fullRaster;
+	return this->p_raster;
 }
 
 /******************************************************************************
 				   isNoData()				     
 ******************************************************************************/
-inline bool isNoData(double val) { return std::is_nan(val) || val == this->noDataValue; }
-inline bool isNoData(int64_t val) { return std::is_nan(val) || val == this->noDataValue; }
-inline bool isNoData(uint64_t val) { return std::is_nan(val) || val == this->noDataValue; }
+inline bool GDALRasterWrapper::isNoData(size_t index) { 
+	switch(this->p_dataset->GetRasterBand(1)->GetRasterDataType()) {
+		case GDT_Int8: {
+			int8_t val = ((int8_t *)p_raster)[index];
+			return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
+		}
+		case GDT_UInt16: {
+			uint16_t val = ((uint16_t *)p_raster)[index];
+			return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
+		}
+		case GDT_Int16: {
+			int16_t val = ((int16_t *)p_raster)[index];
+			return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
+		}
+		case GDT_UInt32: {
+			uint32_t val = ((uint32_t *)p_raster)[index];
+			return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
+		}
+		case GDT_Int32: {
+			int32_t val = ((int32_t *)p_raster)[index];
+			return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
+		}
+		case GDT_Float32: {
+			float val = ((float *)p_raster)[index];
+			return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
+		}
+		case GDT_Float64: {
+			double val = ((double *)p_raster)[index];
+			return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
+		}
+		default:
+			throw std::runtime_error("raster pixel data type not supported.");
+	}
+}
 
 
 /******************************************************************************
 				 copyInChunks()				     
 ******************************************************************************/
 void GDALRasterWrapper::copyInChunks(void *memcpySrc, void *memcpyDst, size_t memcpySize) {
-	size_t memcpyGapSize = (size_t)(dataBlockStart - noDataBlockStart);
+	size_t memcpyGapSize = (size_t)(memcpySrc) - (size_t)memcpyDst;
 
 	size_t bytesCopied = 0;
 	while (bytesCopied < memcpySize) {
@@ -350,7 +365,7 @@ void GDALRasterWrapper::copyInChunks(void *memcpySrc, void *memcpyDst, size_t me
 			       getNoDataRaster()				     
 ******************************************************************************/
 void *GDALRasterWrapper::getNoDataRaster() {
-	if (this->nanAdjusted) {
+	if (this->noDataAdjusted) {
 		return p_raster;
 	}
 
@@ -358,7 +373,7 @@ void *GDALRasterWrapper::getNoDataRaster() {
 
 	void *noDataBlockStart = nullptr;
 	void *dataBlockStart = nullptr;
-	bool prevNoData = isNoData(p_raster[0]); 
+	bool prevNoData = isNoData(0); //0 represents index
 	bool curNoData;
 
 	if (prevNoData) {
@@ -367,20 +382,20 @@ void *GDALRasterWrapper::getNoDataRaster() {
 	}
 	else {
 		dataBlockStart = this->p_raster;
-		originalIndex.push_back(0);
-		adjustedIndex.push_back(0);
+		this->originalIndexes.push_back(0);
+		this->adjustedIndexes.push_back(0);
 	}
 	
 	for (size_t i = 1; i < this->getWidth() * this->getHeight(); i++) {
-		bool curNoData = isNoData(this->p_raster[i]);
+		bool curNoData = isNoData(i);
 		
 		if(curNoData && prevNoData) {
 			this->noDataCount++;
 		}
 		else if (!curNoData && prevNoData) {
-			dataBlockStart = (void *)((size_t)this->p_raster + (i * this->pixelSize))
-			originalIndex.push_back(i);
-			adjustedIndex.push_back(i - this->noDataCount);
+			dataBlockStart = (void *)((size_t)this->p_raster + (i * this->pixelSize));
+			this->originalIndexes.push_back(i);
+			this->adjustedIndexes.push_back(i - this->noDataCount);
 		}
 		else if (curNoData && !prevNoData) {
 			this->noDataCount++;			
@@ -392,9 +407,9 @@ void *GDALRasterWrapper::getNoDataRaster() {
 			}
 
 			size_t dataBlockSize = (size_t)this->p_raster + ((i - 1) * this->pixelSize) - (size_t)dataBlockStart;
-			copyInChunks(dataBlockStart, noDataBlockStart, dataBlockSize)
+			copyInChunks(dataBlockStart, noDataBlockStart, dataBlockSize);
 
-			noDataBlockStart = (void *)((size_t)noDataBlockStart + memcpySize);
+			noDataBlockStart = (void *)((size_t)noDataBlockStart + dataBlockSize);
 			dataBlockStart = nullptr;
 		}
 		
@@ -404,8 +419,8 @@ void *GDALRasterWrapper::getNoDataRaster() {
 	//if the last pixel was a data pixel, and there were any noData pixels in the image, we have
 	//one more block to copy
 	if (this->noDataCount > 0 && !prevNoData) {
-		size_t dataBlockSize = (siz_t)this->p_raster + ((this->getHeight() * this->getWidth() - 1) * this->size) - (size_t)dataBlockStart;
-		copyInChunks(dataBlockStart, noDataBlockStart, dataBlockSize)
+		size_t dataBlockSize = (size_t)this->p_raster + ((this->getHeight() * this->getWidth() - 1) * this->pixelSize) - (size_t)dataBlockStart;
+		copyInChunks(dataBlockStart, noDataBlockStart, dataBlockSize);
 	}
 }
 
@@ -426,13 +441,14 @@ size_t GDALRasterWrapper::getOriginalIndex(size_t adjustedIndex) {
 	//when added to the adjusted index gives the original index.
 	auto boundIt = std::upper_bound(this->adjustedIndexes.begin(), this->adjustedIndexes.end(), adjustedIndex);
 	
+	size_t boundIndex;
 	if (boundIt == this->adjustedIndexes.end()) {
-		size_t boundIndex = this->adjustedIndexes.back();
+		boundIndex = this->adjustedIndexes.back();
 	}
 	else {
-		size_t boundIndex = std::distance(this->adjustedIndexes.begin(), boundIt) - 1;
+		boundIndex = std::distance(this->adjustedIndexes.begin(), boundIt) - 1;
 	}
 
-	size_t adjustemnt = this->originalIndexes.at(boundIndex) - this->adjustedIndexes(boundIndex);
+	size_t adjustment = this->originalIndexes[boundIndex] - this->adjustedIndexes[boundIndex];
 	return adjustedIndex + adjustment;
 }
