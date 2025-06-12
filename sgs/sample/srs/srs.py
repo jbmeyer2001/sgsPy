@@ -19,7 +19,7 @@ def srs(
     mindist: Optional[float] = None,
     buf_inner: Optional[int | float] = None,
     buf_outer: Optional[int | float] = None,
-    plot: bool = false,
+    plot: bool = False,
     filename: Optional[str] = None,
     overwrite: bool = False):
     """
