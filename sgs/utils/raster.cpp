@@ -350,10 +350,3 @@ std::string GDALRasterWrapper::getMinIndexIntTypeMultiLayer() {
 	return getMinIndexIntType(this->getWidth() * this->getHeight() * (size_t)this->getBandCount());
 }
 
-/******************************************************************************
-				   isNoData()				     
-******************************************************************************/
-template <typename T>
-inline bool GDALRasterWrapper::isNoData(T val) {
-	return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
-}

@@ -29,12 +29,12 @@ std::vector<std::vector<double>> srs_cpp(
 	//step 2: allocate index array mapping adjusted index to orignial index
 	U *p_indexArray = (U *)CPLMalloc(p_raster->getWidth() * p_raster->getHeight());
 	U *p_indexArrayUnfilledPointer = p_indexArray;
-	u noDataPixelCount = 0;
+	U noDataPixelCount = 0;
 	
 	//step 3: allocate first raster band
 	T *p_rasterBand = (T *)CPLMalloc(
 		p_raster->getWidth() * 		//width
-		p_raster->GetHeight() * 	//height
+		p_raster->getHeight() * 	//height
 		p_raster->getRasterTypeSize()	//num bytes per pixel
 	);
 	CPLErr err = p_dataset->GetRasterBand(1)->RasterIO(
@@ -50,14 +50,15 @@ std::vector<std::vector<double>> srs_cpp(
 		0,				//int nPixelSpace
 		0				//int nLineSpace
 	);
-	if (CPLErr) {
+	if (err) {
 		throw std::runtime_error("Error reading dataset band.");
 	}
 
 	//Step 4: iterate through raster band
+	double noDataValue = p_dataset->GetRasterBand(1)->GetNoDataValue();
 	for (U i = 0; i < (U)p_raster->getWidth() * (U)p_raster->getHeight(); i++) {
-		T val = p_rasterBand[U];
-		if (p_dataset->isNoData(val)) {
+		T val = p_rasterBand[i];
+		if (std::isnan(val) || (double)val == noDataValue) {
 			//Step 4.1: increment noDataPixelCount if encountered noData
 			noDataPixelCount++;
 		}
@@ -73,15 +74,15 @@ std::vector<std::vector<double>> srs_cpp(
 	CPLFree(p_rasterBand);
 
 	//Step 6: generate random number generator using mt19937
-	mt19937::result_type seed = time(0);
+	std::mt19937::result_type seed = time(0);
 	auto rng = std::bind(
 		std::uniform_int_distribution<U>(0, numDataPixels - 1),
-		mt19937(seed)
+		std::mt19937(seed)
 	);
 
 	//Step 7: generate numSamples random numbers of data pixels
 	std::set<U> samplePixels = {};
-	while(samplePixels.size < numSamples) {
+	while(samplePixels.size() < numSamples) {
 		samplePixels.insert(rng());
 	}
 
@@ -94,7 +95,7 @@ std::vector<std::vector<double>> srs_cpp(
 		double x_index = index / p_raster->getWidth();
 		double y_index = index - (x_index * p_raster->getWidth());
 		xCoords.push_back(GT[0] + x_index * GT[1] + y_index * GT[2]);
-		yCoords.push_back(GT[3] + x_index * GT[4] + u_index * GT[5]);
+		yCoords.push_back(GT[3] + x_index * GT[4] + y_index * GT[5]);
 	}
 
 	//Step 9: free no longer required index array

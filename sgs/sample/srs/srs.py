@@ -10,6 +10,7 @@ from sgs.utils import (
     write,
 )
 
+import srs
 
 def srs(
     rast: SpatialRaster,
@@ -30,7 +31,7 @@ def srs(
         #call access function TODO
 
     #call cpp srs function
-    samples = srs_cpp()
+    #samples = srs_cpp()
 
     if plot:
         pass

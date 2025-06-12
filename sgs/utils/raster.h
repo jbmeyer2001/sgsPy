@@ -288,13 +288,4 @@ class GDALRasterWrapper {
 	 */
 	std::string getMinIndexIntTypeSingleLayer();
 	std::string getMinIndexIntTypeMultiLayer();
-
-	/**
-	 * Checks if the value is a noData pixel or not.
-	 *
-	 * @param template val the value to check
-	 * @returns bool true if noData pixel false if data pixel
-	 */
-	template <typename T>
-	inline bool isNoData(T val);
 };

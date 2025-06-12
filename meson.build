@@ -1,4 +1,10 @@
-project('sgs', 'cpp')
+project(
+  'sgs',
+  'cpp',
+  default_options: [
+    'cpp_std=c++20'
+  ],
+)
 
 #get build operating system
 WIN = host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
