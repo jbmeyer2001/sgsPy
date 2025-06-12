@@ -40,6 +40,7 @@ using namespace pybind11::literals;
 class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
+	GDALExtendedDataType rasterType = GDALExtendedDataType::Create(GDT_Unknown);
 
 	void *p_fullRaster = nullptr;
 	bool fullRasterAllocated = false;
@@ -102,6 +103,13 @@ class GDALRasterWrapper {
 	 * CPLFree() on any allocated raster buffers.
 	 */
 	~GDALRasterWrapper();
+
+	/**
+	 * Getter method for wrapped dataset.
+	 *
+	 * @returns GDALDataset *pointer to the underlying dataset
+	 */
+	GDALDataset *getDataset();
 
 	/**
 	 * Getter method for the raster driver.
@@ -196,6 +204,13 @@ class GDALRasterWrapper {
 	std::vector<std::string> getBands();	
 
 	/**
+	 * Getter method for geotransform.
+	 *
+	 * returns double *array of 6 doubles representing GDAL geotransform
+	 */
+	double *getGeotransform();
+
+	/**
 	 * Getter method for the raster image, used by the Python side 
 	 * of the application. This function allocates the raster if necessary, and
 	 * uses py::memoryview::from_buffer() to create the buffer of the 
@@ -229,4 +244,57 @@ class GDALRasterWrapper {
 	 * @throws std::runtime_error if unable to read raster band during allocation
 	 */
 	void *getRaster();
+
+	/**
+	 * Getter method for the pixel / raster data type.
+	 *
+	 * @returns GDALDataType the data type
+	 *
+	 */
+	GDALDataType getRasterType();
+
+
+	/**
+	 * Getter method for the pixel / raster data type name.
+	 *
+	 * @returns std::string data type name
+	 */
+	std::string getRasterTypeName();
+
+	/**
+	 * Getter method for the pixel /raster data type size.
+	 *
+	 * @returns size_t the data type size in bytes
+	 */
+	size_t getRasterTypeSize();
+
+	/**
+	 * Gets an unsigned int type as a string. This will be
+	 * used by the Python side of the application to call 
+	 * a specific template function.
+	 *
+	 * In some situations it is helpful to have an array or matrix
+	 * of values representing the index of another array. Memory 
+	 * could be saved by using the smallest (in bytes) data type given 
+	 * the number of indexes it is required to represent. this function
+	 * returns that data type.
+	 *
+	 * The maximum index will be different if a single layer is used
+	 * vs if all layers are used, as such the min required data type
+	 * might be different. As such, there are two different versions
+	 * of this function single / multi bands.
+	 *
+	 * @returns std::string of C++ data type.
+	 */
+	std::string getMinIndexIntTypeSingleLayer();
+	std::string getMinIndexIntTypeMultiLayer();
+
+	/**
+	 * Checks if the value is a noData pixel or not.
+	 *
+	 * @param template val the value to check
+	 * @returns bool true if noData pixel false if data pixel
+	 */
+	template <typename T>
+	inline bool isNoData(T val);
 };

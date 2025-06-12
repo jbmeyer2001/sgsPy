@@ -21,12 +21,14 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	if (!this->p_dataset) {
 		throw std::runtime_error("dataset pointer is null after initialization, dataset unable to be initialized.");
 	}
-
 	//geotransform
 	CPLErr cplerr = this->p_dataset->GetGeoTransform(this->geotransform);
 	if (cplerr) {
 		throw std::runtime_error("error getting geotransform from dataset.");
-	}	
+	}
+
+	//data type
+	this->rasterType = GDALExtendedDataType::Create(this->p_dataset->GetRasterBand(1)->GetRasterDataType());	
 }
 
 /******************************************************************************
@@ -40,6 +42,13 @@ GDALRasterWrapper::~GDALRasterWrapper() {
 	if (this->p_downsampledRaster) {
 		CPLFree(this->p_downsampledRaster);
 	}
+}
+
+/******************************************************************************
+				  getDataset()
+******************************************************************************/
+GDALDataset *GDALRasterWrapper::getDataset() {
+	return this->p_dataset.get();
 }
 
 /******************************************************************************
@@ -162,6 +171,13 @@ std::vector<std::string> GDALRasterWrapper::getBands() {
 }
 
 /******************************************************************************
+			       getGeotransform()
+******************************************************************************/
+double *GDALRasterWrapper::getGeotransform() {
+	return this->geotransform;
+}
+
+/******************************************************************************
 				allocateRaster()
 ******************************************************************************/
 void *GDALRasterWrapper::allocateRaster(int width, int height) {
@@ -262,10 +278,6 @@ py::buffer GDALRasterWrapper::getRasterAsMemView(int width, int height) {
 			return getBuffer<int32_t>(4, p_raster, width, height);
 		case GDT_Float32:
 			return getBuffer<float>(4, p_raster, width, height);
-		case GDT_UInt64:
-			return getBuffer<uint64_t>(8, p_raster, width, height);
-		case GDT_Int64:
-			return getBuffer<int64_t>(8, p_raster, width, height);
 		case GDT_Float64:
 			return getBuffer<double>(8, p_raster, width, height);
 		default:
@@ -283,4 +295,65 @@ void *GDALRasterWrapper::getRaster() {
 	}
 
 	return this->p_fullRaster;
+}
+
+/******************************************************************************
+				getRasterType()				     
+******************************************************************************/
+GDALDataType GDALRasterWrapper::getRasterType() {
+	return this->rasterType.GetNumericDataType();
+}
+
+/******************************************************************************
+			      getRasterTypeName()				     
+******************************************************************************/
+std::string GDALRasterWrapper::getRasterTypeName() {
+	return this->rasterType.GetName();
+}
+
+/******************************************************************************
+			      getRasterTypeSize()				     
+******************************************************************************/
+size_t GDALRasterWrapper::getRasterTypeSize() {
+	return this->rasterType.GetSize();
+}
+
+/******************************************************************************
+				getMinIndexInt()		     
+******************************************************************************/
+std::string getMinIndexIntType(size_t maxIndex) {
+	if (std::numeric_limits<unsigned short>::max() >= maxIndex) {
+		return "unsigned_short";
+	}
+	else if (std::numeric_limits<unsigned>::max() >= maxIndex) {
+		return "unsigned";
+	}
+	else if (std::numeric_limits<unsigned long>::max() >= maxIndex) {
+		return "unsigned_long";
+	}
+	else {
+		return "unsigned_long_long";
+	}
+}
+
+/******************************************************************************
+			getMinIndexIntTypeSingleLayer()		     
+******************************************************************************/
+std::string GDALRasterWrapper::getMinIndexIntTypeSingleLayer() {
+	return getMinIndexIntType(this->getWidth() * this->getHeight());
+}
+
+/******************************************************************************
+			 getMinIndexIntTypeMultiLayer()		     
+******************************************************************************/
+std::string GDALRasterWrapper::getMinIndexIntTypeMultiLayer() {
+	return getMinIndexIntType(this->getWidth() * this->getHeight() * (size_t)this->getBandCount());
+}
+
+/******************************************************************************
+				   isNoData()				     
+******************************************************************************/
+template <typename T>
+inline bool GDALRasterWrapper::isNoData(T val) {
+	return std::isnan(val) || (double)val == this->p_dataset->GetRasterBand(1)->GetNoDataValue();
 }
