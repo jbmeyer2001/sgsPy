@@ -120,7 +120,7 @@ srs(
 		samplePixels.insert(rng());
 	}
 	if (mindist != 0.0)  {
-		while(backupSamplePixels.size() < numSamples) {
+		while(backupSamplePixels.size() < numSamples * 2) {
 			U pixel = rng();
 			if (samplePixels.find(pixel) == samplePixels.end()) {
 				backupSamplePixels.insert(pixel);
@@ -136,12 +136,11 @@ srs(
 	std::vector<std::string> wktPoints;
 
 	for( auto samplePixel : samplePixels ) {
-		U index = p_indexArray[samplePixel];
-		
-		double xIndex = index / p_raster->getWidth();
-		double yIndex = index - (xIndex * p_raster->getWidth());
-		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+		U index = p_indexArray[samplePixel];	
+		double yIndex = index / p_raster->getWidth();
+		double xIndex = index - (yIndex * p_raster->getWidth());
 		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 	
 		if (mindist != 0.0 && points.size() != 0) {
@@ -164,10 +163,10 @@ srs(
 	if (mindist != 0.0 && points.size() < numSamples) {
 		for ( auto samplePixel : backupSamplePixels ) {
 			U index = p_indexArray[samplePixel];
-			double xIndex = index / p_raster->getWidth();
-			double yIndex = index - (xIndex * p_raster->getWidth());
-			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+			double yIndex = index / p_raster->getWidth();
+			double xIndex = index - (yIndex * p_raster->getWidth());
 			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 
 			U pIndex = 0;

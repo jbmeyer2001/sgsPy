@@ -41,6 +41,9 @@ def srs(
     #call random sampling function
     [sample_coordinates, sample_points] = srs_cpp(rast.cpp_raster, mindist, num_samples, filename)
     
+    if (len(sample_points)) < num_samples:
+        print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, len(sample_points)))
+
     if plot:
         fig, ax = plt.subplots()
         rast.plot(ax)
