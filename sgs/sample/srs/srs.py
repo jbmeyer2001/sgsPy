@@ -1,3 +1,12 @@
+# ******************************************************************************
+#
+#  Project: sgs
+#  Purpose: GDALDataset wrapper for raster operations
+#  Author: Joseph Meyer
+#  Date: June, 2025
+#
+# ******************************************************************************
+
 from typing import Optional
 
 import numpy as np
@@ -29,11 +38,10 @@ def srs(
     if access is not None:
         pass
         #call access function TODO
-    
-    print("HERE!")
+ 
+    #call random sampling function
     samples = srs_cpp(rast.cpp_raster, num_samples)
-    print("HERE NOW!") 
-    print(samples)
+
     if plot:
         pass
         #call plot function

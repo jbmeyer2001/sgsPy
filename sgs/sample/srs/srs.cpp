@@ -15,7 +15,31 @@
 #include "vector.h"
 
 /**
- * TODO document
+ * This function uses random sampling to determine the location
+ * of sample plots given a raster image which may contain nodata
+ * pixels.
+ *
+ * //TODO add access vector information when functionality
+ * is implemented.
+ *
+ * A single raster band is read from the raster, and each pixel
+ * is checked to ensure a sample is not located on a nodata
+ * pixel. The indeces of the data pixels are saved in another 
+ * allocated matrix. When all pixels have been read, the indexes
+ * are randomly drawn from the data pixels, converted to 
+ * geographic coordinates using the geotransform, and returned.
+ *
+ * The function is a template function which contains the data
+ * type of the raster (T), as well as the type of the 
+ * index matrix (U). The use of U as a template argument is
+ * to ensure the index matrix data type can represent every
+ * index in the raster without overflow, and do it with
+ * the most efficient use of memory.
+ *
+ * @param GDALRasterWrapper * a pointer to the raster image we're sampling
+ * @param GDALRasterVector * a pointer to an access vector image if it exists
+ * @param U <unsigned short, unsigned, unsigned long, unsigned long long> the number of samples
+ * @returns std::vector<std::vector<double>> coordinates of samples
  */
 template <typename T, typename U>
 std::vector<std::vector<double>> srs(
@@ -56,6 +80,7 @@ std::vector<std::vector<double>> srs(
 
 	//Step 4: iterate through raster band
 	double noDataValue = p_dataset->GetRasterBand(1)->GetNoDataValue();
+	U j = 0;
 	for (U i = 0; i < (U)p_raster->getWidth() * (U)p_raster->getHeight(); i++) {
 		T val = p_rasterBand[i];
 		if (std::isnan(val) || (double)val == noDataValue) {
@@ -64,8 +89,8 @@ std::vector<std::vector<double>> srs(
 		}
 		else {
 			//Step 4.2: add data index to indexArray
-			*p_indexArrayUnfilledPointer = i;
-			p_indexArrayUnfilledPointer++;
+			p_indexArrayUnfilledPointer[j] = i;
+			j++;
 		}
 	}
 	U numDataPixels = (U)p_raster->getWidth() * (U)p_raster->getHeight() - noDataPixelCount;
@@ -124,51 +149,51 @@ std::vector<std::vector<double>> srs(
  */
 std::vector<std::vector<double>> srsTypeSpecifier(
 	GDALRasterWrapper *p_raster,
-	//GDALVectorWrapper *p_Vector,
+	//GDALVectorWrapper *p_vector,
 	size_t numSamples) 
 {
 	std::string minIndexIntType = p_raster->getMinIndexIntType(true); //singleBand = true 
 	switch (p_raster->getRasterType()) {
 		case GDT_Int8:
-		if(minIndexIntType.compare("unsigned_short")) { return srs<int8_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned")) { return srs<int8_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long")) { return srs<int8_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long_long")) { return srs<int8_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<int8_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned") { return srs<int8_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long") { return srs<int8_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int8_t, unsigned long long>(p_raster, numSamples); }
 		case GDT_UInt16:
-		if(minIndexIntType.compare("unsigned_short")) { return srs<uint16_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned")) { return srs<uint16_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long")) { return srs<uint16_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long_long")) { return srs<uint16_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<uint16_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned") { return srs<uint16_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long") { return srs<uint16_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<uint16_t, unsigned long long>(p_raster, numSamples); }
 		break;
 		case GDT_Int16:
-		if(minIndexIntType.compare("unsigned_short")) { return srs<int16_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned")) { return srs<int16_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long")) { return srs<int16_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long_long")) { return srs<int16_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<int16_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned") { return srs<int16_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long") { return srs<int16_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int16_t, unsigned long long>(p_raster, numSamples); }
 		break;
 		case GDT_UInt32:
-		if(minIndexIntType.compare("unsigned_short")) { return srs<uint32_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned")) { return srs<uint32_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long")) { return srs<uint32_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long_long")) { return srs<uint32_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<uint32_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned") { return srs<uint32_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long") { return srs<uint32_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<uint32_t, unsigned long long>(p_raster, numSamples); }
 		break;
 		case GDT_Int32:
-		if(minIndexIntType.compare("unsigned_short")) { return srs<int32_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned")) { return srs<int32_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long")) { return srs<int32_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long_long")) { return srs<int32_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<int32_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned") { return srs<int32_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long") { return srs<int32_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int32_t, unsigned long long>(p_raster, numSamples); }
 		break;
 		case GDT_Float32:
-		if(minIndexIntType.compare("unsigned_short")) { return srs<float, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned")) { return srs<float, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long")) { return srs<float, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long_long")) { return srs<float, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<float, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned") { return srs<float, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long") { return srs<float, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<float, unsigned long long>(p_raster, numSamples); }
 		break;
 		case GDT_Float64:
-		if(minIndexIntType.compare("unsigned_short")) { return srs<double, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned")) { return srs<double, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long")) { return srs<double, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType.compare("unsigned_long_long")) { return srs<double, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<double, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned") { return srs<double, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long") { return srs<double, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<double, unsigned long long>(p_raster, numSamples); }
 		break;
 		default: 
 		throw std::runtime_error("GDALDataType not one of the accepted types.");
