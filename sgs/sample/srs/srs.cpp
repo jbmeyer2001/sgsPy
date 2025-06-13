@@ -39,13 +39,17 @@
  * @param GDALRasterWrapper * a pointer to the raster image we're sampling
  * @param GDALRasterVector * a pointer to an access vector image if it exists
  * @param U <unsigned short, unsigned, unsigned long, unsigned long long> the number of samples
- * @returns std::vector<std::vector<double>> coordinates of samples
+ * @returns std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
+ * 		coordinate and wkt representation of samples
  */
 template <typename T, typename U>
-std::vector<std::vector<double>> srs(
+std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+srs(
 	GDALRasterWrapper *p_raster,
+	double mindist,
 	//GDALVectorWrapper *p_vector,
-	U numSamples)
+	U numSamples,
+	std::string filename)
 {
 	//Step 1: get dataset
 	GDALDataset *p_dataset = p_raster->getDataset();
@@ -105,29 +109,90 @@ std::vector<std::vector<double>> srs(
 		std::mt19937(seed)
 	);
 
-	//Step 7: generate numSamples random numbers of data pixels
-	std::set<U> samplePixels = {};
+	//Step 7: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
+	//use std::set because we want to iterate in-order because it will be faster
+	std::set<U> samplePixels = {}; 	
+	
+	//use std::unordered_set because we want to iterate out-of-order because it is required by the implementation
+	std::unordered_set<U> backupSamplePixels = {};
+
 	while(samplePixels.size() < numSamples) {
 		samplePixels.insert(rng());
 	}
+	if (mindist != 0.0)  {
+		while(backupSamplePixels.size() < numSamples) {
+			U pixel = rng();
+			if (samplePixels.find(pixel) == samplePixels.end()) {
+				backupSamplePixels.insert(pixel);
+			}
+		}
+	}
 
-	//Step 8: generate coordinate points for each sample index
+	//Step 8: generate coordinate points for each sample index, and only add if they're outside of mindist
 	double *GT = p_raster->getGeotransform();
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
+	std::vector<OGRPoint> points;
+	std::vector<std::string> wktPoints;
+
 	for( auto samplePixel : samplePixels ) {
 		U index = p_indexArray[samplePixel];
-		double x_index = index / p_raster->getWidth();
-		double y_index = index - (x_index * p_raster->getWidth());
-		xCoords.push_back(GT[0] + x_index * GT[1] + y_index * GT[2]);
-		yCoords.push_back(GT[3] + x_index * GT[4] + y_index * GT[5]);
+		double xIndex = index / p_raster->getWidth();
+		double yIndex = index - (xIndex * p_raster->getWidth());
+		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
+		
+		if (mindist != 0.0 || points.size() == 0) {
+			U pIndex = 0;
+			while ((newPoint.Distance(&points[pIndex]) > mindist) && (pIndex < points.size())) {
+				pIndex++;
+			}
+			if (pIndex != points.size()) {
+				continue;
+			}
+		}
+
+		points.push_back(newPoint);
+		wktPoints.push_back(newPoint.exportToWkt());
+		xCoords.push_back(xCoord);
+		yCoords.push_back(yCoord);
+	}
+
+	//if we need more sample points, iterate through the backups until we have
+	//either run out of backups or have the required number of samples
+	if (mindist != 0.0 && points.size() < numSamples) {
+		for ( auto samplePixel : backupSamplePixels ) {
+			U index = p_indexArray[samplePixel];
+			double xIndex = index / p_raster->getWidth();
+			double yIndex = index - (xIndex * p_raster->getWidth());
+			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
+
+			U pIndex = 0;
+			while ((newPoint.Distance(&points[pIndex]) > mindist) && (pIndex < points.size())) {
+				pIndex++;
+			}
+
+			if (pIndex == points.size()) {
+				points.push_back(newPoint);
+				wktPoints.push_back(newPoint.exportToWkt());
+				xCoords.push_back(xCoord);
+				yCoords.push_back(yCoord);
+			}
+
+			if (points.size() == numSamples) { 
+				break;
+			}
+		}
 	}
 
 	//Step 9: free no longer required index array
 	CPLFree(p_indexArray);
 
-	//Step 10: return coordinates
-	return {xCoords, yCoords};
+	//Step 10: return as coordinates and wkt
+	return {{xCoords, yCoords}, wktPoints};
 }
 
 /**
@@ -145,55 +210,59 @@ std::vector<std::vector<double>> srs(
  * A call is made to srs() with the necessary data type template
  * arguments depending on raster parameters.
  *
- * @returns std::vector<std::vector<double>> coordinate representation of samples
+ * @returns std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+ * 		coordinate and wkt representation of samples
  */
-std::vector<std::vector<double>> srsTypeSpecifier(
+std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+srsTypeSpecifier(
 	GDALRasterWrapper *p_raster,
+	double mindist,
 	//GDALVectorWrapper *p_vector,
-	size_t numSamples) 
+	size_t numSamples,
+	std::string filename) 
 {
 	std::string minIndexIntType = p_raster->getMinIndexIntType(true); //singleBand = true 
 	switch (p_raster->getRasterType()) {
 		case GDT_Int8:
-		if(minIndexIntType == "unsigned_short") { return srs<int8_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned") { return srs<int8_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long") { return srs<int8_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<int8_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<int8_t, unsigned short>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned") { return srs<int8_t, unsigned>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<int8_t, unsigned long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int8_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
 		case GDT_UInt16:
-		if(minIndexIntType == "unsigned_short") { return srs<uint16_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned") { return srs<uint16_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long") { return srs<uint16_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<uint16_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<uint16_t, unsigned short>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned") { return srs<uint16_t, unsigned>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<uint16_t, unsigned long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<uint16_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
 		break;
 		case GDT_Int16:
-		if(minIndexIntType == "unsigned_short") { return srs<int16_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned") { return srs<int16_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long") { return srs<int16_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<int16_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<int16_t, unsigned short>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned") { return srs<int16_t, unsigned>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<int16_t, unsigned long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int16_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
 		break;
 		case GDT_UInt32:
-		if(minIndexIntType == "unsigned_short") { return srs<uint32_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned") { return srs<uint32_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long") { return srs<uint32_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<uint32_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<uint32_t, unsigned short>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned") { return srs<uint32_t, unsigned>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<uint32_t, unsigned long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<uint32_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
 		break;
 		case GDT_Int32:
-		if(minIndexIntType == "unsigned_short") { return srs<int32_t, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned") { return srs<int32_t, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long") { return srs<int32_t, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<int32_t, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<int32_t, unsigned short>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned") { return srs<int32_t, unsigned>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<int32_t, unsigned long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int32_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
 		break;
 		case GDT_Float32:
-		if(minIndexIntType == "unsigned_short") { return srs<float, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned") { return srs<float, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long") { return srs<float, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<float, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<float, unsigned short>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned") { return srs<float, unsigned>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<float, unsigned long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<float, unsigned long long>(p_raster, mindist, numSamples, filename); }
 		break;
 		case GDT_Float64:
-		if(minIndexIntType == "unsigned_short") { return srs<double, unsigned short>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned") { return srs<double, unsigned>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long") { return srs<double, unsigned long>(p_raster, numSamples); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<double, unsigned long long>(p_raster, numSamples); }
+		if(minIndexIntType == "unsigned_short") { return srs<double, unsigned short>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned") { return srs<double, unsigned>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<double, unsigned long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<double, unsigned long long>(p_raster, mindist, numSamples, filename); }
 		break;
 		default: 
 		throw std::runtime_error("GDALDataType not one of the accepted types.");

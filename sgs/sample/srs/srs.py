@@ -25,23 +25,22 @@ def srs(
     rast: SpatialRaster,
     num_samples: int,
     access: Optional[SpatialVector] = None,
-    mindist: Optional[float] = None,
+    mindist: float = 0,
     buf_inner: Optional[int | float] = None,
     buf_outer: Optional[int | float] = None,
     plot: bool = False,
-    filename: Optional[str] = None,
-    overwrite: bool = False):
+    filename: str = ''):
     """
 
     """
-
     if access is not None:
         pass
         #call access function TODO
- 
-    #call random sampling function
-    samples = srs_cpp(rast.cpp_raster, num_samples)
 
+    #call random sampling function
+    [sample_coordinates, sample_wkt] = srs_cpp(rast.cpp_raster, mindist, num_samples, filename)
+    print(sample_coordinates)
+    print(sample_wkt)
     if plot:
         pass
         #call plot function
