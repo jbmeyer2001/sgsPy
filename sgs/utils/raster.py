@@ -12,6 +12,7 @@ from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib #for type checking matplotlib.axes.Axes
 
 from raster import GDALRasterWrapper
 
@@ -264,6 +265,7 @@ class SpatialRaster:
         return self.arr[index]
 
     def plot(self, 
+             ax: Optional[matplotlib.axes.Axes] = None,
              target_width: int = 1000, 
              target_height: int = 1000, 
              bands: Optional[int | str | list | dict] = None, 
@@ -273,6 +275,8 @@ class SpatialRaster:
 
         Parameters
         --------------------
+        ax : matplotlib.axes.Axes
+            axes to plot the raster on
         target_width : int
             maximum width in pixels for the image (after downsampling)
         target_height : int
@@ -288,7 +292,10 @@ class SpatialRaster:
             if unable to read raster band
         """
 
-        fig, ax = plt.subplots()
-        plot_raster(self, ax, target_width, target_width, bands, **kwargs)
-        plt.show()
+        if ax is not None:
+            plot_raster(self, ax, target_width, target_width, bands, **kwargs)
+        else:
+            fig, ax = plt.subplots()
+            plot_raster(self, ax, target_width, target_width, bands, **kwargs)
+            plt.show()
         

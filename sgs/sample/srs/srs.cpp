@@ -137,22 +137,22 @@ srs(
 
 	for( auto samplePixel : samplePixels ) {
 		U index = p_indexArray[samplePixel];
+		
 		double xIndex = index / p_raster->getWidth();
 		double yIndex = index - (xIndex * p_raster->getWidth());
 		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
 		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-		
-		if (mindist != 0.0 || points.size() == 0) {
+	
+		if (mindist != 0.0 && points.size() != 0) {
 			U pIndex = 0;
-			while ((newPoint.Distance(&points[pIndex]) > mindist) && (pIndex < points.size())) {
+			while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
 				pIndex++;
 			}
-			if (pIndex != points.size()) {
+			if (pIndex != (U)points.size()) {
 				continue;
 			}
 		}
-
 		points.push_back(newPoint);
 		wktPoints.push_back(newPoint.exportToWkt());
 		xCoords.push_back(xCoord);
@@ -171,7 +171,7 @@ srs(
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 
 			U pIndex = 0;
-			while ((newPoint.Distance(&points[pIndex]) > mindist) && (pIndex < points.size())) {
+			while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
 				pIndex++;
 			}
 

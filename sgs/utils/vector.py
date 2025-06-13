@@ -10,6 +10,7 @@
 from typing import Optional
 
 import matplotlib.pyplot as plt
+import matplotlib #fpr type checking matplotlib.axes.Axes
 
 from vector import GDALVectorWrapper
 
@@ -98,23 +99,46 @@ class SpatialVector:
             specifies the layer to print information on
         """
         if type(layer) == str:
-            self.pritn_info(layer, self.cpp_vector.get_layer_info(layer))
+            self.print_info(layer, self.cpp_vector.get_layer_info(layer))
         elif type(layer) == int:
             self.print_info(self.layers[layer], self.cpp_vector.get_layer_info(self.layers[layer]))
         else:
             for layer in self.layers:
                 self.print_info(layer, self.cpp_vector.get_layer_info(layer))
 
-    """
-    This function, at present, is only meant to be used for testing purposes.
+    def plot(self,
+        geomtype: str,
+        ax: Optional[matplotlib.axes.Axes] = None,
+        layer: Optional[int | str] = None, 
+        **kwargs):
+        """
+        Calls plot_vector on self.
 
-    In the future, either embellish documentation or delete.
-    """
-    def plot(self, 
-             geomtype: str, 
-             layer: Optional[int | str] = None, 
-             **kwargs):
-        fig, ax = plt.subplots()
-        plot_vector(self, ax, geomtype, layer, **kwargs)
-        plt.show()
+        Paramters
+        --------------------
+        ax : matplotlib.axes.Axes
+            axes to plot the raster on
+        geomtype : str
+            the geometry type to try to print
+        layer : None | int | str
+            specification of which layer to print
+        **kwargs (optional)
+            any parameter which may be passed ot matplotlib.pyplot.plot
+
+        Raises
+        --------------------
+        ValueError:
+            if no layer was specified, and the image contains more than one layer
+        ValueError:
+            if geomtype is not one of 'Point', 'MultiPoint', 'LineString', 'MultiLineString'
+        RuntimeError (from C++):
+            if the layer contains a geometry NOT of an acceptable type
+        """
+
+        if ax is not None: 
+            plot_vector(self, ax, geomtype, layer, **kwargs)
+        else:
+            fig, ax = plt.subplots()
+            plot_vector(self, ax, geomtype, layer, **kwargs)
+            plt.show()
 

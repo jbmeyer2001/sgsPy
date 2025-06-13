@@ -5,9 +5,11 @@ from sgs import SpatialRaster
 import numpy as np
 
 rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster_small.tif')
-sgs.srs(rast, 5)
+samples = sgs.srs(rast, mindist=600, num_samples=40, plot=True)
+print(samples)
 rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster.tif')
-sgs.srs(rast, 5)
+samples = sgs.srs(rast, mindist=600, num_samples=40, plot=True)
+print(samples)
 
 '''
 folder = os.path.join(os.path.dirname(__file__), 'tests', 'utils', 'files')

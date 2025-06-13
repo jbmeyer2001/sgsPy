@@ -10,6 +10,7 @@
 from typing import Optional
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from sgs.utils import (
     access,
@@ -38,15 +39,18 @@ def srs(
         #call access function TODO
 
     #call random sampling function
-    [sample_coordinates, sample_wkt] = srs_cpp(rast.cpp_raster, mindist, num_samples, filename)
-    print(sample_coordinates)
-    print(sample_wkt)
+    [sample_coordinates, sample_points] = srs_cpp(rast.cpp_raster, mindist, num_samples, filename)
+    
     if plot:
-        pass
-        #call plot function
+        fig, ax = plt.subplots()
+        rast.plot(ax)
+        if access is not None:
+            access.plot('LineString', ax)
+        ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
+        plt.show()
 
     if filename:
         #TODO add when write has been implemented
         write(filename, overwrite)
 
-    return samples
+    return sample_points
