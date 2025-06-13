@@ -1,7 +1,7 @@
 # ******************************************************************************
 #
 #  Project: sgs
-#  Purpose: GDALDataset wrapper for raster operations
+#  Purpose: simple random sampling (srs)
 #  Author: Joseph Meyer
 #  Date: June, 2025
 #
@@ -32,7 +32,39 @@ def srs(
     plot: bool = False,
     filename: str = ''):
     """
+    This function conducts simple random sampling on the raster given. 
+    Sample points are randomly selected from data pixels (can't be nodata).
+    All sample points are at least mindist distance away from eachother.
+    If unable to get the full number of sample points, a message is printed.
 
+    Most of the calculation is done within the srs_cpp function which can
+    be found in sgs/sample/srs/srs.cpp.
+
+    Parameters
+    --------------------
+    rast : SpatialRaster
+        raster data structure containing the raster to sample
+    num_samples : int
+        the target number of samples
+    access (optional) : SpatialVector
+        a vector specifying access information
+    mindist : float
+        the minimum distance each sample point must be from each other
+    buf_inner (optional) : int | float
+        buffer boundary specifying distance from access which CANNOT be sampled
+    buf_outer (optional) : int | float
+        buffer boundary specifying distance from access which CAN be sampled
+    plot : bool
+        whether to plot the samples or not
+    filename : str
+        the filename to write to, or '' if file should not be written
+
+    Raises
+    --------------------
+        RuntimeError (from C++)
+            if there is an issue reading a band from the raster
+        RuntimeError (from C++)
+            type errors for not valid/accepted types -- if this error shows up from this function, it means there's a bug
     """
     if access is not None:
         pass
@@ -53,7 +85,7 @@ def srs(
         plt.show()
 
     if filename:
-        #TODO add when write has been implemented
-        write(filename, overwrite)
+        #TODO when write implemented
+        pass
 
     return sample_points
