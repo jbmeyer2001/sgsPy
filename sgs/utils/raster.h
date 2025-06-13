@@ -249,17 +249,8 @@ class GDALRasterWrapper {
 	 * Getter method for the pixel / raster data type.
 	 *
 	 * @returns GDALDataType the data type
-	 *
 	 */
 	GDALDataType getRasterType();
-
-
-	/**
-	 * Getter method for the pixel / raster data type name.
-	 *
-	 * @returns std::string data type name
-	 */
-	std::string getRasterTypeName();
 
 	/**
 	 * Getter method for the pixel /raster data type size.
@@ -279,13 +270,13 @@ class GDALRasterWrapper {
 	 * the number of indexes it is required to represent. this function
 	 * returns that data type.
 	 *
-	 * The maximum index will be different if a single layer is used
-	 * vs if all layers are used, as such the min required data type
-	 * might be different. As such, there are two different versions
-	 * of this function single / multi bands.
+	 * The maximum index required may be different for a single band
+	 * compared to if all bands must be indexed, as such the min required data type
+	 * might be different. the singleBand parameter selects whether
+	 * a single band max index or the full multi-band max index will be used.
 	 *
+	 * @param bool singeBand single/multi band selection
 	 * @returns std::string of C++ data type.
 	 */
-	std::string getMinIndexIntTypeSingleLayer();
-	std::string getMinIndexIntTypeMultiLayer();
+	std::string getMinIndexIntType(bool singleBand);
 };

@@ -7,6 +7,8 @@
  *
  ******************************************************************************/
 
+#include <iostream>
+
 #include "raster.h"
 
 /******************************************************************************
@@ -300,15 +302,8 @@ void *GDALRasterWrapper::getRaster() {
 /******************************************************************************
 				getRasterType()				     
 ******************************************************************************/
-GDALDataType GDALRasterWrapper::getRasterType() {
-	return this->rasterType.GetNumericDataType();
-}
-
-/******************************************************************************
-			      getRasterTypeName()				     
-******************************************************************************/
-std::string GDALRasterWrapper::getRasterTypeName() {
-	return this->rasterType.GetName();
+GDALDataType GDALRasterWrapper::getRasterType() { 
+	return this->rasterType.GetNumericDataType(); 
 }
 
 /******************************************************************************
@@ -319,9 +314,11 @@ size_t GDALRasterWrapper::getRasterTypeSize() {
 }
 
 /******************************************************************************
-				getMinIndexInt()		     
+			      getMinIndexIntType()		     
 ******************************************************************************/
-std::string getMinIndexIntType(size_t maxIndex) {
+std::string GDALRasterWrapper::getMinIndexIntType(bool singleBand) {
+	size_t maxIndex = this->getWidth() * this->getHeight();
+	maxIndex = singleBand ? maxIndex : maxIndex * this->getBandCount();
 	if (std::numeric_limits<unsigned short>::max() >= maxIndex) {
 		return "unsigned_short";
 	}
@@ -335,18 +332,3 @@ std::string getMinIndexIntType(size_t maxIndex) {
 		return "unsigned_long_long";
 	}
 }
-
-/******************************************************************************
-			getMinIndexIntTypeSingleLayer()		     
-******************************************************************************/
-std::string GDALRasterWrapper::getMinIndexIntTypeSingleLayer() {
-	return getMinIndexIntType(this->getWidth() * this->getHeight());
-}
-
-/******************************************************************************
-			 getMinIndexIntTypeMultiLayer()		     
-******************************************************************************/
-std::string GDALRasterWrapper::getMinIndexIntTypeMultiLayer() {
-	return getMinIndexIntType(this->getWidth() * this->getHeight() * (size_t)this->getBandCount());
-}
-

@@ -4,13 +4,12 @@ import sgs
 from sgs import SpatialRaster
 import numpy as np
 
-'''
-rast = SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
-samples = sgs.balanced(rast, 5, 'lcube')
-print(samples)
-print('ran sgs.balanced() to completion and printed samples')
-'''
+rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster_small.tif')
+sgs.srs(rast, 5)
+rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster.tif')
+sgs.srs(rast, 5)
 
+'''
 folder = os.path.join(os.path.dirname(__file__), 'tests', 'utils', 'files')
 access_shapefile_path = os.path.join(folder, 'access.shp')
 existing_shapefile_path = os.path.join(folder, 'existing.shp')
@@ -161,3 +160,4 @@ assert float(layer_info["ymin"]) == 5337710
 assert float(layer_info["ymax"]) == 5343230
 
 print("PASSED")
+'''

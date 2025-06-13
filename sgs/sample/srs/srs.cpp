@@ -15,24 +15,24 @@
 #include "vector.h"
 
 /**
- *
+ * TODO document
  */
 template <typename T, typename U>
-std::vector<std::vector<double>> srs_cpp(
+std::vector<std::vector<double>> srs(
 	GDALRasterWrapper *p_raster,
-	GDALVectorWrapper *p_vector,
+	//GDALVectorWrapper *p_vector,
 	U numSamples)
 {
 	//Step 1: get dataset
 	GDALDataset *p_dataset = p_raster->getDataset();
 
 	//step 2: allocate index array mapping adjusted index to orignial index
-	U *p_indexArray = (U *)CPLMalloc(p_raster->getWidth() * p_raster->getHeight());
+	U *p_indexArray = (U *)std::malloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(U));
 	U *p_indexArrayUnfilledPointer = p_indexArray;
 	U noDataPixelCount = 0;
 	
 	//step 3: allocate first raster band
-	T *p_rasterBand = (T *)CPLMalloc(
+	T *p_rasterBand = (T *)std::malloc(
 		p_raster->getWidth() * 		//width
 		p_raster->getHeight() * 	//height
 		p_raster->getRasterTypeSize()	//num bytes per pixel
@@ -43,7 +43,7 @@ std::vector<std::vector<double>> srs_cpp(
 		0,				//int nYOff
 		p_raster->getWidth(),		//int nXSize
 		p_raster->getHeight(),		//int nYSize
-		(void *)p_rasterBand,			//void *pData
+		(void *)p_rasterBand,		//void *pData
 		p_raster->getWidth(),		//int nBufXSize
 		p_raster->getHeight(),		//int nBufYSize
 		p_raster->getRasterType(),	//GDALDataType eBufType
@@ -70,11 +70,11 @@ std::vector<std::vector<double>> srs_cpp(
 	}
 	U numDataPixels = (U)p_raster->getWidth() * (U)p_raster->getHeight() - noDataPixelCount;
 
-	//Step 5: free no longer required raster band
+	//step 5: free no longer required raster band
 	CPLFree(p_rasterBand);
 
-	//Step 6: generate random number generator using mt19937
-	std::mt19937::result_type seed = time(0);
+	//Step 6: generate random number generator using mt19937	
+	std::mt19937::result_type seed = time(nullptr);
 	auto rng = std::bind(
 		std::uniform_int_distribution<U>(0, numDataPixels - 1),
 		std::mt19937(seed)
@@ -105,39 +105,77 @@ std::vector<std::vector<double>> srs_cpp(
 	return {xCoords, yCoords};
 }
 
+/**
+ * Having template types which rely in dynamic information (such as
+ * the pixel type of the added raster, or the number of pixels in 
+ * the raster) require an unfortunate amount of boilerplate code.
+ *
+ * This is an attempt to condense as much of the annoying boilerplate
+ * into a single place.
+ *
+ * This function uses type information of the raster pixel type,
+ * as well as the minimally sized unsigned int type which can represent
+ * all necessary indices.
+ *
+ * A call is made to srs() with the necessary data type template
+ * arguments depending on raster parameters.
+ *
+ * @returns std::vector<std::vector<double>> coordinate representation of samples
+ */
+std::vector<std::vector<double>> srsTypeSpecifier(
+	GDALRasterWrapper *p_raster,
+	//GDALVectorWrapper *p_Vector,
+	size_t numSamples) 
+{
+	std::string minIndexIntType = p_raster->getMinIndexIntType(true); //singleBand = true 
+	switch (p_raster->getRasterType()) {
+		case GDT_Int8:
+		if(minIndexIntType.compare("unsigned_short")) { return srs<int8_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned")) { return srs<int8_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long")) { return srs<int8_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long_long")) { return srs<int8_t, unsigned long long>(p_raster, numSamples); }
+		case GDT_UInt16:
+		if(minIndexIntType.compare("unsigned_short")) { return srs<uint16_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned")) { return srs<uint16_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long")) { return srs<uint16_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long_long")) { return srs<uint16_t, unsigned long long>(p_raster, numSamples); }
+		break;
+		case GDT_Int16:
+		if(minIndexIntType.compare("unsigned_short")) { return srs<int16_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned")) { return srs<int16_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long")) { return srs<int16_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long_long")) { return srs<int16_t, unsigned long long>(p_raster, numSamples); }
+		break;
+		case GDT_UInt32:
+		if(minIndexIntType.compare("unsigned_short")) { return srs<uint32_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned")) { return srs<uint32_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long")) { return srs<uint32_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long_long")) { return srs<uint32_t, unsigned long long>(p_raster, numSamples); }
+		break;
+		case GDT_Int32:
+		if(minIndexIntType.compare("unsigned_short")) { return srs<int32_t, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned")) { return srs<int32_t, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long")) { return srs<int32_t, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long_long")) { return srs<int32_t, unsigned long long>(p_raster, numSamples); }
+		break;
+		case GDT_Float32:
+		if(minIndexIntType.compare("unsigned_short")) { return srs<float, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned")) { return srs<float, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long")) { return srs<float, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long_long")) { return srs<float, unsigned long long>(p_raster, numSamples); }
+		break;
+		case GDT_Float64:
+		if(minIndexIntType.compare("unsigned_short")) { return srs<double, unsigned short>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned")) { return srs<double, unsigned>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long")) { return srs<double, unsigned long>(p_raster, numSamples); }
+		if(minIndexIntType.compare("unsigned_long_long")) { return srs<double, unsigned long long>(p_raster, numSamples); }
+		break;
+		default: 
+		throw std::runtime_error("GDALDataType not one of the accepted types.");
+	}
+	throw std::runtime_error("type " + minIndexIntType + " not a valid type.");
+}
+
 PYBIND11_MODULE(srs, m) {
-	m.def("srs-GDT_Int8-unsigned_short", &srs_cpp<int8_t, unsigned short>);
-	m.def("srs-GDT_Int8-unsigned", &srs_cpp<int8_t, unsigned>);
-	m.def("srs-GDT_Int8-unsigned_long", &srs_cpp<int8_t, unsigned long>);
-	m.def("srs-GDT_Int8-unsigned_long_long", &srs_cpp<int8_t, unsigned long long>);
-	
-	m.def("srs-GDT_UInt16-unsigned_short", &srs_cpp<uint16_t, unsigned short>);
-	m.def("srs-GDT_UInt16-unsigned", &srs_cpp<uint16_t, unsigned>);
-	m.def("srs-GDT_UInt16-unsigned_long", &srs_cpp<uint16_t, unsigned long>);
-	m.def("srs-GDT_UInt16-unsigned_long_long", &srs_cpp<uint16_t, unsigned long long>);
-	
-	m.def("srs-GDT_Int16-unsigned_short", &srs_cpp<int16_t, unsigned short>);
-	m.def("srs-GDT_Int16-unsigned", &srs_cpp<int16_t, unsigned>);
-	m.def("srs-GDT_Int16-unsigned_long", &srs_cpp<int16_t, unsigned long>);
-	m.def("srs-GDT_Int16-unsigned_long_long", &srs_cpp<int16_t, unsigned long long>);
-	
-	m.def("srs-GDT_UInt32-unsigned_short", &srs_cpp<uint32_t, unsigned short>);
-	m.def("srs-GDT_UInt32-unsigned", &srs_cpp<uint32_t, unsigned>);
-	m.def("srs-GDT_UInt32-unsigned_long", &srs_cpp<uint32_t, unsigned long>);
-	m.def("srs-GDT_UInt32-unsigned_long_long", &srs_cpp<uint32_t, unsigned long long>);
-	
-	m.def("srs-GDT_Int32-unsigned_short", &srs_cpp<int32_t, unsigned short>);
-	m.def("srs-GDT_Int32-unsigned", &srs_cpp<int32_t, unsigned>);
-	m.def("srs-GDT_Int32-unsigned_long", &srs_cpp<int32_t, unsigned long>);
-	m.def("srs-GDT_Int32-unsigned_long_long", &srs_cpp<int32_t, unsigned long long>);
-	
-	m.def("srs-GDT_Float32-unsigned_short", &srs_cpp<float, unsigned short>);
-	m.def("srs-GDT_Float32-unsigned", &srs_cpp<float, unsigned>);
-	m.def("srs-GDT_Float32-unsigned_long", &srs_cpp<float, unsigned long>);
-	m.def("srs-GDT_Float32-unsigned_long_long", &srs_cpp<float, unsigned long long>);
-	
-	m.def("srs-GDT_Float64-unsigned_short", &srs_cpp<double, unsigned short>);
-	m.def("srs-GDT_Float64-unsigned", &srs_cpp<double, unsigned>);
-	m.def("srs-GDT_Float64-unsigned_long", &srs_cpp<double, unsigned long>);
-	m.def("srs-GDT_Float64-unsigned_long_long", &srs_cpp<double, unsigned long long>);
+	m.def("srs_cpp", &srsTypeSpecifier);
 }
