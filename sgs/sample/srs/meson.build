@@ -6,6 +6,7 @@ if WIN
     link_with: [
       raster_lib,
       vector_lib,
+      write_lib,
     ],
     dependencies: [lib_deps],
     include_directories: [
@@ -29,6 +30,7 @@ else #linux
       #from sgs/utils
       raster_obj,
       vector_obj,
+      write_obj,
     ],
     install: true,
   )

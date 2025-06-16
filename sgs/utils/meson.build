@@ -12,6 +12,13 @@ vector_lib = static_library(
   include_directories: [inc_dir],
 )
 
+#build write functionality as  library
+write_lib = static_library(
+  'write_lib', 'write.cpp', 'write.h',
+  dependencies: [lib_deps],
+  include_directories: [inc_dir],
+)
+
 #both windows and linux builds need to be linked slightly differently.
 #windows requires the use of the link_with argument, whereas Linux
 #requires extracted objects to be added.
@@ -44,6 +51,7 @@ else #linux
   #first, extract objects to be linked. These will be used elsewhere in the project as well
   raster_obj = raster_lib.extract_objects('raster.cpp')
   vector_obj = vector_lib.extract_objects('vector.cpp')
+  write_obj = write_lib.extract_objects('write.cpp')
 
   #create raster module
   py.extension_module(

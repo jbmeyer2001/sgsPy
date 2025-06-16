@@ -7,7 +7,6 @@ from .utils import (
     access,
     SpatialRaster,
     SpatialVector,
-    write,
 )
 
 from .calculate import (

@@ -8,11 +8,13 @@
  *
  ******************************************************************************/
 
+#include <iostream>
 #include <random>
 
 //sgs/utils cpp code
 #include "raster.h"
 #include "vector.h"
+#include "write.h"
 
 /**
  * This function uses random sampling to determine the location
@@ -189,6 +191,16 @@ srs(
 
 	//Step 9: free no longer required index array
 	CPLFree(p_indexArray);
+
+	//Step 10: write vector of points if given filename
+	if (filename != "") {
+		try {
+			writeSamplePoints(points, filename);
+		}
+		catch (const std::exception& e) {
+			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
+		}
+	}
 
 	//Step 10: return as coordinates and wkt
 	return {{xCoords, yCoords}, wktPoints};
