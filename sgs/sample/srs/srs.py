@@ -17,7 +17,6 @@ from sgs.utils import (
     SpatialRaster,
     SpatialVector,
     plot,
-    write,
 )
 
 from srs import srs_cpp

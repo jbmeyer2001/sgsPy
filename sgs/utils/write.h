@@ -9,7 +9,10 @@
 
 #pragma once
 
+#include <filesystem>
+
 #include <gdal_priv.h>
+#include <ogrsf_frmts.h>
 
 /**
  * Write function for writing sample points to a vector file.
@@ -17,4 +20,4 @@
  * @param std::vector<OGRPoint> the points to write.
  * @param std::string the filename to write to
  */
-void write(std::vector<OGRPoint> points, std::string filename);
+void writeSamplePoints(std::vector<OGRPoint>& points, std::string filename);

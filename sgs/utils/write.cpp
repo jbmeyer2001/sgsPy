@@ -12,16 +12,16 @@
 /******************************************************************************
 				    write()
 ******************************************************************************/
-void write(std::vector<OGRPoint> points, std::string filename) {
+void writeSamplePoints(std::vector<OGRPoint>& points, std::string filename) {
 	std::filesystem::path filepath = filename;
-	std::string extension = filepath.extension();
+	std::string extension = filepath.extension().string();
+
+	//register format drivers
+	GDALAllRegister();
 
 	//create vector driver using file extension
 	GDALDriver *p_driver;
-	if (extension == ".gdb") {
-		p_driver = GetGDALDriverManager()->GetDriverByName("fileGDB");
-	}
-	else if (extension == ".geojson") {
+	if (extension == ".geojson") {
 		p_driver = GetGDALDriverManager()->GetDriverByName("GeoJSON");
 	}
 	else if (extension == ".shp") {
@@ -37,7 +37,7 @@ void write(std::vector<OGRPoint> points, std::string filename) {
 	}
 
 	//create and check dataset
-	GDALDataset *p_dataset = p_driver->Create(filepath.string(), 0, 0, 0, GDT_Unknown, nullptr );
+	GDALDataset *p_dataset = p_driver->Create(filepath.string().c_str(), 0, 0, 0, GDT_Unknown, nullptr );
 	if (p_dataset == nullptr) {
 		throw std::runtime_error("could not create dataset with driver.");
 	}
@@ -49,7 +49,7 @@ void write(std::vector<OGRPoint> points, std::string filename) {
 	}
 
 	//create and check field
-	OGRFieldDefn field("index", OFTInteger32);
+	OGRFieldDefn field("index", OFTInteger);
 	if (extension == ".shp") {
 		field.SetWidth(32);
 	}

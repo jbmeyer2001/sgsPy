@@ -4,18 +4,9 @@ import sgs
 from sgs import SpatialRaster
 import numpy as np
 
-rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster_small.tif')
-samples = sgs.srs(rast, mindist=600, num_samples=40, plot=True)
-print(samples)
-rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster.tif')
-samples = sgs.srs(rast, mindist=600, num_samples=40, plot=True)
-print(samples)
-
-'''
 folder = os.path.join(os.path.dirname(__file__), 'tests', 'utils', 'files')
 access_shapefile_path = os.path.join(folder, 'access.shp')
 existing_shapefile_path = os.path.join(folder, 'existing.shp')
-existing_geodatabase_path = os.path.join(folder, 'existing.gdb')
 existing_geojson_path = os.path.join(folder, 'existing.geojson')
 inventory_polygons_shapefile_path = os.path.join(folder, 'inventory_polygons.shp')
 mraster_geotiff_path = os.path.join(folder, 'mraster.tif')
@@ -137,18 +128,6 @@ assert float(layer_info["xmax"]) == 438560
 assert float(layer_info["ymin"]) == 5337700
 assert float(layer_info["ymax"]) == 5343240
 
-vec = sgs.utils.vector.SpatialVector(existing_geodatabase_path)
-assert len(vec.layers) == 1
-assert vec.layers[0] == 'existing'
-layer_info = vec.cpp_vector.get_layer_info('existing')
-assert int(layer_info["feature_count"]) == 200
-assert int(layer_info["field_count"]) == 1
-assert layer_info["geometry_type"] == "Point"
-assert float(layer_info["xmin"]) == 431110
-assert float(layer_info["xmax"]) == 438530
-assert float(layer_info["ymin"]) == 5337710
-assert float(layer_info["ymax"]) == 5343230
-
 vec = sgs.utils.vector.SpatialVector(existing_geojson_path)
 assert len(vec.layers) == 1
 assert vec.layers[0] == 'existing'
@@ -161,5 +140,16 @@ assert float(layer_info["xmax"]) == 438530
 assert float(layer_info["ymin"]) == 5337710
 assert float(layer_info["ymax"]) == 5343230
 
+rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/sraster.tif')
+samples = sgs.srs(rast, mindist=200, num_samples=40, plot=True, filename="test_outputs/test_file_out.shp")
+print(samples)
+
+rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster_small.tif')
+samples = sgs.srs(rast, num_samples=60, plot=True, filename="test_outputs/test_file_out.geojson")
+print(samples)
+
+rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster.tif')
+samples = sgs.srs(rast, mindist=1000, num_samples=10, plot=True, filename="test_outputs/test_file_out.shp")
+print(samples)
+
 print("PASSED")
-'''
