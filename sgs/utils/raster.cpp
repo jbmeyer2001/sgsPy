@@ -180,6 +180,20 @@ double *GDALRasterWrapper::getGeotransform() {
 }
 
 /******************************************************************************
+				getMinPixelVal()
+******************************************************************************/
+double GDALRasterWrapper::getMinPixelVal(int band) {
+	return this->p_dataset->GetRasterBand(band + 1)->GetMinimum();
+}
+
+/******************************************************************************
+				getMaxPixelVal()
+******************************************************************************/
+double GDALRasterWrapper::getMaxPixelVal(int band) {
+	return this->p_dataset->GetRasterBand(band + 1)->GetMaximum();
+}
+
+/******************************************************************************
 				allocateRaster()
 ******************************************************************************/
 void *GDALRasterWrapper::allocateRaster(int width, int height) {

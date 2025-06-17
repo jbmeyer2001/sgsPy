@@ -1,3 +1,100 @@
-def breaks():
-    print(__file__)
-    raise NotImplementedError
+# ******************************************************************************
+#
+#  Project: sgs
+#  Purpose: simple random sampling (srs)
+#  Author: Joseph Meyer
+#  Date: June, 2025
+#
+# ******************************************************************************
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sgs.utils import (
+    SpatialRaster,
+    plot,
+)
+
+from breaks import breaks_cpp
+
+def breaks(
+    rast: SpatialRaster,
+    breaks: list[int | float | list[int | float]],
+    map bool = False,
+    plot: bool = False,
+    filename: str = ''):
+    """
+    This function conducts stratification on the raster given
+    according to use defined breaks.
+
+    The breaks may be defined as a single list of ints or floats
+    in the case of a raster with a single band. Or, they may be defined
+    as a list of ints or floats where the index indicates the raster band.
+    Or, they may be defined as a dict where the (str) key represents
+    the raster band and the value is a list of ints or floats.
+
+    most of the calculation is done within the breaks_cpp function 
+    which can be found in sgs/stratify/breaks/breaks.cpp/
+
+    Parameters
+    --------------------
+    rast: SpatialRaster
+        raster data structure containing the raster to stratify
+    breaks: list[int | float | list[int|float]]
+        user defined breaks to stratify
+    map: bool
+        whether to map the stratification of multiple raster layers onto a single layer
+    plot: bool
+        whether to plot the resulting stratification as a distribution
+    filename:
+        whether to save the resulting raster as a file.
+
+    Raises
+    --------------------
+    ValueError
+        if number of bands required by the size of the parameter 'breaks' is inequal to the number of raster bands
+    ValueError
+        if a break contains a value less than the minimum in the corresponding raster band
+    ValueError
+        if a break contains a value greater than the maximum in the corresponding raster band
+    """
+
+    #TODO breaks_dict and add dict as possible breaks parameter type
+    breaks_dict = {}
+    if type(breaks) is list and type(breaks[0]) is list:
+        #error check number of rasters bands
+        if len(breaks) != rast.band_count:
+            raise ValueError("number of lists of breaks must be equal to the number of raster bands.")
+
+        #error check max and min values, and l
+        for i in len(rast.band_count):
+            min_val = rast.cpp_raster.get_band_min(i)
+            max_val = rast.cpp_raster.get_band_max(i)
+            if min_val > min(breaks[i]):
+                raise ValueError("minimum value of break {} less than minimum value in zero-indexed raster band {}.".format(i, i))
+            if max_val < max(breaks[i]):
+                raise ValueError("maximum value of break {} greater than maximum value in zero-indexed raster band {}.".format(i, i))
+
+    else if type(breaks) is list: #type(breaks[0]) is int or float
+        #error check number of raster bands
+        if rast.band_count != 1:
+            raise ValueError("if breaks is a single list, raster must have a single band (has {}).".format(rast.band_count))
+
+        #error check max and min values
+        min_val = rast.cpp_raster.get_band_min(0)
+        max_val = rast.cpp_raster.get_band_max(0)
+        if min_val > min(breaks)
+            raise ValueError("minimum value of break {} less than minimum value in zero-indexed raster band {}.".format(i, i))
+        if max_val < bax(breaks)
+            raise ValueError("maximum value of break {} greater than maximum value in zero-indexed raster band {}.".format(i, i))
+    else: #breaks is a dict
+        
+
+    #call stratify breaks function
+    [strat_raster, plot_dist] breaks_cpp(rast.cpp_raster, breaks_dict, map, plot)
+
+    #plot distribution of breaks if requested
+    if plot:
+
+    return SpatialRaster(strat_raster) 
+

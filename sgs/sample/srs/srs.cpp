@@ -57,12 +57,12 @@ srs(
 	GDALDataset *p_dataset = p_raster->getDataset();
 
 	//step 2: allocate index array mapping adjusted index to orignial index
-	U *p_indexArray = (U *)std::malloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(U));
+	U *p_indexArray = (U *)CPLMalloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(U));
 	U *p_indexArrayUnfilledPointer = p_indexArray;
 	U noDataPixelCount = 0;
 	
 	//step 3: allocate first raster band
-	T *p_rasterBand = (T *)std::malloc(
+	T *p_rasterBand = (T *)CPLMalloc(
 		p_raster->getWidth() * 		//width
 		p_raster->getHeight() * 	//height
 		p_raster->getRasterTypeSize()	//num bytes per pixel

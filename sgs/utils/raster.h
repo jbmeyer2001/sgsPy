@@ -206,9 +206,25 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for geotransform.
 	 *
-	 * returns double *array of 6 doubles representing GDAL geotransform
+	 * @returns double *array of 6 doubles representing GDAL geotransform
 	 */
 	double *getGeotransform();
+
+	/**
+	 * Getter method for the minimum pixel value.
+	 *
+	 * @param int band 0-indexed band to find minimum pixel value for.
+	 * @returns double minimum pixel value in raster excluding nodata
+	 */
+	double getMinPixelVal(int band);
+
+	/**
+	 * Getter method for the maximum pixel value.
+	 *
+	 * @param int band 0-indexed band to find minimum pixel value for.
+	 * @returns double maximum pixel value in raster excluding nodata
+	 */
+	double getMaxPixelVal(int band);
 
 	/**
 	 * Getter method for the raster image, used by the Python side 
