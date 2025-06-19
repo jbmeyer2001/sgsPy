@@ -106,10 +106,10 @@ breaks(
 	if (map) {
 		//determine the stratification band index multipliers of the mapped band and error check maxes
 		for (int i = 1; i < bandCount; i++) {
-			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * bandBreaks[i].size();
+			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * (bandBreaks[i].size() + 1);
 		}
 
-		if (maxBreaks < bandStratMultipliers[bandCount - 1] * bandBreaks[bandCount - 1].size()) {
+		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (bandBreaks[bandCount - 1].size() + 1)) {
 			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum");
 		}
 	}
