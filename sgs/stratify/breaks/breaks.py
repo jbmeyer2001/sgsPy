@@ -21,7 +21,6 @@ def breaks(
     rast: SpatialRaster,
     breaks: list[int | float | list[int | float]] | dict[int, list[int|float]],
     map: bool = False,
-    plot: bool = False,
     filename: str = ''):
     """
     This function conducts stratification on the raster given
@@ -44,8 +43,6 @@ def breaks(
         user defined breaks to stratify
     map : bool
         whether to map the stratification of multiple raster layers onto a single layer
-    plot : bool
-        whether to plot the resulting stratification as a distribution
     filename : str
         filename to write to or '' if no file should be written
 
@@ -84,11 +81,11 @@ def breaks(
                 raise ValueError("breaks dict key must be a valid band name (see SpatialRaster.bands for list of names)")
 
     #call stratify breaks function
-    [strat_raster, plot_info] = breaks_cpp(rast.cpp_raster, breaks_dict, map, plot, filename)
+    strat_raster = breaks_cpp(rast.cpp_raster, breaks_dict, map, filename)
 
     #plot distribution of breaks if requested
     if plot:
-        pass
+        print('plotting not implemented on strat.breaks yet')
 
     return SpatialRaster(strat_raster)
 

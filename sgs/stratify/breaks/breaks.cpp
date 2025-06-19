@@ -23,7 +23,6 @@
  *
  * The required raster bands are first acquired from the datset, and
  * checked to ensure that the number of breaks fits without overflowing.
- * plotInfo, mins, and bucketSizes are updated if plot has been defined.
  *
  * An additional band is added to the output raster if map is specified,
  * and multipliers are determined, so that every unique combination
@@ -39,23 +38,15 @@
  * @param GDALRasterWrapper * a pointer to the raster image were stratifying
  * @param std::map<int, std::vector<double>> band and user-defiend breaks mapping
  * @param bool map whether to add a mapped stratification
- * @param bool plot whether to accumulate and return plotting information
  * @param std::string filename the filename to write to (if desired)
  */
 template <typename T>
-std::pair<GDALRasterWrapper *, std::vector<std::vector<size_t>>>
-breaks(
+GDALRasterWrapper *breaks(
 	GDALRasterWrapper *p_raster,
 	std::map<int, std::vector<double>> breaks,
 	bool map,
-	bool plot,
 	std::string filename)
 {
-	//define plotting data structures
-	std::vector<std::vector<size_t>> plotInfo;
-	std::vector<double> mins;
-	std::vector<double> bucketSizes;
-
 	//find band count and the maximum number of breaks
 	size_t maxBreaks = std::numeric_limits<uint16_t>::max();
 	int bandCount = breaks.size();
@@ -88,17 +79,6 @@ breaks(
 		if (maxBreaks < val.size() + 1) {
 			throw std::runtime_error("number of break indexes exceeds maximum");
 			//throw std::runtime_error("number of break indexes (" + std::to_string(val.size() + 1) + ") exceeds maximum of " + std::to_string(maxBreaks) ".");
-		}
-
-		//add min and bucket size for histogram plot
-		if (plot) {
-			double min = p_raster->getMinPixelVal(key);
-			double max = p_raster->getMinPixelVal(key);
-			std::vector<size_t> buckets(30, 0);
-			mins.push_back(min);
-			bucketSizes.push_back((max - min) / 30); //30 buckets
-			plotInfo.push_back(buckets);
-
 		}
 	}
 
@@ -137,12 +117,6 @@ breaks(
 			if (map) {
 				mappedStrat += strat * bandStratMultipliers[i];
 			}
-
-			if (plot) {
-				//calculate bucket and increment corresponding bucket info
-				size_t bucket = (size_t)((val - mins[i]) / bucketSizes[i]);
-				plotInfo[i][bucket]++;
-			}
 		}
 		
 		if (map) {
@@ -174,7 +148,7 @@ breaks(
 		stratRaster->write(filename);
 	}
 	
-	return {stratRaster, plotInfo};
+	return stratRaster;
 }
 
 /**
@@ -189,32 +163,29 @@ breaks(
  * A call ismade to breads() with the necessary data type template
  * argument.
  *
- * @returns std::tuple<GDALRasterWrapper *, std::vector<double>, std::map<double, int>>
- * 		stratified raster, and plotting information
+ * @returns GDALRasterWrapper *stratified raster
  */
-std::pair<GDALRasterWrapper *, std::vector<std::vector<size_t>>>
-breaksTypeSpecifier(
+GDALRasterWrapper *breaksTypeSpecifier(
 	GDALRasterWrapper *p_raster,
 	std::map<int, std::vector<double>> userDefinedBreaks,
 	bool map,
-	bool plot,
 	std::string filename)
 {
 	switch(p_raster->getRasterType()) {
 		case GDT_Int8:
-		return breaks<int8_t>(p_raster, userDefinedBreaks, map, plot, filename);
+		return breaks<int8_t>(p_raster, userDefinedBreaks, map, filename);
 		case GDT_UInt16:
-		return breaks<uint16_t>(p_raster, userDefinedBreaks, map, plot, filename);
+		return breaks<uint16_t>(p_raster, userDefinedBreaks, map, filename);
 		case GDT_Int16:
-		return breaks<int16_t>(p_raster, userDefinedBreaks, map, plot, filename);
+		return breaks<int16_t>(p_raster, userDefinedBreaks, map, filename);
 		case GDT_UInt32:
-		return breaks<uint32_t>(p_raster, userDefinedBreaks, map, plot, filename);
+		return breaks<uint32_t>(p_raster, userDefinedBreaks, map, filename);
 		case GDT_Int32:
-		return breaks<int32_t>(p_raster, userDefinedBreaks, map, plot, filename);
+		return breaks<int32_t>(p_raster, userDefinedBreaks, map, filename);
 		case GDT_Float32:
-		return breaks<float>(p_raster, userDefinedBreaks, map, plot, filename);
+		return breaks<float>(p_raster, userDefinedBreaks, map, filename);
 		case GDT_Float64:
-		return breaks<double>(p_raster, userDefinedBreaks, map, plot, filename);
+		return breaks<double>(p_raster, userDefinedBreaks, map, filename);
 		default:
 		throw std::runtime_error("GDATDataType not one of the accepted types.");
 	}
