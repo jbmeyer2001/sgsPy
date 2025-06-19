@@ -94,10 +94,10 @@ GDALRasterWrapper *breaks(
 		uint16_t mappedStrat = 0;
 		bool nan = false;
 		for (int i = 0; i < bandCount; i++) {
-			T val = ((T *)rasterBands[i])[j];
+			T val = rasterBands[i][j];
 
 			if (std::isnan(val) || (double)val == noDataValue) {
-				((uint16_t *)(stratRasterBands[i]))[j] = (uint16_t)noDataValue;
+				((uint16_t *)stratRasterBands[i])[j] = (uint16_t)noDataValue;
 				nan = true;
 				continue;
 			}
@@ -126,6 +126,7 @@ GDALRasterWrapper *breaks(
 	if (map) {
 		newBandNames.push_back("strat_map");
 	}
+	//this dynamically-allocated object will be cleaned up by python
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
 		stratRasterBands, 
 		newBandNames,
