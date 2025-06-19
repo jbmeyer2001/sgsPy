@@ -75,6 +75,7 @@ def srs(
     if (len(sample_points)) < num_samples:
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, len(sample_points)))
 
+    #plot new vector if requested
     if plot:
         fig, ax = plt.subplots()
         rast.plot(ax)
@@ -82,9 +83,5 @@ def srs(
             access.plot('LineString', ax)
         ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
         plt.show()
-
-    if filename:
-        #TODO when write implemented
-        pass
 
     return sample_points

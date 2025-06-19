@@ -30,19 +30,97 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	}
 
 	//data type
-	this->rasterType = GDALExtendedDataType::Create(this->p_dataset->GetRasterBand(1)->GetRasterDataType());	
+	this->rasterType = GDALExtendedDataType::Create(this->p_dataset->GetRasterBand(1)->GetRasterDataType());
+
+	//initialize (but don't read) raster band pointers
+	this->rasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
+	this->rasterBandRead = std::vector<bool>(this->getBandCount(), false);
+	this->displayRasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
+	this->displayRasterBandRead = std::vector<bool>(this->getBandCount(), false);	
+}
+
+/******************************************************************************
+			      GDALRasterWrapper()
+******************************************************************************/
+GDALRasterWrapper::GDALRasterWrapper(
+	std::vector<void *> rasterBands,
+	std::vector<std::string> rasterBandNames,
+	int width,
+	int height,
+	GDALDataType type,
+	double *geotransform,
+	std::string projection)
+{
+	//must register drivers before trying to open a dataset
+	GDALAllRegister();
+
+	//create in-memory dataset
+	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
+	this->p_dataset = GDALDatasetUniquePtr(p_driver->Create(
+		"",
+		width,
+		height,
+		0,
+		type,
+		nullptr
+	));
+	if (!this->p_dataset) {
+		throw std::runtime_error("dataset pointer is null after initialization, dataset unabel to be initialized.");
+	}
+
+	//set crs
+	CPLErr err = this->p_dataset->SetProjection(projection.c_str());
+	if (err) {
+		throw std::runtime_error("error setting projection");
+	}
+
+	//dynamically add raster bands and their descriptions
+	for (size_t i = 0; i < rasterBands.size(); i++) {
+		char **papszOptions = nullptr;
+		papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", std::to_string((size_t)rasterBands[i]).c_str());
+		err = this->p_dataset->AddBand(type, papszOptions);
+		if (err) {
+			throw std::runtime_error("error adding band.");
+		}
+		this->p_dataset->GetRasterBand(i + 1)->SetDescription(rasterBandNames[i].c_str());
+	}	
+
+	//copy geotransform values (not pointers) and set dataset geotransform
+	this->geotransform[0] = geotransform[0];
+	this->geotransform[1] = geotransform[1];
+	this->geotransform[2] = geotransform[2];
+	this->geotransform[3] = geotransform[3];
+	this->geotransform[4] = geotransform[4];
+	this->geotransform[5] = geotransform[5];
+	err = this->p_dataset->SetGeoTransform(this->geotransform);
+	if (err) {
+		throw std::runtime_error("error setting geotransform.");
+	}
+	
+	//set raster data type
+	this->rasterType = GDALExtendedDataType::Create(type);
+	
+	//initialize raster band properties
+	this->p_raster = rasterBands[0];
+	this->rasterAllocated = true;
+	this->rasterBandPointers = rasterBands;
+	this->rasterBandRead = std::vector<bool>(this->getBandCount(), true);
+	
+	//initialize display raster band properties
+	this->displayRasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
+	this->displayRasterBandRead = std::vector<bool>(this->getBandCount(), false);
 }
 
 /******************************************************************************
 			      ~GDALRasterWrapper()
 ******************************************************************************/
 GDALRasterWrapper::~GDALRasterWrapper() {
-	if (this->p_fullRaster) {
-		CPLFree(this->p_fullRaster);
+	if (this->rasterAllocated) {
+		CPLFree(p_raster);
 	}
 
-	if (this->p_downsampledRaster) {
-		CPLFree(this->p_downsampledRaster);
+	if (this->displayRasterAllocated) {
+		CPLFree(p_displayRaster);
 	}
 }
 
@@ -160,7 +238,7 @@ double GDALRasterWrapper::getPixelHeight() {
 }
 
 /******************************************************************************
-				   getBands()
+				   getBandNames()
 ******************************************************************************/
 std::vector<std::string> GDALRasterWrapper::getBands() {
 	std::vector<std::string> retval;
@@ -180,65 +258,82 @@ double *GDALRasterWrapper::getGeotransform() {
 }
 
 /******************************************************************************
+				getMinPixelVal()
+******************************************************************************/
+double GDALRasterWrapper::getMinPixelVal(int band) {
+	return this->p_dataset->GetRasterBand(band + 1)->GetMinimum(nullptr);
+}
+
+/******************************************************************************
+				getMaxPixelVal()
+******************************************************************************/
+double GDALRasterWrapper::getMaxPixelVal(int band) {
+	return this->p_dataset->GetRasterBand(band + 1)->GetMaximum(nullptr);
+}
+
+/******************************************************************************
 				allocateRaster()
 ******************************************************************************/
-void *GDALRasterWrapper::allocateRaster(int width, int height) {
-	//get type and size information
-	GDALDataType type = this->p_dataset->GetRasterBand(1)->GetRasterDataType();
-	size_t size = GDALExtendedDataType::Create(type).GetSize();
-
-	//allocate the whole raster
-	void *p_raster = CPLMalloc(size * this->getBandCount() * width * height);
-
-	//calculate the number of bytes that a single raster layer/band takes
-	size_t layerSize = size * width * height;
-
-	//iterate and read the raster bands. Begin at the start of the allocated chunk.
-	void *bufferLocation = p_raster;
-	for( auto&& p_band : this->p_dataset->GetBands() ) {
-		/**
-		 * NOTE: RasterIO should take care of windowing for us, so we can allocate the
-		 * whole raster, with all bands, and let GDAL worry about RAM size, etc.
-		 * 
-		 * see https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
-		 * and https://gdal.org/en/stable/tutorials/raster_api_tut.html#reading-raster-data
-		 */
-
-		//perform raster read on current band
-		CPLErr err = p_band->RasterIO(
-			GF_Read, 			//GDALRWFlag eRWFlag
-			0, 					//int nXOff
-			0,					//int nYOff
-			this->getWidth(),	//int nXSize
-			this->getHeight(),	//int nYSize
-			bufferLocation,		//void *pData
-			width,				//int nBufXSize
-			height,				//int nBufYSize
-			type,				//GDALDataType eBufType 
-			0,					//int nPixelSpace
-			0					//int nLineSpace
-		);
-		if (err) {
-			throw std::runtime_error("error reading raster band from dataset.");
+void GDALRasterWrapper::allocateRaster(bool display) {
+	//This is not an ideal usage of CPLMalloc because it may be very large
+	//In the future, this will likely be swapped out.
+	if (display) {
+		size_t bandSize = this->getRasterTypeSize() * this->displayRasterWidth * this->displayRasterHeight;
+		this->p_displayRaster = CPLRealloc(this->p_displayRaster, bandSize * this->getBandCount());
+		this->displayRasterAllocated = true;
+		for (int i = 0; i < this->getBandCount(); i++) {
+			this->displayRasterBandPointers[i] = (void *)((size_t)this->p_displayRaster + ((size_t)i * bandSize));
+			this->displayRasterBandRead[i] = false;
 		}
-
-		//move the write buffer by the size of a band
-		bufferLocation = (void *)((size_t)bufferLocation + layerSize);
 	}
+	else {
+		size_t bandSize = this->getRasterTypeSize() * this->getWidth() * this->getHeight();
+		this->p_raster = CPLMalloc(bandSize * this->getBandCount());
+		this->rasterAllocated = true;
+		for (int i = 0; i < this->getBandCount(); i++) {
+			this->rasterBandPointers[i] = (void *)((size_t)this->p_raster + ((size_t)i * bandSize));
+		}
+	}
+}
 
-	return p_raster;
+/******************************************************************************
+			    readRasterBand()
+******************************************************************************/
+void GDALRasterWrapper::readRasterBand(void *p_band, int width, int height, int band) {	
+	/**
+	 * see https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
+	 * and https://gdal.org/en/stable/tutorials/raster_api_tut.html#reading-raster-data
+	 */
+
+	//perform raster read on current band
+	CPLErr err = this->p_dataset->GetRasterBand(band + 1)->RasterIO(
+		GF_Read, 			//GDALRWFlag eRWFlag
+		0, 				//int nXOff
+		0,				//int nYOff
+		this->getWidth(),		//int nXSize
+		this->getHeight(),		//int nYSize
+		p_band,				//void *pData
+		width,				//int nBufXSize
+		height,				//int nBufYSize
+		this->getRasterType(),		//GDALDataType eBufType 
+		0,				//int nPixelSpace
+		0				//int nLineSpace
+	);
+	if (err) {
+		throw std::runtime_error("error reading raster band from dataset.");
+	}
 }
 
 /******************************************************************************
 				  getBuffer()
 ******************************************************************************/
 template <typename T> 
-py::buffer GDALRasterWrapper::getBuffer(size_t size, void *p_raster, int width, int height) {
+py::buffer GDALRasterWrapper::getBuffer(size_t size, void *p_buffer, int width, int height) {
 	//see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
 	return py::memoryview::from_buffer(
-		(T*)p_raster, 								//buffer
+		(T*)p_buffer, 					//buffer
 		{this->getBandCount(), height, width}, 		//shape
-		{size * height * width, size * width, size} //stride
+		{size * height * width, size * width, size} 	//stride
 	);
 }	
 
@@ -246,57 +341,84 @@ py::buffer GDALRasterWrapper::getBuffer(size_t size, void *p_raster, int width, 
 			      getRasterAsMemView()
 ******************************************************************************/
 py::buffer GDALRasterWrapper::getRasterAsMemView(int width, int height) {
-	bool downsampled = (width != this->getWidth() || height != this->getHeight());
+	bool display = (width != this->getWidth() || height != this->getHeight());
+	void *p_buffer;
 
-	//allocate full raster if required
-	if (!downsampled && !this->fullRasterAllocated) {
-		this->p_fullRaster = this->allocateRaster(width, height);
-		this->fullRasterAllocated = true;
+	//allocate raster if required
+	if (!display && !this->rasterAllocated) {
+		this->allocateRaster(display); //allocate whole raster
+	}
+
+	//reallocate display raster if required
+	if (display && 
+		(!this->displayRasterAllocated || 
+		 width != this->displayRasterWidth || 
+		 height != this->displayRasterHeight)) 
+	{
+		this->displayRasterWidth = width;
+		this->displayRasterHeight = height;
+		this->allocateRaster(display); //reallocate (potentially downsampled) display raster
 	}
 	
-	//allocate (or re-allocate) downsampled raster if required
-	if (downsampled && (width != this->downsampledRasterWidth || height != this->downsampledRasterHeight)) {
-		if (this->downsampledRasterAllocated) {
-			CPLFree(this->p_downsampledRaster);
+	//read raster bands if required
+	if (!display) {
+		for (int i = 0; i < this->getBandCount(); i++) {
+			if (!this->rasterBandRead[i]) {
+				this->readRasterBand(this->rasterBandPointers[i], width, height, i);
+				this->rasterBandRead[i] = true;
+			}
 		}
-		this->p_downsampledRaster = this->allocateRaster(width, height);
-		this->downsampledRasterAllocated = true;
-		this->downsampledRasterHeight = height;
-		this->downsampledRasterWidth = width;
+		p_buffer = this->p_raster;
 	}
-
-	void *p_raster = downsampled ? this->p_downsampledRaster : this->p_fullRaster;	
+	else {
+		for (int i = 0; i < this->getBandCount(); i++) {
+			if (!this->displayRasterBandRead[i]) {
+				this->readRasterBand(this->displayRasterBandPointers[i], width, height, i);
+				this->displayRasterBandRead[i] = true;
+			}
+		}
+		p_buffer = this->p_displayRaster;
+	}
 	
-	switch(this->p_dataset->GetRasterBand(1)->GetRasterDataType()) {
+	switch(this->getRasterType()) {
 		case GDT_Int8:
-			return getBuffer<int8_t>(1, p_raster, width, height);
+			return getBuffer<int8_t>(sizeof(int8_t), p_buffer, width, height);
 		case GDT_UInt16:
-			return getBuffer<uint16_t>(2, p_raster, width, height);
+			return getBuffer<uint16_t>(sizeof(uint16_t), p_buffer, width, height);
 		case GDT_Int16:
-			return getBuffer<int16_t>(2, p_raster, width, height);
+			return getBuffer<int16_t>(sizeof(int16_t), p_buffer, width, height);
 		case GDT_UInt32:
-			return getBuffer<uint32_t>(4, p_raster, width, height);
+			return getBuffer<uint32_t>(sizeof(uint32_t), p_buffer, width, height);
 		case GDT_Int32:
-			return getBuffer<int32_t>(4, p_raster, width, height);
+			return getBuffer<int32_t>(sizeof(int32_t), p_buffer, width, height);
 		case GDT_Float32:
-			return getBuffer<float>(4, p_raster, width, height);
+			return getBuffer<float>(sizeof(float), p_buffer, width, height);
 		case GDT_Float64:
-			return getBuffer<double>(8, p_raster, width, height);
+			return getBuffer<double>(sizeof(double), p_buffer, width, height);
 		default:
 			throw std::runtime_error("raster pixel data type not supported.");
 	}
 }
 
 /******************************************************************************
-				  getRaster()				     
+				getRasterBand()				     
 ******************************************************************************/
-void *GDALRasterWrapper::getRaster() {
-	if (!this->fullRasterAllocated) {
-		this->p_fullRaster = this->allocateRaster(this->getWidth(), this->getHeight());
-		this->fullRasterAllocated = true;
+void *GDALRasterWrapper::getRasterBand(int band) {
+	if (!this->rasterAllocated) {
+		this->allocateRaster(false); //display = false
 	}
 
-	return this->p_fullRaster;
+	if (!this->rasterBandRead[band]) {
+		this->readRasterBand(
+			this->rasterBandPointers[band], 
+			this->getWidth(),
+			this->getHeight(),
+			band
+		);
+		this->rasterBandRead[band] = true;
+	}
+
+	return this->rasterBandPointers[band];
 }
 
 /******************************************************************************
@@ -331,4 +453,21 @@ std::string GDALRasterWrapper::getMinIndexIntType(bool singleBand) {
 	else {
 		return "unsigned_long_long";
 	}
+}
+
+/******************************************************************************
+				    write()				     
+******************************************************************************/
+void GDALRasterWrapper::write(std::string filename) {
+	std::filesystem::path filepath = filename;
+	std::string extension = filepath.extension().string();
+
+	//TODO move this to write.cpp ? a write_raster() function ??
+	if (extension != ".tif") {
+		throw std::runtime_error("write only supports .tif files right now");
+	}
+
+	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("GTiff");
+
+	GDALClose(p_driver->CreateCopy(filename.c_str(), this->p_dataset.get(), (int)false, nullptr, nullptr, nullptr));
 }
