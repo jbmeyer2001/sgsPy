@@ -20,7 +20,7 @@ from breaks import breaks_cpp
 def breaks(
     rast: SpatialRaster,
     breaks: list[int | float | list[int | float]] | dict[int, list[int|float]],
-    map bool = False,
+    map: bool = False,
     plot: bool = False,
     filename: str = ''):
     """
@@ -66,10 +66,10 @@ def breaks(
         if len(breaks) != rast.band_count:
             raise ValueError("number of lists of breaks must be equal to the number of raster bands.")
 
-        for i in range(len(breaks))
+        for i in range(len(breaks)):
             breaks_dict[i] = breaks[i]
 
-    else if type(breaks) is list: #type(breaks[0]) is int or float
+    elif type(breaks) is list: #type(breaks[0]) is int or float
         #error check number of raster bands
         if rast.band_count != 1:
             raise ValueError("if breaks is a single list, raster must have a single band (has {}).".format(rast.band_count))
@@ -84,10 +84,11 @@ def breaks(
                 raise ValueError("breaks dict key must be a valid band name (see SpatialRaster.bands for list of names)")
 
     #call stratify breaks function
-    [strat_raster, plot_dist] breaks_cpp(rast.cpp_raster, breaks_dict, map, plot, filename)
+    [strat_raster, plot_info] = breaks_cpp(rast.cpp_raster, breaks_dict, map, plot, filename)
 
     #plot distribution of breaks if requested
     if plot:
+        pass
 
     return SpatialRaster(strat_raster) 
 
