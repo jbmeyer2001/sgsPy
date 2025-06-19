@@ -56,33 +56,13 @@ srs(
 	//Step 1: get dataset
 	GDALDataset *p_dataset = p_raster->getDataset();
 
-	//step 2: allocate index array mapping adjusted index to orignial index
+	//step 2: allocate index array which maps the adjusted index to the orignial index
 	U *p_indexArray = (U *)CPLMalloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(U));
 	U *p_indexArrayUnfilledPointer = p_indexArray;
 	U noDataPixelCount = 0;
 	
-	//step 3: allocate first raster band
-	T *p_rasterBand = (T *)CPLMalloc(
-		p_raster->getWidth() * 		//width
-		p_raster->getHeight() * 	//height
-		p_raster->getRasterTypeSize()	//num bytes per pixel
-	);
-	CPLErr err = p_dataset->GetRasterBand(1)->RasterIO(
-		GF_Read,			//GDALRWFlag eRWFlag
-		0,				//int nXOff
-		0,				//int nYOff
-		p_raster->getWidth(),		//int nXSize
-		p_raster->getHeight(),		//int nYSize
-		(void *)p_rasterBand,		//void *pData
-		p_raster->getWidth(),		//int nBufXSize
-		p_raster->getHeight(),		//int nBufYSize
-		p_raster->getRasterType(),	//GDALDataType eBufType
-		0,				//int nPixelSpace
-		0				//int nLineSpace
-	);
-	if (err) {
-		throw std::runtime_error("Error reading dataset band.");
-	}
+	//step 3: get first raster band
+	T *p_rasterBand = (T *)p_raster->getRasterBand(0);	//GDALRasterWrapper bands are 0 indexed
 
 	//Step 4: iterate through raster band
 	double noDataValue = p_dataset->GetRasterBand(1)->GetNoDataValue();
@@ -101,17 +81,14 @@ srs(
 	}
 	U numDataPixels = (U)p_raster->getWidth() * (U)p_raster->getHeight() - noDataPixelCount;
 
-	//step 5: free no longer required raster band
-	CPLFree(p_rasterBand);
-
-	//Step 6: generate random number generator using mt19937	
+	//Step 5: generate random number generator using mt19937	
 	std::mt19937::result_type seed = time(nullptr);
 	auto rng = std::bind(
 		std::uniform_int_distribution<U>(0, numDataPixels - 1),
 		std::mt19937(seed)
 	);
 
-	//Step 7: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
+	//Step 6: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
 	//use std::set because we want to iterate in-order because it will be faster
 	std::set<U> samplePixels = {}; 	
 	
@@ -130,7 +107,7 @@ srs(
 		}
 	}
 
-	//Step 8: generate coordinate points for each sample index, and only add if they're outside of mindist
+	//Step 7: generate coordinate points for each sample index, and only add if they're outside of mindist
 	double *GT = p_raster->getGeotransform();
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
@@ -189,10 +166,10 @@ srs(
 		}
 	}
 
-	//Step 9: free no longer required index array
+	//Step 7: free no longer required index array
 	CPLFree(p_indexArray);
 
-	//Step 10: write vector of points if given filename
+	//Step 8: write vector of points if given filename
 	if (filename != "") {
 		try {
 			writeSamplePoints(points, filename);
@@ -202,7 +179,7 @@ srs(
 		}
 	}
 
-	//Step 10: return as coordinates and wkt
+	//Step 9: return as coordinates and wkt
 	return {{xCoords, yCoords}, wktPoints};
 }
 

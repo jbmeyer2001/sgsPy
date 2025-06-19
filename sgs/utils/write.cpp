@@ -57,6 +57,10 @@ void writeSamplePoints(std::vector<OGRPoint>& points, std::string filename) {
 		throw std::runtime_error("could not create name field.");
 	}
 
+	if (points.size() > std::numeric_limits<int>::max()) {
+		throw std::runtime_error("unable to write that many points, implementation needs changing");
+	}
+
 	//add feature geometries to vector
 	for (int i = 0; i < points.size(); i++) {
 		OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());

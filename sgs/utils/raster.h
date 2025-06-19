@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <filesystem>
+
 #include <gdal_priv.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -42,40 +44,57 @@ class GDALRasterWrapper {
 	GDALDatasetUniquePtr p_dataset;
 	GDALExtendedDataType rasterType = GDALExtendedDataType::Create(GDT_Unknown);
 
-	void *p_fullRaster = nullptr;
-	bool fullRasterAllocated = false;
+	void *p_raster = nullptr;
+	bool rasterAllocated = false;
+	std::vector<void *> rasterBandPointers;
+	std::vector<bool> rasterBandRead;
 
-	void *p_downsampledRaster = nullptr;
-	bool downsampledRasterAllocated = false;
-	int downsampledRasterWidth = -1;
-	int downsampledRasterHeight = -1;
+	void *p_displayRaster = nullptr;
+	bool displayRasterAllocated = false;
+	std::vector<void *> displayRasterBandPointers;
+	std::vector<bool> displayRasterBandRead;
+	int displayRasterWidth = -1;
+	int displayRasterHeight = -1;
 
 	double geotransform[6];
 
 	/**
-	 * Internal function used to allocate the raster data.
-	 * This function is used for allocating both full and 
-	 * downsampled rasters, which is why it takes the width and
-	 * height parameters. 
+	 * Internal function used to allocate the full or display rasters.
+	 * If this function is being called, it's assumed that the raster
+	 * has not already been allocated.
 	 *
-	 * Memory is allocated using CPLMalloc(). Rasters are read 
-	 * using GDALDataset::RasterIO().
+	 * CPLRealloc is used for the display raster, and CPLMalloc is used
+	 * for the full raster.
+	 *
+	 * either rasterAllocated or displayRasterAllocated will be set to true.
+	 * either displayRasterBandPointers or rasterBandPointers will be updated.
+	 * either displayRasterBandRead or rasterBandRead will have all elements set to false.
+	 *
+	 * @param bool display indication of whether to allocate full or displayr aster
+	 */
+	void allocateRaster(bool display);
+
+	/**
+	 * Internal function used to read raster band data.
+	 * 
+	 * the band int is used to select the band from the dataset.
+	 *
+	 * width, height, and p_band parameters are passed into
+	 * the GDALRasterBand::RasterIO function. The band
+	 * may be downsampled depending on the values of width and height.
 	 *
 	 * @param int width
 	 * @param int height
+	 * @param int band zero-indexed
 	 * @returns void * allocated raster buffer
 	 * @throws std::runtime_error if unable to read raster band
 	 */
-	void *allocateRaster(int width, int height);
+	void readRasterBand(void *p_band, int width, int height, int band);
 
 	/**
-	 * Internal function which returns a pybuffer of the raster, using
-	 * the type specified. The raster must have already been allocated
-	 * using allocateRaster(). 
-	 *
-	 * This function is used for getting the buffer to both the full
-	 * and downsampled rasters, which is why it takes the raster pointer,
-	 * width, and height parameters. 
+	 * Internal function which returns a pybuffer of the raster band, using
+	 * the type specified. The band must have already been allocated
+	 * using allocateRasterBand(). 
 	 *
 	 * @param size_t size of data type for one pixel
 	 * @param void *p_raster pointer to allocated raster
@@ -97,6 +116,24 @@ class GDALRasterWrapper {
 	 * @throws std::runtime_error if unable to get geotransform
 	 */
 	GDALRasterWrapper(std::string filename);
+
+	/**
+	 * Constructor for GDALRasterWrapper class. This method creates
+	 * a GDAL dataset either in memory using the raster bands specified.
+	 *
+	 * @param std::vector<void *> rasterBands the bands which will be part of the raster
+	 * @param GDALDataType type the pixel data type
+	 * @param double *geotransform of new raster
+	 */
+	GDALRasterWrapper(
+		std::vector<void *> rasterBands, 
+		std::vector<std::string> rasterBandNames,
+		int width, 
+		int height, 
+		GDALDataType type, 
+		double *geotransform,
+		std::string projection
+	);
 
 	/**
 	 * Deconstructor for GDALRasterWrapper class. This method calls
@@ -228,21 +265,15 @@ class GDALRasterWrapper {
 
 	/**
 	 * Getter method for the raster image, used by the Python side 
-	 * of the application. This function allocates the raster if necessary, and
-	 * uses py::memoryview::from_buffer() to create the buffer of the 
+	 * of the application. This function allocates and reads aa raster if necessary, 
+	 * and uses py::memoryview::from_buffer() to create the buffer of the 
 	 * correct size/dimensions without copying data unecessarily.
 	 *
-	 * This function requires that width and height already be allocated according
+	 * This function requires that width and height be defined according
 	 * to GDAL target_downscaling_factor rules. Otherwise, the incorrect amount
 	 * of memory will be allocated. Information on target_downsampling_factor
 	 * can be found here:
 	 * https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
-	 *
-	 * A full raster will be allocated if the width and height correspond to the
-	 * full raster size, and the p_fullRaster pointer has yet to be allocated.
-	 * A downsampled raster will be allocated if a raster with the given width
-	 * and height has yet to be allocated. Note, this may require de-allocation
-	 * if a downsampled raster has been allocated with different width/height.
 	 *
 	 * for py::memoryview::from_buffer() information see:
 	 * https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
@@ -255,11 +286,13 @@ class GDALRasterWrapper {
 	py::buffer getRasterAsMemView(int width, int height);
 
 	/**
-	 * Getter method for the raster image, used by the C++ side of the application.
+	 * Getter method for a band in the raster image, used by the C++ side of the application.
 	 *
+	 * @param int band zero indexed
+	 * @returns void *pointer to band
 	 * @throws std::runtime_error if unable to read raster band during allocation
 	 */
-	void *getRaster();
+	void *getRasterBand(int band);
 
 	/**
 	 * Getter method for the pixel / raster data type.
@@ -277,8 +310,7 @@ class GDALRasterWrapper {
 
 	/**
 	 * Gets an unsigned int type as a string. This will be
-	 * used by the Python side of the application to call 
-	 * a specific template function.
+	 * used by to call a specific template function.
 	 *
 	 * In some situations it is helpful to have an array or matrix
 	 * of values representing the index of another array. Memory 
@@ -287,7 +319,7 @@ class GDALRasterWrapper {
 	 * returns that data type.
 	 *
 	 * The maximum index required may be different for a single band
-	 * compared to if all bands must be indexed, as such the min required data type
+	 * compared to if allBand *p_band = this->p_dataset->GetRasterBand(band + 1); bands must be indexed, as such the min required data type
 	 * might be different. the singleBand parameter selects whether
 	 * a single band max index or the full multi-band max index will be used.
 	 *
@@ -295,4 +327,12 @@ class GDALRasterWrapper {
 	 * @returns std::string of C++ data type.
 	 */
 	std::string getMinIndexIntType(bool singleBand);
+
+	/**
+	 * Writes the raster to a specific file given by filename, by creating
+	 * a copy of the GDALDatset.
+	 *
+	 * @param std::string filename
+	 */
+	void write(std::string filename);
 };

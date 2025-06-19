@@ -19,7 +19,7 @@ from breaks import breaks_cpp
 
 def breaks(
     rast: SpatialRaster,
-    breaks: list[int | float | list[int | float]],
+    breaks: list[int | float | list[int | float]] | dict[int, list[int|float]],
     map bool = False,
     plot: bool = False,
     filename: str = ''):
@@ -38,16 +38,16 @@ def breaks(
 
     Parameters
     --------------------
-    rast: SpatialRaster
+    rast : SpatialRaster
         raster data structure containing the raster to stratify
-    breaks: list[int | float | list[int|float]]
+    breaks : list[int | float | list[int|float]] | dict[int, list[int|float]]
         user defined breaks to stratify
-    map: bool
+    map : bool
         whether to map the stratification of multiple raster layers onto a single layer
-    plot: bool
+    plot : bool
         whether to plot the resulting stratification as a distribution
-    filename:
-        whether to save the resulting raster as a file.
+    filename : str
+        filename to write to or '' if no file should be written
 
     Raises
     --------------------
@@ -66,32 +66,25 @@ def breaks(
         if len(breaks) != rast.band_count:
             raise ValueError("number of lists of breaks must be equal to the number of raster bands.")
 
-        #error check max and min values, and l
-        for i in len(rast.band_count):
-            min_val = rast.cpp_raster.get_band_min(i)
-            max_val = rast.cpp_raster.get_band_max(i)
-            if min_val > min(breaks[i]):
-                raise ValueError("minimum value of break {} less than minimum value in zero-indexed raster band {}.".format(i, i))
-            if max_val < max(breaks[i]):
-                raise ValueError("maximum value of break {} greater than maximum value in zero-indexed raster band {}.".format(i, i))
+        for i in range(len(breaks))
+            breaks_dict[i] = breaks[i]
 
     else if type(breaks) is list: #type(breaks[0]) is int or float
         #error check number of raster bands
         if rast.band_count != 1:
             raise ValueError("if breaks is a single list, raster must have a single band (has {}).".format(rast.band_count))
 
-        #error check max and min values
-        min_val = rast.cpp_raster.get_band_min(0)
-        max_val = rast.cpp_raster.get_band_max(0)
-        if min_val > min(breaks)
-            raise ValueError("minimum value of break {} less than minimum value in zero-indexed raster band {}.".format(i, i))
-        if max_val < bax(breaks)
-            raise ValueError("maximum value of break {} greater than maximum value in zero-indexed raster band {}.".format(i, i))
+        breaks_dict[0] = breaks
+
     else: #breaks is a dict
-        
+        for key, val in breaks.items():
+            if key in bands:
+                breaks_dict[rast.band_name_dict[key]] = val
+            else:
+                raise ValueError("breaks dict key must be a valid band name (see SpatialRaster.bands for list of names)")
 
     #call stratify breaks function
-    [strat_raster, plot_dist] breaks_cpp(rast.cpp_raster, breaks_dict, map, plot)
+    [strat_raster, plot_dist] breaks_cpp(rast.cpp_raster, breaks_dict, map, plot, filename)
 
     #plot distribution of breaks if requested
     if plot:
