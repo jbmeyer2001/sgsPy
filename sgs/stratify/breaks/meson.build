@@ -5,7 +5,6 @@ if WIN
     'breaks.cpp',
     link_with: [
       raster_lib,
-      write_lib,
     ],
     link_args: win_link_args,
     dependencies: [lib_deps],
@@ -28,7 +27,6 @@ else
     objects: [
       #from sgs/utils
       raster_obj,
-      write_obj,
     ],
     install: true,
   )
