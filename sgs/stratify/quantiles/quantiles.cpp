@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Project: sgs
- * Purpose: C++ implementation of raster stratification using breaks
+ * Purpose: C++ implementation of raster stratification using quantiles
  * Author: Joseph Meyer
  * Date: June, 2025
  *

@@ -8,12 +8,8 @@
 # ******************************************************************************
 
 import numpy as np
-import matplotlib.pyplot as plt
 
-from sgs.utils import (
-    SpatialRaster,
-    plot,
-)
+from sgs.utils import SpatialRaster
 
 from breaks import breaks_cpp
 
@@ -21,6 +17,7 @@ def breaks(
     rast: SpatialRaster,
     breaks: list[int | float | list[int | float]] | dict[int, list[int|float]],
     map: bool = False,
+    plot: bool = False,
     filename: str = ''):
     """
     This function conducts stratification on the raster given
