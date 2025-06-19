@@ -66,21 +66,23 @@ breaks(
 	//step 2: allocate new stratification raster
 	std::vector<size_t> bandStratMultipliers(breaks.size(), 1);
 	std::vector<std::vector<double>> bandBreaks;
-	std::vector<uint16_t *> stratRasterBands;
-	size_t stratRasterLayerSize = p_raster->getWidth() * p_raster->getHeight() * sizeof(float);
-	for (int i = 0; i < bandCount + (int)map; i++) {
-		stratRasterBands.push_back((uint16_t *)CPLMalloc(stratRasterLayerSize));
+	std::vector<void *> stratRasterBands;
+	size_t stratRasterBandSize = p_raster->getWidth() * p_raster->getHeight() * sizeof(uint16_t);
+	void *p_stratRaster = CPLMalloc(stratRasterBandSize * (bandCount + (size_t)map));
+	for (size_t i = 0; i < bandCount + (size_t)map; i++) {
+		stratRasterBands.push_back((void *)((size_t)p_stratRaster + (stratRasterBandSize * i)));
 	}
 	
 	//step 3: get the raster bands needed from the datset
-	CPLErr err;
-	std::vector<void *> rasterBands;
+	std::vector<T *> rasterBands;
 	for (auto const& [key, val] : breaks) {
 		//add requested band to rasterBands
-		rasterBands.push_back((void *)p_raster->getRasterBand(key));		
+		rasterBands.push_back((T *)p_raster->getRasterBand(key));		
 
-		//and band breaks vector
-		bandBreaks.push_back(val);
+		//and band breaks vectori
+		std::vector<double> valCopy = val; //have to create copy to alter the band breaks in iteration loop
+		std::sort(valCopy.begin(), valCopy.end());
+		bandBreaks.push_back(valCopy);
 
 		//error checking on band count
 		if (maxBreaks < val.size() + 1) {
@@ -120,16 +122,17 @@ breaks(
 		bool nan = false;
 		for (int i = 0; i < bandCount; i++) {
 			T val = ((T *)rasterBands[i])[j];
+
 			if (std::isnan(val) || (double)val == noDataValue) {
-				stratRasterBands[i][j] = (uint16_t)noDataValue;
+				((uint16_t *)(stratRasterBands[i]))[j] = (uint16_t)noDataValue;
 				nan = true;
 				continue;
 			}
 
 			std::vector<double> curBandBreaks = bandBreaks[i];	
 			auto upper = std::upper_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
-			uint16_t strat = (upper == curBandBreaks.end()) ? (uint16_t)breaks.size() - 1 : std::distance(curBandBreaks.begin(), upper);
-			stratRasterBands[i][j] = strat;
+			uint16_t strat = (upper == curBandBreaks.end()) ? (uint16_t)curBandBreaks.size() : std::distance(curBandBreaks.begin(), upper);
+			((uint16_t *)(stratRasterBands[i]))[j] = strat;
 
 			if (map) {
 				mappedStrat += strat * bandStratMultipliers[i];
@@ -143,7 +146,7 @@ breaks(
 		}
 		
 		if (map) {
-			stratRasterBands[bandCount][j] = nan ? (uint16_t)noDataValue : mappedStrat;
+			((uint16_t *)stratRasterBands[bandCount])[j] = nan ? (uint16_t)noDataValue : mappedStrat;
 		}
 	}
 
@@ -157,11 +160,11 @@ breaks(
 		newBandNames.push_back("strat_map");
 	}
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
-		rasterBands, 
+		stratRasterBands, 
 		newBandNames,
 		p_raster->getWidth(),
 		p_raster->getHeight(),
-		GDT_UInt16, 
+		GDT_UInt16,
 		p_raster->getGeotransform(),
 		std::string(p_dataset->GetProjectionRef())
 	);

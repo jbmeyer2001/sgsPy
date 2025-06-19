@@ -154,6 +154,7 @@ print("PASSED raster.cpp and vector.cpp test")
 #samples = sgs.srs(rast, mindist=1000, num_samples=50, plot=True, filename="test_outputs/test_file_out.shp")
 #print(samples)
 
-rast = SpatialRaster(mraster_geotiff_path)
+rast = SpatialRaster(mraster_small_geotiff_path)
 strat_rast = sgs.stratify.breaks(rast,{"zq90": [10, 12]})
 print(strat_rast[0])
+print(np.unique(strat_rast[0]))
