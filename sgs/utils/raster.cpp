@@ -115,14 +115,12 @@ GDALRasterWrapper::GDALRasterWrapper(
 			      ~GDALRasterWrapper()
 ******************************************************************************/
 GDALRasterWrapper::~GDALRasterWrapper() {
-	for (int i = 0; i < this->getBandCount(); i++) {
-		if (this->rasterAllocated) {
-			CPLFree(p_raster);
-		}
+	if (this->rasterAllocated) {
+		CPLFree(p_raster);
+	}
 
-		if (this->displayRasterAllocated) {
-			CPLFree(p_displayRaster);
-		}
+	if (this->displayRasterAllocated) {
+		CPLFree(p_displayRaster);
 	}
 }
 

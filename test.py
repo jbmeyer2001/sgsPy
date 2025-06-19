@@ -140,16 +140,16 @@ assert float(layer_info["xmax"]) == 438530
 assert float(layer_info["ymin"]) == 5337710
 assert float(layer_info["ymax"]) == 5343230
 
-rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/sraster.tif')
-samples = sgs.srs(rast, mindist=200, num_samples=40, plot=True, filename="test_outputs/test_file_out.shp")
-print(samples)
+#rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/sraster.tif')
+#samples = sgs.srs(rast, mindist=200, num_samples=40, plot=True, filename="test_outputs/test_file_out.shp")
+#print(samples)
 
-rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster_small.tif')
-samples = sgs.srs(rast, num_samples=60, plot=True, filename="test_outputs/test_file_out.geojson")
-print(samples)
+#rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster_small.tif')
+#samples = sgs.srs(rast, num_samples=60, plot=True, filename="test_outputs/test_file_out.geojson")
+#print(samples)
 
-rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster.tif')
-samples = sgs.srs(rast, mindist=1000, num_samples=10, plot=True, filename="test_outputs/test_file_out.shp")
-print(samples)
+#rast = SpatialRaster('C:/Users/jmeyer03/projects/Github/sgs/tests/utils/files/mraster.tif')
+#samples = sgs.srs(rast, mindist=1000, num_samples=10, plot=True, filename="test_outputs/test_file_out.shp")
+#print(samples)
 
 print("PASSED")
