@@ -78,7 +78,7 @@ def breaks(
 
     else: #breaks is a dict
         for key, val in breaks.items():
-            if key in bands:
+            if key in rast.bands:
                 breaks_dict[rast.band_name_dict[key]] = val
             else:
                 raise ValueError("breaks dict key must be a valid band name (see SpatialRaster.bands for list of names)")
@@ -90,5 +90,5 @@ def breaks(
     if plot:
         pass
 
-    return SpatialRaster(strat_raster) 
+    return SpatialRaster(strat_raster)
 

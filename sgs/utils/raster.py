@@ -141,7 +141,7 @@ class SpatialRaster:
     """
 
     def __init__(self, 
-                 image: str):
+                 image: str | GDALRasterWrapper):
         """
         Constructing method for the SpatialRaster class.
 
@@ -180,7 +180,12 @@ class SpatialRaster:
         RuntimeError (from C++):
             if unable to get coordinate reference system
         """
-        self.cpp_raster = GDALRasterWrapper(image)
+        if (type(image) is str):
+            self.cpp_raster = GDALRasterWrapper(image)
+        else:
+            print("setting cpp_raster to image")
+            self.cpp_raster = image
+
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
         self.height = self.cpp_raster.get_height()

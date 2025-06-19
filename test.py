@@ -140,16 +140,20 @@ assert float(layer_info["xmax"]) == 438530
 assert float(layer_info["ymin"]) == 5337710
 assert float(layer_info["ymax"]) == 5343230
 
-rast = SpatialRaster(sraster_geotiff_path)
-samples = sgs.srs(rast, mindist=200, num_samples=40, plot=True, filename="test_outputs/test_file_out.shp")
-print(samples)
+print("PASSED raster.cpp and vector.cpp test")
 
-rast = SpatialRaster(mraster_small_geotiff_path)
-samples = sgs.srs(rast, num_samples=60, plot=True, filename="test_outputs/test_file_out.geojson")
-print(samples)
+#rast = SpatialRaster(sraster_geotiff_path)
+#samples = sgs.srs(rast, mindist=200, num_samples=40, plot=True, filename="test_outputs/test_file_out.shp")
+#print(samples)
+
+#rast = SpatialRaster(mraster_small_geotiff_path)
+#samples = sgs.srs(rast, num_samples=60, plot=True, filename="test_outputs/test_file_out.geojson")
+#print(samples)
+
+#rast = SpatialRaster(mraster_geotiff_path)
+#samples = sgs.srs(rast, mindist=1000, num_samples=50, plot=True, filename="test_outputs/test_file_out.shp")
+#print(samples)
 
 rast = SpatialRaster(mraster_geotiff_path)
-samples = sgs.srs(rast, mindist=1000, num_samples=50, plot=True, filename="test_outputs/test_file_out.shp")
-print(samples)
-
-print("PASSED")
+strat_rast = sgs.stratify.breaks(rast,{"zq90": [10, 12]})
+print(strat_rast[0])

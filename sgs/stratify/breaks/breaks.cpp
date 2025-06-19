@@ -8,6 +8,8 @@
  *
  ******************************************************************************/
 
+#include <iostream> //TODO remove
+
 #include "raster.h"
 #include "write.h"
 
@@ -70,7 +72,7 @@ breaks(
 		stratRasterBands.push_back((uint16_t *)CPLMalloc(stratRasterLayerSize));
 	}
 	
-	//step 4: get the raster bands needed from the datset
+	//step 3: get the raster bands needed from the datset
 	CPLErr err;
 	std::vector<void *> rasterBands;
 	for (auto const& [key, val] : breaks) {
@@ -97,8 +99,8 @@ breaks(
 
 		}
 	}
-	
-	//step 5: set bandStratMultipliers and check max size if mapped stratification	
+
+	//step 4: set bandStratMultipliers and check max size if mapped stratification	
 	if (map) {
 		//determine the stratification band index multipliers of the mapped band and error check maxes
 		for (int i = 1; i < bandCount; i++) {
@@ -111,8 +113,7 @@ breaks(
 	}
 	
 	//TODO: multithread and consider cache thrashing
-	//step 6: iterate through indices and update the stratified raster bands
-	
+	//step 5: iterate through indices and update the stratified raster bands
 	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
 		uint16_t mappedStrat = 0;
@@ -146,7 +147,7 @@ breaks(
 		}
 	}
 
-	//step 9: create GDALRasterWrapper object from bands
+	//step 6: create GDALRasterWrapper object from bands
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
 	for (int i = 0; i < bandNames.size(); i++) {
@@ -155,9 +156,7 @@ breaks(
 	if (map) {
 		newBandNames.push_back("strat_map");
 	}
-
-
-	GDALRasterWrapper stratRaster(
+	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
 		rasterBands, 
 		newBandNames,
 		p_raster->getWidth(),
@@ -167,12 +166,12 @@ breaks(
 		std::string(p_dataset->GetProjectionRef())
 	);
 	
-	//step 10: write raster if desired
+	//step 7: write raster if desired
 	if (filename != "") {
-		stratRaster.write(filename);
+		stratRaster->write(filename);
 	}
-
-	return {&stratRaster, plotInfo};
+	
+	return {stratRaster, plotInfo};
 }
 
 /**

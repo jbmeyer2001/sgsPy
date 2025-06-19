@@ -96,16 +96,16 @@ GDALRasterWrapper::GDALRasterWrapper(
 	if (err) {
 		throw std::runtime_error("error setting geotransform.");
 	}
-
+	
 	//set raster data type
 	this->rasterType = GDALExtendedDataType::Create(type);
-
+	
 	//initialize raster band properties
-	this->p_raster = rasterBandPointers[0];
+	this->p_raster = rasterBands[0];
 	this->rasterAllocated = true;
 	this->rasterBandPointers = rasterBands;
 	this->rasterBandRead = std::vector<bool>(this->getBandCount(), true);
-
+	
 	//initialize display raster band properties
 	this->displayRasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
 	this->displayRasterBandRead = std::vector<bool>(this->getBandCount(), false);
