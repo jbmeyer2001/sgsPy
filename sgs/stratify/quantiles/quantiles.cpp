@@ -89,6 +89,10 @@ GDALRasterWrapper *quantiles(
 		for (int i = 1; i < bandCount; i++) {
 			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * (probabilities[i].size() + 1);
 		}
+		
+		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (probabilities[bandCount - 1].size() + 1) {
+			throw std::runtime_error("number of stratum indexes in mapped stratification exceeds maximum.");
+		}
 
 		newBandNames.push_back("strat_map");
 	}
@@ -215,7 +219,7 @@ GDALRasterWrapper *quantilesTypeSpecifier(
 	std::string filename) 
 {
 	//TODO add switch with minIndexIntType and more template arguments
-	std::string minIndexIntType = p_raster->getMinIndexIntType(false); //singleBand = false
+	std::string minIndexIntType = p_raster->getMinIndexIntType(true); //singleBand = true
 	switch(p_raster->getRasterType()) {
 		case GDT_Int8:
 		if (minIndexIntType == "unsigned_short") { return quantiles<int8_t, unsigned short>(p_raster, userProbabilites, map, filename); }

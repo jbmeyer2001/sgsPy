@@ -87,7 +87,7 @@ GDALRasterWrapper *breaks(
 		}
 
 		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (bandBreaks[bandCount - 1].size() + 1)) {
-			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum");
+			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum.");
 		}
 
 		newBandNames.push_back("stat_map");
