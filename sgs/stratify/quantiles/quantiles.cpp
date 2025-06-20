@@ -25,14 +25,15 @@ GDALRasterWrapper *quantiles(
 	//step 1 allocate new rasters
 	std::vector<void *>stratRasterBands;
 	size_t stratRasterBandSize = p_raster->getWidth() * p_raster->getHeight() * sizeof(uint16_t);
-	void *p_stratRaster = CPLMalloc(stratRasterBandSize * (bandCount + (size_t)map);
+	void *p_stratRaster = CPLMalloc(stratRasterBandSize * (bandCount + (size_t)map));
 	for (size_t i = 0; i < bandCount + (size_t)map; i++) {
-		stratRasterBands.push_back((void *)p_stratRaster + (stratRasterBandSize * i));
+		stratRasterBands.push_back((void *)((size_t)p_stratRaster + (stratRasterBandSize * i)));
 	}
 
 	//step 2 get raster bands from GDALRasterWrapper
 	std::vector<T *>rasterBands;
-	std::vector<std::vector<double>> probabilites
+	std::vector<std::vector<double>> probabilities;
+	std::vector<std::vector<std::tuple<T, U, uint16_t>>> stratVects;
 	for (auto const& [key, value] : userProbabilites) {
 		rasterBands.push_back((T *)p_raster->getRasterBand(key));
 
@@ -41,20 +42,22 @@ GDALRasterWrapper *quantiles(
 		}
 
 		probabilities.push_back(value);	
+
+		std::vector<std::tuple<T, U, uint16_t>> stratVect;
+		stratVects.push_back(stratVect);
 	}
 
 	//step 3 set strat multipliers for mapped stratum raster if required
 	std::vector<size_t> bandStratMultipliers(probabilities.size(), 1);
 	if (map) {
 		for (int i = 1; i < bandCount; i++) {
-			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * (probabilities[i] + 1);
+			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * (probabilities[i].size() + 1);
 		}
 	}
 	
 	//TODO this can all be done in parallel without much use of locks	
 	//step 4 iterate through rasters
-	std::vector<std::vector<std::tuple<T, U, uint16_t>>> stratVects(bandCount, {});
-	double noDataValue = p_Raster->getDataset->GetRasterBand(1)->GetNoDataValue();
+	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	for (int i = 0; i < bandCount; i++) {
 		std::vector<std::tuple<T, U, uint16_t>> *stratVect = &stratVects[i];
 		for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
@@ -67,25 +70,24 @@ GDALRasterWrapper *quantiles(
 			}
 			else {
 				//step 4.2 populate vectors with index/value
-				stratVect->push_back({val, j, 0})
+				stratVect->push_back({val, j, 0});
 			}
 		}	
 
 		//step 4.3 sort vectors in ascending order by pixel val
 		std::sort(stratVect->begin(), stratVect->end(), [](auto const& t1, auto const& t2){
-			return std::get<0>(t1) < std::get<0>(t2)	
+			return std::get<0>(t1) < std::get<0>(t2);	
 		});
 		
 		//step 4.4 assign stratum values depending on user defined probability breaks
 		size_t numDataPixels = stratVect->size();
-		std::vector<auto> splittingIterators;		
-		splittingIterators.push_back(stratVect->begin());
+		std::vector<size_t> stratumSplittingIndexes;		
+		stratumSplittingIndexes.push_back(0);
 		for (const double& prob : probabilities[i]) {
 			//TODO test for off by 1!!!!!
-			auto it = stratVect->begin() + (size_t)((double)numDataPixels * prob) + 1;
-			splittingIndexes.push_back(it);
+			stratumSplittingIndexes.push_back((size_t)((double)numDataPixels * prob) + 1);
 		}
-		splittingIterators.push_back(stratVect->end());
+		stratumSplittingIndexes.push_back(numDataPixels);
 
 		/**
 		 * TODO its possible runtime will be faster if I just write the stratum values here
@@ -98,10 +100,10 @@ GDALRasterWrapper *quantiles(
 		 *
 		 * Regardless, this requires some testing in the future.
 		 */
-		for (uint16_t i = 0; i < splittingIterators.size() - 1; i++) {
-			std::for_each(splittingIterators[i], splittingIterators[i+1], [](auto const& t){
-				std::get<3>t = i;		
-			});
+		for (uint16_t stratum = 0; stratum < stratumSplittingIndexes.size() - 1; stratum++) {
+			for (size_t index = stratumSplittingIndexes[stratum]; index < stratumSplittingIndexes[stratum + 1]; index++) {
+				std::get<2>(stratVect->at(index)) = stratum;
+			}
 		}
 
 		//step 4.5 sort by index
@@ -112,19 +114,22 @@ GDALRasterWrapper *quantiles(
 
 	//TODO this may be parallelizable
 	//step 8 iterate through vectors and assign stratum value
-	for (size_t j = 0; j < stratVects[0].size() < j++) {
+	for (size_t j = 0; j < stratVects[0].size(); j++) {
 		uint16_t mappedStrat = 0;
+
+ 		//I'm assuming if there are nodata pixels, they're all in the same indexes.
+		//if that's not true there could be errors here.
+		U index = std::get<1>(stratVects[0][j]);
 		for (int i = 0; i < bandCount; i++) {
 			uint16_t strat = std::get<2>(stratVects[i][j]);
-			U index = std::fet<1>(stratVects[i][j]);
-			stratRasterBands[i][index] = strat;
+			((uint16_t *)stratRasterBands[i])[index] = strat;
 			if (map) {
 				mappedStrat += strat * bandStratMultipliers[i];
 			}
 		}
 
 		if (map) {
-			stratRasterBands[bandCount][j] = mappedStrat;
+			((uint16_t *)stratRasterBands[bandCount])[index] = mappedStrat;
 		}
 	}
 
@@ -166,24 +171,54 @@ GDALRasterWrapper *quantilesTypeSpecifier(
 	std::string filename) 
 {
 	//TODO add switch with minIndexIntType and more template arguments
+	std::string minIndexIntType = p_raster->getMinIndexIntType(false); //singleBand = false
 	switch(p_raster->getRasterType()) {
 		case GDT_Int8:
-		return quantiles<int8_t>(p_raster, userProbabilites, map, filename);
+		if (minIndexIntType == "unsigned_short") { return quantiles<int8_t, unsigned short>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned") { return quantiles<int8_t, unsigned>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long") { return quantiles<int8_t, unsigned long>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long_long") { return quantiles<int8_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
+		break;
 		case GDT_UInt16:
-		return breaks<uint16_t>(p_raster, userProbabilites, map, filename);
+		if (minIndexIntType == "unsigned_short") { return quantiles<uint16_t, unsigned short>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned") { return quantiles<uint16_t, unsigned>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long") { return quantiles<uint16_t, unsigned long>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long_long") { return quantiles<uint16_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
+		break;
 		case GDT_Int16:
-		return breaks<int16_t>(p_raster, userProbabilites, map, filename);
+		if (minIndexIntType == "unsigned_short") { return quantiles<int16_t, unsigned short>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned") { return quantiles<int16_t, unsigned>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long") { return quantiles<int16_t, unsigned long>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long_long") { return quantiles<int16_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
+		break;
 		case GDT_UInt32:
-		return breaks<uint32_t>(p_raster, userProbabilites, map, filename);
+		if (minIndexIntType == "unsigned_short") { return quantiles<uint32_t, unsigned short>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned") { return quantiles<uint32_t, unsigned>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long") { return quantiles<uint32_t, unsigned long>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long_long") { return quantiles<uint32_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
+		break;
 		case GDT_Int32:
-		return breaks<int32_t>(p_raster, userProbabilites, map, filename);
+		if (minIndexIntType == "unsigned_short") { return quantiles<int32_t, unsigned short>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned") { return quantiles<int32_t, unsigned>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long") { return quantiles<int32_t, unsigned long>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long_long") { return quantiles<int32_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
+		break;
 		case GDT_Float32:
-		return breaks<float>(p_raster, userProbabilites, map, filename);
+		if (minIndexIntType == "unsigned_short") { return quantiles<float, unsigned short>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned") { return quantiles<float, unsigned>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long") { return quantiles<float, unsigned long>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long_long") { return quantiles<float, unsigned long long>(p_raster, userProbabilites, map, filename); }
+		break;
 		case GDT_Float64:
-		return breaks<double>(p_raster, userProbabilites, map, filename);
+		if (minIndexIntType == "unsigned_short") { return quantiles<double, unsigned short>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned") { return quantiles<double, unsigned>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long") { return quantiles<double, unsigned long>(p_raster, userProbabilites, map, filename); }
+		if (minIndexIntType == "unsigned_long_long") { return quantiles<double, unsigned long long>(p_raster, userProbabilites, map, filename); }
+		break;
 		default:
 		throw std::runtime_error("GDATDataType not one of the accepted types.");
 	}
+	throw std::runtime_error("type " + minIndexIntType + " not a valid type.");
 }
 
 PYBIND11_MODULE(quantiles, m) {
