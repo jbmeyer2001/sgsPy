@@ -59,6 +59,8 @@ GDALRasterWrapper *breaks(
 	
 	//step 2: get the raster bands needed from the datset
 	std::vector<T *> rasterBands;
+	std::vector<std::string> bandNames = p_raster->getBands();
+	std::vector<std::string> newBandNames;
 	for (auto const& [key, val] : breaks) {
 		//add requested band to rasterBands
 		rasterBands.push_back((T *)p_raster->getRasterBand(key));		
@@ -73,6 +75,8 @@ GDALRasterWrapper *breaks(
 			throw std::runtime_error("number of break indexes exceeds maximum");
 			//throw std::runtime_error("number of break indexes (" + std::to_string(val.size() + 1) + ") exceeds maximum of " + std::to_string(maxBreaks) ".");
 		}
+
+		newBandNames.push_back("strat_" + bandNames[key]);
 	}
 
 	//step 3: set bandStratMultipliers and check max size if mapped stratification	
@@ -85,6 +89,8 @@ GDALRasterWrapper *breaks(
 		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (bandBreaks[bandCount - 1].size() + 1)) {
 			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum");
 		}
+
+		newBandNames.push_back("stat_map");
 	}
 	
 	//TODO: multithread and consider cache thrashing
@@ -118,14 +124,6 @@ GDALRasterWrapper *breaks(
 	}
 
 	//step 5: create GDALRasterWrapper object from bands
-	std::vector<std::string> bandNames = p_raster->getBands();
-	std::vector<std::string> newBandNames;
-	for (int i = 0; i < bandNames.size(); i++) {
-		newBandNames.push_back("strat_" + bandNames[i]);
-	}
-	if (map) {
-		newBandNames.push_back("strat_map");
-	}
 	//this dynamically-allocated object will be cleaned up by python
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
 		stratRasterBands, 

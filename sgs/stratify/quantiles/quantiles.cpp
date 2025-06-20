@@ -34,6 +34,8 @@ GDALRasterWrapper *quantiles(
 	std::vector<T *>rasterBands;
 	std::vector<std::vector<double>> probabilities;
 	std::vector<std::vector<std::tuple<T, U, uint16_t>>> stratVects;
+	std::vector<std::string> bandNames = p_raster->getBands();
+	std::vector<std::string> newBandNames;
 	for (auto const& [key, value] : userProbabilites) {
 		rasterBands.push_back((T *)p_raster->getRasterBand(key));
 
@@ -45,6 +47,8 @@ GDALRasterWrapper *quantiles(
 
 		std::vector<std::tuple<T, U, uint16_t>> stratVect;
 		stratVects.push_back(stratVect);
+
+		newBandNames.push_back("strat_" + bandNames[key]);
 	}
 
 	//step 3 set strat multipliers for mapped stratum raster if required
@@ -53,6 +57,8 @@ GDALRasterWrapper *quantiles(
 		for (int i = 1; i < bandCount; i++) {
 			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * (probabilities[i].size() + 1);
 		}
+
+		newBandNames.push_back("strat_map");
 	}
 	
 	//TODO this can all be done in parallel without much use of locks	
@@ -134,14 +140,6 @@ GDALRasterWrapper *quantiles(
 	}
 
 	//step 9 create new GDALRasterWrapper in-memory
-	std::vector<std::string> bandNames = p_raster->getBands();
-	std::vector<std::string> newBandNames;
-	for (const std::string& name : bandNames) {
-		newBandNames.push_back("strat_" + name);
-	}
-	if (map) {
-		newBandNames.push_back("strat_map");
-	}
 	//this dynamically-allocated object will be cleaned up by python
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
 		stratRasterBands,

@@ -53,7 +53,6 @@ def breaks(
         if a break contains a value greater than the maximum in the corresponding raster band
     """
 
-    #TODO breaks_dict and add dict as possible breaks parameter type
     breaks_dict = {}
     if type(breaks) is list and type(breaks[0]) is list:
         #error check number of rasters bands
