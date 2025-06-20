@@ -16,11 +16,13 @@ GDALRasterWrapper *mapStratifications(
 	std::vector<std::vector<uint16_t>> stratums,
 	std::string filename)
 {
+	//define useful variables
 	size_t maxStratum = std::numeric_limits<uint16_t>::max();
 	size_t numPixels = rasters[0]->getWidth() * rasters[0]->getHeight();
 	size_t bandSize = numPixels * sizeof(uint16_t);
 	double noDataValue = rasters[0]->getDataset()->GetRasterBand(1)->GetNoDataValue();
 
+	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
 	std::vector<size_t> bandStratMultipliers(1, 1);	
 	std::vector<uint16_t *>rasterBands;
 	for (size_t i = 0; < rasters.size(); i++) {
@@ -35,22 +37,27 @@ GDALRasterWrapper *mapStratifications(
 			band = bands[i][j];
 			stratum = stratums[i][j];
 
-			//TODO RETHINK BAND STRAT MULTIPLIERS CALCULATIONS
-			//size_t numBands = bandStratMultipliers.size();
-			//else {
-			//	bandStratMultipliers.push_back(bandStratMultipliers[numBands - 1] * stratum);
-			//}
+			//we initialized with 1 element and append one for every band.
+			//so, we need to remove 1 element (which wouldn't have been used anyway)
+			//when we are done looping through bands.
+			bandStratMultipliers.push_back(bandStratMultipliers.back() * stratum);
 
 			rasterBands.push_back((uint16_t *)p_raster->getRasterBand(band));
 		}
 	}
 
-	void * p_mappedRaster = CPLMalloc(bandSize * rasterBands.size());
-	std::vector<void *> mappedRasterBands;
-	for (size_t i = 0; i < rasterBands.size(); i++) {
-		mappedRasterBands.append((void *)((size_t)p_mappedRaster + layerSize * i));
-	}	
+	//step 2 check max stratum, and remove unused bandStratMultiplier
+	//bandStratMultipliers.back() contains the largest index possible given all the stratification
+	//combinations.
+	if (bandStratMultipliers.back() > maxStratum) {
+		throw std::runtime_error("the number of possible strata given by the raster bands exceeds the maximum allowed (the maximum index which can occur without integer overflow).");
+	}
+	bandStratMultipliers.pop_back();
 
+	//step 3 allocate mapped raster
+	void * p_mappedRaster = CPLMalloc(bandSize);
+
+	//step 4 iterate through pixels populating mapped raster with stratum values
 	for (size_t j = 0; j < numPixels; j++) {
 		uint16_t mappedStrat = 0;
 		for (size_t i = 0; i < rasterBands.size(); i++) {
@@ -63,8 +70,27 @@ GDALRasterWrapper *mapStratifications(
 			mappedStrat += strat * bandStratMultipliers[i];
 		}
 		
-		((uint16_t *)mappedRasterBands[i])[j] = mappedStrat;
+		((uint16_t *)p_mappedRaster)[j] = mappedStrat;
 	}
+
+	//step 5 create new GDALRasterWrapper in-memory
+	//this dynamically-allocated object will be cleaned up by python
+	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
+		{p_mappedStrat},
+		{"strat_map"},
+		rasters[0]->getWidth(),
+		rasters[0]->getHeight(),
+		GDT_UInt16,
+		rasters[0]->getGeotransform(),
+		std::string(rasters[0]->getDataset()->GetProjectionRef())
+	);
+
+	//step 6 write raster if desired
+	if (filename != "") {
+		stratRaster->write(filename);
+	}
+
+	return stratRaster;
 }
 
 PYBIND11_MODULE(map_stratifications, m) {

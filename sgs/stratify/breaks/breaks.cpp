@@ -82,8 +82,8 @@ GDALRasterWrapper *breaks(
 	//step 3: set bandStratMultipliers and check max size if mapped stratification	
 	if (map) {
 		//determine the stratification band index multipliers of the mapped band and error check maxes
-		for (int i = 1; i < bandCount; i++) {
-			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * (bandBreaks[i].size() + 1);
+		for (int i = 0; i < bandCount - 1; i++) {
+			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (bandBreaks[i].size() + 1);
 		}
 
 		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (bandBreaks[bandCount - 1].size() + 1)) {
