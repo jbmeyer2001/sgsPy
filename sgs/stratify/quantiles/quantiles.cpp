@@ -10,7 +10,39 @@
 #include "raster.h"
 
 /**
+ * This function stratifies a given raster using user-defined probabilities.
+ * The probabilities (quantiles) are provided as a vector of doubles mapped
+ * to a band index.
  *
+ * The function can be run on a single raster band or multiple raster bands,
+ * and the user may pass the map variable to combine the stratification of
+ * the given raster bands.
+ *
+ * The raster bands are initially iterated through, and vectors are 
+ * creatied containing their value, index in the original raster, and 
+ * resulting stratum (not set). The vectors are sorted by value, and
+ * their stratum is set according to which quantile they are in.
+ *
+ * The vectors are then re-sorted by index -- in order to take advantage
+ * of the CPU cache and spatial locality for large images -- before being
+ * iterated through (now sequentially by index) and having their stratum
+ * written to the output raster. 
+ *
+ * An additional band is added to the output raster if map is specified,
+ * and multipliers are determined, so that every unique combination of 
+ * stratifications of the normal raster bands corresponds to a single
+ * stratification of the mapped raster band. For example, if there were
+ * 3 normal raster bands each with 5 possible stratifications, there
+ * would be 5^3 or 125 possible mapped stratifications.
+ *
+ * A new GDALRasterWrapper object is created and initialized using
+ * the strtified as raster bands, and the raster is written to disk
+ * if a filename is given.
+ *
+ * @param GDALRasterWrapper * a pointer to the raster image to stratify
+ * @param std::map<int, std::vector<double>> band mapped to user-defined probs
+ * @param bool map whether to add a mapped stratification
+ * @param std::string filename the filename to write to (if desired)
  */
 template <typename T, typename U>
 GDALRasterWrapper *quantiles(
@@ -160,7 +192,21 @@ GDALRasterWrapper *quantiles(
 }
 
 /**
+ * Having template types which rely on dynamic information (such as
+ * the pixel type of the added raster, or the number of pixels in
+ * the raster) require an unfortunate amount of boilerplate code.
  *
+ * This is an attempt to condense as much of the annoyting boilerplate
+ * into a single place.
+ *
+ * This function uses type information of the raster pixel type,
+ * as well as the minimally sized unsigned int type which can represent
+ * all necessary indices.
+ *
+ * A call is made to quantiles() with the necessary data type template
+ * arguments depending on raster parameters.
+ *
+ * @returns GDALRasterWraper * newly generated raster image of stratum
  */
 GDALRasterWrapper *quantilesTypeSpecifier(
 	GDALRasterWrapper *p_raster,

@@ -184,7 +184,7 @@ srs(
 }
 
 /**
- * Having template types which rely in dynamic information (such as
+ * Having template types which rely on dynamic information (such as
  * the pixel type of the added raster, or the number of pixels in 
  * the raster) require an unfortunate amount of boilerplate code.
  *

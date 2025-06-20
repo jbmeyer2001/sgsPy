@@ -39,7 +39,7 @@ def breaks(
     breaks : list[int | float | list[int|float]] | dict[int, list[int|float]]
         user defined breaks to stratify
     map : bool
-        whether to map the stratification of multiple raster layers onto a single layer
+        whether to map the stratification of multiple raster bands onto a single band
     filename : str
         filename to write to or '' if no file should be written
 
@@ -52,6 +52,7 @@ def breaks(
     ValueError
         if a break contains a value greater than the maximum in the corresponding raster band
     """
+    #TODO add cpp runtime errors
 
     breaks_dict = {}
     if type(breaks) is list and type(breaks[0]) is list:

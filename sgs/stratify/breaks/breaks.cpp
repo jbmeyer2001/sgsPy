@@ -10,11 +10,11 @@
 #include "raster.h"
 
 /**
- * this function stratifies a given raster using user-defined breaks.
- * The breaks are provided as a vector of doubles corresponding to a band index.
+ * This function stratifies a given raster using user-defined breaks.
+ * The breaks are provided as a vector of doubles mapped to a band index.
  *
  * The function can be run on a single raster band or multiple raster bands,
- * and the user may pass the map function, to combine the stratification of
+ * and the user may pass the map variable to combine the stratification of
  * the multiple raster bands.
  *
  * The required raster bands are first acquired from the datset, and
@@ -31,8 +31,8 @@
  * a new dataset object is created using the stratifcation raster, and it is
  * written to disk if a filename is given.
  *
- * @param GDALRasterWrapper * a pointer to the raster image were stratifying
- * @param std::map<int, std::vector<double>> band and user-defiend breaks mapping
+ * @param GDALRasterWrapper * a pointer to the raster image to stratify
+ * @param std::map<int, std::vector<double>> band mapped to user-defiend breaks
  * @param bool map whether to add a mapped stratification
  * @param std::string filename the filename to write to (if desired)
  */
