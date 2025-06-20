@@ -1,8 +1,8 @@
 if WIN
   #create breaks module
   py.extension_module(
-    'breaks',
-    'breaks.cpp',
+    'quantiles',
+    'quantiles.cpp',
     link_with: [
       raster_lib,
     ],
@@ -17,8 +17,8 @@ if WIN
 else
   #create srs module
   py.extension_module(
-    'breaks',
-    'breaks.cpp',
+    'quantiles',
+    'quantiles.cpp',
     dependencies: [lib_deps],
     include_directories: [
       inc_dir,

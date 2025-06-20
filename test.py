@@ -154,8 +154,15 @@ print("PASSED raster.cpp and vector.cpp test")
 #samples = sgs.srs(rast, mindist=1000, num_samples=50, plot=True, filename="test_outputs/test_file_out.shp")
 #print(samples)
 
-#rast = SpatialRaster(mraster_small_geotiff_path)
+rast = SpatialRaster(mraster_geotiff_path)
 #strat_rast = sgs.stratify.breaks(rast,[[10, 12], [50,80], [3,4]], map=True)
-#strat_rast = sgs.stratify.breaks(rast, {'pzabove2': [50, 80]})
-#strat_rast.plot()
+strat_rast = sgs.stratify.breaks(rast, {'pzabove2': [50, 80]})
+strat_rast.plot()
+
+rast = SpatialRaster(mraster_geotiff_path)
+strat_rast = sgs.stratify.quantiles(rast, {"pzabove2": 20, "zq90": 20}, map=True)
+print(strat_rast[0])
+print(strat_rast[1])
+print(strat_rast[2])
+print(strat_rast.bands)
 

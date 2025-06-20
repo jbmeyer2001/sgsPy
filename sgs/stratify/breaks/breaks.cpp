@@ -4,14 +4,10 @@
  * Purpose: C++ implementation of raster stratification using breaks
  * Author: Joseph Meyer
  * Date: June, 2025
-
  *
  ******************************************************************************/
 
-#include <iostream> //TODO remove
-
 #include "raster.h"
-#include "write.h"
 
 /**
  * this function stratifies a given raster using user-defined breaks.
@@ -51,10 +47,7 @@ GDALRasterWrapper *breaks(
 	size_t maxBreaks = std::numeric_limits<uint16_t>::max();
 	int bandCount = breaks.size();
 
-	//step 1: get dataset
-	GDALDataset *p_dataset = p_raster->getDataset();
-
-	//step 2: allocate new stratification raster
+	//step 1: allocate new stratification raster
 	std::vector<size_t> bandStratMultipliers(breaks.size(), 1);
 	std::vector<std::vector<double>> bandBreaks;
 	std::vector<void *> stratRasterBands;
@@ -64,8 +57,10 @@ GDALRasterWrapper *breaks(
 		stratRasterBands.push_back((void *)((size_t)p_stratRaster + (stratRasterBandSize * i)));
 	}
 	
-	//step 3: get the raster bands needed from the datset
+	//step 2: get the raster bands needed from the datset
 	std::vector<T *> rasterBands;
+	std::vector<std::string> bandNames = p_raster->getBands();
+	std::vector<std::string> newBandNames;
 	for (auto const& [key, val] : breaks) {
 		//add requested band to rasterBands
 		rasterBands.push_back((T *)p_raster->getRasterBand(key));		
@@ -80,9 +75,11 @@ GDALRasterWrapper *breaks(
 			throw std::runtime_error("number of break indexes exceeds maximum");
 			//throw std::runtime_error("number of break indexes (" + std::to_string(val.size() + 1) + ") exceeds maximum of " + std::to_string(maxBreaks) ".");
 		}
+
+		newBandNames.push_back("strat_" + bandNames[key]);
 	}
 
-	//step 4: set bandStratMultipliers and check max size if mapped stratification	
+	//step 3: set bandStratMultipliers and check max size if mapped stratification	
 	if (map) {
 		//determine the stratification band index multipliers of the mapped band and error check maxes
 		for (int i = 1; i < bandCount; i++) {
@@ -92,19 +89,21 @@ GDALRasterWrapper *breaks(
 		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (bandBreaks[bandCount - 1].size() + 1)) {
 			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum");
 		}
+
+		newBandNames.push_back("stat_map");
 	}
 	
 	//TODO: multithread and consider cache thrashing
-	//step 5: iterate through indices and update the stratified raster bands
+	//step 4: iterate through indices and update the stratified raster bands
 	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
 		uint16_t mappedStrat = 0;
 		bool nan = false;
 		for (int i = 0; i < bandCount; i++) {
-			T val = ((T *)rasterBands[i])[j];
+			T val = rasterBands[i][j];
 
 			if (std::isnan(val) || (double)val == noDataValue) {
-				((uint16_t *)(stratRasterBands[i]))[j] = (uint16_t)noDataValue;
+				((uint16_t *)stratRasterBands[i])[j] = (uint16_t)noDataValue;
 				nan = true;
 				continue;
 			}
@@ -124,15 +123,8 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	//step 6: create GDALRasterWrapper object from bands
-	std::vector<std::string> bandNames = p_raster->getBands();
-	std::vector<std::string> newBandNames;
-	for (int i = 0; i < bandNames.size(); i++) {
-		newBandNames.push_back("strat_" + bandNames[i]);
-	}
-	if (map) {
-		newBandNames.push_back("strat_map");
-	}
+	//step 5: create GDALRasterWrapper object from bands
+	//this dynamically-allocated object will be cleaned up by python
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
 		stratRasterBands, 
 		newBandNames,
@@ -140,10 +132,10 @@ GDALRasterWrapper *breaks(
 		p_raster->getHeight(),
 		GDT_UInt16,
 		p_raster->getGeotransform(),
-		std::string(p_dataset->GetProjectionRef())
+		std::string(p_raster->getDataset()->GetProjectionRef())
 	);
 	
-	//step 7: write raster if desired
+	//step 6: write raster if desired
 	if (filename != "") {
 		stratRaster->write(filename);
 	}
