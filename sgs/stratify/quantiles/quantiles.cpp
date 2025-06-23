@@ -86,8 +86,12 @@ GDALRasterWrapper *quantiles(
 	//step 3 set strat multipliers for mapped stratum raster if required
 	std::vector<size_t> bandStratMultipliers(probabilities.size(), 1);
 	if (map) {
-		for (int i = 1; i < bandCount; i++) {
-			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * (probabilities[i].size() + 1);
+		for (int i = 0; i < bandCount - 1; i++) {
+			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (probabilities[i].size() + 1);
+		}
+
+		if (maxStratum < bandStratMultipliers.back() * probabilities.back().size()) {
+			throw std::runtime_error("number og break indexes in mapped stratification exceeds maximum.");
 		}
 
 		newBandNames.push_back("strat_map");

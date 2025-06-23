@@ -86,7 +86,7 @@ GDALRasterWrapper *breaks(
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (bandBreaks[i].size() + 1);
 		}
 
-		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (bandBreaks[bandCount - 1].size() + 1)) {
+		if (maxBreaks < bandStratMultipliers.back() * bandBreaks.back().size()) {
 			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum.");
 		}
 
