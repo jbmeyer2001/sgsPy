@@ -75,7 +75,7 @@ GDALRasterWrapper *quantiles(
 			throw std::runtime_error("too many stratum given, result would overflow");
 		}
 
-		probabilities.push_back(value);	
+		probabilities.push_back(value);
 
 		std::vector<std::tuple<T, U, uint16_t>> stratVect;
 		stratVects.push_back(stratVect);
@@ -90,7 +90,7 @@ GDALRasterWrapper *quantiles(
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (probabilities[i].size() + 1);
 		}
 		
-		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (probabilities[bandCount - 1].size() + 1) {
+		if (maxBreaks < bandStratMultipliers[bandCount - 1] * (probabilities[bandCount - 1].size() + 1)) {
 			throw std::runtime_error("number of stratum indexes in mapped stratification exceeds maximum.");
 		}
 
