@@ -63,44 +63,52 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     #TODO add cpp runtime errors
 
     raster_list = []
-    bands_list = []
-    stratums_list = []
+    band_lists = []
+    stratum_lists = []
 
-    for arg in args:
-        raster, bands, num_stratum = args
-
+    for (raster, bands, num_stratum) in args: 
         #error checking on bands and num_stratum lists
         if type(bands) is list and type(num_stratum) is list and len(bands) != len(num_stratum):
             raise ValueError("if bands and num_stratum arguments are lists, they must have the same length.")
         
-        if type(bands) is list ^ type(num_stratum) is list: #XOR
+        if (type(bands) is list) ^ (type(num_stratum) is list): #XOR
             raise TypeError("if one of bands and num_stratum is list, the other one must be a list of the same length.")
 
         if type(bands) is list and len(bands) > raster.band_count:
             raise ValueError("bands list cannot have more bands than raster contains.")
+            
+        #helper function which checks int/str value and returns int band index
+        def get_band_int(band: int|str) -> int:
+            #if an int is passed, check and return
+            if type(band) is int:
+                if band not in range(raster.band_count):
+                    raise ValueError("band {} is out of range.".format(band))
+                return band
 
-        #error checking on bands string values
-        if type(bands[0]) is str:
+            #if a string is passed, check and return corresponding int
+            if band not in raster.bands:
+                raise ValueError("bands {} is not a band within the raster.".format(band))
+            return raster.band_name_dict[band]
+
+
+        #error checking on band int/string values
+        band_list = []
+        stratum_list = []
+        if type(bands) is list:
             for i in range(len(bands)):
-                if (bands[i] not in raster.bands):
-                    raise ValueError("{} is not a band within the raster".format(bands[i]))
-
-                #convert from string to int
-                bands[i] = raster.band_name_dict[bands[i]]
-
-        #error checking on bands int values
-        if type(bands[i]) is int:
-            for i in range(len(bands)):
-                if bands[i] not in range(raster.band_count):
-                    raise ValueError("band {} is out of range.".format(bands[i])) 
-
-        #add raster, bands, and stratums to arguments (passed to c++ function)
-        raster_list.append(raster)
-        bands_list.append(bands)
-        stratums_list.append(stratums)
+                band_list.append(get_band_int(bands[i]))
+                stratum_list.append(num_stratum[i])
+        else:
+            band_list.append(get_band_int(bands))
+            stratum_list.append(num_stratum)
+        
+        #prepare cpp function arguments
+        raster_list.append(raster.cpp_raster)
+        band_lists.append(band_list)
+        stratum_lists.append(stratum_list)
 
     #call cpp map function
-    mapped_raster = map_stratifications_cpp(raster_list, bands_list, stratums_list, filename)
+    mapped_raster = map_stratifications_cpp(raster_list, band_lists, stratum_lists, filename)
 
     #plot distribtion of stratum if requested
     if plot:
