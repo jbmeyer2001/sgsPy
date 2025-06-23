@@ -36,7 +36,7 @@
  * would be 5^3 or 125 possible mapped stratifications.
  *
  * A new GDALRasterWrapper object is created and initialized using
- * the strtified as raster bands, and the raster is written to disk
+ * the stratifications as raster bands, and the raster is written to disk
  * if a filename is given.
  *
  * @param GDALRasterWrapper * a pointer to the raster image to stratify
