@@ -7,12 +7,14 @@
  *
  ******************************************************************************/
 
+#include "raster.h"
+
 /**
  *
  */
 GDALRasterWrapper *mapStratifications(
 	std::vector<GDALRasterWrapper *> rasters,
-	std::vector<std::vector<int>>, bands,
+	std::vector<std::vector<int>> bands,
 	std::vector<std::vector<uint16_t>> stratums,
 	std::string filename)
 {
@@ -25,17 +27,17 @@ GDALRasterWrapper *mapStratifications(
 	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
 	std::vector<size_t> bandStratMultipliers(1, 1);	
 	std::vector<uint16_t *>rasterBands;
-	for (size_t i = 0; < rasters.size(); i++) {
+	for (size_t i = 0; i < rasters.size(); i++) {
 		GDALRasterWrapper *p_raster = rasters[i];
-		std::vector<uint16_t> stratumVect = stratum[i];
+		std::vector<uint16_t> stratumVect = stratums[i];
 
 		if (p_raster->getRasterType() != GDT_UInt16) {
 			throw std::runtime_error("raster MUST have pixel type GDT_UInt16");
 		}
 
 		for (size_t j = 0; j < bands[i].size(); j++) {
-			band = bands[i][j];
-			stratum = stratums[i][j];
+			int band = bands[i][j];
+			uint16_t stratum = stratums[i][j];
 
 			//we initialized with 1 element and append one for every band.
 			//so, we need to remove 1 element (which wouldn't have been used anyway)
@@ -61,7 +63,7 @@ GDALRasterWrapper *mapStratifications(
 	for (size_t j = 0; j < numPixels; j++) {
 		uint16_t mappedStrat = 0;
 		for (size_t i = 0; i < rasterBands.size(); i++) {
-			uint16_t strat = rasterBands[i][j]
+			uint16_t strat = rasterBands[i][j];
 			if (std::isnan(strat) || (double)strat == noDataValue) {
 				mappedStrat = (uint16_t)noDataValue;
 				break;
@@ -76,7 +78,7 @@ GDALRasterWrapper *mapStratifications(
 	//step 5 create new GDALRasterWrapper in-memory
 	//this dynamically-allocated object will be cleaned up by python
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
-		{p_mappedStrat},
+		{p_mappedRaster},
 		{"strat_map"},
 		rasters[0]->getWidth(),
 		rasters[0]->getHeight(),
