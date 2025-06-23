@@ -10,7 +10,24 @@
 #include "raster.h"
 
 /**
+ * This function maps multiple stratifications.
  *
+ * Based on the number of bands passed, and the number of stratifications
+ * per band, multipliers are determined such that every unique combination
+ * of stratifications within the passed stratification rasters
+ * corrosponds to a single stratification in the output mapping.
+ *
+ * For example, if there were 3 stratification rasters passed, each with 5
+ * possible stratum, there would be 5^3 or 125 possible mapped stratifications.
+ *
+ * A new GDALRasterWrappper object is created and initialized using the
+ * mapped raster, and the mapped raster is written to disk if a filename is given.
+ *
+ * @param std::vector<GDALRasterWrapper *> rasters list
+ * @param std::vector<std::vector<int>> bands list
+ * @param std::vector<std::vector<uint16_t>> number of stratums list
+ * @param std::string filename the filename to write to or "" if file shouldn't be written
+ * @returns GDALRasterWrapper *pointer to newly created raster mapping
  */
 GDALRasterWrapper *mapStratifications(
 	std::vector<GDALRasterWrapper *> rasters,
