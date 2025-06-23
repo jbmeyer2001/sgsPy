@@ -36,8 +36,10 @@
  * would be 5^3 or 125 possible mapped stratifications.
  *
  * A new GDALRasterWrapper object is created and initialized using
- * the strtified as raster bands, and the raster is written to disk
+ * the stratifications as raster bands, and the raster is written to disk
  * if a filename is given.
+ *
+ * NOTE: stratifications have the data type 'float' to accomodate nan values
  *
  * @param GDALRasterWrapper * a pointer to the raster image to stratify
  * @param std::map<int, std::vector<double>> band mapped to user-defined probs
@@ -51,12 +53,12 @@ GDALRasterWrapper *quantiles(
 	bool map,
 	std::string filename) 
 {
-	size_t maxStratum = std::numeric_limits<uint16_t>::max();
+	size_t maxStratum = std::numeric_limits<float>::max();
 	int bandCount = userProbabilites.size();
 
 	//step 1 allocate new rasters
 	std::vector<void *>stratRasterBands;
-	size_t stratRasterBandSize = p_raster->getWidth() * p_raster->getHeight() * sizeof(uint16_t);
+	size_t stratRasterBandSize = p_raster->getWidth() * p_raster->getHeight() * sizeof(float);
 	void *p_stratRaster = CPLMalloc(stratRasterBandSize * (bandCount + (size_t)map));
 	for (size_t i = 0; i < bandCount + (size_t)map; i++) {
 		stratRasterBands.push_back((void *)((size_t)p_stratRaster + (stratRasterBandSize * i)));
@@ -65,7 +67,7 @@ GDALRasterWrapper *quantiles(
 	//step 2 get raster bands from GDALRasterWrapper
 	std::vector<T *>rasterBands;
 	std::vector<std::vector<double>> probabilities;
-	std::vector<std::vector<std::tuple<T, U, uint16_t>>> stratVects;
+	std::vector<std::vector<std::tuple<T, U, float>>> stratVects;
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
 	for (auto const& [key, value] : userProbabilites) {
@@ -77,7 +79,7 @@ GDALRasterWrapper *quantiles(
 
 		probabilities.push_back(value);	
 
-		std::vector<std::tuple<T, U, uint16_t>> stratVect;
+		std::vector<std::tuple<T, U, float>> stratVect;
 		stratVects.push_back(stratVect);
 
 		newBandNames.push_back("strat_" + bandNames[key]);
@@ -86,8 +88,12 @@ GDALRasterWrapper *quantiles(
 	//step 3 set strat multipliers for mapped stratum raster if required
 	std::vector<size_t> bandStratMultipliers(probabilities.size(), 1);
 	if (map) {
-		for (int i = 1; i < bandCount; i++) {
-			bandStratMultipliers[i] = bandStratMultipliers[i - 1] * (probabilities[i].size() + 1);
+		for (int i = 0; i < bandCount - 1; i++) {
+			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (probabilities[i].size() + 1);
+		}
+
+		if (maxStratum < bandStratMultipliers.back() * probabilities.back().size()) {
+			throw std::runtime_error("number og break indexes in mapped stratification exceeds maximum.");
 		}
 
 		newBandNames.push_back("strat_map");
@@ -97,13 +103,13 @@ GDALRasterWrapper *quantiles(
 	//step 4 iterate through rasters
 	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	for (int i = 0; i < bandCount; i++) {
-		std::vector<std::tuple<T, U, uint16_t>> *stratVect = &stratVects[i];
+		std::vector<std::tuple<T, U, float>> *stratVect = &stratVects[i];
 		for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
 			T val = rasterBands[i][j];
 
 			if (std::isnan(val) || (double)val == noDataValue) {
 				//step 4.1 write nodata in nodata ares
-				((uint16_t *)stratRasterBands[i])[j] = (uint16_t)noDataValue;
+				((float *)stratRasterBands[i])[j] = (float)noDataValue;
 				continue;
 			}
 			else {
@@ -138,7 +144,7 @@ GDALRasterWrapper *quantiles(
 		 *
 		 * Regardless, this requires some testing in the future.
 		 */
-		for (uint16_t stratum = 0; stratum < stratumSplittingIndexes.size() - 1; stratum++) {
+		for (float stratum = 0; stratum < stratumSplittingIndexes.size() - 1; stratum++) {
 			for (size_t index = stratumSplittingIndexes[stratum]; index < stratumSplittingIndexes[stratum + 1]; index++) {
 				std::get<2>(stratVect->at(index)) = stratum;
 			}
@@ -153,21 +159,21 @@ GDALRasterWrapper *quantiles(
 	//TODO this may be parallelizable
 	//step 8 iterate through vectors and assign stratum value
 	for (size_t j = 0; j < stratVects[0].size(); j++) {
-		uint16_t mappedStrat = 0;
+		float mappedStrat = 0;
 
  		//I'm assuming if there are nodata pixels, they're all in the same indexes.
 		//if that's not true there could be errors here.
 		U index = std::get<1>(stratVects[0][j]);
 		for (int i = 0; i < bandCount; i++) {
-			uint16_t strat = std::get<2>(stratVects[i][j]);
-			((uint16_t *)stratRasterBands[i])[index] = strat;
+			float strat = std::get<2>(stratVects[i][j]);
+			((float *)stratRasterBands[i])[index] = strat;
 			if (map) {
 				mappedStrat += strat * bandStratMultipliers[i];
 			}
 		}
 
 		if (map) {
-			((uint16_t *)stratRasterBands[bandCount])[index] = mappedStrat;
+			((float *)stratRasterBands[bandCount])[index] = mappedStrat;
 		}
 	}
 
@@ -178,10 +184,14 @@ GDALRasterWrapper *quantiles(
 		newBandNames,
 		p_raster->getWidth(),
 		p_raster->getHeight(),
-		GDT_UInt16,
+		GDT_Float32,
 		p_raster->getGeotransform(),
 		std::string(p_raster->getDataset()->GetProjectionRef())
 	);
+	GDALDataset *p_dataset = stratRaster->getDataset();
+	for (size_t i = 1; i <= stratRasterBands.size(); i++) {
+		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataValue);
+	}
 
 	//Step 10 write raster if desired
 	if (filename != "") {

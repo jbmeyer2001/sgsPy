@@ -142,27 +142,63 @@ assert float(layer_info["ymax"]) == 5343230
 
 print("PASSED raster.cpp and vector.cpp test")
 
-#rast = SpatialRaster(sraster_geotiff_path)
-#samples = sgs.srs(rast, mindist=200, num_samples=40, plot=True, filename="test_outputs/test_file_out.shp")
-#print(samples)
+''' some tests for srs() '''
+'''
+rast = SpatialRaster(sraster_geotiff_path)
+samples = sgs.srs(rast, mindist=200, num_samples=40, plot=True, filename="test_outputs/test_file_out.shp")
+print(samples)
 
-#rast = SpatialRaster(mraster_small_geotiff_path)
-#samples = sgs.srs(rast, num_samples=60, plot=True, filename="test_outputs/test_file_out.geojson")
-#print(samples)
-
-#rast = SpatialRaster(mraster_geotiff_path)
-#samples = sgs.srs(rast, mindist=1000, num_samples=50, plot=True, filename="test_outputs/test_file_out.shp")
-#print(samples)
+rast = SpatialRaster(mraster_small_geotiff_path)
+samples = sgs.srs(rast, num_samples=60, plot=True, filename="test_outputs/test_file_out.geojson")
+print(samples)
 
 rast = SpatialRaster(mraster_geotiff_path)
-#strat_rast = sgs.stratify.breaks(rast,[[10, 12], [50,80], [3,4]], map=True)
+samples = sgs.srs(rast, mindist=1000, num_samples=50, plot=True, filename="test_outputs/test_file_out.shp")
+print(samples)
+'''
+
+
+''' some tests form breaks() '''
+rast = SpatialRaster(mraster_geotiff_path)
+strat_rast = sgs.stratify.breaks(rast,[[10, 12], [50,80], [3,4]], map=True)
 strat_rast = sgs.stratify.breaks(rast, {'pzabove2': [50, 80]})
 strat_rast.plot()
 
+
+''' some tests for quantiles() '''
+'''
 rast = SpatialRaster(mraster_geotiff_path)
 strat_rast = sgs.stratify.quantiles(rast, {"pzabove2": 20, "zq90": 20}, map=True)
 print(strat_rast[0])
 print(strat_rast[1])
 print(strat_rast[2])
 print(strat_rast.bands)
+'''
 
+
+'''some tests for map() '''
+rast = SpatialRaster(mraster_geotiff_path)
+strat_rast_one = sgs.stratify.quantiles(rast, {"pzabove2": 20, "zq90": 18})
+strat_rast_one.plot(bands='strat_zq90')
+strat_rast_one.plot(bands='strat_pzabove2')
+
+strat_rast_two = sgs.stratify.breaks(rast, {"zsd": [3,4]})
+strat_rast_two.plot(bands='strat_zsd')
+mapped_rast = sgs.stratify.map((strat_rast_one, [0, 1], [20, 18]),(strat_rast_two, 0, 3))
+
+print("pzabove2")
+print(strat_rast_one[0])
+print()
+
+print("zq90")
+print(strat_rast_one[1])
+print()
+
+print("zsd")
+print(strat_rast_two[0])
+print()
+
+print("map")
+print(mapped_rast[0])
+print()
+mapped_rast.plot()

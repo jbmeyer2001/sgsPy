@@ -1,4 +1,3 @@
-
 # ******************************************************************************
 #
 #  Project: sgs
@@ -126,7 +125,7 @@ def quantiles(
                     probabilities_dict[band_num].remove(1.0)
 
     #call stratify quantiles function
-    strat_raster = quantiles_cpp(rast.cpp_raster, probabilities_dict, map, filename);
+    strat_raster = quantiles_cpp(rast.cpp_raster, probabilities_dict, map, filename)
 
     #plot distribution of stratum if requested
     if plot:

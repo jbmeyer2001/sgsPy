@@ -183,7 +183,6 @@ class SpatialRaster:
         if (type(image) is str):
             self.cpp_raster = GDALRasterWrapper(image)
         else:
-            print("setting cpp_raster to image")
             self.cpp_raster = image
 
         self.driver = self.cpp_raster.get_driver()
