@@ -13,7 +13,7 @@ from map_stratifications import map_stratifications_cpp
 
 def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         filename: str = '',
-        plot: bool = false):
+        plot: bool = False):
     """
     this function conducts mapping on existing stratifications.
 
@@ -81,7 +81,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
 
         #error checking on bands string values
         if type(bands[0]) is str:
-            for i in range(len(bands))
+            for i in range(len(bands)):
                 if (bands[i] not in raster.bands):
                     raise ValueError("{} is not a band within the raster".format(bands[i]))
 
@@ -90,8 +90,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
 
         #error checking on bands int values
         if type(bands[i]) is int:
-            for i in range(len(bands))
-                if bands[i] is not in range(raster.band_count):
+            for i in range(len(bands)):
+                if bands[i] not in range(raster.band_count):
                     raise ValueError("band {} is out of range.".format(bands[i])) 
 
         #add raster, bands, and stratums to arguments (passed to c++ function)
