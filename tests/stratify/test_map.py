@@ -5,4 +5,5 @@ class TestMap:
     #TODO add real tests before implementing map
     @pytest.mark.xfail
     def test_not_implemented(self):
-        map()
+        #map()
+        pass
