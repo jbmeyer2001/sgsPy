@@ -96,6 +96,23 @@ class TestSpatialRaster:
         rast = sgs.utils.raster.SpatialRaster(sraster2_geotiff_path)
         self.sraster2_check(rast)
 
+    def test_construct_from_existing(self):
+        rast = sgs.utils.raster.SpatialRaster(mraster_geotiff_path)
+        new_rast = sgs.utils.raster.SpatialRaster(rast.cpp_raster)
+        self.mraster_check(new_rast)
+
+        rast = sgs.utils.raster.SpatialRaster(mraster_small_geotiff_path)
+        new_rast = sgs.utils.raster.SpatialRaster(rast.cpp_raster)
+        self.mraster_small_check(new_rast)
+
+        rast = sgs.utils.raster.SpatialRaster(sraster_geotiff_path)
+        new_rast = sgs.utils.raster.SpatialRaster(rast.cpp_raster)
+        self.sraster_check(new_rast)
+
+        rast = sgs.utils.raster.SpatialRaster(sraster2_geotiff_path)
+        new_rast = sgs.utils.raster.SpatialRaster(rast.cpp_raster)
+        self.sraster2_check(new_rast)
+
     def test_raster_slicing(self):
         rast = sgs.utils.raster.SpatialRaster(mraster_small_geotiff_path)
         zq90 = np.load(mraster_small_zq90_path)
