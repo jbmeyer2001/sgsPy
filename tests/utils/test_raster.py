@@ -96,7 +96,6 @@ class TestSpatialRaster:
         rast = sgs.utils.raster.SpatialRaster(sraster2_geotiff_path)
         self.sraster2_check(rast)
 
-    @pytest.mark.skip('temporary skip to debug')
     def test_raster_slicing(self):
         rast = sgs.utils.raster.SpatialRaster(mraster_small_geotiff_path)
         zq90 = np.load(mraster_small_zq90_path)
