@@ -8,9 +8,13 @@ requires = [
 name = "sgs"
 version = "0.0.0"
 dependencies = [
-#	"gdal >= VERSION" TODO add version
-#	"numpy >= VERSION" TODO add version
-#	"matplotlib >= VERSION" TODO add version
+	"numpy", #TODO add version
+	"matplotlib" #TODO add version
+]
+
+[project.optional-dependencies]
+test = [
+	"geopandas" #TODO add version
 ]
 
 #TODO add license

@@ -60,6 +60,10 @@ def srs(
 
     Raises
     --------------------
+        ValueError
+            if num_samples is less than 1
+        RuntimeError (from C++)
+            if the number of samples is greater than the number of data pixels in the image
         RuntimeError (from C++)
             if there is an issue reading a band from the raster
         RuntimeError (from C++)
@@ -68,6 +72,9 @@ def srs(
     if access is not None:
         pass
         #call access function TODO
+
+    if num_samples < 1:
+        raise ValueError("num_samples must be greater than 0")
 
     #call random sampling function
     [sample_coordinates, sample_points] = srs_cpp(rast.cpp_raster, mindist, num_samples, filename)

@@ -179,11 +179,11 @@ print(strat_rast.bands)
 '''some tests for map() '''
 rast = SpatialRaster(mraster_geotiff_path)
 strat_rast_one = sgs.stratify.quantiles(rast, {"pzabove2": 20, "zq90": 18})
-strat_rast_one.plot(bands='strat_zq90')
-strat_rast_one.plot(bands='strat_pzabove2')
+strat_rast_one.plot(band='strat_zq90')
+strat_rast_one.plot(band='strat_pzabove2')
 
 strat_rast_two = sgs.stratify.breaks(rast, {"zsd": [3,4]})
-strat_rast_two.plot(bands='strat_zsd')
+strat_rast_two.plot(band='strat_zsd')
 mapped_rast = sgs.stratify.map((strat_rast_one, [0, 1], [20, 18]),(strat_rast_two, 0, 3))
 
 print("pzabove2")
