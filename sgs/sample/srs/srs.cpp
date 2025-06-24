@@ -50,7 +50,7 @@ srs(
 	GDALRasterWrapper *p_raster,
 	double mindist,
 	//GDALVectorWrapper *p_vector,
-	U numSamples,
+	unsigned long long numSamples,
 	std::string filename)
 {
 	//Step 1: get dataset
@@ -80,6 +80,10 @@ srs(
 		}
 	}
 	U numDataPixels = (U)p_raster->getWidth() * (U)p_raster->getHeight() - noDataPixelCount;
+
+	if (numSamples > numDataPixels) {
+		throw std::runtime_error("num_samples cannot be greater than the number of data pixels in the image.");
+	}
 
 	//Step 5: generate random number generator using mt19937	
 	std::mt19937::result_type seed = time(nullptr);
