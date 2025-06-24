@@ -131,28 +131,3 @@ class TestSpatialRaster:
         assert np.array_equal(zq90[131:141, 100:110], rast['zq90', 131:141, 100:110], equal_nan=True)
         assert np.array_equal([zq90, pzabove2], rast[0:2], equal_nan=True)
         assert np.array_equal(zq90[73, 46], rast['zq90', 73, 46], equal_nan=True)
-
-    @pytest.mark.skip('weird Python abort when running this')
-    def test_plotting(self):
-        rast = sgs.utils.raster.SpatialRaster(mraster_small_geotiff_path)
-
-        #testing correct / incorrect inputs to rast.plot_image(), not testing displayed image
-        plt.ion()
-        rast.plot_image()
-        rast.plot_image(bands=0)
-        rast.plot_image(bands=[0,1,2])
-        rast.plot_image(bands='zq90')
-        rast.plot_image(bands={'red':1, 'green':2, 'blue':0})
-        rast.plot_image(bands={'red':'pzabove2', 'blue':0, 'green':'zsd'})
-
-        with pytest.raises(TypeError):
-            rast.plot_image(bands=(0, 1, 2))
-        with pytest.raises(TypeError):
-            rast.plot_image(bands=0.5)
-        with pytest.raises(ValueError):
-            rast.plot_image(bands={'red':0, 'green':1})
-        with pytest.raises(ValueError):
-            rast.plot_image(bands={'red':0, 'green':1, 'b':2})
-        with pytest.raises(ValueError):
-            rast.plot_image(bands=[1,2])
-

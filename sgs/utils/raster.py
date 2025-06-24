@@ -65,42 +65,37 @@ class SpatialRaster:
     Plotting raster:
 
         the plot() function provides a wrapper around matplotlibs imshow 
-        functionality (matplotlib.pyplot.imshow). As such, either a single band 
-        can be plotted, or three bands can be plotted as an RGB image. 
+        functionality (matplotlib.pyplot.imshow). Only a single band can
+        be plotted, and for multi-band rasters an indication must be given
+        for which band to plot. 
 
         Target width and heights can be given in the parameters 
         target_width and target_height. Default parameters are 1000 pixels for both. 
         Information on the actual downsampling can be found here:
         https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
 
-        If no 'bands' argument is given, the function may throw an error if the
-        image does not contain 1 or 3 bands.
+        If no 'band' argument is given, the function will throw an error if the
+        image does not contain a single.
 
-        The 'bands' argument allows the end-user to specify either the band
-        index or the band name for either a scalar or rgb image. 'bands' may
-        be an int, str, list, or dict.
+        The 'band' argument allows the end-user to specify either the band
+        index or the band name. 'band' may be an int or str.
 
         Optionally, any of the arguments which may be passed to the matplotlib
         imshow function may also be passed to plot_image(), such as cmap
         for a specific color mapping.
 
         examples:
-        rast = sgs.utils.raster.SpatialRaster('test.tif')
-
-        #plots either scalar or RGB image depending on number of bands 
+        #plots the single band 
+        rast = sgs.SpatialRaster('test_single_band_raster.tif') 
         rast.plot_image()
 
-        #plots the second band (index 1) as a scalar image
-        rast.plot_image(bands=1)
+        #plots the second band
+        rast = sgs.SpatialRaster('test_multi_band_raster.tif')
+        rast.plot_image(band=1)
 
-        #plots the zq90 band as a scalar image
-        rast.plot_image(bands='zq90')
-
-        #plots an RGB image with 0 as red, 2 as green, and 1 as blue
-        rast.plot_image(bands=[0,2,1])
-
-        #plots an RGB image with red green and blue bands specified
-        rast.plot_image(bands={'red':0, 'green':'zsd', 'blue':1}
+        #plots the 'zq90' band
+        rast = sgs.SpatialRaster('test_multi_band_raster.tif')
+        rast.plot_image(band='zq90')
 
     Public Attributes
     --------------------
@@ -134,9 +129,9 @@ class SpatialRaster:
     info()
         takes no arguments, prints raster information to the console
     plot_image()
-        takes one optional 'bands' argument of type int, str, list, or dict specifying
-        the bands to be used in the scalar or RGB image. 
-        Optionally, any of the arguments that can be passed to matplotlib.pyplot.imshow 
+        takes one optional 'band' argument of type int, or str
+        
+    Optionally, any of the arguments that can be passed to matplotlib.pyplot.imshow 
         can also be passed to plot_image().
     """
 
@@ -272,7 +267,7 @@ class SpatialRaster:
              ax: Optional[matplotlib.axes.Axes] = None,
              target_width: int = 1000, 
              target_height: int = 1000, 
-             bands: Optional[int | str | list | dict] = None, 
+             band: Optional[int | str] = None, 
              **kwargs):
         """
         Calls plot_raster() on self.
@@ -284,8 +279,8 @@ class SpatialRaster:
         target_width : int
             maximum width in pixels for the image (after downsampling)
         target_height : int
-            maximum height in pxeils for the image (after downsampling)
-        bands (optional) : int or str or list or dict
+            maximum height in pixeils for the image (after downsampling)
+        band (optional) : int or str
             specification of which bands to plot
         **kwargs (optional)
             any parameters which may be passed to matplotlib.pyplot.imshow
@@ -297,9 +292,9 @@ class SpatialRaster:
         """
 
         if ax is not None:
-            plot_raster(self, ax, target_width, target_width, bands, **kwargs)
+            plot_raster(self, ax, target_width, target_width, band, **kwargs)
         else:
             fig, ax = plt.subplots()
-            plot_raster(self, ax, target_width, target_width, bands, **kwargs)
+            plot_raster(self, ax, target_width, target_width, band, **kwargs)
             plt.show()
         
