@@ -20,6 +20,11 @@ mraster_small_zsd_path = os.path.join(folder, 'mraster_small_zsd.npy')
 sraster_strata_path = os.path.join(folder, 'sraster_strata.npy')
 sraster2_band_path = os.path.join(folder, 'sraster2_band.npy')
 
+strat_breaks_zq90_r_path = os.path.join(folder, 'strat_breaks_zq90_R.tif')
+strat_breaks_pz2_r_path = os.path.join(folder, 'strat_breaks_pz2_R.tif')
+strat_quantiles_zq90_r_path = os.path.join(folder, 'strat_quantiles_zq90_R.tif')
+strat_quantiles_pz2_r_path = os.path.join(folder, 'strat_quantiles_pz2_R.tif')
+
 __all__ = [
     'access_shapefile_path',
     'existing_shapefile_path',
@@ -38,4 +43,8 @@ __all__ = [
     'mraster_small_zsd_path',
     'sraster_strata_path',
     'sraster2_band_path',
+    'strat_breaks_zq90_r_path',
+    'strat_breaks_pz2_r_path',
+    'strat_quantiles_zq90_r_path',
+    'strat_quantiles_pz2_r_path',
 ]
