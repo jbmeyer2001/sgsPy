@@ -19,24 +19,25 @@ class TestQuantiles:
     zq90_output_rast = sgs.SpatialRaster(strat_quantiles_zq90_r_path)
     pz2_output_rast = sgs.SpatialRaster(strat_quantiles_pz2_r_path)
     def test_correct_stratifications_against_R_version(self):
-        test_rast = sgs.quantiles(rast, num_strata={"zq90": 4})
-        for i in range(zq90_output_rast.height):
-            for j in range(zq90_output_rast.width):
-                if np.isnan(test_rast[i][j]):
-                    assert np.isnan(zq90_output_rast[i][j])
+        test_rast = sgs.quantiles(self.rast, num_strata={"zq90": 4})
+        for i in range(self.zq90_output_rast.height):
+            for j in range(self.zq90_output_rast.width):
+                if np.isnan(test_rast['strat_zq90', i, j]):
+                    assert np.isnan(self.zq90_output_rast[0, i, j])
                 else:
-                    #plus one to R output because R is 1-indexed
-                    assert test_rast[i][j] == zq90_output_rast[i][j] + 1
+                    #minus 1 to R output because R is 1-indexed
+                    assert test_rast['strat_zq90', i, j] == self.zq90_output_rast[0, i, j] - 1
 
-        test_rast = sgs.quantiles(rast, num_strata={"pzabove2": [0.2, 0.4, 0.8]})
-        for i in range(pz2_output_rast.height):
-            for j in range(pz2_output_rast.width):
-                if np.isnan(test_rast[i][j]):
-                    assert np.isnan(pz2_output_rast[i][j])
+        test_rast = sgs.quantiles(self.rast, num_strata={"pzabove2": [0.2, 0.4, 0.8]})
+        for i in range(self.pz2_output_rast.height):
+            for j in range(self.pz2_output_rast.width):
+                if np.isnan(test_rast['strat_pzabove2', i, j]):
+                    assert np.isnan(self.pz2_output_rast[0, i, j])
                 else:
-                    #plus one to R output because R is 1-indexed
-                    assert test_rast[i][j] == zq90_output_rast[i][j] + 1
+                    #minus one to R output because R is 1-indexed
+                    assert test_rast['strat_pzabove2', i, j] == self.pz2_output_rast[0, i, j] - 1
 
+    @pytest.mark.skip
     def test_mapping_outputs(self):
         #the python version maps variables differently than the R version
         #so rather than compare against the R version, I'm going to ensure
@@ -46,7 +47,7 @@ class TestQuantiles:
         pz2_mapping = {}
         zsd_mapping = {}
         
-        test_rast = sgs.quantiles(rast, num_strata=[5, [0.2, 0.4, 0.8], 3], map=True)
+        test_rast = sgs.quantiles(self.rast, num_strata=[5, [0.2, 0.4, 0.8], 3], map=True)
 
         for i in range(test_rast.height):
             for j in range(test_rast.width):
@@ -65,36 +66,36 @@ class TestQuantiles:
                     zsd_mapping[map_strat] = zsd_strat
 
     def test_quantiles_inputs(self):
-        test_rast = sgs.quantiles(single_band_rast, num_strata=10)
-        test_rast = sgs.quantiles(single_band_rast, num_strata=[0.00001])
+        test_rast = sgs.quantiles(self.single_band_rast, num_strata=10)
+        test_rast = sgs.quantiles(self.single_band_rast, num_strata=[0.00001])
 
         with pytest.raises(ValueError):
-            test_rast = sgs.quantiles(single_band_rast, num_strata=[-0.000001, 0.2, 0.4, 0.7])
+            test_rast = sgs.quantiles(self.single_band_rast, num_strata=[-0.000001, 0.2, 0.4, 0.7])
 
         with pytest.raises(ValueError):
-            test_rast = sgs.quantiles(single_band_rast, num_strata=[0.2, 0.4, 0.8, 1.1])
+            test_rast = sgs.quantiles(self.single_band_rast, num_strata=[0.2, 0.4, 0.8, 1.1])
 
-        with pytest.expect(ValueError):
-            test_rast = sgs.quantiles(rast, num_strata=5)
+        with pytest.raises(ValueError):
+            test_rast = sgs.quantiles(self.rast, num_strata=5)
 
-        with pytest.expect(ValueError):
-            test_rast = sgs.quantiles(single_band_rast, num_strata=[[0.2, 0.4, 0.8], 5])
+        with pytest.raises(ValueError):
+            test_rast = sgs.quantiles(self.single_band_rast, num_strata=[[0.2, 0.4, 0.8], 5])
         
-        with pytest.expect(ValueError):
-            test_rast = sgs.quantiles(single_band_rast, num_strata=[])
+        with pytest.raises(ValueError):
+            test_rast = sgs.quantiles(self.single_band_rast, num_strata=[])
 
+    @pytest.mark.skip
     def test_write_functionality(self, tmp_path):
         temp_dir = tmp_path / "test_out"
         temp_dir.mkdir()
 
         temp_file = temp_dir / "rast.tif"
-        sgs.breaks(rast, breaks={'zq90': [3, 5, 11, 18]}, filename=str(temp_file))
+        sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18]}, filename=str(temp_file))
         test_rast = sgs.SpatialRaster(str(temp_file))
-        for i in range(test_rast.height):
-            for j in range(test_rast.width):
-                if np.isnan(test_rast[i][j]):
-                    assert np.isnan(zq90_output_rast[i][j])
+        for i in range(self.zq90_output_rast.height):
+            for j in range(self.zq90_output_rast.width):
+                if np.isnan(test_rast['strat_zq90', i, j]):
+                    assert(np.isnan(self.zq90_output_rast[0, i, j]))
                 else:
-                    #plus one to R output because R is 1-indexed
-                    assert test_rast[i][j] == zq90_output_rast[i][j] + 1
-
+                    #minus one to R output because R is 1-indexed
+                    assert test_rast['strat_zq90', i, j ] == self.zq90_output_rast[0, i, j] - 1

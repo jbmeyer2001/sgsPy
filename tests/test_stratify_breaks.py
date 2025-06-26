@@ -26,7 +26,7 @@ class TestBreaks:
                 if np.isnan(test_rast['strat_zq90', i, j]):
                     assert np.isnan(self.zq90_output_rast[0, i, j])
                 else:
-                    #plus one to R output because R is 1-indexed
+                    #minus one to R output because R is 1-indexed
                     if (test_rast['strat_zq90', i, j] != self.zq90_output_rast[0, i, j] - 1):
                         print('[' + str(i) + '][' + str(j) + '] is different') 
 
@@ -38,7 +38,7 @@ class TestBreaks:
                 if np.isnan(test_rast['strat_pzabove2', i, j]):
                     assert np.isnan(self.pz2_output_rast[0, i, j])
                 else:
-                    #plus one to R output because R is 1-indexed
+                    #minus one to R output because R is 1-indexed
                     assert test_rast['strat_pzabove2', i, j] == self.pz2_output_rast[0, i, j] - 1
 
     def test_mapping_outputs(self):
@@ -94,7 +94,7 @@ class TestBreaks:
                 if np.isnan(test_rast['strat_zq90', i, j]):
                     assert np.isnan(self.zq90_output_rast[0, i, j])
                 else:
-                    #plus one to R output because R is 1-indexed
+                    #minus one to R output because R is 1-indexed
                     assert test_rast['strat_zq90', i, j] == self.zq90_output_rast[0, i, j] - 1
 
 
