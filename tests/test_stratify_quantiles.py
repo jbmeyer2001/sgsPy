@@ -66,13 +66,13 @@ class TestQuantiles:
 
     def test_quantiles_inputs(self):
         test_rast = sgs.quantiles(single_band_rast, num_strata=10)
-        test_rast = sgs.quantiles(single_band_rast, num_strata=[0.00001]
+        test_rast = sgs.quantiles(single_band_rast, num_strata=[0.00001])
 
         with pytest.raises(ValueError):
             test_rast = sgs.quantiles(single_band_rast, num_strata=[-0.000001, 0.2, 0.4, 0.7])
 
         with pytest.raises(ValueError):
-            test_rast = sgs.quantiles(single_band_rast, num_strata=[0.2, 0.4, 0.8. 1.1])
+            test_rast = sgs.quantiles(single_band_rast, num_strata=[0.2, 0.4, 0.8, 1.1])
 
         with pytest.expect(ValueError):
             test_rast = sgs.quantiles(rast, num_strata=5)
@@ -90,11 +90,11 @@ class TestQuantiles:
         temp_file = temp_dir / "rast.tif"
         sgs.breaks(rast, breaks={'zq90': [3, 5, 11, 18]}, filename=str(temp_file))
         test_rast = sgs.SpatialRaster(str(temp_file))
-            for i in range(test_rast.height):
-                for j in range(test_rast.width):
-                    if np.isnan(test_rast[i][j]):
-                        assert np.isnan(zq90_output_rast[i][j])
-                    else:
-                        #plus one to R output because R is 1-indexed
-                        assert test_rast[i][j] == zq90_output_rast[i][j] + 1
+        for i in range(test_rast.height):
+            for j in range(test_rast.width):
+                if np.isnan(test_rast[i][j]):
+                    assert np.isnan(zq90_output_rast[i][j])
+                else:
+                    #plus one to R output because R is 1-indexed
+                    assert test_rast[i][j] == zq90_output_rast[i][j] + 1
 

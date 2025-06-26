@@ -56,7 +56,7 @@ class TestMap:
             mapped = sgs.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5]))
         
         with pytest.raises(ValueError):
-            mapped = sgs.map((breaks, ['strat_zq90', 'strat_pzabove2', 'strat_zsd'], [5, 5, 25])
+            mapped = sgs.map((breaks, ['strat_zq90', 'strat_pzabove2', 'strat_zsd'], [5, 5, 25]))
 
         with pytest.raises(ValueError):
             mapped = sgs.map((breaks, ['strat_zq90', 'pzabove2'], [5, 5]))

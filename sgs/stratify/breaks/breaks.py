@@ -55,6 +55,10 @@ def breaks(
     #TODO add cpp runtime errors
 
     breaks_dict = {}
+
+    if type(breaks) is list and len(breaks) < 1:
+        raise ValueError("breaks list must contain at least one element.")
+
     if type(breaks) is list and type(breaks[0]) is list:
         #error check number of rasters bands
         if len(breaks) != rast.band_count:

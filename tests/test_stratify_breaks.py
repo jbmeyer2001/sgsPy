@@ -13,30 +13,33 @@ from files import (
 class TestBreaks:
     #input raster
     rast = sgs.SpatialRaster(mraster_geotiff_path)
-    singe_band_rast = sgs.SpatialRaster(sraster_geotiff_path)
+    single_band_rast = sgs.SpatialRaster(sraster_geotiff_path)
 
     #output rasters from running through R version
     zq90_output_rast = sgs.SpatialRaster(strat_breaks_zq90_r_path)
     pz2_output_rast = sgs.SpatialRaster(strat_breaks_pz2_r_path)
 
     def test_correct_stratifications_against_R_version(self):
-        test_rast = sgs.breaks(rast, breaks={'zq90': [3, 5, 11, 18]}) #zq90
-        for i in range(zq90_output_rast.height):
-            for j in range(zq90_output_rast.width):
-                if np.isnan(test_rast[i][j]):
-                    assert np.isnan(zq90_output_rast[i][j])
+        test_rast = sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18]}) #zq90
+        for i in range(self.zq90_output_rast.height):
+            for j in range(self.zq90_output_rast.width):
+                if np.isnan(test_rast['strat_zq90', i, j]):
+                    assert np.isnan(self.zq90_output_rast[0, i, j])
                 else:
                     #plus one to R output because R is 1-indexed
-                    assert test_rast[i][j] == zq90_output_rast[i][j] + 1
+                    if (test_rast['strat_zq90', i, j] != self.zq90_output_rast[0, i, j] - 1):
+                        print('[' + str(i) + '][' + str(j) + '] is different') 
 
-        test_rast = sgs.breaks(rast, breaks={'pzabove2': [20, 40, 60, 80]}) #pzabove2
-        for i in range(pz2_output_rast.height):
-            for j in range(pz2_output_rast.width):
-                if np.isnan(test_rast[i][j]):
-                    assert np.isnan(pz2_output_rast[i][j])
+                    assert test_rast['strat_zq90', i, j] == self.zq90_output_rast[0, i, j] - 1
+
+        test_rast = sgs.breaks(self.rast, breaks={'pzabove2': [20, 40, 60, 80]}) #pzabove2
+        for i in range(self.pz2_output_rast.height):
+            for j in range(self.pz2_output_rast.width):
+                if np.isnan(test_rast['strat_pzabove2', i, j]):
+                    assert np.isnan(self.pz2_output_rast[0, i, j])
                 else:
                     #plus one to R output because R is 1-indexed
-                    assert test_rast[i][j] == pz2_output_rast[i][j] + 1
+                    assert test_rast['strat_pzabove2', i, j] == self.pz2_output_rast[0, i, j] - 1
 
     def test_mapping_outputs(self):
         #the python version maps variables differently than the R version
@@ -47,7 +50,7 @@ class TestBreaks:
         pz2_mapping = {}
         zsd_mapping = {}
         
-        test_rast = sgs.breaks(rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]], map=True)
+        test_rast = sgs.breaks(self.rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]], map=True)
         
         for i in range(test_rast.height):
             for j in range(test_rast.width):
@@ -59,7 +62,7 @@ class TestBreaks:
                 if map_strat in zq90_mapping:
                     assert zq90_mapping[map_strat] == zq90_strat
                     assert pz2_mapping[map_strat] == pz2_strat
-                    assert zsd_mappingt[map_strat] == zsd_strat
+                    assert zsd_mapping[map_strat] == zsd_strat
                 else:
                     zq90_mapping[map_strat] = zq90_strat
                     pz2_mapping[map_strat] = pz2_strat
@@ -67,33 +70,31 @@ class TestBreaks:
 
     def test_breaks_inputs(self):
         #ensuring no errors with single band input
-        test_rast = sgs.breaks(single_band_rast, breaks=[1,3])
-        test_rast = sgs.breaks(single_band_rast, breaks=[1])
+        test_rast = sgs.breaks(self.single_band_rast, breaks=[1,3])
+        test_rast = sgs.breaks(self.single_band_rast, breaks=[1])
 
-        with pytest.expect(ValueError):
-            test_rast = sgs.breaks(rast, num_strata=[2, 5])
+        with pytest.raises(ValueError):
+            test_rast = sgs.breaks(self.rast, breaks=[2, 5])
 
-        with pytest.expect(ValueError):
-            test_rast = sgs.breaks(single_band_rast, num_strata=[[3, 5, 11, 18], [2, 5]])
+        with pytest.raises(ValueError):
+            test_rast = sgs.breaks(self.single_band_rast, breaks=[[3, 5, 11, 18], [2, 5]])
         
-        with pytest.expect(ValueError):
-            test_rast = sgs.breaks(single_band_rast, num_strata=[])
+        with pytest.raises(ValueError):
+            test_rast = sgs.breaks(self.single_band_rast, breaks=[])
 
     def test_write_functionality(self, tmp_path):
         temp_dir = tmp_path / "test_out"
         temp_dir.mkdir()
 
         temp_file = temp_dir / "rast.tif"
-        sgs.breaks(rast, breaks={'zq90': [3, 5, 11, 18]}, filename=str(temp_file))
+        sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18]}, filename=str(temp_file))
         test_rast = sgs.SpatialRaster(str(temp_file))
-            for i in range(test_rast.height):
-                for j in range(test_rast.width):
-                    if np.isnan(test_rast[i][j]):
-                        assert np.isnan(zq90_output_rast[i][j])
-                    else:
-                        #plus one to R output because R is 1-indexed
-                        assert test_rast[i][j] == zq90_output_rast[i][j] + 1
+        for i in range(self.zq90_output_rast.height):
+            for j in range(self.zq90_output_rast.width):
+                if np.isnan(test_rast['strat_zq90', i, j]):
+                    assert np.isnan(self.zq90_output_rast[0, i, j])
+                else:
+                    #plus one to R output because R is 1-indexed
+                    assert test_rast['strat_zq90', i, j] == self.zq90_output_rast[0, i, j] - 1
 
-
-        
 
