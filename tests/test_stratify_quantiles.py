@@ -37,7 +37,6 @@ class TestQuantiles:
                     #minus one to R output because R is 1-indexed
                     assert test_rast['strat_pzabove2', i, j] == self.pz2_output_rast[0, i, j] - 1
 
-    @pytest.mark.skip
     def test_mapping_outputs(self):
         #the python version maps variables differently than the R version
         #so rather than compare against the R version, I'm going to ensure
@@ -59,7 +58,7 @@ class TestQuantiles:
                 if map_strat in zq90_mapping:
                     assert zq90_mapping[map_strat] == zq90_strat
                     assert pz2_mapping[map_strat] == pz2_strat
-                    assert zsd_mappingt[map_strat] == zsd_strat
+                    assert zsd_mapping[map_strat] == zsd_strat
                 else:
                     zq90_mapping[map_strat] = zq90_strat
                     pz2_mapping[map_strat] = pz2_strat
@@ -84,13 +83,12 @@ class TestQuantiles:
         with pytest.raises(ValueError):
             test_rast = sgs.quantiles(self.single_band_rast, num_strata=[])
 
-    @pytest.mark.skip
     def test_write_functionality(self, tmp_path):
         temp_dir = tmp_path / "test_out"
         temp_dir.mkdir()
 
         temp_file = temp_dir / "rast.tif"
-        sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18]}, filename=str(temp_file))
+        sgs.quantiles(self.rast, num_strata={'zq90': 4}, filename=str(temp_file))
         test_rast = sgs.SpatialRaster(str(temp_file))
         for i in range(self.zq90_output_rast.height):
             for j in range(self.zq90_output_rast.width):

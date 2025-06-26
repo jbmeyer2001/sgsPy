@@ -104,12 +104,21 @@ GDALRasterWrapper *quantiles(
 	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	for (int i = 0; i < bandCount; i++) {
 		std::vector<std::tuple<T, U, float>> *stratVect = &stratVects[i];
+
 		for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
 			T val = rasterBands[i][j];
 
 			if (std::isnan(val) || (double)val == noDataValue) {
 				//step 4.1 write nodata in nodata ares
 				((float *)stratRasterBands[i])[j] = (float)noDataValue;
+				
+				//if we're in the first band and we're mapping, write nodata to the map
+				//only do this in the first band so we're not writing to the map a bunch
+				//of times unecessarily
+				if (i == 0 && map) {
+					((float *)stratRasterBands[bandCount])[j] = (float)noDataValue;
+				}
+
 				continue;
 			}
 			else {
@@ -117,12 +126,12 @@ GDALRasterWrapper *quantiles(
 				stratVect->push_back({val, j, 0});
 			}
 		}	
-
+		
 		//step 4.3 sort vectors in ascending order by pixel val
 		std::sort(stratVect->begin(), stratVect->end(), [](auto const& t1, auto const& t2){
 			return std::get<0>(t1) < std::get<0>(t2);	
 		});
-		
+
 		//step 4.4 assign stratum values depending on user defined probability breaks
 		size_t numDataPixels = stratVect->size();
 		std::vector<size_t> stratumSplittingIndexes;		

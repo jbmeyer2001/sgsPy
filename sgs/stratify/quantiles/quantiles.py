@@ -70,7 +70,7 @@ def quantiles(
 
         #add quantiles to probabilities_dict
         inc = 1 / num_strata
-        probabilities_dict[0] = np.arange(inc, 1, inc)
+        probabilities_dict[0] = np.array(range(1, num_strata)) / num_strata
 
     elif type(num_strata) is list and type(num_strata[0]) is float:
         #error check number of raster bands
@@ -99,7 +99,7 @@ def quantiles(
         for i in range(len(num_strata)):
             if type(num_strata[i]) is int:
                 inc = 1 / num_strata[i]
-                probabilities_dict[i] = np.arange(inc, 1, inc)
+                probabilities_dict[i] = np.array(range(1, num_strata[i])) / num_strata[i]
             else: #list of float
                 #for lists, error check max and min values
                 if min(num_strata[i]) < 0:
@@ -120,7 +120,7 @@ def quantiles(
                 band_num = rast.band_name_dict[key]
                 if type(val) is int:
                     inc = 1 / val
-                    probabilities_dict[band_num] = np.arange(inc, 1, inc)
+                    probabilities_dict[band_num] = np.array(range(1, val)) / val
                 else: #list of float
                     #for lists, error check max and min values
                     if min(val) < 0:
@@ -133,6 +133,9 @@ def quantiles(
                     if 1.0 in probabilities_dict[band_num]:
                         probabilities_dict[band_num].remove(1.0)
 
+    print('probabilities_dict')
+    print(probabilities_dict)
+    print()
     #call stratify quantiles function
     strat_raster = quantiles_cpp(rast.cpp_raster, probabilities_dict, map, filename)
 
