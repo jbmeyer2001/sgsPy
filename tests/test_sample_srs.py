@@ -79,7 +79,7 @@ class TestSrs:
         temp_dir = tmp_path / "test_out"
         temp_dir.mkdir()
 
-        temp_file = temp_dir / "rast.shp"
+        temp_file = temp_dir / "vect.shp"
         samples = sgs.srs(self.rast, num_samples = 1000, filename=str(temp_file))
         gs_samples = gpd.GeoSeries.from_wkt(samples)
         gs_file = gpd.read_file(temp_file)

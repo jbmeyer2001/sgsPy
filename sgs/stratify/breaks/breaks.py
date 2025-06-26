@@ -15,7 +15,7 @@ from breaks import breaks_cpp
 
 def breaks(
     rast: SpatialRaster,
-    breaks: list[int | float | list[int | float]] | dict[int, list[int|float]],
+    breaks: list[float | list[float]] | dict[str, list[float]],
     map: bool = False,
     plot: bool = False,
     filename: str = ''):
@@ -36,7 +36,7 @@ def breaks(
     --------------------
     rast : SpatialRaster
         raster data structure containing the raster to stratify
-    breaks : list[int | float | list[int|float]] | dict[int, list[int|float]]
+    breaks :  list[float | list[float]] | dict[str, list[float]],
         user defined breaks to stratify
     map : bool
         whether to map the stratification of multiple raster bands onto a single band
@@ -55,6 +55,10 @@ def breaks(
     #TODO add cpp runtime errors
 
     breaks_dict = {}
+
+    if type(breaks) is list and len(breaks) < 1:
+        raise ValueError("breaks list must contain at least one element.")
+
     if type(breaks) is list and type(breaks[0]) is list:
         #error check number of rasters bands
         if len(breaks) != rast.band_count:

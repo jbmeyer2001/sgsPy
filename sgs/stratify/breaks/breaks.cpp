@@ -92,7 +92,7 @@ GDALRasterWrapper *breaks(
 			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum.");
 		}
 
-		newBandNames.push_back("stat_map");
+		newBandNames.push_back("strat_map");
 	}
 	
 	//TODO: multithread and consider cache thrashing
@@ -111,8 +111,8 @@ GDALRasterWrapper *breaks(
 			}
 
 			std::vector<double> curBandBreaks = bandBreaks[i];	
-			auto upper = std::upper_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
-			float strat = (upper == curBandBreaks.end()) ? (float)curBandBreaks.size() : std::distance(curBandBreaks.begin(), upper);
+			auto it = std::lower_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
+			float strat = (it == curBandBreaks.end()) ? (float)curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
 			((float *)(stratRasterBands[i]))[j] = strat;
 
 			if (map) {

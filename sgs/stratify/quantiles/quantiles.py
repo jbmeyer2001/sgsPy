@@ -59,6 +59,9 @@ def quantiles(
     """
     #TODO add cpp runtime errors
 
+    if type(num_strata) is list and len(num_strata) < 1:
+        raise ValueError("num_strata list must contain at least one element")
+
     probabilities_dict = {}
     if type(num_strata) is int:
         #error check number of raster bands
@@ -67,7 +70,7 @@ def quantiles(
 
         #add quantiles to probabilities_dict
         inc = 1 / num_strata
-        probabilities_dict[0] = np.arange(inc, 1, inc)
+        probabilities_dict[0] = np.array(range(1, num_strata)) / num_strata
 
     elif type(num_strata) is list and type(num_strata[0]) is float:
         #error check number of raster bands
@@ -82,8 +85,10 @@ def quantiles(
 
         #add quantiles to probabilities_dict and ensure 1 and 0 are removed
         probabilities_dict[0] = num_strata
-        probabilities_dict[0].remove(0.0)
-        probabilities_dict[0].remove(1.0)
+        if 0.0 in probabilities_dict[0]:
+            probabilities_dict[0].remove(0.0)
+        if 1.0 in probabilities_dict[0]:
+            probabilities_dict[0].remove(1.0)
 
     elif type(num_strata) is list:
         #error checking number of raster bands
@@ -91,19 +96,21 @@ def quantiles(
             raise ValueError("number of lists in num_strata must be equal to the number of raster bands.")
 
         #for each given num_strata, add it to probabilities_dict depending on type
-        for i in range(len(probabilities)):
-            if type(probabilities[i]) is int:
-                inc = 1 / num_strata[probabilities[i]]
-                probabilities_dict[i] = np.arange(inc, 1, inc)
+        for i in range(len(num_strata)):
+            if type(num_strata[i]) is int:
+                inc = 1 / num_strata[i]
+                probabilities_dict[i] = np.array(range(1, num_strata[i])) / num_strata[i]
             else: #list of float
                 #for lists, error check max and min values
-                if min(probabilities[i]) < 0:
+                if min(num_strata[i]) < 0:
                     raise ValueError("list[float] must not contain value less than 0")
-                elif max(probabilities[i]) > 1:
+                elif max(num_strata[i]) > 1:
                     raise ValueError("list[float] must not contain value greater than 1")
-                probabilities_dict[i] = probabilities[i]
-                probabilities_dict[i].remove(0.0)
-                probabilities_dict[i].remove(1.0)
+                probabilities_dict[i] = num_strata[i]
+                if 0.0 in probabilities_dict[i]:
+                    probabilities_dict[i].remove(0.0)
+                if 1.0 in probabilities_dict[i]:
+                    probabilities_dict[i].remove(1.0)
 
     else: #type dict
         for key, val in num_strata.items():
@@ -113,7 +120,7 @@ def quantiles(
                 band_num = rast.band_name_dict[key]
                 if type(val) is int:
                     inc = 1 / val
-                    probabilities_dict[band_num] = np.arange(inc, 1, inc)
+                    probabilities_dict[band_num] = np.array(range(1, val)) / val
                 else: #list of float
                     #for lists, error check max and min values
                     if min(val) < 0:
@@ -121,9 +128,14 @@ def quantiles(
                     elif max(val) > 1:
                         raise ValueError("list[float] must not contain value greater than 1")
                     probabilities_dict[band_num] = val
-                    probabilities_dict[band_num].remove(0.0)
-                    probabilities_dict[band_num].remove(1.0)
+                    if 0.0 in probabilities_dict[band_num]:
+                        probabilities_dict[band_num].remove(0.0)
+                    if 1.0 in probabilities_dict[band_num]:
+                        probabilities_dict[band_num].remove(1.0)
 
+    print('probabilities_dict')
+    print(probabilities_dict)
+    print()
     #call stratify quantiles function
     strat_raster = quantiles_cpp(rast.cpp_raster, probabilities_dict, map, filename)
 

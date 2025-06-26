@@ -93,7 +93,7 @@ GDALRasterWrapper *quantiles(
 		}
 
 		if (maxStratum < bandStratMultipliers.back() * probabilities.back().size()) {
-			throw std::runtime_error("number og break indexes in mapped stratification exceeds maximum.");
+			throw std::runtime_error("number of stratum in mapped stratification exceeds maximum.");
 		}
 
 		newBandNames.push_back("strat_map");
@@ -104,12 +104,21 @@ GDALRasterWrapper *quantiles(
 	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	for (int i = 0; i < bandCount; i++) {
 		std::vector<std::tuple<T, U, float>> *stratVect = &stratVects[i];
+
 		for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
 			T val = rasterBands[i][j];
 
 			if (std::isnan(val) || (double)val == noDataValue) {
 				//step 4.1 write nodata in nodata ares
 				((float *)stratRasterBands[i])[j] = (float)noDataValue;
+				
+				//if we're in the first band and we're mapping, write nodata to the map
+				//only do this in the first band so we're not writing to the map a bunch
+				//of times unecessarily
+				if (i == 0 && map) {
+					((float *)stratRasterBands[bandCount])[j] = (float)noDataValue;
+				}
+
 				continue;
 			}
 			else {
@@ -117,19 +126,21 @@ GDALRasterWrapper *quantiles(
 				stratVect->push_back({val, j, 0});
 			}
 		}	
-
+		
 		//step 4.3 sort vectors in ascending order by pixel val
 		std::sort(stratVect->begin(), stratVect->end(), [](auto const& t1, auto const& t2){
 			return std::get<0>(t1) < std::get<0>(t2);	
 		});
-		
+
 		//step 4.4 assign stratum values depending on user defined probability breaks
 		size_t numDataPixels = stratVect->size();
 		std::vector<size_t> stratumSplittingIndexes;		
+		std::vector<T> stratumSplittingValues;
 		stratumSplittingIndexes.push_back(0);
 		for (const double& prob : probabilities[i]) {
-			//TODO test for off by 1!!!!!
-			stratumSplittingIndexes.push_back((size_t)((double)numDataPixels * prob) + 1);
+			size_t splitIndex = (size_t)((double)numDataPixels * prob); 
+			stratumSplittingIndexes.push_back(splitIndex + 1);
+			stratumSplittingValues.push_back(std::get<0>(stratVect->at(splitIndex)));
 		}
 		stratumSplittingIndexes.push_back(numDataPixels);
 
@@ -146,7 +157,25 @@ GDALRasterWrapper *quantiles(
 		 */
 		for (float stratum = 0; stratum < stratumSplittingIndexes.size() - 1; stratum++) {
 			for (size_t index = stratumSplittingIndexes[stratum]; index < stratumSplittingIndexes[stratum + 1]; index++) {
-				std::get<2>(stratVect->at(index)) = stratum;
+				if (stratum == 0) {
+					std::get<2>(stratVect->at(index)) = stratum;
+					continue;
+				}
+
+				//values should not occur in multiple stratum. 
+				//If this value occured in a previous stratum (due to overlap)
+				//then add it to that stratum.
+				T val = std::get<0>(stratVect->at(index));
+				if (val != stratumSplittingValues[(size_t)stratum - 1]) {
+					std::get<2>(stratVect->at(index)) = stratum;
+				}
+				else {
+					float newStratum = stratum - 1;
+					while (newStratum >= 0 && val == stratumSplittingValues[(size_t)newStratum]) {
+						newStratum--;
+					}
+					std::get<2>(stratVect->at(index)) = newStratum + 1;
+				}
 			}
 		}
 
