@@ -5,6 +5,7 @@ if WIN
     'poly.cpp',
     link_with: [
       raster_lib,
+      vector_lib,
     ],
     link_args: win_link_args,
     dependencies: [lib_deps],
@@ -27,6 +28,7 @@ else
     objects: [
       #from sgs/utils
       raster_obj,
+      vector_obj,
     ],
     install: true,
   )

@@ -7,76 +7,96 @@
  *
  ******************************************************************************/
 
+#include <iostream> //TODO remove
 #include "raster.h"
 #include "vector.h"
+#include "cpl_port.h"
+#include "gdal_utils.h"
 
 GDALRasterWrapper *poly(
 	GDALVectorWrapper *p_vector,
 	GDALRasterWrapper *p_raster,
-	std::string attribute,
-	std::vector<std::vector<std::string>> features,
+	std::string query,
 	std::string filename)
 {
-	//generate OGREnvelope
-	OGREnvelope envelope;
-	envelope.MinX = p_raster->getXMin();
-	envelope.MaxX = p_raster->getXMax();
-	envelope.MinY = p_raster->getYMin();
-	envelope.MaxY = p_raster->getYMax();
 
-	//generate GDALRasterizeOptions using given raster and parameters
-	GDALRasterizeOptions* options = GDALRasterizeOptionsNew();
-	options->anBandList = {1};
-	options->dfXRes = p_raster->getGeotransform[1]; //pixel width 
-	options->dfYRes = p_raster->getGeotransform[5]; //pixel height
-	options->nXSize = p_raster->getWidth();
-	options->nYSize = p_raster->getHeight();
-	options->eOutputType = GDT_Float32;
-	options->sEnvelop = envelope;
-	options->oOutputSRS = p_raster->getDataset()->GetProjectionRef();
+	std::cout << query << std::endl;
 
-	//options to add potentially:
-	/*
-    	std::vector<double> adfBurnValues{};
-    	std::string osFormat{};
-    	std::vector<std::string> aosLayers{};
-    	std::string osBurnAttribute{};
-    	CPLStringList aosRasterizeOptions{};
-    	CPLStringList aosTO{};
-    	CPLStringList aosCreationOptions{};
-    	std::vector<double> adfInitVals{};
-    	std::string osNoData{};
-    	bool bTargetAlignedPixels = false;
-    	bool bCreateOutput = false;
-    	*/
+	//step 1: get required info from vector and raster objects
+	GDALDataset *p_vectorDS = p_vector->getDataset();
+	GDALDataset *p_rasterDS = p_raster->getDataset();
+	double noDataValue = p_rasterDS->GetRasterBand(1)->GetNoDataValue();
+	double xRes = p_raster->getPixelWidth();
+	double yRes = p_raster->getPixelHeight();
+	double xMin = p_raster->getXMin();
+	double xMax = p_raster->getXMax();
+	double yMin = p_raster->getYMin();
+	double yMax = p_raster->getYMax();
 
-	//create new in-memory dataset using driver
+	//step 2: generate options list
+	char ** argv = nullptr;
+
+	//set the attribute to 'strata', which is created by the sql query
+	argv = CSLAddString(argv, "-a");
+	argv = CSLAddString(argv, "strata");
+
+	//specify sql query
+	argv = CSLAddString(argv, "-sql");
+	argv = CSLAddString(argv, query.c_str());
+
+	//specify sql dialect
+	argv = CSLAddString(argv, "-dialect");
+	argv = CSLAddString(argv, "SQLITE");
+
+	//specify nodata
+	argv = CSLAddString(argv, "-a_nodata");
+	argv = CSLAddString(argv, std::to_string(noDataValue).c_str());
+
+	//specify resolution
+	argv = CSLAddString(argv, "-tr");
+	argv = CSLAddString(argv, std::to_string(xRes).c_str());
+	argv = CSLAddString(argv, std::to_string(yRes).c_str());
+
+	//specify data type
+	argv = CSLAddString(argv, "-ot");
+	argv = CSLAddString(argv, "Float32");
+
+	//specify extent
+	argv = CSLAddString(argv, "-te");
+	argv = CSLAddString(argv, std::to_string(xMin).c_str());
+	argv = CSLAddString(argv, std::to_string(yMin).c_str());
+	argv = CSLAddString(argv, std::to_string(xMax).c_str());
+	argv = CSLAddString(argv, std::to_string(yMax).c_str());
+
+	GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
+
+	//step 3: create in-memory dataset
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
 	GDALDataset *p_dataset = p_driver->Create(
 		"",
-		options->nXSize,
-		options->nYSize,
-		options->anBandList.size(),
-		options->eOutputType,
+		p_raster->getWidth(),
+		p_raster->getHeight(),
+		1,
+		GDT_Float32,
 		nullptr
 	);
 
-	//rasterize image with new in-memory dataset as output
-	GDALRasterize(
-		nullptr,
+	//step 4: rasterize vector into in-memory dataset
+	GDALRasterize(nullptr,
 		p_dataset,
-		p_vector->getDataset(),
-		options
+		p_vectorDS,
+		options,
+		nullptr
 	);
 
-	//free rasterize options
+	//step 5: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
 
-	//create new GDALRasterWrapper using dataset pointer
+	//step 6: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python
 	GDALRasterWrapper* stratRaster = new GDALRasterWrapper(p_dataset);
 
-	//write raster if desired
+	//step 7: write raster if desired
 	if (filename != "") {
 		stratRaster->write(filename);
 	}

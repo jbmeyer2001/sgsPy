@@ -24,6 +24,13 @@ GDALVectorWrapper::GDALVectorWrapper(std::string filename) {
 }
 
 /******************************************************************************
+			      GDALVectorWrapper()
+******************************************************************************/
+GDALDataset *GDALVectorWrapper::getDataset() {
+	return this->p_dataset.get();
+}
+
+/******************************************************************************
 				getLayerNames()
 ******************************************************************************/
 std::vector<std::string> GDALVectorWrapper::getLayerNames() {

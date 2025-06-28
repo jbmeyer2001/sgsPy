@@ -43,6 +43,13 @@ class GDALVectorWrapper {
 	GDALVectorWrapper(std::string filename);
 
 	/**
+	 * Getter method for the dataset pointer.
+	 *
+	 * @returns pointer to the underlying GDAL dataset
+	 */
+	GDALDataset *getDataset();
+
+	/**
 	 * Getter method for vector layer names.
 	 *
 	 * @returns std::vector<std::string> an array of layer names as strings
