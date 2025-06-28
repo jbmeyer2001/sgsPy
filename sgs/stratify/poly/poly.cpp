@@ -7,10 +7,8 @@
  *
  ******************************************************************************/
 
-#include <iostream> //TODO remove
 #include "raster.h"
 #include "vector.h"
-#include "cpl_port.h"
 #include "gdal_utils.h"
 
 GDALRasterWrapper *poly(
@@ -19,9 +17,6 @@ GDALRasterWrapper *poly(
 	std::string query,
 	std::string filename)
 {
-
-	std::cout << query << std::endl;
-
 	//step 1: get required info from vector and raster objects
 	GDALDataset *p_vectorDS = p_vector->getDataset();
 	GDALDataset *p_rasterDS = p_raster->getDataset();
@@ -32,8 +27,6 @@ GDALRasterWrapper *poly(
 	double xMax = p_raster->getXMax();
 	double yMin = p_raster->getYMin();
 	double yMax = p_raster->getYMax();
-
-	std::cout << "HERE 1" << std::endl;
 
 	//step 2: generate options list
 	char ** argv = nullptr;
@@ -54,6 +47,10 @@ GDALRasterWrapper *poly(
 	argv = CSLAddString(argv, "-a_nodata");
 	argv = CSLAddString(argv, std::to_string(noDataValue).c_str());
 
+	//specify intialization of pixels to nodata value
+	argv = CSLAddString(argv, "-init");
+	argv = CSLAddString(argv, std::to_string(noDataValue).c_str());
+
 	//specify resolution
 	argv = CSLAddString(argv, "-tr");
 	argv = CSLAddString(argv, std::to_string(xRes).c_str());
@@ -70,54 +67,37 @@ GDALRasterWrapper *poly(
 	argv = CSLAddString(argv, std::to_string(xMax).c_str());
 	argv = CSLAddString(argv, std::to_string(yMax).c_str());
 
+	//specify the output format as in-memory
+	argv = CSLAddString(argv, "-of");
+	argv = CSLAddString(argv, "MEM");
+
 	GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
 
-	std::cout << "HERE 2" << std::endl;
-	//step 3: create in-memory dataset
-/*
+	//step 3: rasterize vector creating in-memory dataset
 	GDALAllRegister();
-	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
-	GDALDataset *p_dataset = p_driver->Create(
-		"",
-		p_raster->getWidth(),
-		p_raster->getHeight(),
-		1,
-		GDT_Float32,
-		nullptr
-	);
-*/
-	std::cout << "HERE 3" << std::endl;
-
-	//step 4: overwrite in-memory dataset with rasterized vector
-	GDALAllRegister();
-	GDALDataset *p_dataset = (GDALDataset *)GDALRasterize("test.tif",
+	GDALDataset *p_dataset = (GDALDataset *)GDALRasterize("",
 		nullptr,
 		p_vectorDS,
 		options,
 		nullptr
 	);
 
-	std::cout << "HERE 4" << std::endl;
-	//step 5: free dynamically allocated rasterization options
+	//step 4: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
 
-	//step 6: set the geotransform and projection of the new dataset
-	std::cout << "HERE 5" << std::endl;
+	//step 5: set the geotransform and projection of the new dataset
 	p_dataset->SetGeoTransform(p_raster->getGeotransform());
 	p_dataset->SetProjection(p_rasterDS->GetProjectionRef());
 
-	std::cout << "HERE 6" << std::endl;
 	//step 6: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python
 	GDALRasterWrapper* stratRaster = new GDALRasterWrapper(p_dataset);
 
-	std::cout << "HERE 7" << std::endl;
 	//step 7: write raster if desired
 	if (filename != "") {
 		stratRaster->write(filename);
 	}
 
-	std::cout << "HERE 8" << std::endl;
 	return stratRaster;
 }
 
