@@ -36,21 +36,17 @@ def poly(
     #generate query cases and where clause using features and attribute
     for i in range(len(features)):
         if type(features[i]) is str:
-            cases += "WHEN '{}' THEN {}".format(features[i], i)
-            where_entries += "{}='{}'".format(attribute, features[i])
+            cases += "WHEN '{}' THEN {} ".format(features[i], i)
+            where_entries.append("{}='{}'".format(attribute, features[i]))
         else:
             for j in range(len(features[i])):
-                cases += "WHEN '{}' THEN {}".format(features[i][j], i)
+                cases += "WHEN '{}' THEN {} ".format(features[i][j], i)
                 where_entries += "{}='{}'".format(attribute, features[i][j])
 
     where_clause = " OR ".join(where_entries)
 
     #generate SQL query
-    sql_query = f"""
-    "SELECT CASE {attribute} {cases} ELSE NULL END AS strata, {layer_name}.* 
-    FROM {layer_name} 
-    WHERE {where_clause}"
-    """
+    sql_query = f"""SELECT CASE {attribute} {cases}ELSE NULL END AS strata, {layer_name}.* FROM {layer_name} WHERE {where_clause}"""
 
     strat_rast = poly_cpp(
         vector.cpp_vector,
