@@ -24,6 +24,8 @@ strat_breaks_zq90_r_path = os.path.join(folder, 'strat_breaks_zq90_R.tif')
 strat_breaks_pz2_r_path = os.path.join(folder, 'strat_breaks_pz2_R.tif')
 strat_quantiles_zq90_r_path = os.path.join(folder, 'strat_quantiles_zq90_R.tif')
 strat_quantiles_pz2_r_path = os.path.join(folder, 'strat_quantiles_pz2_R.tif')
+strat_poly_test1_r_path = os.path.join(folder, 'strat_poly_test1_R.tif')
+strat_poly_test2_r_path = os.path.join(folder, 'strat_poly_test2_R.tif')
 
 __all__ = [
     'access_shapefile_path',
@@ -47,4 +49,6 @@ __all__ = [
     'strat_breaks_pz2_r_path',
     'strat_quantiles_zq90_r_path',
     'strat_quantiles_pz2_r_path',
+    'strat_poly_test1_r_path',
+    'strat_poly_test2_r_path',
 ]
