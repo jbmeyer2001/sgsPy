@@ -41,7 +41,7 @@ def poly(
         else:
             for j in range(len(features[i])):
                 cases += "WHEN '{}' THEN {} ".format(features[i][j], i)
-                where_entries += "{}='{}'".format(attribute, features[i][j])
+                where_entries.append("{}='{}'".format(attribute, features[i][j]))
 
     where_clause = " OR ".join(where_entries)
 

@@ -27,15 +27,16 @@ class TestPoly:
             'inventory_polygons',
             ['poor', 'rich', 'medium'],
         )
-        test1_output = np.copy(self.test1_output_rast[0])
-
-        #the r version uses a non-floating point type so 4294967295 is how it stores nan values
-        test1_output[test1_output == 4294967295] = np.nan
+        for i in range(self.test1_output_rast.height):
+            for j in range(self.test1_output_rast.width):
+                if np.isnan(test_rast[0, i, j]):
+                    #the R image is not a float, it stores nan values as 4294967295
+                    assert self.test1_output_rast[0, i, j] == 4294967295
+                else:
+                    pass
+                    #minus 1 to R output because R is 1-indexed
+                    assert test_rast[0, i, j] == self.test1_output_rast[0, i, j] - 1
         
-        #adjust for 0 and 1 indexing differences between R/Python
-        test1_output = test1_output - 1
-        np.array_equal(test1_output, test_rast[0], equal_nan=True)
-
         test_rast = sgs.poly(
             self.rast,
             self.vect,
@@ -46,7 +47,8 @@ class TestPoly:
         for i in range(self.test2_output_rast.height):
             for j in range(self.test2_output_rast.width):
                 if np.isnan(test_rast[0, i, j]):
-                    assert np.isnan(self.test2_output_rast[0, i, j])
+                    #the R image is not a float, it stores nan values as 4294967295
+                    assert self.test2_output_rast[0, i, j] == 4294967295
                 else:
                     #minus 1 to R output because R is 1-indexed
                     assert test_rast[0, i, j] == self.test2_output_rast[0, i, j] - 1
@@ -68,7 +70,10 @@ class TestPoly:
         for i in range(self.test1_output_rast.height):
             for j in range(self.test1_output_rast.width):
                 if np.isnan(test_rast[0, i, j]):
-                    assert np.isnan(self.test1_output_rast[0, i, j])
+                    #the R image is not a float, it stores nan values as 4294967295
+                    assert self.test1_output_rast[0, i, j] == 4294967295 
                 else:
                     #minus 1 to R output because R is 1-indexed
                     assert test_rast[0, i, j] == self.test1_output_rast[0, i, j] - 1
+
+
