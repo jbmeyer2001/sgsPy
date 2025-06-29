@@ -17,10 +17,27 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 	GDALAllRegister();
 
 	//dataset
-	this->p_dataset = GDALDatasetUniquePtr(GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly)));
-	if (!this->p_dataset) {
+	GDALDataset *p_dataset = GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly));
+	if (!p_dataset) {
 		throw std::runtime_error("dataset pointer is null after initialization, dataset unable to be initialized.");
 	}
+
+	this->createFromDataset(p_dataset);
+}	
+
+/******************************************************************************
+			      GDALRasterWrapper()
+******************************************************************************/
+GDALRasterWrapper::GDALRasterWrapper(GDALDataset *p_dataset) {
+	this->createFromDataset(p_dataset);
+}
+
+/******************************************************************************
+			      createFromDataset()
+******************************************************************************/
+void GDALRasterWrapper::createFromDataset(GDALDataset *p_dataset) {
+	this->p_dataset = GDALDatasetUniquePtr(p_dataset);
+
 	//geotransform
 	CPLErr cplerr = this->p_dataset->GetGeoTransform(this->geotransform);
 	if (cplerr) {

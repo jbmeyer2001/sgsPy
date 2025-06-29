@@ -107,15 +107,24 @@ class GDALRasterWrapper {
 	
 	public:
 	/**
-	 * Constructor for GDALRasterWrapper class. This method registers
-	 * drivers, creates a GDALDataset object, and gets the geotransform
-	 * information from the GDALDataset object.
+	 * Constructor for GDALRasterWrapper class.
+	 * Creates GDALDataset using drivers and given file, then calls
+	 * createFromDataset() passing the created object.
 	 *
 	 * @param filename as std::string
 	 * @throws std::runtime_error if dataset is not initialized
 	 * @throws std::runtime_error if unable to get geotransform
 	 */
 	GDALRasterWrapper(std::string filename);
+
+	/**
+	 * Constructor for GDALRasterWrapper class.
+	 * Calls createFromDataset() passing p_dataset parameter.
+	 *
+	 * @param GDALDataset *GDAL raster dataset
+	 * @throws std::runtime_error if unable to get geotransform
+	 */
+	GDALRasterWrapper(GDALDataset *p_dataset);
 
 	/**
 	 * Constructor for GDALRasterWrapper class. This method creates
@@ -134,6 +143,16 @@ class GDALRasterWrapper {
 		double *geotransform,
 		std::string projection
 	);
+
+	/**
+	 * Populates/constructs the GDALRasterWrapper object using a raster
+	 * dataset pointer. Called by some of the GDALRasterWrapper 
+	 * constructors as a helper function.
+	 *
+	 * @param GDALDataset *GDAL raster dataset
+	 * @throws std::runtime_error if unable to get geotransform
+	 */
+	void createFromDataset(GDALDataset *p_dataset);
 
 	/**
 	 * Deconstructor for GDALRasterWrapper class. This method calls
