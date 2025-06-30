@@ -148,3 +148,35 @@ GDALVectorWrapper::getLineStrings(std::string layerName) {
 	return retval;
 }
 
+/******************************************************************************
+			      getAccessPolygons()
+******************************************************************************/
+std::vector<OGRGeometry *>
+GDALVectorWrapper::getAccessPolygons(
+	std::string layerName, 
+	double buffInner, 
+	double buffOuter) 
+{
+	OGRLayer *p_layer = this->p_dataset->GetLayerByName(layerName.c_str());
+	std::vector<OGRGeometry *> retval;
+
+	for (const auto& p_feature : *p_layer) {
+		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
+
+		if (type != wkbLineString && type != wkbMultiLineString) {
+			throw std::runtime_error("all geometryies in layer must be LineString or MultiLineString.");
+		}
+
+		if (buffInner == 0) {
+			retval.push_back(p_geometry->Buffer(buffOuter));
+		}
+		else {
+			OGRGeometry *p_innerPolygon = p_geometry->Buffer(buffInner);
+			OGRGeometry *p_outerPolygon = p_geometry->Buffer(buffOuter);
+			retval.push_back(p_outerPolygon->Difference(p_innerPolygon));
+		}
+	}	
+
+	return retval;
+}

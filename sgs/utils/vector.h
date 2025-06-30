@@ -121,4 +121,19 @@ class GDALVectorWrapper {
 	 * @throws std::runtime_error if an incorrect geometry is encountered
 	 */
 	std::vector<std::vector<std::vector<double>>> getLineStrings(std::string layerName);
+
+	/*
+	 * Calculates a polygon for each line in the layer specified by
+	 * layerName. Access polygons are calculated by calculating the
+	 * BuffOuter polygon, and removing BuffInner from it (if buffInner
+	 * is greater than 0).
+	 *
+	 * All geometries in the layer must be of type LineString or MultiLineString.
+	 *
+	 * @param std::string layerName layer to get access polygons for
+	 * @param double buffInner buffer not to sample from
+	 * @param double buffOuter buffer which must be sampled from
+	 * @returns std::vector<OGRGeometry *> access polygons
+	 */
+	std::vector<OGRGeometry *> getAccessPolygons(std::string layerName, double buffInner, double buffOuter);
 };
