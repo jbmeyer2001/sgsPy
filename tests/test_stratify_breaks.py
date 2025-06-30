@@ -20,27 +20,16 @@ class TestBreaks:
     pz2_output_rast = sgs.SpatialRaster(strat_breaks_pz2_r_path)
 
     def test_correct_stratifications_against_R_version(self):
-        test_rast = sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18]}) #zq90
-        for i in range(self.zq90_output_rast.height):
-            for j in range(self.zq90_output_rast.width):
-                if np.isnan(test_rast['strat_zq90', i, j]):
-                    assert np.isnan(self.zq90_output_rast[0, i, j])
-                else:
-                    #minus one to R output because R is 1-indexed
-                    if (test_rast['strat_zq90', i, j] != self.zq90_output_rast[0, i, j] - 1):
-                        print('[' + str(i) + '][' + str(j) + '] is different') 
-
-                    assert test_rast['strat_zq90', i, j] == self.zq90_output_rast[0, i, j] - 1
+        test_rast = sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18]})
+        test = test_rast[:]
+        correct = np.subtract(self.zq90_output_rast[:], 1)
+        assert np.array_equal(test, correct, equal_nan=True)
 
         test_rast = sgs.breaks(self.rast, breaks={'pzabove2': [20, 40, 60, 80]}) #pzabove2
-        for i in range(self.pz2_output_rast.height):
-            for j in range(self.pz2_output_rast.width):
-                if np.isnan(test_rast['strat_pzabove2', i, j]):
-                    assert np.isnan(self.pz2_output_rast[0, i, j])
-                else:
-                    #minus one to R output because R is 1-indexed
-                    assert test_rast['strat_pzabove2', i, j] == self.pz2_output_rast[0, i, j] - 1
-
+        test = test_rast[:]
+        correct = np.subtract(self.pz2_output_rast[:], 1)
+        assert np.array_equal(test, correct, equal_nan=True)
+            
     def test_mapping_outputs(self):
         #the python version maps variables differently than the R version
         #so rather than compare against the R version, I'm going to ensure
@@ -89,12 +78,6 @@ class TestBreaks:
         temp_file = temp_dir / "rast.tif"
         sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18]}, filename=str(temp_file))
         test_rast = sgs.SpatialRaster(str(temp_file))
-        for i in range(self.zq90_output_rast.height):
-            for j in range(self.zq90_output_rast.width):
-                if np.isnan(test_rast['strat_zq90', i, j]):
-                    assert np.isnan(self.zq90_output_rast[0, i, j])
-                else:
-                    #minus one to R output because R is 1-indexed
-                    assert test_rast['strat_zq90', i, j] == self.zq90_output_rast[0, i, j] - 1
-
-
+        test = test_rast[:]
+        correct = np.subtract(self.zq90_output_rast[:], 1)
+        assert np.array_equal(test, correct, equal_nan=True)

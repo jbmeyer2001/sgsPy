@@ -27,15 +27,11 @@ class TestPoly:
             'inventory_polygons',
             ['poor', 'rich', 'medium'],
         )
-        for i in range(self.test1_output_rast.height):
-            for j in range(self.test1_output_rast.width):
-                if np.isnan(test_rast[0, i, j]):
-                    #the R image is not a float, it stores nan values as 4294967295
-                    assert self.test1_output_rast[0, i, j] == 4294967295
-                else:
-                    pass
-                    #minus 1 to R output because R is 1-indexed
-                    assert test_rast[0, i, j] == self.test1_output_rast[0, i, j] - 1
+        test = test_rast[:]
+        correct = self.test1_output_rast[:].astype(np.float32)
+        correct[correct == 4294967295] = np.nan
+        correct = np.subtract(correct, 1)
+        assert np.array_equal(test, correct, equal_nan=True)
         
         test_rast = sgs.poly(
             self.rast,
@@ -44,14 +40,11 @@ class TestPoly:
             'inventory_polygons',
             ['poor', ['rich', 'medium']],
         )
-        for i in range(self.test2_output_rast.height):
-            for j in range(self.test2_output_rast.width):
-                if np.isnan(test_rast[0, i, j]):
-                    #the R image is not a float, it stores nan values as 4294967295
-                    assert self.test2_output_rast[0, i, j] == 4294967295
-                else:
-                    #minus 1 to R output because R is 1-indexed
-                    assert test_rast[0, i, j] == self.test2_output_rast[0, i, j] - 1
+        test = test_rast[:]
+        correct = self.test2_output_rast[:].astype(np.float32)
+        correct[correct == 4294967295] = np.nan
+        correct = np.subtract(correct, 1)
+        assert np.array_equal(test, correct, equal_nan=True)
 
     def test_write_functionality(self, tmp_path):
         temp_dir = tmp_path / "test_out"
@@ -67,13 +60,9 @@ class TestPoly:
             filename=str(temp_file),
         )
         test_rast = sgs.SpatialRaster(str(temp_file))
-        for i in range(self.test1_output_rast.height):
-            for j in range(self.test1_output_rast.width):
-                if np.isnan(test_rast[0, i, j]):
-                    #the R image is not a float, it stores nan values as 4294967295
-                    assert self.test1_output_rast[0, i, j] == 4294967295 
-                else:
-                    #minus 1 to R output because R is 1-indexed
-                    assert test_rast[0, i, j] == self.test1_output_rast[0, i, j] - 1
-
+        test = test_rast[:]
+        correct = self.test1_output_rast[:].astype(np.float32)
+        correct[correct == 4294967295] = np.nan
+        correct = np.subtract(correct, 1)
+        assert np.array_equal(test, correct, equal_nan=True)
 

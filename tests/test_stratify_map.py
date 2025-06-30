@@ -99,6 +99,3 @@ class TestMap:
                     zq90_mapping[map_strat] = zq90_strat
                     pz2_mapping[map_strat] = pz2_strat
                     zsd_mapping[map_strat] = zsd_strat
-
-
-

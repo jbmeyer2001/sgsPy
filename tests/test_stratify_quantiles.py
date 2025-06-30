@@ -18,24 +18,17 @@ class TestQuantiles:
     #output raster form running through R version
     zq90_output_rast = sgs.SpatialRaster(strat_quantiles_zq90_r_path)
     pz2_output_rast = sgs.SpatialRaster(strat_quantiles_pz2_r_path)
+    
     def test_correct_stratifications_against_R_version(self):
         test_rast = sgs.quantiles(self.rast, num_strata={"zq90": 4})
-        for i in range(self.zq90_output_rast.height):
-            for j in range(self.zq90_output_rast.width):
-                if np.isnan(test_rast['strat_zq90', i, j]):
-                    assert np.isnan(self.zq90_output_rast[0, i, j])
-                else:
-                    #minus 1 to R output because R is 1-indexed
-                    assert test_rast['strat_zq90', i, j] == self.zq90_output_rast[0, i, j] - 1
+        test = test_rast[:]
+        correct = np.subtract(self.zq90_output_rast[:], 1)
+        assert np.array_equal(test, correct, equal_nan=True)
 
         test_rast = sgs.quantiles(self.rast, num_strata={"pzabove2": [0.2, 0.4, 0.8]})
-        for i in range(self.pz2_output_rast.height):
-            for j in range(self.pz2_output_rast.width):
-                if np.isnan(test_rast['strat_pzabove2', i, j]):
-                    assert np.isnan(self.pz2_output_rast[0, i, j])
-                else:
-                    #minus one to R output because R is 1-indexed
-                    assert test_rast['strat_pzabove2', i, j] == self.pz2_output_rast[0, i, j] - 1
+        test = test_rast[:]
+        correct = np.subtract(self.pz2_output_rast[:], 1)
+        assert np.array_equal(test, correct, equal_nan=True)
 
     def test_mapping_outputs(self):
         #the python version maps variables differently than the R version
@@ -90,10 +83,6 @@ class TestQuantiles:
         temp_file = temp_dir / "rast.tif"
         sgs.quantiles(self.rast, num_strata={'zq90': 4}, filename=str(temp_file))
         test_rast = sgs.SpatialRaster(str(temp_file))
-        for i in range(self.zq90_output_rast.height):
-            for j in range(self.zq90_output_rast.width):
-                if np.isnan(test_rast['strat_zq90', i, j]):
-                    assert(np.isnan(self.zq90_output_rast[0, i, j]))
-                else:
-                    #minus one to R output because R is 1-indexed
-                    assert test_rast['strat_zq90', i, j ] == self.zq90_output_rast[0, i, j] - 1
+        test = test_rast[:]
+        correct = np.subtract(self.zq90_output_rast[:], 1)
+        assert np.array_equal(test, correct, equal_nan=True)
