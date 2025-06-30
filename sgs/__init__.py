@@ -4,7 +4,6 @@ from . import sample
 from . import stratify
 
 from .utils import (
-    access,
     SpatialRaster,
     SpatialVector,
 )

@@ -13,7 +13,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from sgs.utils import (
-    access,
     SpatialRaster,
     SpatialVector,
     plot,
@@ -82,7 +81,7 @@ def srs(
     if num_samples < 1:
         raise ValueError("num_samples must be greater than 0")
 
-    if (access)
+    if (access):
         if layer_name is None and len(access.layers) > 1:
             raise ValueError("if there are multiple layers in the access vector, layer_name must be defined.")
 
