@@ -123,10 +123,13 @@ class GDALVectorWrapper {
 	std::vector<std::vector<std::vector<double>>> getLineStrings(std::string layerName);
 
 	/*
-	 * Calculates a polygon for each line in the layer specified by
-	 * layerName. Access polygons are calculated by calculating the
-	 * BuffOuter polygon, and removing BuffInner from it (if buffInner
-	 * is greater than 0).
+	 * Calculates a polygon for each LineString or MultiLineString in
+	 * the provided access polygon, Buffer() with outerBuffer, and with
+	 * innerBuffer if innerBuffer is not equal to zero.
+	 *
+	 * Takes the union of all outerBuffer polygons, and the union of all
+	 * innerBuffer polygons, then finds the difference. Returns a single 
+	 * Geometry which is the difference.
 	 *
 	 * All geometries in the layer must be of type LineString or MultiLineString.
 	 *
@@ -135,5 +138,5 @@ class GDALVectorWrapper {
 	 * @param double buffOuter buffer which must be sampled from
 	 * @returns std::vector<OGRGeometry *> access polygons
 	 */
-	std::vector<OGRGeometry *> getAccessPolygons(std::string layerName, double buffInner, double buffOuter);
+	OGRGeometry * getAccessPolygon(std::string layerName, double buffInner, double buffOuter);
 };

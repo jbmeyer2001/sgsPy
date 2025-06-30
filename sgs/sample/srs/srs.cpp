@@ -69,9 +69,9 @@ srs(
 	T *p_rasterBand = (T *)p_raster->getRasterBand(0);	//GDALRasterWrapper bands are 0 indexed
 
 	//step 4: get access polygons if access is defined
-	std::vector<OGRGeometry *> accessPolygons;
+	OGRGeometry * accessPolygon;
 	if (p_access) {
-		accessPolygons = p_access->getAccessPolygons(layerName, buffInner, buffOuter);
+		accessPolygon = p_access->getAccessPolygon(layerName, buffInner, buffOuter);
 	}
 
 	//Step 5: iterate through raster band
@@ -80,8 +80,6 @@ srs(
 	for (U i = 0; i < (U)p_raster->getWidth() * (U)p_raster->getHeight(); i++) {
 		if (p_access) {
 			//step 5.1: if an access vector is used, ensure the pixel lies within the accessable area
-			bool contained = false;
-
 			//TODO there may be a way to not require calculating x/y coords multiple times
 			//for images which have both mindist and access.
 			double yIndex = i / p_raster->getWidth();
@@ -90,14 +88,7 @@ srs(
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint point = OGRPoint(xCoord, yCoord);
 
-			for (int i = 0; i < accessPolygons.size(); i++) {
-				if (accessPolygons[i]->Contains(&point)) {
-					contained = true;
-					break;
-				}
-			}
-
-			if (!contained) {
+			if (!accessPolygon->Contains(&point)) {
 				noDataPixelCount++;
 				continue;
 			}
@@ -114,6 +105,11 @@ srs(
 			j++;
 		}
 	}
+
+	if (p_access) {
+		free(accessPolygon);
+	}
+
 	U numDataPixels = (U)p_raster->getWidth() * (U)p_raster->getHeight() - noDataPixelCount;
 
 	if (numSamples > numDataPixels) {
