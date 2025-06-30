@@ -149,10 +149,11 @@ GDALVectorWrapper::getLineStrings(std::string layerName) {
 }
 
 /******************************************************************************
-			       getAccessPolygon()
+			       getAccessMask()
 ******************************************************************************/
-OGRGeometry *
-GDALVectorWrapper::getAccessPolygon(
+
+GDALVectorWrapper::getAccessMask(
+	GDALRasterWrapper *p_raster,
 	std::string layerName, 
 	double buffInner, 
 	double buffOuter) 
@@ -160,7 +161,7 @@ GDALVectorWrapper::getAccessPolygon(
 	OGRLayer *p_layer = this->p_dataset->GetLayerByName(layerName.c_str());
 	OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
 	OGRMultiPolygon *buffOuterPolygons = new OGRMultiPolygon;
-	OGRGeometry *retval;
+	OGRGeometry *polygonMask;
 
 	for (const auto& p_feature : *p_layer) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
@@ -180,18 +181,19 @@ GDALVectorWrapper::getAccessPolygon(
 	}	
 
 	if (buffInner == 0) {
-		retval = buffOuterPolygons->UnionCascaded();
+		polygonMask = buffOuterPolygons->UnionCascaded();
 		free(buffOuterPolygons);
 	}
 	else {
 		OGRGeometry *buffOuterUnion = buffOuterPolygons->UnionCascaded();
 		OGRGeometry *buffInnerUnion = buffInnerPolygons->UnionCascaded();
-		retval = buffOuterUnion->Difference(buffInnerUnion);
+		polygonMask = buffOuterUnion->Difference(buffInnerUnion);
 		free(buffOuterPolygons);
 		free(buffInnerPolygons);
 		free(buffOuterUnion);
 		free(buffInnerUnion);
 	}
+
 
 	return retval;
 }

@@ -82,8 +82,10 @@ def srs(
         raise ValueError("num_samples must be greater than 0")
 
     if (access):
-        if layer_name is None and len(access.layers) > 1:
-            raise ValueError("if there are multiple layers in the access vector, layer_name must be defined.")
+        if layer_name is None:
+            if len(access.layers) > 1:
+                raise ValueError("if there are multiple layers in the access vector, layer_name must be defined.")
+        layer_name = access.layers[0]
 
         if buff_inner is None:
             buff_inner = 0
@@ -98,13 +100,13 @@ def srs(
     if (access):
         [sample_coordinates, sample_points] = srs_cpp_access(
             rast.cpp_raster,
-            numSamples,
+            num_samples,
             mindist,
             access.cpp_vector,
             layer_name,
             buff_inner,
             buff_outer,
-
+            filename
         )
     else:
         [sample_coordinates, sample_points] = srs_cpp(rast.cpp_raster, num_samples, mindist, filename)
@@ -115,7 +117,8 @@ def srs(
     #plot new vector if requested
     if plot:
         fig, ax = plt.subplots()
-        rast.plot(ax)
+        #TODO let user know which band is being printed
+        rast.plot(ax, band=rast.bands[0])
         if access:
             access.plot('LineString', ax)
         ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')

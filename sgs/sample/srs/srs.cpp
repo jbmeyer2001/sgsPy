@@ -105,7 +105,6 @@ srs(
 			j++;
 		}
 	}
-
 	if (p_access) {
 		free(accessPolygon);
 	}

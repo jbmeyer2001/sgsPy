@@ -41,7 +41,7 @@ def plot_raster(raster,
     #get bands argument as list of int
     if band is None:
         if raster.band_count > 1:
-            raise ValueError("Bands argument must be given if raster contains more than one band.")
+            raise ValueError("'band' argument must be given if raster contains more than one band.")
         band = 0
     else:
         band = raster.get_band_index(band)
