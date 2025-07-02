@@ -80,7 +80,8 @@ GDALDataset *getAccessMask(
 	//step X: add the access polygon to the new layer
 	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
 	p_feature->SetField("index", 0);
-	p_feature->SetGeometry(p_polygonMask);	
+	p_feature->SetGeometry(p_polygonMask);
+	p_layer->CreateFeature(p_feature); //error handling here???
 	OGRFeature::DestroyFeature(p_feature);
 
 	//step X: get required info from raster
@@ -96,7 +97,7 @@ GDALDataset *getAccessMask(
 
 	//specify the burn value for the polygon
 	argv = CSLAddString(argv, "-burn");
-	argv = CSLAddString(argv, "1");
+	argv = CSLAddString(argv, std::to_string(1).c_str());
 
 	//specify the layer
 	argv = CSLAddString(argv, "-l");
@@ -104,7 +105,7 @@ GDALDataset *getAccessMask(
 
 	//specify the initialization values for the rest of the rastr
 	argv = CSLAddString(argv, "-init");
-	argv = CSLAddString(argv, "0");
+	argv = CSLAddString(argv, std::to_string(0).c_str());
 
 	//specify resolution
 	argv = CSLAddString(argv, "-tr");

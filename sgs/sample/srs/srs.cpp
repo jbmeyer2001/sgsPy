@@ -71,12 +71,12 @@ srs(
 
 	//step 4: get access mask if access is defined
 	GDALRasterWrapper *p_accessMask;
-	char *p_accessMaskData;
+	uint8_t *p_accessMaskData;
 	if (p_access) {
 		p_accessMask = new GDALRasterWrapper(
 			getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter)
 		);
-		p_accessMaskData = (char *)p_accessMask->getRasterBand(0);
+		p_accessMaskData = (uint8_t *)p_accessMask->getRasterBand(0);	//GDALRasterWrapper bands are 0 indexed
 	}
 
 	//Step 5: iterate through raster band
@@ -85,7 +85,7 @@ srs(
 	for (U i = 0; i < (U)p_raster->getWidth() * (U)p_raster->getHeight(); i++) {
 		if (p_accessMask) {
 			//step 5.1: if the current pixel is not accessable, mark it as nodata and don't read it
-			if (!(bool)p_accessMaskData[i]) {
+			if (((uint8_t *)p_accessMaskData)[i] == 0) {
 				noDataPixelCount++;
 				continue;
 			}
