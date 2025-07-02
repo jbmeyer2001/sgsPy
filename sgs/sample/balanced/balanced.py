@@ -3,7 +3,6 @@ from typing import Optional
 import numpy as np
 
 from sgs.utils import (
-        access,
         SpatialRaster,
         SpatialVector,
         plot,

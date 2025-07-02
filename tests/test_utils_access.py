@@ -1,5 +1,4 @@
 import pytest
-import sgs.utils.access as access
 
 class TestAccess:
     #TODO add real tests before implementing access

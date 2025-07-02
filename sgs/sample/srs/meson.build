@@ -7,6 +7,7 @@ if WIN
       raster_lib,
       vector_lib,
       write_lib,
+      access_lib,
     ],
     dependencies: [lib_deps],
     include_directories: [
@@ -31,6 +32,7 @@ else #linux
       raster_obj,
       vector_obj,
       write_obj,
+      access_obj,
     ],
     install: true,
   )

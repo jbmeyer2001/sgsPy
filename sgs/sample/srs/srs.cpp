@@ -12,6 +12,7 @@
 #include <random>
 
 //sgs/utils cpp code
+#include "access.h"
 #include "raster.h"
 #include "vector.h"
 #include "write.h"
@@ -42,19 +43,23 @@
  * @param GDALRasterVector * a pointer to an access vector image if it exists
  * @param U <unsigned short, unsigned, unsigned long, unsigned long long> the number of samples
  * @returns std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
- * 		coordinate and wkt representation of samples
+ * 	coordinate and wkt representation of samples
  */
 template <typename T, typename U>
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
 srs(
 	GDALRasterWrapper *p_raster,
-	double mindist,
-	//GDALVectorWrapper *p_vector,
 	unsigned long long numSamples,
+	double mindist,
+	GDALVectorWrapper *p_access,
+	std::string layerName,
+	double buffInner,
+	double buffOuter,
 	std::string filename)
 {
-	//Step 1: get dataset
+	//Step 1: get dataset and geotransform
 	GDALDataset *p_dataset = p_raster->getDataset();
+	double *GT = p_raster->getGeotransform();
 
 	//step 2: allocate index array which maps the adjusted index to the orignial index
 	U *p_indexArray = (U *)CPLMalloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(U));
@@ -64,35 +69,57 @@ srs(
 	//step 3: get first raster band
 	T *p_rasterBand = (T *)p_raster->getRasterBand(0);	//GDALRasterWrapper bands are 0 indexed
 
-	//Step 4: iterate through raster band
+	//step 4: get access mask if access is defined
+	GDALRasterWrapper *p_accessMask;
+	uint8_t *p_accessMaskData;
+	if (p_access) {
+		p_accessMask = new GDALRasterWrapper(
+			getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter)
+		);
+		p_accessMaskData = (uint8_t *)p_accessMask->getRasterBand(0);	//GDALRasterWrapper bands are 0 indexed
+	}
+
+	//Step 5: iterate through raster band
 	double noDataValue = p_dataset->GetRasterBand(1)->GetNoDataValue();
 	U j = 0;
 	for (U i = 0; i < (U)p_raster->getWidth() * (U)p_raster->getHeight(); i++) {
+		if (p_accessMask) {
+			//step 5.1: if the current pixel is not accessable, mark it as nodata and don't read it
+			if (((uint8_t *)p_accessMaskData)[i] == 0) {
+				noDataPixelCount++;
+				continue;
+			}
+		}
+
 		T val = p_rasterBand[i];
 		if (std::isnan(val) || (double)val == noDataValue) {
-			//Step 4.1: increment noDataPixelCount if encountered noData
+			//Step 5.2: increment noDataPixelCount if encountered noData
 			noDataPixelCount++;
 		}
 		else {
-			//Step 4.2: add data index to indexArray
+			//Step 5.3: add data index to indexArray
 			p_indexArrayUnfilledPointer[j] = i;
 			j++;
 		}
 	}
+	if (p_accessMask) {
+		free(p_accessMask);
+	}
+
 	U numDataPixels = (U)p_raster->getWidth() * (U)p_raster->getHeight() - noDataPixelCount;
 
 	if (numSamples > numDataPixels) {
 		throw std::runtime_error("num_samples cannot be greater than the number of data pixels in the image.");
 	}
 
-	//Step 5: generate random number generator using mt19937	
+	//Step 6: generate random number generator using mt19937	
 	std::mt19937::result_type seed = time(nullptr);
 	auto rng = std::bind(
 		std::uniform_int_distribution<U>(0, numDataPixels - 1),
 		std::mt19937(seed)
 	);
 
-	//Step 6: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
+	//Step 7: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
 	//use std::set because we want to iterate in-order because it will be faster
 	std::set<U> samplePixels = {}; 	
 	
@@ -111,8 +138,7 @@ srs(
 		}
 	}
 
-	//Step 7: generate coordinate points for each sample index, and only add if they're outside of mindist
-	double *GT = p_raster->getGeotransform();
+	//Step 8: generate coordinate points for each sample index, and only add if they're outside of mindist
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
 	std::vector<OGRPoint> points;
@@ -170,10 +196,10 @@ srs(
 		}
 	}
 
-	//Step 7: free no longer required index array
+	//Step 9: free no longer required index array
 	CPLFree(p_indexArray);
 
-	//Step 8: write vector of points if given filename
+	//Step 10: write vector of points if given filename
 	if (filename != "") {
 		try {
 			writeSamplePoints(points, filename);
@@ -183,7 +209,7 @@ srs(
 		}
 	}
 
-	//Step 9: return as coordinates and wkt
+	//Step 11: return as coordinates and wkt
 	return {{xCoords, yCoords}, wktPoints};
 }
 
@@ -208,53 +234,56 @@ srs(
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
 srsTypeSpecifier(
 	GDALRasterWrapper *p_raster,
-	double mindist,
-	//GDALVectorWrapper *p_vector,
 	size_t numSamples,
+	double mindist,
+	GDALVectorWrapper *p_access,
+	std::string layerName,
+	double buffInner,
+	double buffOuter,
 	std::string filename) 
 {
 	std::string minIndexIntType = p_raster->getMinIndexIntType(true); //singleBand = true 
 	switch (p_raster->getRasterType()) {
 		case GDT_Int8:
-		if(minIndexIntType == "unsigned_short") { return srs<int8_t, unsigned short>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned") { return srs<int8_t, unsigned>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long") { return srs<int8_t, unsigned long>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<int8_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_short") { return srs<int8_t, unsigned short>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned") { return srs<int8_t, unsigned>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<int8_t, unsigned long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int8_t, unsigned long long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
 		case GDT_UInt16:
-		if(minIndexIntType == "unsigned_short") { return srs<uint16_t, unsigned short>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned") { return srs<uint16_t, unsigned>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long") { return srs<uint16_t, unsigned long>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<uint16_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_short") { return srs<uint16_t, unsigned short>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned") { return srs<uint16_t, unsigned>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<uint16_t, unsigned long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<uint16_t, unsigned long long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
 		break;
 		case GDT_Int16:
-		if(minIndexIntType == "unsigned_short") { return srs<int16_t, unsigned short>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned") { return srs<int16_t, unsigned>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long") { return srs<int16_t, unsigned long>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<int16_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_short") { return srs<int16_t, unsigned short>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned") { return srs<int16_t, unsigned>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<int16_t, unsigned long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int16_t, unsigned long long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
 		break;
 		case GDT_UInt32:
-		if(minIndexIntType == "unsigned_short") { return srs<uint32_t, unsigned short>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned") { return srs<uint32_t, unsigned>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long") { return srs<uint32_t, unsigned long>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<uint32_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_short") { return srs<uint32_t, unsigned short>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned") { return srs<uint32_t, unsigned>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<uint32_t, unsigned long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<uint32_t, unsigned long long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
 		break;
 		case GDT_Int32:
-		if(minIndexIntType == "unsigned_short") { return srs<int32_t, unsigned short>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned") { return srs<int32_t, unsigned>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long") { return srs<int32_t, unsigned long>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<int32_t, unsigned long long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_short") { return srs<int32_t, unsigned short>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned") { return srs<int32_t, unsigned>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<int32_t, unsigned long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<int32_t, unsigned long long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
 		break;
 		case GDT_Float32:
-		if(minIndexIntType == "unsigned_short") { return srs<float, unsigned short>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned") { return srs<float, unsigned>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long") { return srs<float, unsigned long>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<float, unsigned long long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_short") { return srs<float, unsigned short>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned") { return srs<float, unsigned>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<float, unsigned long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<float, unsigned long long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
 		break;
 		case GDT_Float64:
-		if(minIndexIntType == "unsigned_short") { return srs<double, unsigned short>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned") { return srs<double, unsigned>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long") { return srs<double, unsigned long>(p_raster, mindist, numSamples, filename); }
-		if(minIndexIntType == "unsigned_long_long") { return srs<double, unsigned long long>(p_raster, mindist, numSamples, filename); }
+		if(minIndexIntType == "unsigned_short") { return srs<double, unsigned short>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned") { return srs<double, unsigned>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long") { return srs<double, unsigned long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
+		if(minIndexIntType == "unsigned_long_long") { return srs<double, unsigned long long>(p_raster, numSamples, mindist, p_access, layerName, buffInner, buffOuter, filename); }
 		break;
 		default: 
 		throw std::runtime_error("GDALDataType not one of the accepted types.");
@@ -262,6 +291,59 @@ srsTypeSpecifier(
 	throw std::runtime_error("type " + minIndexIntType + " not a valid type.");
 }
 
+//TODO: maybe find a better (less verbose) way of optional Python arguments than this...
+
+/*
+ * srs function for when access has not been specified. 
+ * Calls srsTypeSpecifier() which calls srs().
+ */
+std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+srs_cpp(
+	GDALRasterWrapper *p_raster,
+	size_t numSamples,
+	double mindist,
+	std::string filename) 
+{
+	return srsTypeSpecifier(
+		p_raster, 
+		numSamples,
+		mindist, 
+		nullptr, 
+		"",
+		0, 
+		0, 
+		filename
+	);
+}
+
+/*
+ * srs function for when access has been specified.
+ * Calls srsTypeSpecifier() which calls srs().
+ */
+std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+srs_cpp_access(
+	GDALRasterWrapper *p_raster,
+	size_t numSamples,
+	double mindist,
+	GDALVectorWrapper *p_access,
+	std::string layerName,
+	double buffInner,
+	double buffOuter,
+	std::string filename) 
+{
+	return srsTypeSpecifier(
+		p_raster, 
+		numSamples,
+		mindist, 
+		p_access,
+	       	layerName,	
+		buffInner, 
+		buffOuter, 
+		filename
+	);
+}
+
 PYBIND11_MODULE(srs, m) {
-	m.def("srs_cpp", &srsTypeSpecifier);
+	m.def("srs_cpp", &srs_cpp);
+	m.def("srs_cpp_access", &srs_cpp_access);
 }

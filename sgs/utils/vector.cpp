@@ -147,4 +147,3 @@ GDALVectorWrapper::getLineStrings(std::string layerName) {
 
 	return retval;
 }
-
