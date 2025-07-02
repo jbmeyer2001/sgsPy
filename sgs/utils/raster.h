@@ -118,13 +118,17 @@ class GDALRasterWrapper {
 	GDALRasterWrapper(std::string filename);
 
 	/**
-	 * Constructor for GDALRasterWrapper class.
-	 * Calls createFromDataset() passing p_dataset parameter.
+	 * Constructor for GDALRasterWrapper class if an in-memory dataset
+	 * has already been created. The bands (already read and allocated)
+	 * are passed as the second parameter.
+	 * Calls createFromDataset() passing p_dataset parameter, and
+	 * sets internal raster band parameters accordingly.
 	 *
 	 * @param GDALDataset *GDAL raster dataset
+	 * @param std::vector<void *> raster bands
 	 * @throws std::runtime_error if unable to get geotransform
 	 */
-	GDALRasterWrapper(GDALDataset *p_dataset);
+	GDALRasterWrapper(GDALDataset *p_dataset, std::vector<void *> bands);
 
 	/**
 	 * Constructor for GDALRasterWrapper class. This method creates

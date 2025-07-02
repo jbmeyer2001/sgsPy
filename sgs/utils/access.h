@@ -30,7 +30,8 @@
  * @param double buffOuter buffer which must be sampled from
  * @returns GDALDataset * access mask
  */
-GDALDataset *getAccessMask(
+std::pair<GDALDataset *, void *>
+getAccessMask(
 	GDALVectorWrapper *p_vector,
 	GDALRasterWrapper *p_raster,
 	std::string layerName, 

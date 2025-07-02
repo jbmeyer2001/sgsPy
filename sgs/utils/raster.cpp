@@ -28,8 +28,12 @@ GDALRasterWrapper::GDALRasterWrapper(std::string filename) {
 /******************************************************************************
 			      GDALRasterWrapper()
 ******************************************************************************/
-GDALRasterWrapper::GDALRasterWrapper(GDALDataset *p_dataset) {
+GDALRasterWrapper::GDALRasterWrapper(GDALDataset *p_dataset, std::vector<void *>bands) {
 	this->createFromDataset(p_dataset);
+	this->rasterBandPointers = bands;
+	this->rasterBandRead = std::vector<bool>(bands.size(), true);
+	this->p_raster = bands[0];
+	this->rasterAllocated = true;
 }
 
 /******************************************************************************

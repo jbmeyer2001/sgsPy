@@ -12,7 +12,8 @@
 /******************************************************************************
 				getAccessMask()
 ******************************************************************************/
-GDALDataset *getAccessMask(
+std::pair<GDALDataset *, void *>
+getAccessMask(
 	GDALVectorWrapper *p_vector,
 	GDALRasterWrapper *p_raster,
 	std::string layerName, 
@@ -84,15 +85,32 @@ GDALDataset *getAccessMask(
 	p_layer->CreateFeature(p_feature); //error handling here???
 	OGRFeature::DestroyFeature(p_feature);
 
-	//step 7: get required info from raster
-	double xRes = p_raster->getPixelWidth();
-	double yRes = p_raster->getPixelHeight();
-	double xMin = p_raster->getXMin();
-	double xMax = p_raster->getXMax();
-	double yMin = p_raster->getYMin();
-	double yMax = p_raster->getYMax();
+	//step 7: create in-memory dataset
+	GDALDataset *p_accessRasterDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
+		"",
+		p_raster->getWidth(),
+		p_raster->getHeight(),
+		0,
+		GDT_Byte,
+		nullptr
+	);
 
-	//step 8: generate options list for rasterization	
+	//allocate new raster layer
+	void *datapointer = CPLMalloc(p_raster->getWidth() * p_raster->getHeight()* sizeof(uint8_t));
+
+	//add band to new in-memory raster dataset
+	char **papszOptions = nullptr;
+	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", std::to_string((size_t)datapointer).c_str());
+
+	//step 8: set and fill parameters of new in-memory dataset
+	p_accessRasterDataset->AddBand(GDT_Byte, papszOptions);
+	p_accessRasterDataset->SetGeoTransform(p_raster->getGeotransform());
+	p_accessRasterDataset->SetProjection(p_raster->getDataset()->GetProjectionRef());
+	GDALRasterBand *p_band = p_accessRasterDataset->GetRasterBand(1);
+	p_band->SetDescription("access_mask");
+	p_band->Fill(0);
+
+	//step 9: generate options list for rasterization	
 	char **argv;
 
 	//specify the burn value for the polygon
@@ -103,46 +121,23 @@ GDALDataset *getAccessMask(
 	argv = CSLAddString(argv, "-l");
 	argv = CSLAddString(argv, "access");
 
-	//specify the initialization values for the rest of the rastr
-	argv = CSLAddString(argv, "-init");
-	argv = CSLAddString(argv, std::to_string(0).c_str());
-
-	//specify resolution
-	argv = CSLAddString(argv, "-tr");
-	argv = CSLAddString(argv, std::to_string(xRes).c_str());
-	argv = CSLAddString(argv, std::to_string(yRes).c_str());
-
-	//specify data type
-	argv = CSLAddString(argv, "-ot");
-	argv = CSLAddString(argv, "Byte");
-	
-	//specify extent
-	argv = CSLAddString(argv, "-te");
-	argv = CSLAddString(argv, std::to_string(xMin).c_str());
-	argv = CSLAddString(argv, std::to_string(yMin).c_str());
-	argv = CSLAddString(argv, std::to_string(xMax).c_str());
-	argv = CSLAddString(argv, std::to_string(yMax).c_str());
-
-	//specify the output format as in-memory
-	argv = CSLAddString(argv, "-of");
-	argv = CSLAddString(argv, "MEM");
-
 	GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
 
-	//step 9: rasterize vector creating in-memory dataset
-	GDALDataset *p_accessRasterDataset = (GDALDataset *)GDALRasterize("",
+	//step 10: rasterize vector creating in-memory dataset
+	GDALRasterize(
 		nullptr,
+		p_accessRasterDataset,
 		p_accessPolygonDataset,
 		options,
 		nullptr
 	);
 
-	//step 10: free dynamically allocated rasterization options
+	//step 11: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
 
 	//step11: free no longer used polygon dataset
 	free(p_accessPolygonDataset);
 
-	//step 12: return access mask
-	return p_accessRasterDataset;
+	//step 12: return access mask data and pointer to dataset to free
+	return {p_accessRasterDataset, datapointer};
 }

@@ -21,17 +21,38 @@ GDALRasterWrapper *poly(
 	GDALDataset *p_vectorDS = p_vector->getDataset();
 	GDALDataset *p_rasterDS = p_raster->getDataset();
 	double noDataValue = p_rasterDS->GetRasterBand(1)->GetNoDataValue();
-	double xRes = p_raster->getPixelWidth();
-	double yRes = p_raster->getPixelHeight();
-	double xMin = p_raster->getXMin();
-	double xMax = p_raster->getXMax();
-	double yMin = p_raster->getYMin();
-	double yMax = p_raster->getYMax();
+	
+	//step 2: create in-memory dataset
+	GDALAllRegister();
+	GDALDataset *p_dataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
+		"",
+		p_raster->getWidth(),
+		p_raster->getHeight(),
+		0,
+		GDT_Float32,
+		nullptr
+	);
 
-	//step 2: generate options list
+	//allocate new raster layer
+	void *datapointer = CPLMalloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(float));
+	
+	//add band to new in-memory raster dataset
+	char **papszOptions = nullptr;
+	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", std::to_string((size_t)datapointer).c_str());
+	
+	//step 3: set and fill parameters of new in-memory dataset
+	p_dataset->AddBand(GDT_Float32, papszOptions);
+	p_dataset->SetGeoTransform(p_raster->getGeotransform());
+	p_dataset->SetProjection(p_rasterDS->GetProjectionRef());
+	GDALRasterBand *p_band = p_dataset->GetRasterBand(1);
+	p_band->SetDescription("strata");
+	p_band->SetNoDataValue(noDataValue);
+	p_band->Fill(noDataValue);
+
+	//step 4: generate options list for GDALRasterize()
 	char ** argv = nullptr;
 
-	//set the attribute to 'strata', which is created by the sql query
+	//specify the vector attribute to 'strata', which is created by the sql query
 	argv = CSLAddString(argv, "-a");
 	argv = CSLAddString(argv, "strata");
 
@@ -41,59 +62,27 @@ GDALRasterWrapper *poly(
 
 	//specify sql dialect
 	argv = CSLAddString(argv, "-dialect");
-	argv = CSLAddString(argv, "SQLITE");
-
-	//specify nodata
-	argv = CSLAddString(argv, "-a_nodata");
-	argv = CSLAddString(argv, std::to_string(noDataValue).c_str());
-
-	//specify intialization of pixels to nodata value
-	argv = CSLAddString(argv, "-init");
-	argv = CSLAddString(argv, std::to_string(noDataValue).c_str());
-
-	//specify resolution
-	argv = CSLAddString(argv, "-tr");
-	argv = CSLAddString(argv, std::to_string(xRes).c_str());
-	argv = CSLAddString(argv, std::to_string(yRes).c_str());
-
-	//specify data type
-	argv = CSLAddString(argv, "-ot");
-	argv = CSLAddString(argv, "Float32");
-
-	//specify extent
-	argv = CSLAddString(argv, "-te");
-	argv = CSLAddString(argv, std::to_string(xMin).c_str());
-	argv = CSLAddString(argv, std::to_string(yMin).c_str());
-	argv = CSLAddString(argv, std::to_string(xMax).c_str());
-	argv = CSLAddString(argv, std::to_string(yMax).c_str());
-
-	//specify the output format as in-memory
-	argv = CSLAddString(argv, "-of");
-	argv = CSLAddString(argv, "MEM");
+	argv = CSLAddString(argv, "SQLITE");	
 
 	GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
 
-	//step 3: rasterize vector creating in-memory dataset
-	GDALAllRegister();
-	GDALDataset *p_dataset = (GDALDataset *)GDALRasterize("",
+	//step 5: rasterize vector to in-memory dataset
+	GDALRasterize(
 		nullptr,
+		p_dataset,
 		p_vectorDS,
 		options,
 		nullptr
 	);
 
-	//step 4: free dynamically allocated rasterization options
+	//step 6: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
-
-	//step 5: set the geotransform and projection of the new dataset
-	p_dataset->SetGeoTransform(p_raster->getGeotransform());
-	p_dataset->SetProjection(p_rasterDS->GetProjectionRef());
-
-	//step 6: create new GDALRasterWrapper using dataset pointer
+	
+	//step 7: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python
-	GDALRasterWrapper* stratRaster = new GDALRasterWrapper(p_dataset);
+	GDALRasterWrapper* stratRaster = new GDALRasterWrapper(p_dataset, {datapointer});
 
-	//step 7: write raster if desired
+	//step 8: write raster if desired
 	if (filename != "") {
 		stratRaster->write(filename);
 	}
