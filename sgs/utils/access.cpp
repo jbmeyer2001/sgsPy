@@ -10,7 +10,7 @@
 #include "access.h"
 
 /******************************************************************************
-				allocateRaster()
+				getAccessMask()
 ******************************************************************************/
 GDALDataset *getAccessMask(
 	GDALVectorWrapper *p_vector,
@@ -19,12 +19,12 @@ GDALDataset *getAccessMask(
 	double buffInner, 
 	double buffOuter) 
 {
-	//step X:
+	//step 1:
 	OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
 	OGRMultiPolygon *buffOuterPolygons = new OGRMultiPolygon;
 	OGRGeometry *p_polygonMask;
 
-	//step X:
+	//step 2:
 	for (const auto& p_feature : *p_vector->getLayer(layerName.c_str())) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
 		OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
@@ -42,7 +42,7 @@ GDALDataset *getAccessMask(
 		}
 	}	
 
-	//step X: 
+	//step 3: 
 	if (buffInner == 0) {
 		p_polygonMask = buffOuterPolygons->UnionCascaded();
 		free(buffOuterPolygons);
@@ -62,7 +62,7 @@ GDALDataset *getAccessMask(
 
 	//TODO: error check output of these
 	
-	//step X: create new GDAL dataset to rasterize as access mask
+	//step 4: create new GDAL dataset to rasterize as access mask
 	GDALDataset *p_accessPolygonDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
 		"",
 		0,
@@ -72,19 +72,19 @@ GDALDataset *getAccessMask(
 		nullptr
 	);
 
-	//step X: create a layer of type Polygon in the new dataset
+	//step 5: create a layer of type Polygon in the new dataset
 	OGRLayer *p_layer = p_accessPolygonDataset->CreateLayer("access", nullptr, wkbPolygon, nullptr);
 	OGRFieldDefn field("index", OFTInteger);
 	p_layer->CreateField(&field);
 	
-	//step X: add the access polygon to the new layer
+	//step 6: add the access polygon to the new layer
 	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
 	p_feature->SetField("index", 0);
 	p_feature->SetGeometry(p_polygonMask);
 	p_layer->CreateFeature(p_feature); //error handling here???
 	OGRFeature::DestroyFeature(p_feature);
 
-	//step X: get required info from raster
+	//step 7: get required info from raster
 	double xRes = p_raster->getPixelWidth();
 	double yRes = p_raster->getPixelHeight();
 	double xMin = p_raster->getXMin();
@@ -92,7 +92,7 @@ GDALDataset *getAccessMask(
 	double yMin = p_raster->getYMin();
 	double yMax = p_raster->getYMax();
 
-	//step X: generate options list for rasterization	
+	//step 8: generate options list for rasterization	
 	char **argv;
 
 	//specify the burn value for the polygon
@@ -129,7 +129,7 @@ GDALDataset *getAccessMask(
 
 	GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
 
-	//step X: rasterize vector creating in-memory dataset
+	//step 9: rasterize vector creating in-memory dataset
 	GDALDataset *p_accessRasterDataset = (GDALDataset *)GDALRasterize("",
 		nullptr,
 		p_accessPolygonDataset,
@@ -137,12 +137,12 @@ GDALDataset *getAccessMask(
 		nullptr
 	);
 
-	//step X: free dynamically allocated rasterization options
+	//step 10: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
 
-	//step X: free no longer used polygon dataset
+	//step11: free no longer used polygon dataset
 	free(p_accessPolygonDataset);
 
-	//step X: return access mask
+	//step 12: return access mask
 	return p_accessRasterDataset;
 }
