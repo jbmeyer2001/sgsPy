@@ -70,8 +70,8 @@ srs(
 	T *p_rasterBand = (T *)p_raster->getRasterBand(0);	//GDALRasterWrapper bands are 0 indexed
 
 	//step 4: get access mask if access is defined
-	GDALRasterWrapper *p_accessMask;
-	uint8_t *p_accessMaskData;
+	GDALRasterWrapper *p_accessMask = nullptr;
+	uint8_t *p_accessMaskData = nullptr;
 	if (p_access) {
 		p_accessMask = new GDALRasterWrapper(
 			getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter)
@@ -83,7 +83,7 @@ srs(
 	double noDataValue = p_dataset->GetRasterBand(1)->GetNoDataValue();
 	U j = 0;
 	for (U i = 0; i < (U)p_raster->getWidth() * (U)p_raster->getHeight(); i++) {
-		if (p_accessMask) {
+		if (p_access) {
 			//step 5.1: if the current pixel is not accessable, mark it as nodata and don't read it
 			if (((uint8_t *)p_accessMaskData)[i] == 0) {
 				noDataPixelCount++;
@@ -102,7 +102,7 @@ srs(
 			j++;
 		}
 	}
-	if (p_accessMask) {
+	if (p_access) {
 		free(p_accessMask);
 	}
 
