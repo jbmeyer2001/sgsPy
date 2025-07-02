@@ -12,6 +12,7 @@
 #include <random>
 
 //sgs/utils cpp code
+#include "access.h"
 #include "raster.h"
 #include "vector.h"
 #include "write.h"
@@ -42,7 +43,7 @@
  * @param GDALRasterVector * a pointer to an access vector image if it exists
  * @param U <unsigned short, unsigned, unsigned long, unsigned long long> the number of samples
  * @returns std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
- * 		coordinate and wkt representation of samples
+ * 	coordinate and wkt representation of samples
  */
 template <typename T, typename U>
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
@@ -68,27 +69,23 @@ srs(
 	//step 3: get first raster band
 	T *p_rasterBand = (T *)p_raster->getRasterBand(0);	//GDALRasterWrapper bands are 0 indexed
 
-	//step 4: get access polygons if access is defined
-	OGRGeometry * accessPolygon;
+	//step 4: get access mask if access is defined
+	GDALRasterWrapper *p_accessMask;
+	char *p_accessMaskData;
 	if (p_access) {
-		accessPolygon = p_access->getAccessPolygon(layerName, buffInner, buffOuter);
+		p_accessMask = new GDALRasterWrapper(
+			getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter)
+		);
+		p_accessMaskData = (char *)p_accessMask->getRasterBand(0);
 	}
 
 	//Step 5: iterate through raster band
 	double noDataValue = p_dataset->GetRasterBand(1)->GetNoDataValue();
 	U j = 0;
 	for (U i = 0; i < (U)p_raster->getWidth() * (U)p_raster->getHeight(); i++) {
-		if (p_access) {
-			//step 5.1: if an access vector is used, ensure the pixel lies within the accessable area
-			//TODO there may be a way to not require calculating x/y coords multiple times
-			//for images which have both mindist and access.
-			double yIndex = i / p_raster->getWidth();
-			double xIndex = i - (yIndex * p_raster->getWidth());
-			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
-			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
-			OGRPoint point = OGRPoint(xCoord, yCoord);
-
-			if (!accessPolygon->Contains(&point)) {
+		if (p_accessMask) {
+			//step 5.1: if the current pixel is not accessable, mark it as nodata and don't read it
+			if (!(bool)p_accessMaskData[i]) {
 				noDataPixelCount++;
 				continue;
 			}
@@ -105,8 +102,8 @@ srs(
 			j++;
 		}
 	}
-	if (p_access) {
-		free(accessPolygon);
+	if (p_accessMask) {
+		free(p_accessMask);
 	}
 
 	U numDataPixels = (U)p_raster->getWidth() * (U)p_raster->getHeight() - noDataPixelCount;

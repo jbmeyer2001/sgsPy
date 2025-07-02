@@ -26,6 +26,15 @@ write_lib = static_library(
 #Windows additionally requires linker arguments to search for .lib files
 #from the Windows SDK.
 if WIN
+  #create access module
+  access_lib = static_library(
+    'access_lib', 'access.cpp', 'access.h',
+    link_with: [raster_lib, vector_lib],
+    link_args: win_link_args,
+    dependencies: [lib_deps],
+    include_directories: inc_dir,
+  )
+
   #create raster module
   py.extension_module(
     'raster',
@@ -53,6 +62,15 @@ else #linux
   vector_obj = vector_lib.extract_objects('vector.cpp')
   write_obj = write_lib.extract_objects('write.cpp')
 
+  #create access library and extract object, using raster and vector objects
+  access_lib = static_library(
+    'access_lib', 'access.cpp', 'access.h',
+    dependencies: [lib_deps, py.dependency()],
+    include_directories: inc_dir,
+    objects: [raster_obj, vector_obj],
+  )
+  access_obj = access_lib.extract_objects('access.cpp')
+
   #create raster module
   py.extension_module(
     'raster',
@@ -67,7 +85,7 @@ else #linux
   py.extension_module(
     'vector',
     ['vector_pybind.cpp'],
-    dependencies: [lib_deps],
+    dependencies: [lib_deps, py.dependency()],
     include_directories: inc_dir,
     objects: [vector_obj],
     install: true,
