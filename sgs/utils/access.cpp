@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 #include "access.h"
+#include <ogrsf_frmts.h>
 
 /******************************************************************************
 				getAccessMask()
@@ -73,8 +74,12 @@ getAccessMask(
 		nullptr
 	);
 
-	//step 5: create a layer of type Polygon in the new dataset
-	OGRLayer *p_layer = p_accessPolygonDataset->CreateLayer("access", nullptr, wkbPolygon, nullptr);
+	OGRLayer *p_layer = p_accessPolygonDataset->CreateLayer(
+		"access", 
+		p_vector->getLayer(layerName.c_str())->GetSpatialRef(), 
+		wkbPolygon, 
+		nullptr
+	);
 	OGRFieldDefn field("index", OFTInteger);
 	p_layer->CreateField(&field);
 	

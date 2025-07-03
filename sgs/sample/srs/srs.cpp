@@ -74,8 +74,8 @@ srs(
 	void *p_mask = nullptr;
 	if (p_access) {
 		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
- 		GDALDataset *p_accessMaskDataset = maskInfo.first; //GDALDataset to free after using band
-		void *p_mask = maskInfo.second; //pointer to mask
+ 		p_accessMaskDataset = maskInfo.first; //GDALDataset to free after using band
+		p_mask = maskInfo.second; //pointer to mask
 	}
 
 	//Step 5: iterate through raster band
