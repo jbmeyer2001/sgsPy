@@ -85,7 +85,7 @@ def srs(
         if layer_name is None:
             if len(access.layers) > 1:
                 raise ValueError("if there are multiple layers in the access vector, layer_name must be defined.")
-        layer_name = access.layers[0]
+            layer_name = access.layers[0]
 
         if buff_inner is None:
             buff_inner = 0
@@ -115,6 +115,8 @@ def srs(
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, len(sample_points)))
 
     #plot new vector if requested
+    #TODO do this in try/catch so that error won't cause
+    #sampling to be thrown out
     if plot:
         fig, ax = plt.subplots()
         #TODO let user know which band is being printed
