@@ -21,30 +21,40 @@ getAccessMask(
 	double buffInner, 
 	double buffOuter) 
 {
-	//step 1:
+	//step 1: create multipolygon buffers
 	OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
 	OGRMultiPolygon *buffOuterPolygons = new OGRMultiPolygon;
 	OGRGeometry *p_polygonMask;
 
-	//step 2:
+	//step 2: add geometries to access polygon buffers
 	for (const auto& p_feature : *p_vector->getLayer(layerName.c_str())) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
 		OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
 
-		if (type != wkbLineString && type != wkbMultiLineString) {
-			throw std::runtime_error("all geometries in layer must be LineString or MultiLineString.");
-		}
-
-		if (buffInner == 0) {
-			buffOuterPolygons->addGeometry(p_geometry->Buffer(buffOuter));
-		}
-		else {
-			buffInnerPolygons->addGeometry(p_geometry->Buffer(buffInner));
-			buffOuterPolygons->addGeometry(p_geometry->Buffer(buffOuter));
+		switch (type) {
+			case OGRwkbGeometryType::wkbLineString: {
+				buffOuterPolygons->addGeometry(p_geometry->Buffer(buffOuter));
+				if (buffInner != 0) {
+					buffInnerPolygons->addGeometry(p_geometry->Buffer(buffInner));
+				}
+				break;
+			}
+			case OGRwkbGeometryType::wkbMultiLineString: {
+				for (const auto& p_lineString : *p_geometry->toMultiLineString()) {
+					buffOuterPolygons->addGeometry(p_lineString->Buffer(buffOuter));
+					if (buffInner != 0) {
+						buffInnerPolygons->addGeometry(p_lineString->Buffer(buffInner));
+					}
+				}
+				break;
+			}
+			default: {
+				throw std::runtime_error("geometry type must be LineString or MultiLineString");
+			}
 		}
 	}	
 
-	//step 3: 
+	//step 3: generate the polygon mask and free no longer used memory
 	if (buffInner == 0) {
 		p_polygonMask = buffOuterPolygons->UnionCascaded();
 		free(buffOuterPolygons);
@@ -113,14 +123,21 @@ getAccessMask(
 	p_accessRasterDataset->SetProjection(p_raster->getDataset()->GetProjectionRef());
 	GDALRasterBand *p_band = p_accessRasterDataset->GetRasterBand(1);
 	p_band->SetDescription("access_mask");
-	p_band->Fill(0);
+	p_band->Fill(1);
 
 	//step 9: generate options list for rasterization	
 	char **argv;
 
+	//specify invert rasterization and ALL_TOUCHED true
+	//this ensures pixels whos upper-left corner is outside the
+	//accessable area don't accidentally get included.
+	//The upper left corner is where the geotransform applies to.
+	argv = CSLAddString(argv, "-i");
+	argv = CSLAddString(argv, "-at");
+
 	//specify the burn value for the polygon
 	argv = CSLAddString(argv, "-burn");
-	argv = CSLAddString(argv, std::to_string(1).c_str());
+	argv = CSLAddString(argv, std::to_string(0).c_str());
 
 	//specify the layer
 	argv = CSLAddString(argv, "-l");
