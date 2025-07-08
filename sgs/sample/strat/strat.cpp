@@ -341,144 +341,152 @@ strat_queinnec(
 
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
-	int horizontalPad = (wrow / 2) + 1;
-	int verticalPad = (wcol / 2) + 1;
-	U focalWindowMatrixHeight = (wrow / 2) + 1;
-	U focalWindowMatrixWidth = width - wrow + 1;
+	int horizontalPad = (wcol / 2);
+	int verticalPad = (wrow / 2);
+	U fwMatrixHeight = wrow;
+	U fwMatrixWidth = width - wcol + 1;
 
-	std::vector<bool> focalWindowMatrix(true, focalWindowMatrixWidth * focalWindowMatrixHeight); //use std::vector
-	std::vector<bool> prevUpperSame(true, width);
-	bool prevLeftSame = true;
+	std::vector<bool> focalWindowMatrix(true, fwMatrixWidth * fwMatrixHeight);
+	std::vector<bool> prevVertSame(true, width);
+	bool prevHoriSame = true;
 
 	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	U noDataPixelCount = 0;
-	//upper section of strat raster
-	for (U y = 0; y < verticalPad; y++) {
-		U start = y * width;
-		
-		//upper left section of strat raster
-		for (x = 0; x < horizontalPad; x++) {
-			U index = start + x;
+
+	U fwMatrixXStart = 0;
+	U fwMatrixXEnd = 0;
+	U fwMatrixYStart;
+	U fwMatrixYEnd;
+	bool addSelf;
+	bool addUpperLeftCornerPixel;
+	
+	for (U y = 0; y < height; y++) {
+		addSelf = y < verticalPad || y > height - 1 - verticalPad;
+		addUpperPixel = y >= verticalPad * 2;
+
+		for (x = 0; x < width; x++) {
+			addSelf |= x < horizontalPad || x > width - 1 - horizontalPad;
+			//addUpperPixel &= ;
+			//fwMatrixXStart = std::max(x - (horizontalPad * 2), 0);
+			//fwMatrixXEnd = std::min(x, focalWindowMatrixWidth - 1);
+			U index = y * width + x;
 			U val;
 			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
-			upperSame == !isNan && ((i == 0 || val == p_strata[index - width]);
-			leftSame == !isNan && ((j == 0) || val == p_strata[index - 1]);
+			nextVertSame == !isNan && ((y == height - 1) || val == p_strata[index + width]);
+			nextHoriSame == !isNan && ((x == width - 1) || val == p_strata[index + 1]);
 			
 			std::bitset<4> bitmask;
-			bitmask.set(0, prevLeftSame);
-			bitmask.set(1, prevUpperSame[x]);
-			bitmask.set(2, leftSame);
-			bitmask.set(3, upperSame);
-
+			bitmask.set(0, prevHoriSame);
+			bitmask.set(1, prevVertSame[x]);
+			bitmask.set(2, nextHoriSame);
+			bitmask.set(3, nextVertSame);
+		
 			switch(bitmask.to_ulong()) {
+				//!nextHoriSame && !nextVertSame
 				case 0:
 				case 1:
 				case 2:
 				case 3:
 
-				//!upperSame && !prevUpperSame
+				//!nextVertSame && !prevVertSame
 				case 4:
 				case 5:
+					/*
+					 * previous vertical was different and next vertical is different,
+					 * set all pixels which would contain both this and the next to the right
+					 * pixel in their focal windows to false.
+					 * 
+					 * BUT don't set the pixels which would alread have been set by the previous
+					 * pixel being different.
+					 */
+					for() {
 
+					}
 					break;
-				
-				//!upperSame && prevUpperSame
+
+				//!nextVertSame && prevVertSame
 				case 6:
 				case 7:
+					/*
+					 * previous vertical was the same, but the next vertical is different
+					 * set all pixels which would contain both this and the next to the right
+					 * pixel in their focal windows to false.
+					 */
+					for() {
 
+					}
 					break;
 
-				//!leftSame && !prevLeftSame
+				//!nextHoriSame && !prevHoriSame
 				case 8:
 				case 10:
-				
+					/*
+					 * previous horizontal was different and next horizontal is different,
+					 * set all pixels which would contain both this and the next to the right
+					 * pixel in their focal windows to false.
+					 *
+					 * BUT don't set the pixels which would alread have been set by the previous
+					 * pixel being different.
+					 */
+					for() {
+
+					}
 					break;
 
-				//!leftSame && prevLeftSame
+				//!nextHoriSame && prevHoriSame
 				case 9:
 				case 11:
+					/*
+					 * previous horizontal was the same, but the next horizontal is different
+					 * set all pixels which would contain both this and the next to the right
+					 * pixel in their focal windows to false.
+					 */
+					for() {
 
+					}
 					break;
 
-				//leftSame && upperSame
+				//nextHoriSame && nextVertSame
 				case 12:
 				case 13:
 				case 14:
 				case 15:
+					if (addSelf) {
+						stratumIndexes[(size_t)val].push_back(index);
+					}
+
+					if (addUpperPixel) {
+						size_t ToAddfwIndex = fwMatrixYStart * fwMatrixWidth + fwMatrixXStart;
+						U toAddIndex = index - width * verticalPad;
+						U toAddVal
+						bool toAddIsNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		 
+					}
 					break;
 				default:
 					throw std::runtime_error("bit mask value impossible, bug in code.");
 			}
-
 		}
 
-		//upper center section of strat raster
-		for (j = horizontalPad; j < width - horizontalPad; j++) {
-			U index = start + j;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		if (y <= height - 2 - verticalPad * 2) {
+			fwMatrixYEnd++;
+			if (fwMatrixYEnd == focalWindowMatrixHeight) {
+				fwMatrixYEnd = 0;
+			}
 		}
 
-		//upper right section of strat raster
-		for (j = width - horizontalPad; j < width; j++) {
-			U index = start + j;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		if (fwMatrixEnd == focalWindowMatrixStart) {
+			
+		}
+
+		if (y >= verticalPad * 2) {
+			fwMatrixYStart++;
+			if (fwMatrixYStart == focalWindowMatrixHeight) {
+				fwMatrixYStart = 0;
+			}
 		}
 	}
-
-	//mid layer of strat raster
-	for (U i = verticalPad; i < height - verticalPad; i++) {
-		U start = i * width;
 		
-		//middle left section of strat raster
-		for (j = 0; j < horizontalPad; j++) {
-			U index = start + j;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
-		}
-
-		//middle center section of strat raster
-		for (j = horizontalPad; j < width - horizontalPad; j++) {
-			U index = start + j;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
-		}
-
-		//middle right section of strat raster
-		for (j = width - horizontalPad; j < width; j++) {
-			U index = start + j;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
-		}
-	}
-
-	//bottom layer of strat raster
-	for (U i = height - verticalPad; i < height; i++) {
-		U start = i * width;
-		
-		//lower left section of strat raster
-		for (j = 0; j < horizontalPad; j++) {
-			U index = start + j;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
-		}
-
-		//lower center section of strat raster
-		for (j = horizontalPad; j < width - horizontalPad; j++) {
-			U index = start + j;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
-		}
-
-		//lower right section of strat raster
-		for (j = width - horizontalPad; j < width; j++) {
-			U index = start + j;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
-		}
-	}
-
 	return {{}, ""};
 }
 
