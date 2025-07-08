@@ -114,8 +114,8 @@ srs(
 	//Step 6: generate random number generator using mt19937	
 	std::mt19937::result_type seed = time(nullptr);
 	auto rng = std::bind(
-		std::ref(std::uniform_int_distribution<U>(0, numDataPixels - 1)),
-		std::ref(std::mt19937(seed))
+		std::uniform_int_distribution<U>(0, numDataPixels - 1),
+		std::mt19937(seed)
 	);
 
 	//Step 7: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
