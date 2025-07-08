@@ -114,8 +114,8 @@ srs(
 	//Step 6: generate random number generator using mt19937	
 	std::mt19937::result_type seed = time(nullptr);
 	auto rng = std::bind(
-		std::uniform_int_distribution<U>(0, numDataPixels - 1),
-		std::mt19937(seed)
+		std::ref(std::uniform_int_distribution<U>(0, numDataPixels - 1)),
+		std::ref(std::mt19937(seed))
 	);
 
 	//Step 7: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
@@ -129,6 +129,7 @@ srs(
 		samplePixels.insert(rng());
 	}
 	if (mindist != 0.0)  {
+		//TODO what if there aren't enough pixels???
 		while(backupSamplePixels.size() < numSamples * 2) {
 			U pixel = rng();
 			if (samplePixels.find(pixel) == samplePixels.end()) {

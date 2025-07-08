@@ -1,4 +1,3 @@
-"""
 # ******************************************************************************
 #
 #  Project: sgs
@@ -27,6 +26,7 @@ from strat import (
 def strat(
     strat_rast: SpatialRaster,
     num_samples: int,
+    num_strata: int,
     wrow: int = 3,
     wcol: int = 3,
     allocation: str = "prop",
@@ -52,7 +52,6 @@ def strat(
     if allocation == "manual":
         if weights is None:
             raise ValueError("for manual allocation, weights must be given.")
-
         if np.sum(weights) != 1:
             raise ValueError("weights must sum to 1.")
 
@@ -89,6 +88,7 @@ def strat(
         [sample_coordinates, sample_points] = strat_cpp_access(
             strat_rast.cpp_raster,
             num_samples,
+            num_strata,
             wrow,
             wcol,
             allocation,
@@ -106,6 +106,7 @@ def strat(
         [sample_coordinates, sample_points] = strat_cpp(
             strat_rast.cpp_raster,
             num_samples,
+            num_strata,
             wrow,
             wcol,
             allocation,
@@ -126,4 +127,3 @@ def strat(
             access.plot('LineString', ax)
         ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
         plt.show()
-"""

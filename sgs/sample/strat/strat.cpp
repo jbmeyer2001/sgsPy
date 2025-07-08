@@ -17,6 +17,105 @@
 #include "write.h"
 
 /**
+ * Helper function which calculates the count of values for each strata.
+ *
+ * @param std::string allocation method
+ * @param std::vector<size_t>& sizes of each strata
+ * @param std::vector<double> weights of each strata
+ * @param size_t total number of pixels
+ * @returns std::vector<size_t> counts of each stratum
+ */
+typedef <typename U>
+std::vector<size_t>
+calculateAllocation(
+	size_t numSamples,
+	std::string allocation, 
+	std::vector<size_t>& strataSizes, 
+	std::vector<double>& weights,
+	size_t numPixels
+{
+	std::vector<U> retval;
+
+	if (allocation == "prop") {
+		//allocate the samples per stratum according to stratum size
+		size_t remainer = numSamples;
+		for (size_t i = 0; i < strataSizes.size(); i++) {
+			size_t count = numSamples / (numPixels / strataSizes[i]);
+			retval.push_back(count);
+			remainder -= count;
+		}
+
+		//redistribute remainder pixels equally among strata
+		size_t i = 0;
+		while (remainder > 0) {
+			retval[i] += 1;
+			remainder -= 1;
+			i++;
+		}
+	}
+	else if (allocation == "equal") { //TODO what if a strata doesn't have enough pixels???
+		//determine the count of samples per strata
+		size_t strataSampleCount = numStrata / stratSizes.size();
+		
+		for (size_t i = 0; i < strataSizes.size(); i++) {
+			if (strataSizes[i] < strataSampleCount) {
+				retval.push_back(strataSizes[i]);
+				std::cout << "warning: strata " << i << " does not have enough pixels for the full " << strataSampleCount << " samples it should recieve. There will be less than " << numSamples << " final samples." << std::endl;
+			}
+			else {
+				retval.push_back(strataSampleCount);
+			}
+
+		}
+	}
+	else if (allocation == "manual") { //TODO what if a strata doesn't have enough pixels???
+		if (strataSizes.size() != weights.size()) {
+			throw std::runtime_error("size of weights is not equal to the number of strata.");
+		}
+
+		//allocate samples accordign to weights.
+		remainder = numSamples;
+		for (size_t i = 0; i < strataSizes.size(); i++) {
+			size_t count = (size_t)((double)strataSizes[i] * weights[i]);
+			retval.push_back(count);
+			remainder -= count;
+		}
+
+		//redistribute remainder pixels equally among strata
+		size_t i = 0;
+		while (remainder > 0) {
+			retval[i] += 1;
+			remainder -= 1;
+			i++;
+		}
+
+		//ensure number of strata doesn't exceed maximum
+		for (size_t i = 0; i < retval.size(); i++) {
+			if (retval[i] > strataSizes[i]) {
+				std::cout << "warning: strata " << i << " does not have enough pixels for the full " << retval[i] << " samples it should recieve. There will be less than " << numSamples << " final samples." << std::endl;
+				retval[i] = strataSizes[i];
+			}
+		}
+	}
+	else { //allocaiton == "optim"
+		//TODO implement
+		throw std::runtime_error("'optim' has not been implemented!");
+	}	
+
+	return retval;
+}
+
+template <typename U>
+inline bool checkNan(U index, U& val, uint8_t *p_mask, float *p_strat, double noDataValue) {
+	bool isNan = p_mask && p_mask[index] == 0;
+	if (!isNan) {
+		val = p_strat[index];
+		isNan = std::isnan(val) || (double)val = noDataValue;
+	}
+	return isnan;
+}
+
+/**
  *
  */
 template <typename U>
@@ -24,6 +123,7 @@ std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_random(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
+	U numStrata,
 	std::string allocation,
 	std::vector<double> weights,
 	double mindist,
@@ -40,9 +140,8 @@ strat_random(
 	float *p_strat = p_raster->getBand(0);
 
 	//step 2: create stratum index storing vectors
-	//TODO require that users pass us number of stratum!
 	std::vector<std::vector<U>> stratumIndexes;
-	//stratumIndexes.resize() call resize with the max stratum as
+	stratumIndexes.resize(numStrata);
 
 	//step 3: get access mask if access is defined
 	GDALDataset *p_accessMaskDataset = nullptr;
@@ -79,17 +178,125 @@ strat_random(
 		free(p_accessMaskDataset);
 	}
 
+	U numDataPixels = (p_raster->getWidth() * p_raster->getHeight()) - noDataPixelCount;
+
 	//step 5: using the size of the stratum and allocation method,
 	//determine the number of samples to take from each stratum
-	
+	std::vector<U> strataSizes;
+	for (size_t i = 0; i < stratumIndexes.size(); i++) {
+		strataSizes.push_back(stratumIndexes[i].size());
+	}
 
-	//make a map and an unordered map in the same way that srs does
-	//
-	//generate random number generator
-	//
-	//add sample pixels
-	//
-	//calculate geotransform of sample pixels
+	std::vector<U> stratumCounts = calculateAllocation<U>(
+		numSamples,
+		allocation,
+		strataSizes,
+		weights,
+		numDataPixels
+	);
+	U maxSampleCount = *std::max_element(stratumCounts.begin(), stratumCounts.end());
+	
+	//Step 6: generate random number generator using mt19937	
+	std::mt19937 gen(time(nullptr));
+	std::vector<std::function<U(void)>> rngs;
+	for (size_t i = 0; i < stratumCounts.size(); i++) {
+		rngs.push_back(std::bind(
+			std::ref(std::uniform_int_distribution<U>(0, stratumCounts[i] - 1)),
+			std::ref(gen())
+		));
+	}
+
+	//step 7: determine pixel values to include as samples.
+	
+	//make a set of pixels to include as samples
+	std::unordered_set<U> samplePixels;
+
+	//make backup unordered set of pixels to use (if mindist causes others not to be included);
+	std::unordered_set<U> backupSamplePixels;
+
+	for (size_t i = 0; i < stratumCounts.size(); i++) {
+		size_t startSize = samplePixels.size();
+		while(samplePixels.size() < startSize + stratumCounts[i]) {
+			samplePixels.insert(stratumIndexes[i][rngs[i]()]);
+		}
+		if (mindist != 0.0) {
+			size_t startSize = backupSamplePixels.size();
+			//TODO what if there aren't enough pixels???
+			while(backupSamplePixelsSize() < startSize + (stratumCounts[i] * 2)) {
+				U pixel = stratumIndexes[i][rngs[i]()];
+				if (samplePixels.find(pixel) == samplePixels.end()) {
+					backupSamplePixels.insert(pixel);
+				}
+			}
+		}
+	}
+
+	//step 8: generate coordinate points for each sample index, and only add if they're outside of mindist
+	std::vector<double> xCoords;
+	std::vector<double> yCoords;
+	std::vector<OGRPoint> points;
+	std::Vector<std::string> wktPoints;
+
+	double *GT = p_raster->getGeotransform();
+	for (auto index : samplePixels) {
+		//TODO check if we can move this to a helper function...
+		double yIndex = index / p_raster->getWidth();
+		double xIndex = index - (yIndex * p_raster->getWidth());
+		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
+	
+		if (mindist != 0.0 && points.size() != 0) {
+			U pIndex = 0;
+			while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
+				pIndex++;
+			}
+			if (pIndex != (U)points.size()) {
+				continue;
+			}
+		}
+		points.push_back(newPoint);
+		wktPoints.push_back(newPoint.exportToWkt());
+		xCoords.push_back(xCoord);
+		yCoords.push_back(yCoord);
+	}
+	
+	if (mindist != 0.0 && points.size() < samplePixels.size()) {
+		for (auto index : backupSamplePixels) {
+			double yIndex = index / p_raster->getWidth();
+			double xIndex = index - (yIndex * p_raster->getWidth());
+			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
+
+			U pIndex = 0;
+			while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
+				pIndex++;
+			}
+
+			if (pIndex == points.size()) {
+				points.push_back(newPoint);
+				wktPoints.push_back(newPoint.exportToWkt());
+				xCoords.push_back(xCoord);
+				yCoords.push_back(yCoord);
+			}
+
+			if (points.size() == numSamples) { 
+				break;
+			}
+		}
+	}
+
+	if (filename != "") {
+		try {
+			writeSamplePoints(points, filename);
+		}
+		catch (const std::exception& e) {
+			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
+		}
+	}
+
+	return {{xCoords, yCoords}, wktPoints};
 }
 	
 /**
@@ -99,6 +306,7 @@ std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_queinnec(
 	GDALRasterWrapper,
 	size_t numSamples,
+	U numStrata,
 	int wrow,
 	int wcol,
 	std::string allocation,
@@ -110,7 +318,168 @@ strat_queinnec(
 	double buffOuter,
 	std::string fileName)
 {
+	//step 1: get raster band
+	if (p_raster->getRasterType() != GDTFloat32) {
+		throw std::runtime_error("raster band must be of type float32.");
+	}
+	float *p_strat = p_raster->getBand(0);
 
+	//step 2: create stratum index storing vectors
+	std::vector<std::vector<U>> queinnecStratumIndexes;
+	std::vector<std::vector<U>> stratumIndexes;
+	queinnecStratumIndexes.resize(numStrata);
+	stratumIndexes.resize(numStrata);
+
+	//step 3: get access mask if access is defined
+	GDALDataset *p_accessMaskDataset = nullptr;
+	void *p_mask = nullptr;
+	if (p_access) {
+		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
+		p_accessMaskDataset = maskInfo.first;
+		p_mask = maskInfo.second;
+	}	
+
+	int width = p_raster->getWidth();
+	int height = p_raster->getHeight();
+	int horizontalPad = (wrow / 2) + 1;
+	int verticalPad = (wcol / 2) + 1;
+	U focalWindowMatrixHeight = (wrow / 2) + 1;
+	U focalWindowMatrixWidth = width - wrow + 1;
+
+	std::vector<bool> focalWindowMatrix(true, focalWindowMatrixWidth * focalWindowMatrixHeight); //use std::vector
+	std::vector<bool> prevUpperSame(true, width);
+	bool prevLeftSame = true;
+
+	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
+	U noDataPixelCount = 0;
+	//upper section of strat raster
+	for (U y = 0; y < verticalPad; y++) {
+		U start = y * width;
+		
+		//upper left section of strat raster
+		for (x = 0; x < horizontalPad; x++) {
+			U index = start + x;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+			upperSame == !isNan && ((i == 0 || val == p_strata[index - width]);
+			leftSame == !isNan && ((j == 0) || val == p_strata[index - 1]);
+			
+			std::bitset<4> bitmask;
+			bitmask.set(0, prevLeftSame);
+			bitmask.set(1, prevUpperSame[x]);
+			bitmask.set(2, leftSame);
+			bitmask.set(3, upperSame);
+
+			switch(bitmask.to_ulong()) {
+				case 0:
+				case 1:
+				case 2:
+				case 3:
+
+				//!upperSame && !prevUpperSame
+				case 4:
+				case 5:
+
+					break;
+				
+				//!upperSame && prevUpperSame
+				case 6:
+				case 7:
+
+					break;
+
+				//!leftSame && !prevLeftSame
+				case 8:
+				case 10:
+				
+					break;
+
+				//!leftSame && prevLeftSame
+				case 9:
+				case 11:
+
+					break;
+
+				//leftSame && upperSame
+				case 12:
+				case 13:
+				case 14:
+				case 15:
+					break;
+				default:
+					throw std::runtime_error("bit mask value impossible, bug in code.");
+			}
+
+		}
+
+		//upper center section of strat raster
+		for (j = horizontalPad; j < width - horizontalPad; j++) {
+			U index = start + j;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		}
+
+		//upper right section of strat raster
+		for (j = width - horizontalPad; j < width; j++) {
+			U index = start + j;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		}
+	}
+
+	//mid layer of strat raster
+	for (U i = verticalPad; i < height - verticalPad; i++) {
+		U start = i * width;
+		
+		//middle left section of strat raster
+		for (j = 0; j < horizontalPad; j++) {
+			U index = start + j;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		}
+
+		//middle center section of strat raster
+		for (j = horizontalPad; j < width - horizontalPad; j++) {
+			U index = start + j;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		}
+
+		//middle right section of strat raster
+		for (j = width - horizontalPad; j < width; j++) {
+			U index = start + j;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		}
+	}
+
+	//bottom layer of strat raster
+	for (U i = height - verticalPad; i < height; i++) {
+		U start = i * width;
+		
+		//lower left section of strat raster
+		for (j = 0; j < horizontalPad; j++) {
+			U index = start + j;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		}
+
+		//lower center section of strat raster
+		for (j = horizontalPad; j < width - horizontalPad; j++) {
+			U index = start + j;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		}
+
+		//lower right section of strat raster
+		for (j = width - horizontalPad; j < width; j++) {
+			U index = start + j;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_index, noDataValue);
+		}
+	}
+
+	return {{}, ""};
 }
 
 /**
@@ -120,6 +489,7 @@ std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_cpp_access(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
+	size_t numStrata,
 	int wrow,
 	int wcol,
 	std::string allocation,
@@ -132,35 +502,18 @@ strat_cpp_access(
 	double buffOuter,
 	std::string filename)
 {
+	std::string minIndexIntType = p_raster->getMinIndexIntType(true); //single band
 	if (method == "random") {
-		return strat_random(
-			p_raster,
-			numSamples,
-			allocation,
-			weights,
-			mindist,
-			p_access,
-			layerName,
-			buffInner,
-			buffOuter,
-			filename
-		);
+		if (minIndexIntType == "unsigned_short") { return strat_random<unsigned short>(p_raster,numSamples,numStrata,allocation,weights,mindist,p_access,layerName,buffInner,buffOuter,filename); }
+		if (minIndexIntType == "unsigned") { return strat_random<unsigned>(p_raster,numSamples,numStrata,allocation,weights,mindist,p_access,layerName,buffInner,buffOuter,filename); }
+		if (minIndexIntType == "unsigned_long") { return strat_random<unsigned long>(p_raster,numSamples,numStrata,allocation,weights,mindist,p_access,layerName,buffInner,buffOuter,filename); }
+		if (minIndexIntType == "unsigned_long_long") { return strat_random<unsigned long long>(p_raster,numSamples,numStrata,allocation,weights,mindist,p_access,layerName,buffInner,buffOuter,filename); }
 	}
 	else { //method == "Queinnec"
-		return strat_queinnec(
-			p_raster,
-			numSamples,
-			wrow,
-			wcol,
-			allocation,
-			weights,
-			mindist,
-			p_access,
-			layerName,
-			buffInner,
-			buffOuter,
-			filename
-		);
+		if (minIndexIntType == "unsigned_short") { return strat_queinnec<unsigned short>(p_raster,numSamples,numStrata,wrow,wcol,allocation,weights,mindist,p_access,layerName,buffInner,buffOuter,filename); }
+		if (minIndexIntType == "unsigned") { return strat_queinnec<unsigned>(p_raster,numSamples,numStrata,wrow,wcol,allocation,weights,mindist,p_access,layerName,buffInner,buffOuter,filename); }
+		if (minIndexIntType == "unsigned_long") { return strat_queinnec<unsigned long>(p_raster,numSamples,numStrata,wrow,wcol,allocation,weights,mindist,p_access,layerName,buffInner,buffOuter,filename); }
+		if (minIndexIntType == "unsigned_long_long") { return strat_queinnec<unsigned long long>(p_raster,numSamples,numStrata,wrow,wcol,allocation,weights,mindist,p_access,layerName,buffInner,buffOuter,filename); }
 	}
 }
 
@@ -171,6 +524,7 @@ std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_cpp(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
+	size_t numStrata,
 	int wrow,
 	int wcol,
 	std::string allocation,
@@ -179,35 +533,18 @@ strat_cpp(
 	double mindist,
 	std::string filename)
 {
+	std::string minIndexIntType = p_raster->getMinIndexIntType(true); //single band
 	if (method == "random") {
-		return strat_random(
-			p_raster,
-			numSamples,
-			allocation,
-			weights,
-			mindist,
-			nullptr,
-			"",
-			0,
-			0,
-			filename
-		);
+		if (minIndexIntType == "unsigned_short") { return strat_random<unsigned short>(p_raster,numSamples,numStrata,allocation,weights,mindist,nullptr,"",0,0,filename); }
+		if (minIndexIntType == "unsigned") { return strat_random<unsigned>(p_raster,numSamples,numStrata,allocation,weights,mindist,nullptr,"",0,0,filename); }
+		if (minIndexIntType == "unsigned_long") { return strat_random<unsigned long>(p_raster,numSamples,numStrata,allocation,weights,mindist,nullptr,"",0,0,filename); }
+		if (minIndexIntType == "unsigned_long_long") { return strat_random<unsigned long long>(p_raster,numSamples,numStrata,allocation,weights,mindist,nullptr,"",0,0,filename); }
 	}
 	else { //method == "Queinnec"
-		return strat_queinnec(
-			p_raster,
-			numSamples,
-			wrow,
-			wcol,
-			allocation,
-			weights,
-			mindist,
-			nullptr,
-			"",
-			0,
-			0,
-			filename
-		);
+		if (minIndexIntType == "unsigned_short") { return strat_queinnec<unsigned short>(p_raster,numSamples,numStrata,wrow,wcol,allocation,weights,mindist,nullptr,"",0,0,filename); }
+		if (minIndexIntType == "unsigned") { return strat_queinnec<unsigned >(p_raster,numSamples,numStrata,wrow,wcol,allocation,weights,mindist,nullptr,"",0,0,filename); }
+		if (minIndexIntType == "unsigned_long") { return strat_queinnec<unsigned long>(p_raster,numSamples,numStrata,wrow,wcol,allocation,weights,mindist,nullptr,"",0,0,filename); }
+		if (minIndexIntType == "unsigned_long_long") { return strat_queinnec<unsigned long long>(p_raster,numSamples,numStrata,wrow,wcol,allocation,weights,mindist,nullptr,"",0,0,filename); }
 	}
 
 }
