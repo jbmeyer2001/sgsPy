@@ -319,7 +319,132 @@ strat_queinnec(
 	double buffOuter,
 	std::string fileName)
 {
-	//add later	
+	//step 1: get raster band
+	if (p_raster->getRasterType() != GDTFloat32) {
+		throw std::runtime_error("raster band must be of type float32.");
+	}
+	float *p_strat = p_raster->getBand(0);
+
+	//step 2: create stratum index storing vectors
+	std::vector<std::vector<U>> queinnecStratumIndexes;
+	std::vector<std::vector<U>> stratumIndexes;
+	queinnecStratumIndexes.resize(numStrata);
+	randomStratumIndexes.resize(numStrata);
+
+	//step 3: get access mask if access is defined
+	GDALDataset *p_accessMaskDataset = nullptr;
+	void *p_mask = nullptr;
+	if (p_access) {
+		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
+		p_accessMaskDataset = maskInfo.first;
+		p_mask = maskInfo.second;
+	}	
+
+	int width = p_raster->getWidth();
+	int height = p_raster->getHeight();
+	int horizontalPad = (wcol / 2);
+	int verticalPad = (wrow / 2);
+	U fwMatrixHeight = wrow;
+	U fwMatrixWidth = width - wcol + 1;
+
+	std::vector<bool> focalWindowMatrix(true, fwMatrixWidth * fwMatrixHeight);
+	std::vector<bool> prevVertSame(true, width);
+	bool prevHoriSame = true;
+
+	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
+	U noDataPixelCount = 0;
+
+	bool addSelf;
+	bool addUpperLeftCornerPixel;
+
+	U fwUpperLeftX;
+	U fwUpperLeftY = 0 - verticalPad * 2;
+
+	U fwMatrixXStart;
+	U fwMatrixXEnd;
+	U fwMatrixYStart;
+	U fwMatrixYEnd = 0;
+		
+	for (U y = 0; y < height; y++) {
+		addSelf = y < verticalPad || y > height - 1 - verticalPad;
+		addUpperLeftCornerPixel = y >= verticalPad * 2;
+		
+		//fwUpperLeftY and fwMatrixYEnd already calculated/set elsewhere
+		fwMatrixYStart = std::max(fwUpperLeftY + 1, 0);
+		if (fwMatrixYStart == fwMatrixHeight) {
+			fwMatrixYStart = 0;
+		}
+
+		for (x = 0; x < width; x++) {
+			addSelf |= x < horizontalPad || x > width - 1 - horizontalPad;
+			addUpperLeftCornerPixel &= x >= horizontalPad * 2;
+
+			fwUpperLeftX = x - horizontalPad * 2;
+			fwMatrixXEnd = std::min(x, fwMatrixWidth - 1);
+			fwMatrixXStart = std::max(0, fwUpperLeft + 1);
+
+			U index = y * width + x;
+			U val;
+			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
+		
+			if (addSelf && !isNan) {
+				randomStratumIndexes[(size_t)val].push_back(index);			
+			}
+
+			if (addUpperLeftCornerPixel) {
+				U upperLeftIndex = (y - verticalPad) * width + (x - horizontalPad);
+				U upperLeftfwIndex = fwUpperLeftY * fwMatrixWidth + fwUpperLeftX;
+				U upperLeftVal;
+				bool upperLeftIsNan = checkNan(upperLeftIndex, &upperLeftVal, p_mask, p_strata, noDataValue);
+
+				//if the corrosponding value in the focal window matrix is true, it means
+				//that every surrounding pixel is the same, so the pixel should be added
+				//to the queinnec group of pixels, otherwise add to the random group of pixels
+				if (focalWindowMatrix[upperLeftfwIndex] && !upperLeftIsNan) {
+					queinnecStratumIndexes[(size_t)upperLeftVal].push_back(upperLeftIndex);
+				}
+				else if (!upperLeftIsNan) {
+					randomStratumIndexes[(size_t)upperLeftVal].push_back(upperLeftIndex);
+				}
+			}
+
+			nextVertSame == !isNan && ((y == height - 1) || val == p_strata[index + width]);
+			nextHoriSame == !isNan && ((x == width - 1) || val == p_strata[index + 1]);
+			
+			//add special case for if previous vertical and horizontal were the same
+			//but next vertical and horizontal were different, to avoid rewriting
+			//focal window matrix pixels.
+			if (prevVertSame[x] && prevHoriSame && !nextVertSame && !nextHoriSame) {
+				//TODO add
+				prevVertSame = false;
+				prevHoriSame = false;
+				continue;
+			}
+
+			//conceptually split the affected pixels in the focal window matrix into
+			//pixels which need to be updated if:
+			//
+			//either !nextHoriSame OR !nextVertSame
+			//!nextHoriSame
+			//!nextVertSame
+			//
+
+			prevVertSame[x] = nextVertSame;
+			prevHoriSame = nextHoriSame;
+		}
+
+		//TODO set required values in focal window matrix to true
+		fwUpperLeftY++;
+		if (fwUpperLeftY == fwMatrixHeight) {
+			fwUpperLeftY -= 0;
+		}
+
+		fwMatrixYEnd++;
+		if (fwMatrixYEnd == fwMatrixHeight) {
+			fwMatrixYEnd++;
+		}
+	}
+			
 	return {{{0.0}, {0.0}}, {""}};
 }
 
