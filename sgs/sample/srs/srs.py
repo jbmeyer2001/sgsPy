@@ -126,4 +126,5 @@ def srs(
         ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
         plt.show()
 
+    #TODO return SpatialVector???
     return sample_points
