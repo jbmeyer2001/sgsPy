@@ -345,7 +345,7 @@ strat_queinnec(
 	int horizontalPad = (wcol / 2);
 	int verticalPad = (wrow / 2);
 	U fwMatrixHeight = wrow;
-	U fwMatrixWidth = width - wcol + 1;
+	U fwMatrixWidth = width - wcol;
 
 	std::vector<bool> focalWindowMatrix(true, fwMatrixWidth * fwMatrixHeight);
 	std::vector<bool> prevVertSame(true, width);
@@ -380,7 +380,6 @@ strat_queinnec(
 			addUpperLeftCornerPixel &= x >= horizontalPad * 2;
 
 			fwUpperLeftX = x - horizontalPad * 2;
-			fwMatrixXEnd = std::min(x, fwMatrixWidth - 1);
 			fwMatrixXStart = std::max(0, fwUpperLeft + 1);
 
 			U index = y * width + x;
@@ -411,23 +410,49 @@ strat_queinnec(
 			nextVertSame == !isNan && ((y == height - 1) || val == p_strata[index + width]);
 			nextHoriSame == !isNan && ((x == width - 1) || val == p_strata[index + 1]);
 			
-			//add special case for if previous vertical and horizontal were the same
-			//but next vertical and horizontal were different, to avoid rewriting
-			//focal window matrix pixels.
-			if (prevVertSame[x] && prevHoriSame && !nextVertSame && !nextHoriSame) {
-				//TODO add
-				prevVertSame = false;
-				prevHoriSame = false;
-				continue;
+			if (!nextHoriSame && x <= fwMatrixWidth - 1) {
+				for (U fwIndex = x; fwIndex < fwMatrixWidth * fwMatrixHeight; fwIndex += fwMatrixWidth) {
+					focalWindowMatrix[fwIndex] = false;
+				}
 			}
 
-			//conceptually split the affected pixels in the focal window matrix into
-			//pixels which need to be updated if:
-			//
-			//either !nextHoriSame OR !nextVertSame
-			//!nextHoriSame
-			//!nextVertSame
-			//
+			if (!nextVertSame && y <= height - wrow - 1) {
+				U startIndex = fwMatrixYEnd * fwMatrixWidth + std::max(fwMatrixXStart - 1, 0);
+				U lastIndex = fwMatrixYEnd * fwMatrixWidth + std::min(fwMatrixWidth - 1, x);
+				for (U fwIndex = startIndex; fwIndex <= lastIndex; fwIndex++) {
+					focalWindowMatrix[fwIndex] = false;
+				}
+			}
+
+			//TODO: could be some problems here if wrow or wcol == 1 or are even... need to check
+			if (prevHoriSame && prevVertSame) {
+				if (!nextHoriSame) {
+					U fwYIndex = fwMatrixYStart != 0 ? fwMatrixYStart - 1 : fwMatrixHeight - 1;
+					U startIndex = (fwYIndex) * fwMatrixWidth + fwMatrixXStart;
+					U lastIndex = (fwYIndex) * fwMatrixWidth + std::min(fwMatrixWidth - 1, x - 1);
+					for (U fwIndex = startIndex; fwIndex <= lastIndex; fwIndex++) {
+						focalWindowMatrix[fwIndex] = false;
+					}
+				}
+				if (!nextVertSame && fwMatrixXStart != 0) {
+					U fwIndex = fwMatrixYStart * fwMatrixWidth + fwMatrixXStart - 1;
+					for (U i = 0; i < wrow - 2; i++) {
+						focalWIndowMatrix[fwIndex] = false;
+						fwIndex += fwMatrixWidth;
+						if (fwIndex >= fwMatrixWidth * fwMatrixHeight) {
+							fwIndex -= fwMatrixWidth * fwMatrixHeight;
+						}
+					}
+				}
+
+				if (!nextHoriSame || !nextVertSame) {
+					for() {
+						for() {
+
+						}
+					}
+				}
+			}
 
 			prevVertSame[x] = nextVertSame;
 			prevHoriSame = nextHoriSame;
@@ -436,7 +461,7 @@ strat_queinnec(
 		//TODO set required values in focal window matrix to true
 		fwUpperLeftY++;
 		if (fwUpperLeftY == fwMatrixHeight) {
-			fwUpperLeftY -= 0;
+			fwUpperLeftY = 0;
 		}
 
 		fwMatrixYEnd++;
