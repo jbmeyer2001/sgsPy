@@ -10,3 +10,19 @@ samples = sgs.sample.systematic(
     'centers',
     False
 )
+
+samples = sgs.sample.systematic(
+    rast,
+    500,
+    'hexagon',
+    'centers',
+    False
+)
+
+samples = sgs.sample.systematic(
+    rast,
+    500,
+    'triangle',
+    'centers',
+    False
+)

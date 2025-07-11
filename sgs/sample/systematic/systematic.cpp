@@ -31,6 +31,8 @@ systematic(
 	bool plot,
 	std::string filename)
 {
+
+	
 	//Step 1: formulate sql query
 	//calculate extent polygon
 	double xMin, xMax, yMin, yMax;
@@ -38,6 +40,20 @@ systematic(
 	xMax = p_raster->getXMax();
 	yMin = p_raster->getYMin();
 	yMax = p_raster->getYMax();
+	
+	//determine grid creation function
+	std::string gridFunction;
+	if (shape == "square") {
+		gridFunction = "ST_SquareGrid";
+	}
+	else if (shape == "hexagon") {
+		gridFunction = "ST_HexagonalGrid";
+	}
+	else { //shape == "triangle"
+		gridFunction = "ST_TriangularGrid";
+	}
+
+	//create sql query using extent polygon and grid function
 	std::string extentPolygon = "'POLYGON (( " 
 		+ std::to_string(xMin) + " " + std::to_string(yMin) + ", "
 		+ std::to_string(xMin) + " " + std::to_string(yMax) + ", "
@@ -45,7 +61,7 @@ systematic(
 		+ std::to_string(xMax) + " " + std::to_string(yMin) + ", "
 		+ std::to_string(xMin) + " " + std::to_string(yMin) + " ))'";
 
-	std::string queryString = "SELECT ST_SquareGrid(ST_GeomFromText("
+	std::string queryString = "SELECT " + gridFunction + "(ST_GeomFromText("
 		+ extentPolygon
 		+ "), " + std::to_string(cellSize) + ")";
 
