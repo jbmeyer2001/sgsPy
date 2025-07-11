@@ -25,14 +25,13 @@ std::tuple<
 >
 systematic(
 	GDALRasterWrapper *p_raster,
-	double cellsize,
+	double cellSize,
 	std::string shape,
 	std::string location,
 	bool plot,
 	std::string filename)
 {
 	//Step 1: formulate sql query
-	double size = 200; //use cellsize for real query
 	//calculate extent polygon
 	double xMin, xMax, yMin, yMax;
 	xMin = p_raster->getXMin();
@@ -46,22 +45,35 @@ systematic(
 		+ std::to_string(xMax) + " " + std::to_string(yMin) + ", "
 		+ std::to_string(xMin) + " " + std::to_string(yMin) + " ))'";
 
-	std::string queryString = "SELECT ST_SquareGrid(ST_GeomFromTest("
+	std::string queryString = "SELECT ST_SquareGrid(ST_GeomFromText("
 		+ extentPolygon
-		+ "), " + std::to_string(size) + ")";
+		+ "), " + std::to_string(cellSize) + ")";
 
 	std::cout << "query string: " << std::endl;
-	std::cout << queryString << std::endl;
-
+	std::cout << queryString << std::endl << std::endl;
 	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");
-
-	std::cout << "HERE!" << std::endl;
 	std::cout << p_gridTest << std::endl;
-	
-	// SELECT ST_HexagonalGrid(ST_GeomFromText(), 1)	
+	std::cout << "HERE!" << std::ends;
+
+	std::vector<std::vector<std::vector<double>>> grid;
+	for (const auto& p_feature : *p_gridTest) {
+		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		std::cout << p_geometry->getGeometryName() << std::endl;
+		for (const auto& p_polygon : *p_geometry->toMultiPolygon()) {
+			for (const auto& p_linearRing : *p_polygon) {
+				std::vector<double> xCoords;
+				std::vector<double> yCoords;
+				for (const auto& p_point : *p_linearRing) {
+					xCoords.push_back(p_point.getX());
+					yCoords.push_back(p_point.getY());
+				}
+				grid.push_back({xCoords, yCoords});
+			}
+		}
+	}
 
 	//step 2: use query to generate points
-	return {{""},{{0.0}},{{{0.0}}}};
+	return {{""},{{0.0}},grid};
 }
 
 PYBIND11_MODULE(systematic, m) {

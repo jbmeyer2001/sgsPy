@@ -17,14 +17,14 @@ from sgs.utils import (
     plot,
 )
 
-from systematic import systematic_cpp, systematic_cpp_access
+from systematic import systematic_cpp
 
 def systematic(
     rast: SpatialRaster,
     cellsize: float,
     shape: str = "square",
     location: str = "centers",
-    plot: bool = false,
+    plot: bool = False,
     filename: str = ""):
     """
 
@@ -37,7 +37,7 @@ def systematic(
         raise RuntimeError("location parameter must be one of 'centers', 'corners', 'random'")
 
     [samples, points, grid] = systematic_cpp(
-        rast.cpp_rast,
+        rast.cpp_raster,
         cellsize,
         shape,
         location,
@@ -45,7 +45,14 @@ def systematic(
         filename
     )
 
+    #TODO delete this, it's for testing purposes
+    fig, ax = plt.subplots()
+    for shape in grid:
+        ax.plot(shape[0], shape[1])
+    plt.show()
+
     if plot:
+        pass
         # plot points, grid on top of raster
         
 
