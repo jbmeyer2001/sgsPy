@@ -30,11 +30,14 @@ def systematic(
 
     """
     
+    if cellsize <= 0:
+        raise ValueError("cellsize must be greater than 0")
+
     if shape not in ["square", "hexagon", "triangle"]:
-        raise RuntimeError("shape parameter must be one of 'square', 'hexagon', 'triangle'")
+        raise ValueError("shape parameter must be one of 'square', 'hexagon', 'triangle'")
 
     if location not in ["centers", "corners", "random"]:
-        raise RuntimeError("location parameter must be one of 'centers', 'corners', 'random'")
+        raise ValueError("location parameter must be one of 'centers', 'corners', 'random'")
 
     [samples, points, grid] = systematic_cpp(
         rast.cpp_raster,

@@ -8,9 +8,9 @@
  *
  ******************************************************************************/
 
+#include <iostream>
 #include <random>
 
-#include "access.h"
 #include "raster.h"
 #include "vector.h"
 #include "write.h"
@@ -80,6 +80,9 @@ systematic(
 	//query to create grid
 	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");
 
+	//OGRPoints to be written, if filename is set
+	std::vector<OGRPoint> points;
+
 	//wktPoints represents the samples as well known text, and is returned to the (Python) caller
 	std::vector<std::string> wktPoints;	
 
@@ -122,12 +125,15 @@ systematic(
 			double x = point.getX();
 			double y = point.getY();
 
-			//only add (and potentially plot) a point if it is within the grid polygon
+			//only add (and potentially plot/write) a point if it is within the grid polygon
 			if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
 				wktPoints.push_back(point.exportToWkt());
 				if (plot) {
 					xCoords.push_back(x);
 					yCoords.push_back(y);
+				}
+				if (filename != "") {
+					points.push_back(point);
 				}
 			}
 
@@ -145,6 +151,15 @@ systematic(
 			}
 		}
 	}
+
+	if (filename != "") {
+		try {
+			writeSamplePoints(points, filename);
+		}
+		catch (const std::exception& e) {
+			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
+		}
+	}	
 
 	return {wktPoints, {xCoords, yCoords}, grid};
 }
