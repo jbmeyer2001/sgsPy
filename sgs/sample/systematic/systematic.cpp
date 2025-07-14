@@ -8,7 +8,6 @@
  *
  ******************************************************************************/
 
-#include <iostream> //TODO remove
 #include <random>
 
 #include "access.h"
@@ -119,24 +118,21 @@ systematic(
 					point.setY(yMinEnv + rng() / (rngMax / yDiffEnv));
 				}
 			}
+
 			double x = point.getX();
 			double y = point.getY();
 
-			//if point is not within raster extent, don't add it
-			//TODO don't necessarily just continue here, because we may have to add grid to print
-			if (x < xMin || x > xMax || y < yMin || y > yMax) {
-				continue;
+			//only add (and potentially plot) a point if it is within the grid polygon
+			if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
+				wktPoints.push_back(point.exportToWkt());
+				if (plot) {
+					xCoords.push_back(x);
+					yCoords.push_back(y);
+				}
 			}
 
-			wktPoints.push_back(point.exportToWkt());
-
-			//if we're plotting, add point to coordinate vectors and plottable vectors to 'grid'
+			//set grid vector to be plot
 			if (plot) {
-				//for point plotting
-				xCoords.push_back(x);
-				yCoords.push_back(y);
-
-				//for grid plotting
 				grid.push_back({}); //add new polygon to grid
 				grid.back().push_back({}); //add new x vector to polygon grid
 				grid.back().push_back({}); //add new y vector to polygon grid

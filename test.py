@@ -12,4 +12,5 @@ for location in ['centers', 'corners', 'random']:
             location,
             plot=True
         )
+        print(samples)
 

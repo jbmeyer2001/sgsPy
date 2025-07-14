@@ -46,8 +46,9 @@ def systematic(
     )
 
     if plot:
-        #TODO set axis limits, and make grid all same color
         fig, ax = plt.subplots()
+        ax.set_xlim([rast.xmin, rast.xmax])
+        ax.set_ylim([rast.ymin, rast.ymax])
 
         #TODO let user know which band is being printed
         #plot raster
@@ -55,8 +56,10 @@ def systematic(
         
         #plot grid
         for shape in grid:
-            ax.plot(shape[0], shape[1])
+            ax.plot(shape[0], shape[1], '-k')
 
-        #plot sapmle points
+        #plot sample points
         ax.plot(points[0], points[1], '.r')
         plt.show()
+
+    return samples
