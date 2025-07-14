@@ -44,14 +44,15 @@ systematic(
 	//TODO generate random corner (origin) for the grid
 	double xDiff = xMax - xMin;
 	double yDiff = yMax - yMin;
+	double rngMax = yDiff * xDiff;
 	std::mt19937::result_type seed = time(nullptr);
 	auto rng = std::bind(
-		std::uniform_real_distribution<double>(0, yDiff * xDiff),
+		std::uniform_real_distribution<double>(0, rngMax),
 		std::mt19937(seed)
 	);
 
-	double yCoord = rng() % (yDiff);
-	double xCoord = rng() % (xDiff);
+	double yCoord = rng() / xDiff; //divide by xDiff because the result will then be between 0 and yDiff
+	double xCoord = rng() / yDiff; //divide by yDiff becausethe result will then be between 0 and xDiff
 
 	//determine grid creation function
 	std::string gridFunction;
@@ -66,7 +67,7 @@ systematic(
 	}
 
 	//create sql query using extent polygon and grid function
-	std::string extentPolygon = "SELECT 'POLYGON (( " 
+	std::string extentPolygon = "'POLYGON (( " 
 		+ std::to_string(xMin) + " " + std::to_string(yMin) + ", "
 		+ std::to_string(xMin) + " " + std::to_string(yMax) + ", "
 		+ std::to_string(xMax) + " " + std::to_string(yMax) + ", "
@@ -75,8 +76,7 @@ systematic(
 
 	std::string queryString = "SELECT " + gridFunction + "(ST_GeomFromText("
 		+ extentPolygon
-		+ "), " + std::to_string(cellSize) + 
-		", ST_GeomFromText(" + std::to_string(xCoord) + ", " + std::to_string(yCoord) + "))";
+		+ "), " + std::to_string(cellSize) + ")"; 
 
 	//query to create grid
 	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");
@@ -93,48 +93,58 @@ systematic(
 	//iterate through the polygons in the grid and populate the ruturn data depending on user inputs
 	for (const auto& p_feature : *p_gridTest) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
-		std::cout << p_geometry->getGeometryName() << std::endl;
 		for (const auto& p_polygon : *p_geometry->toMultiPolygon()) {
 			//generate sample depending on 'location' parameter
 			OGRPoint point;
-			if (location == "center") {
-				p_polygon->(&point);
+			if (location == "centers") {
+				p_polygon->Centroid(&point);
 			}
-			else if (location == "corner") {
-				point = p_polygon->begin()->begin();
+			else if (location == "corners") {
+				(*p_polygon->begin())->StartPoint(&point);
 			}
 			else { //location == "random"
-				OGREnvelope3D *p_envelope;
-				p_polygon->getEnvelope(p_envelope);
-				double xMin = p_envelope->MinX;
-				double xMax = p_envelope->MaxX;
-				double xDiff = xMax - xMin;
-				double yMin = p_envelope->MinY;
-				double yMax = p_envelope->MaxY;
-				yDiff = yMax - yMin;
+				OGREnvelope envelope;
+				p_polygon->getEnvelope(&envelope);
+				double xMinEnv = envelope.MinX;
+				double xMaxEnv = envelope.MaxX;
+				double xDiffEnv = xMaxEnv - xMinEnv;
+				double yMinEnv = envelope.MinY;
+				double yMaxEnv = envelope.MaxY;
+				double yDiffEnv = yMaxEnv - yMinEnv;
 
-				point.setX(xMin + rng() % xDiff);
-				point.setY(yMin + rng() % yDiff);
-				while (!p_polygon->Contains(point)) {
-					point.setX(xMin + rng() % xDiff);
-					point.setY(yMin + rng() % yDiff);
+				point.setX(xMinEnv + rng() / (rngMax / xDiffEnv));
+				point.setY(yMinEnv + rng() / (rngMax / yDiffEnv));
+				while (!p_polygon->Contains(&point)) {
+					point.setX(xMinEnv + rng() / (rngMax / xDiffEnv));
+					point.setY(yMinEnv + rng() / (rngMax / yDiffEnv));
 				}
+			}
+			double x = point.getX();
+			double y = point.getY();
+
+			//if point is not within raster extent, don't add it
+			//TODO don't necessarily just continue here, because we may have to add grid to print
+			if (x < xMin || x > xMax || y < yMin || y > yMax) {
+				continue;
 			}
 
 			wktPoints.push_back(point.exportToWkt());
 
 			//if we're plotting, add point to coordinate vectors and plottable vectors to 'grid'
 			if (plot) {
-				xCoords.push_back(point.getX());
-				yCoords.push_back(point.getY());
+				//for point plotting
+				xCoords.push_back(x);
+				yCoords.push_back(y);
+
+				//for grid plotting
+				grid.push_back({}); //add new polygon to grid
+				grid.back().push_back({}); //add new x vector to polygon grid
+				grid.back().push_back({}); //add new y vector to polygon grid
 				for (const auto& p_linearRing : *p_polygon) {
-					std::vector<double> xCoords;
-					std::vector<double> yCoords;
 					for (const auto& p_point : *p_linearRing) {
-						xCoords.push_back(p_point.getX());
-						yCoords.push_back(p_point.getY());
+						grid.back()[0].push_back(p_point.getX());
+						grid.back()[1].push_back(p_point.getY());
 					}
-					grid.push_back({xCoords, yCoords});
 				}
 			}
 		}

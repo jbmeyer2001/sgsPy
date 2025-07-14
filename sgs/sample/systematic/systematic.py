@@ -45,14 +45,18 @@ def systematic(
         filename
     )
 
-    #TODO delete this, it's for testing purposes
-    fig, ax = plt.subplots()
-    for shape in grid:
-        ax.plot(shape[0], shape[1])
-    plt.show()
-
     if plot:
-        pass
-        # plot points, grid on top of raster
-        
+        #TODO set axis limits, and make grid all same color
+        fig, ax = plt.subplots()
 
+        #TODO let user know which band is being printed
+        #plot raster
+        rast.plot(ax, band=rast.bands[0])
+        
+        #plot grid
+        for shape in grid:
+            ax.plot(shape[0], shape[1])
+
+        #plot sapmle points
+        ax.plot(points[0], points[1], '.r')
+        plt.show()
