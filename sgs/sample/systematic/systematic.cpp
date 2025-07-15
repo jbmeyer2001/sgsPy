@@ -16,7 +16,37 @@
 #include "write.h"
 
 /*
+ * This function conducts Systematic sampling on an input raster image.
  *
+ * First, the extent polygon of the raster is determined, then a random
+ * point is found within the polygon to act as the origin. An SQL query
+ * is conducted using one of the ST_SquareGrid, ST_HexagonalGrid,
+ * ST_TriangularGrid spatialite functions to create a grid of polygons
+ * of the user-specified shape. The grid is then rotated by a randomly
+ * generated rotation angle.
+ *
+ * Next, the resulting grid polygons are iterated through, and a sample
+ * point is determined for each polygon depending on the user-defined
+ * location parameter (centers, corners, or random). Plot-required data
+ * is saved if plot is true (to later be utilized by the Python side
+ * of the application with matplotlib). Additionally, a vector of 
+ * points may be generated and used to write if the user specified a
+ * valid filename.
+ *
+ * @param GDALRasterWrapper *p_raster raster to be systematically sampled
+ * @param double cellSize the size of the grid cell shapes
+ * @param std::string shape the shape of the grid cells
+ * @param std::string location the location within a cell to sample
+ * @param bool plot whether to save and return plot-required data
+ * @param std::string filename to write to or "" if not to write
+ * @returns std::tuple<
+ * 		std::vector<std::string>,
+ * 		std::vector<std::vector<double>>,
+ * 		std::vector<std::vector<std::vector<double>>>
+ * 	>
+ * 	the vector of strings is a wkt strings of the sample points,
+ * 	the 2d vector of doubles contains sample points to plot
+ * 	the 3d vector of doubles contains grid cells to plot
  */
 std::tuple<
 	std::vector<std::string>, //wkt samples
@@ -32,15 +62,14 @@ systematic(
 	std::string filename)
 {
 	
-	//Step 1: formulate sql query
-	//calculate extent polygon
+	//determine raster extent
 	double xMin, xMax, yMin, yMax;
 	xMin = p_raster->getXMin();
 	xMax = p_raster->getXMax();
 	yMin = p_raster->getYMin();
 	yMax = p_raster->getYMax();
 	
-	//TODO generate random corner (origin) for the grid
+	//generate random number generator
 	double xDiff = xMax - xMin;
 	double yDiff = yMax - yMin;
 	double rngMax = yDiff * xDiff;
@@ -50,8 +79,12 @@ systematic(
 		std::mt19937(seed)
 	);
 
+	//determine random origin location within extent polygon
 	double yCoord = rng() / xDiff; //divide by xDiff because the result will then be between 0 and yDiff
 	double xCoord = rng() / yDiff; //divide by yDiff becausethe result will then be between 0 and xDiff
+
+	//determine random rotation angle within extent polygon
+	double rotation = rng() / (rngMax / 180);
 
 	//determine grid creation function
 	std::string gridFunction;
@@ -73,9 +106,10 @@ systematic(
 		+ std::to_string(xMax) + " " + std::to_string(yMin) + ", "
 		+ std::to_string(xMin) + " " + std::to_string(yMin) + " ))'";
 
-	std::string queryString = "SELECT " + gridFunction + "(ST_GeomFromText("
+	std::string queryString = "SELECT RotateCoords(" + gridFunction + "(ST_GeomFromText("
 		+ extentPolygon
-		+ "), " + std::to_string(cellSize) + ")"; 
+		+ "), " + std::to_string(cellSize) + "), "
+		+ std::to_string(rotation) + ")"; 
 
 	//query to create grid
 	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");

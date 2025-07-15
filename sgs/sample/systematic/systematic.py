@@ -27,7 +27,34 @@ def systematic(
     plot: bool = False,
     filename: str = ""):
     """
+    This function conducts error-checking on user input parameters
+    for systematic sampling, then calls a c++ function to conduct
+    the sampling. The return values are plotted using matplotlib
+    depending on the 'plot' parameter.
 
+    Parameters
+    --------------------
+    rast : SpatialRaster
+        the raster to be sampled
+    cellsize : float
+        the size of the grid cells to be sampled
+    shape : str
+        the shape of the grid cells to be sampled
+    location : str
+        the location within the grid cell to be sampled
+    plot : bool
+        whether or not to plot the resulting samples
+    filename : str
+        the filename to write to or "" if not to write
+
+    Raises
+    --------------------
+    ValueError
+        if cellsize is less than or equal to 0
+    ValueError
+        if 'shape' parameter is not one of 'square', 'hexagon', or 'triangle'
+    ValueError
+        if 'location' parameter is not on e of 'centers', 'corners', 'random'
     """
     
     if cellsize <= 0:
