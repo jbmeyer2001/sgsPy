@@ -204,12 +204,14 @@ strat_random(
 	//make a set of pixels to include as samples
 	std::vector<std::unordered_set<U>> sampleIndexes;
 	std::vector<std::unordered_set<U>::iterator> sampleIterators;
+	std::vector<U> samplesAdded;
 	std::vector<U> strataNum;
 
 	std::mt19939::result_type seed = time(nullptr);
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
-		strataNum.push_back[i];
 		sampleIndexes.push_back({});
+		samples_added.push_back(0);
+		strataNum.push_back(i);
 
 		auto rng = std::bind(
 			std::uniform_int_distribution<U>(0, stratumIndexes[i].size() - 1),
@@ -498,38 +500,7 @@ strat_queinnec(
 		numDataPixels
 	);
 
-	//step 9: generate random number generator for queinnec pixels
-	std::vector<std::function<U(void)>> rngs;
-	for (size_t i = 0; i < stratumCounts.size(); i++) {
-		std::mt19937::result_type seed = time(nullptr);
-		rngs.push_back(std::bind(
-			std::uniform_int_distribution<U>(0, queinnecStratumIndexes[i].size() - 1),
-			std::mt19937(seed)
-		));
-
-	}
-
-	//step 10: generate coordinate points for each queinnec sample pixel
-	std::unordered_set<U> samplePixels;
-	std::unordered_set<U> backupSamplePixels;
-	for (size_t i = 0; i < stratumCounts.size(); i++) {
-		size_t startSize = samplePixels.size();
-		//TODO may be more efficient to insert all and remove later pixels, if the number of samples
-		//is close to the number of pixels in the strata.
-		while (samplePixels.size() < startSize + std::min(stratumCounts[i], queinnecStratumIndexes[i].size())) {
-			samplePixels.insert(queinnecStratumIndexes[i](rngs[i]());
-		}
-		if (mindist != 0.0) {
-			startSize = backupSamplePixels.size();
-			//TODO what if we run out of pixels???
-			while (backupSamplePixels.size() < startSize + std::min(stratumCounts[i] * 2, queinnecStratumIndexes[i].size()) {
-				U pixel = queinnecStratumIndexes[i][rngs[i]()];
-				if (samplePixel.find(pixel) == samplePixels.end()) {
-					backupSamplePixels.insert(pixel);
-				}
-			}
-		}
-	}
+	
 	
 	return {{{0.0}, {0.0}}, {""}};
 }
