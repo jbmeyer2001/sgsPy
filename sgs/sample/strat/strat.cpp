@@ -198,40 +198,45 @@ strat_random(
 		&weights,
 		numDataPixels
 	);
-	
-	//Step 6: generate random number generator using mt19937	
-	std::vector<std::function<U(void)>> rngs;
-	for (size_t i = 0; i < stratumCounts.size(); i++) {
-		std::mt19937::result_type seed = time(nullptr);
-		rngs.push_back(std::bind(
-			std::uniform_int_distribution<U>(0, stratumCounts[i] - 1),
-			std::mt19937(seed)
-		));
-	}
 
 	//step 7: determine pixel values to include as samples.
 	
 	//make a set of pixels to include as samples
-	std::unordered_set<U> samplePixels;
+	std::vector<std::unordered_set<U>> sampleIndexes;
+	std::vector<std::unordered_set<U>::iterator> sampleIterators;
+	std::vector<U> strataNum;
 
-	//make backup unordered set of pixels to use (if mindist causes others not to be included);
-	std::unordered_set<U> backupSamplePixels;
+	std::mt19939::result_type seed = time(nullptr);
+	for (size_t i = 0; i < stratumCounts.size(); i++) {	
+		strataNum.push_back[i];
+		sampleIndexes.push_back({});
 
-	for (size_t i = 0; i < stratumCounts.size(); i++) {
-		size_t startSize = samplePixels.size();
-		while(samplePixels.size() < startSize + stratumCounts[i]) {
-			samplePixels.insert(stratumIndexes[i][rngs[i]()]);
-		}
-		if (mindist != 0.0) {
-			size_t startSize = backupSamplePixels.size();
-			//TODO what if there aren't enough pixels???
-			while(backupSamplePixels.size() < startSize + (stratumCounts[i] * 2)) {
-				U pixel = stratumIndexes[i][rngs[i]()];
-				if (samplePixels.find(pixel) == samplePixels.end()) {
-					backupSamplePixels.insert(pixel);
+		auto rng = std::bind(
+			std::uniform_int_distribution<U>(0, stratumIndexes[i].size() - 1),
+			std::mt19937(seed)
+		);
+
+		U stratumSamples = std::min((mindist == 0) ? stratumCounts[i] : stratumCounts[i] * 3, stratumIndexes[i].size());
+
+		if (stratumSamples > stratumIndexes[i].size() / 2) {
+			std::unordered_set<U> dontSamplePixels;
+			while (dontSamplePixels.size() < stratumIndexes[i].size() - stratumSamples) {
+				dontSamplePixels.insert(rng());
+			}
+			for (size_t j = 0; j < stratumIndexes[i].size(); j++) {
+				if (dontSamplePixels.find(j) == dontSamplePixels.end()) {
+					sampleIndexes[i].insert(stratumIndexes[j]);
 				}
 			}
 		}
+		else {
+			size_t samplePixelsStartSize = sampleIndexes.size();
+			while (sampleIndexes.size() < stratumSamples) {
+				sampleIndexes[i].insert(stratumIndexes[rng()]);
+			}
+		}
+
+		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
 
 	//step 8: generate coordinate points for each sample index, and only add if they're outside of mindist
@@ -240,53 +245,46 @@ strat_random(
 	std::vector<OGRPoint> points;
 	std::vector<std::string> wktPoints;
 
+	U i = 0;
+	U completedStratum = 0;
 	double *GT = p_raster->getGeotransform();
-	for (auto index : samplePixels) {
-		//TODO check if we can move this to a helper function...
-		double yIndex = index / p_raster->getWidth();
-		double xIndex = index - (yIndex * p_raster->getWidth());
-		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
-		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
-		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-	
-		if (mindist != 0.0 && points.size() != 0) {
-			U pIndex = 0;
-			while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-				pIndex++;
-			}
-			if (pIndex != (U)points.size()) {
-				continue;
-			}
+	while (completedStratum < strataCounts.size()) {
+		//determine strata from i
+		if (i >= strataNum.size()) {
+			i = 0;
 		}
-		points.push_back(newPoint);
-		wktPoints.push_back(newPoint.exportToWkt());
-		xCoords.push_back(xCoord);
-		yCoords.push_back(yCoord);
-	}
-	
-	if (mindist != 0.0 && points.size() < samplePixels.size()) {
-		for (auto index : backupSamplePixels) {
+		U strata = strataNum[i];
+
+		if (sampleIterators[strata] == sampleIndexes[strata].end() || stratumCounts[strata] == samplesAdded[strata]) {
+			strataNum.erase(strataNum.begin() + index);
+		}
+		else {
+			U index = *sampleIterators[strata];
+			sampleIterators[strata] = std::next(sampleIterators[strata]);
+
 			double yIndex = index / p_raster->getWidth();
 			double xIndex = index - (yIndex * p_raster->getWidth());
 			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-
-			U pIndex = 0;
-			while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-				pIndex++;
+	
+			if (mindist != 0.0 && points.size() != 0) {
+				U pIndex = 0;
+				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
+					pIndex++;
+				}
+				if (pIndex != (U)points.size()) {
+					i++;
+					continue;
+				}
 			}
 
-			if (pIndex == points.size()) {
-				points.push_back(newPoint);
-				wktPoints.push_back(newPoint.exportToWkt());
-				xCoords.push_back(xCoord);
-				yCoords.push_back(yCoord);
-			}
-
-			if (points.size() == numSamples) { 
-				break;
-			}
+			samplesAdded[strata]++;
+			points.push_back(newPoint);
+			wktPoints.push_back(newPoint.exportToWkt());
+			xCoords.push_back(xCoord);
+			yCoords.push_back(yCoord);
+			i++;
 		}
 	}
 
