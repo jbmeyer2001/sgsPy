@@ -210,7 +210,7 @@ strat_random(
 	std::mt19939::result_type seed = time(nullptr);
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
 		sampleIndexes.push_back({});
-		samples_added.push_back(0);
+		samplesAdded.push_back(0);
 		strataNum.push_back(i);
 
 		auto rng = std::bind(
@@ -258,6 +258,7 @@ strat_random(
 		U strata = strataNum[i];
 
 		if (sampleIterators[strata] == sampleIndexes[strata].end() || stratumCounts[strata] == samplesAdded[strata]) {
+			completedStratum++;
 			strataNum.erase(strataNum.begin() + index);
 		}
 		else {
@@ -487,7 +488,7 @@ strat_queinnec(
 
 	//step 8: calculate allocation of samples depending on stratum sizes 
 	std::vector<U> strataSizes;
-	for (size_t i = 0; i < stratumIndexes.size(); i++) {
+	for (size_t i = 0; i < queinnecStratumIndexes.size(); i++) {
 		strataSizes.push_back(randomStratumIndexes[i].size() + queinnecStratumIndexes[i].size());
 	}
 	U numDataPixels = p_raster->getWidth() * p_raster->getHeight() - noDataPixelCount;
@@ -500,9 +501,187 @@ strat_queinnec(
 		numDataPixels
 	);
 
+	//step 7: determine queinnec indexes to try including as samples
+	std::vector<std::unordered_set<U>> sampleIndexes;
+	std::vector<std::unordered_set<U>::iterator> sampleIterators;
+	std::vector<U> samplesAdded;
+	std::vector<U> strataNum;
+
+	std::mt19937::result_type seed = time(nullptr);
+	for (size_t i = 0; i < stratumCounts.size(); i++) {	
+		sampleIndexes.push_back({});
+		samplesAdded.push_back(0);
+		strataNum.push_back(i);
+
+		auto rng = std::bind(
+			std::uniform_int_distribution<U>(0, queinnecStratumIndexes[i].size() - 1),
+			std::mt19937(seed)
+		);
+
+		U stratumSamples = std::min((mindist == 0) ? stratumCounts[i] : stratumCounts[i] * 3, queinnecStratumIndexes[i].size());
+
+		if (stratumSamples > queinnecStratumIndexes[i].size() / 2) {
+			std::unordered_set<U> dontSamplePixels;
+			while (dontSamplePixels.size() < queinnecStratumIndexes[i].size() - stratumSamples) {
+				dontSamplePixels.insert(rng());
+			}
+			for (size_t j = 0; j < queinnecStratumIndexes[i].size(); j++) {
+				if (dontSamplePixels.find(j) == dontSamplePixels.end()) {
+					sampleIndexes[i].insert(queinnecStratumIndexes[j]);
+				}
+			}
+		}
+		else {
+			size_t samplePixelsStartSize = sampleIndexes.size();
+			while (sampleIndexes.size() < stratumSamples) {
+				sampleIndexes[i].insert(queinnecStratumIndexes[rng()]);
+			}
+		}
+
+		sampleIterators.push_back(sampleIndexes[i].begin());
+	}
+
+	//step 8: generate coordinate points for each queinnec sample, and only add if they're outside of mindist
+	std::vector<double> xCoords;
+	std::vector<double> yCoords;
+	std::vector<OGRPoint> points;
+	std::vector<std::string> wktPoints;
+
+	U sIndex = 0;
+	U completedStratum = 0;
+	double *GT = p_raster->getGeotransform();
+	while (completedStratum < strataCounts.size()) {
+		//determine strata from i
+		if (sIndex >= strataNum.size()) {
+			sIndex = 0;
+		}
+		U strata = strataNum[sIndex];
+
+		if (sampleIterators[strata] == sampleIndexes[strata].end() || stratumCounts[strata] == samplesAdded[strata]) {
+			completedStratum++;
+			strataNum.erase(strataNum.begin() + index);
+		}
+		else {
+			U index = *sampleIterators[strata];
+			sampleIterators[strata] = std::next(sampleIterators[strata]);
+
+			double yIndex = index / p_raster->getWidth();
+			double xIndex = index - (yIndex * p_raster->getWidth());
+			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 	
+			if (mindist != 0.0 && points.size() != 0) {
+				U pIndex = 0;
+				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
+					pIndex++;
+				}
+				if (pIndex != (U)points.size()) {
+					sIndex++;
+					continue;
+				}
+			}
+
+			samplesAdded[strata]++;
+			points.push_back(newPoint);
+			wktPoints.push_back(newPoint.exportToWkt());
+			xCoords.push_back(xCoord);
+			yCoords.push_back(yCoord);
+			sIndex++;
+		}
+	}
+
+	//step 9: determine random indexes to try including as samples
+	for (size_t i = 0; i < stratumCounts.size(); i++) {	
+		stratumCounts[i] -= samplesAdded[i];
+		if (stratumCounts[i] > 0) {
+			completedStratum--;
+			sampleIndexes[i] = {};
+			samplesAdded[i] = 0;
+			strataNum.push_back(i);
+
+			auto rng = std::bind(
+				std::uniform_int_distribution<U>(0, randomStratumIndexes[i].size() - 1),
+				std::mt19937(seed)
+			);
+
+			U stratumSamples = std::min((mindist == 0) ? stratumCounts[i] : stratumCounts[i] * 3, randomStratumIndexes[i].size());
+
+			if (stratumSamples > randomStratumIndexes[i].size() / 2) {
+				std::unordered_set<U> dontSamplePixels;
+				while (dontSamplePixels.size() < randomStratumIndexes[i].size() - stratumSamples) {
+					dontSamplePixels.insert(rng());
+				}
+				for (size_t j = 0; j < randomStratumIndexes[i].size(); j++) {
+					if (dontSamplePixels.find(j) == dontSamplePixels.end()) {
+						sampleIndexes[i].insert(randomStratumIndexes[j]);
+					}
+				}
+			}
+			else {
+				size_t samplePixelsStartSize = sampleIndexes.size();
+				while (sampleIndexes.size() < stratumSamples) {
+					sampleIndexes[i].insert(randomStratumIndexes[rng()]);
+				}
+			}
+
+			sampleIterators[i] = sampleIndexes[i].begin();
+		}
+	}
+
+	//step 10: try adding random samples
+	sIndex = 0;
+	while (completedStratum < strataCounts.size()) {
+		//determine strata from i
+		if (sIndex >= strataNum.size()) {
+			sIndex = 0;
+		}
+		U strata = strataNum[sIndex];
+
+		if (sampleIterators[strata] == sampleIndexes[strata].end() || stratumCounts[strata] == samplesAdded[strata]) {
+			completedStratum++;
+			strataNum.erase(strataNum.begin() + index);
+		}
+		else {
+			U index = *sampleIterators[strata];
+			sampleIterators[strata] = std::next(sampleIterators[strata]);
+
+			double yIndex = index / p_raster->getWidth();
+			double xIndex = index - (yIndex * p_raster->getWidth());
+			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 	
-	return {{{0.0}, {0.0}}, {""}};
+			if (mindist != 0.0 && points.size() != 0) {
+				U pIndex = 0;
+				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
+					pIndex++;
+				}
+				if (pIndex != (U)points.size()) {
+					sIndex++;
+					continue;
+				}
+			}
+
+			samplesAdded[strata]++;
+			points.push_back(newPoint);
+			wktPoints.push_back(newPoint.exportToWkt());
+			xCoords.push_back(xCoord);
+			yCoords.push_back(yCoord);
+			sIndex++;
+		}
+	}
+
+	if (filename != "") {
+		try {
+			writeSamplePoints(points, filename);
+		}
+		catch (const std::exception& e) {
+			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
+		}
+	}
+
+	return {{xCoords, yCoords}, wktPoints};
 }
 
 /**
