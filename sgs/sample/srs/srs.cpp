@@ -120,15 +120,16 @@ srs(
 	//use std::set because we want to iterate in-order because it will be faster
 	std::unordered_set<U> samplePixels = {};
 	std::unordered_set<U> dontSamplePixels = {};	
-	samplePixelsSize = std::min((mindist == 0.0) ? numSamples : numSamples * 3, numDataPixels);
+	U samplePixelsSize = std::min((mindist == 0.0) ? numSamples : numSamples * 3, numDataPixels);
 
 	if (samplePixelsSize > numDataPixels / 2) {
-		while (dontSamplePixels.size() < numDataPixels - samplePixelSize) {
+		while (dontSamplePixels.size() < numDataPixels - samplePixelsSize) {
 			dontSamplePixels.insert(rng());
 		}
+		std::shuffle(indexes.begin(), indexes.end(), std::mt19937(seed));
 	}
 	else {
-		while (samplePixels.size() < samplePixelSize) {
+		while (samplePixels.size() < samplePixelsSize) {
 			samplePixels.insert(rng());
 		}
 	}
