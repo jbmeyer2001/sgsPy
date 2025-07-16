@@ -106,6 +106,9 @@ calculateAllocation(
 	return retval;
 }
 
+/*
+ *
+ */
 template <typename U>
 inline bool checkNan(U index, U& val, uint8_t *p_mask, float *p_strat, double noDataValue) {
 	bool isNan = p_mask && p_mask[index] == 0;
@@ -364,9 +367,9 @@ strat_queinnec(
 
 
 	while (y < height) {
-		int fwyTrueRowStart = ((fwy - 1) % wrow) * fwWidth;
+		//reset no longer used section of focal window matrix
 		for (int fwxi = 0; fwxi < fwWidth; fwxi++) {
-			focalWindowMatrix[fwyTrueRowStart + fwxi] = true;
+			focalWindowMatrix[((fwy - 1) % wrow) * fwWidth + fwxi] = true;
 		}
 
 		addSelf = (fwy + verticalPad < 0) || (y - verticalPad > height - wrow + 1);
@@ -377,16 +380,19 @@ strat_queinnec(
 		
 		x = 0;
 		fwx = -wcol + 1;
+
 		while (x < width) {
 			addSelf |= (fwx + horizontalPad < 0) || (x - verticalPad > fwWidth);
 			addfw = &= fwx >= 0;
+
 			int fwxStart = std::max(fwx, 0);
 			int fwxEnd = std::min(x, fwWidth);
 		
 			int index = y * width + x;
 			U val;
 			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-	
+			noDataPixelCount += (U)isNan;
+
 			nextVertSame = !isNan && ((y == height - 1) || val == p_strata[index + width]);
 		       	nextHoriSame = !isNan && ((x == width - 1) || val == p_strata[index + 1]);	
 
@@ -409,6 +415,9 @@ strat_queinnec(
 			}
 
 			int fwi;
+			//set the portion of the focal window matrix to false which is impacted
+			//only when the next horizontal pixel value is different than the 
+			//current one.
 			if (!nextHoriSame) {
 				for (int fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
 					fwi = (fwyi % wrow) * fwWidth + fwxEnd;
@@ -416,6 +425,9 @@ strat_queinnec(
 				}
 			}
 
+			//set the portion of the focal window matrix to false which is impacted
+			//only when the next vertical pixel value is different than the current
+			//one.
 			if (!nextVertSame) {
 				for (int fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
 					fwi = (fwyEnd % wrow) * fwWidth + fwxi;
@@ -423,11 +435,17 @@ strat_queinnec(
 				}
 			}
 
+			//set the portion of the focal window matrix to false which is impacted
+			//when either the next vertical or the next horizontal pixel is different
+			//than the current one.
 			if (!nextHoriSame || !nextVertSame) {
 				fwi = (fwyEnd % wrow) * fwWidth + fwxEnd;
 				focalWindowMatrix[fwi] = false;
 			}
 
+			//set the portion of the focal window matrix to false which must be
+			//changed when the next horizontal pixel is different but the previous
+			//horizontal pixel is the same as the current one.
 			if (!nextHoriSame && prevHoriSame) {
 				for (int fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
 					fwi = (fwyStart % wrow) * fwWidth + fwxi;
@@ -435,6 +453,9 @@ strat_queinnec(
 				}
 			}
 
+			//set the portion of the focal window matrix to false which must be
+			//changed when the next vertical pixel is different but the previous
+			//vertical pixel is the same as teh current one. 
 			if (!nextVertSame && prevVertSame) {
 				for (int fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
 					fwi = (fwyi % wrow) * fwWidth + fwxStart;
@@ -442,7 +463,11 @@ strat_queinnec(
 				}
 			}
 
-			if ((!nextHoriSame && prevHoriSame) || (!nextVertSame && prevVertSame)) {
+			//set the portion of the focal window matrix to false which must be
+			//changed when either the next vertical or horizontlal pixel is different,
+			//but both the previous vertical and previous horizontal pixels were the same
+			//as the current one.
+			if ((!nextHoriSame || !nextVertSame) && prevHoriSame && prevVertSame) {
 				for (int fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
 					for (int fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
 						fwi = (fwyi % wrow) * fwWidth + fwxi;
@@ -460,324 +485,54 @@ strat_queinnec(
 	}
 
 
-	/*
-	int fwYStart, fwYEnd, fwXStart, fwXEnd;
-	fwYStart = 0;
-	fwYEnd = 0;
-	for (int y = 0; y < wrow - 1; y++) {	
-		for (int x = 0; x < wcol - 1; x++) {
-			fwXStart = 0;
-			fwXEnd = x;
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
+	//step 8: calculate allocation of samples depending on stratum sizes 
+	std::vector<U> strataSizes;
+	for (size_t i = 0; i < stratumIndexes.size(); i++) {
+		strataSizes.push_back(randomStratumIndexes[i].size() + queinnecStratumIndexes[i].size());
+	}
+	U numDataPixels = p_raster->getWidth() * p_raster->getHeight() - noDataPixelCount;
 
-			if (!isNan) {
-				randomStratumIndexes[(size_t)val].push_bac(index);
+	std::vector<U> stratumCounts = calculateAllocation<U>(
+		numSamples,
+		allocation,
+		&strataSizes,
+		&weights,
+		numDataPixels
+	);
+
+	//step 9: generate random number generator for queinnec pixels
+	std::vector<std::function<U(void)>> rngs;
+	for (size_t i = 0; i < stratumCounts.size(); i++) {
+		std::mt19937::result_type seed = time(nullptr);
+		rngs.push_back(std::bind(
+			std::uniform_int_distribution<U>(0, queinnecStratumIndexes[i].size() - 1),
+			std::mt19937(seed)
+		));
+
+	}
+
+	//step 10: generate coordinate points for each queinnec sample pixel
+	std::unordered_set<U> samplePixels;
+	std::unordered_set<U> backupSamplePixels;
+	for (size_t i = 0; i < stratumCounts.size(); i++) {
+		size_t startSize = samplePixels.size();
+		//TODO may be more efficient to insert all and remove later pixels, if the number of samples
+		//is close to the number of pixels in the strata.
+		while (samplePixels.size() < startSize + std::min(stratumCounts[i], queinnecStratumIndexes[i].size())) {
+			samplePixels.insert(queinnecStratumIndexes[i](rngs[i]());
+		}
+		if (mindist != 0.0) {
+			startSize = backupSamplePixels.size();
+			//TODO what if we run out of pixels???
+			while (backupSamplePixels.size() < startSize + std::min(stratumCounts[i] * 2, queinnecStratumIndexes[i].size()) {
+				U pixel = queinnecStratumIndexes[i][rngs[i]()];
+				if (samplePixel.find(pixel) == samplePixels.end()) {
+					backupSamplePixels.insert(pixel);
+				}
 			}
 		}
-
-		for (int x = wcol - 1; x < width - horizontalPad; x++) {
-			fwXStart = std::max(0, x - horizontalPad * 2);
-			fwXEnd = x;
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
-
-			if (!isNan) {
-				randomStratumIndexes[(size_t)val].push_bac(index);
-			}
-
-		}
-
-		for (int x = width - horizontalPad; x < width; x++) {
-			fwXStart = x - horizontalPad * 2;
-			fwEnd = std::min(x, fwWidth);
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
-
-			if (!isNan) {
-				randomStratumIndexes[(size_t)val].push_bac(index);
-			}
-
-		}
-
-		fwYEnd++;
 	}
 	
-	//step 6: iterate through the middle chunk of the raster, the chunk that will,
-	//	  for each pixel, add the pixel whose focal window would have a
-	//	  bottom right of the current pixel. This is done because we know there
-	//	  will be no update to the focal window of the added pixel after this
-	//	  one is passed. The added pixel will go to either the non-queinnec
-	//	  stratum index vector, or the queinnec stratum index vector, depending
-	//	  on the value of the corrosponding pixel in the focal window matrix.
-	for (int y = wrow - 1; y < height - verticalPad; y++) {
-		for (int x = 0; x < wcol - 1; x++) {
-			fwXStart = 0;
-			fwXEnd = x;
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
-
-			if (!isNan) {
-				randomStratumIndexes[(size_t)val].push_bac(index);
-			}
-
-		}
-
-		for (int x = wcol - 1; x < width - horizontalPad; x++) {
-			fwXStart = std::max(0, x - horizontalPad * 2);
-			fwXEnd = x;
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
-
-			if (!isNan) {
-				
-			}
-
-		}
-
-		for (int x = width - horizontalPad; x < width; x++) {
-			fwXStart = x - horizontalPad * 2;
-			fwEnd = std::min(x, fwWidth);
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
-
-			if (!isNan) {
-				randomStratumIndexes[(size_t)val].push_bac(index);
-			}
-
-		}
-
-		fwYStart++;
-		fwYEnd++;
-	}
-
-	//step 7: iterate through the bottom chunk of the raster. This chunk will
-	//	  add the pixel in the focal window in the same way as step 6,
-	//	  and it will also add the current pixel to the non-queinnec stratum
-	//	  index vector.
-	for (int y = height - verticalPad; y < height; y++) {
-		for (int x = 0; x < wcol - 1; x++) {
-			fwXStart = 0;
-			fwXEnd = x;
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
-
-			if (!isNan) {
-				randomStratumIndexes[(size_t)val].push_bac(index);
-			}
-
-		}
-
-		for (int x = wcol - 1; x < width - horizontalPad; x++) {
-			fwXStart = std::max(0, x - horizontalPad * 2);
-			fwXEnd = x;
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
-
-			
-
-		}
-
-		for (int x = width - horizontalPad; x < width; x++) {
-			fwXStart = x - horizontalPad * 2;
-			fwEnd = std::min(x, fwWidth);
-			U index = y * width  + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-			nextVertSame = !isNan && (val == p_strata[index + width]);
-			nextHoriSame = !isNan && (val == p_strata[index + 1]);
-
-			if (!isNan) {
-				randomStratumIndexes[(size_t)val].push_bac(index);
-			}
-
-		}
-
-		fwYStart++;
-	}
-
-	//step 8: calculate allocation of samples depending on stratum sizes 
-
-	//step 9: generate random number generator
-
-	//step 10: generate coordinate points for each sample pixel
-	*/
-	/*
-	//step 1: get raster band
-	if (p_raster->getRasterType() != GDTFloat32) {
-		throw std::runtime_error("raster band must be of type float32.");
-	}
-	float *p_strat = p_raster->getBand(0);
-
-	//step 2: create stratum index storing vectors
-	std::vector<std::vector<U>> queinnecStratumIndexes;
-	std::vector<std::vector<U>> stratumIndexes;
-	queinnecStratumIndexes.resize(numStrata);
-	randomStratumIndexes.resize(numStrata);
-
-	//step 3: get access mask if access is defined
-	GDALDataset *p_accessMaskDataset = nullptr;
-	void *p_mask = nullptr;
-	if (p_access) {
-		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
-		p_accessMaskDataset = maskInfo.first;
-		p_mask = maskInfo.second;
-	}	
-
-	int width = p_raster->getWidth();
-	int height = p_raster->getHeight();
-	int horizontalPad = (wcol / 2);
-	int verticalPad = (wrow / 2);
-	U fwMatrixHeight = wrow;
-	U fwMatrixWidth = width - wcol;
-
-	std::vector<bool> focalWindowMatrix(true, fwMatrixWidth * fwMatrixHeight);
-	std::vector<bool> prevVertSame(true, width);
-	bool prevHoriSame = true;
-
-	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
-	U noDataPixelCount = 0;
-
-	bool addSelf;
-	bool addUpperLeftCornerPixel;
-
-	U fwUpperLeftX;
-	U fwUpperLeftY = 0 - verticalPad * 2;
-
-	U fwMatrixXStart;
-	U fwMatrixXEnd;
-	U fwMatrixYStart;
-	U fwMatrixYEnd = 0;
-		
-	for (U y = 0; y < height; y++) {
-		addSelf = y < verticalPad || y > height - 1 - verticalPad;
-		addUpperLeftCornerPixel = y >= verticalPad * 2;
-		
-		//fwUpperLeftY and fwMatrixYEnd already calculated/set elsewhere
-		fwMatrixYStart = std::max(fwUpperLeftY + 1, 0);
-		if (fwMatrixYStart == fwMatrixHeight) {
-			fwMatrixYStart = 0;
-		}
-
-		for (x = 0; x < width; x++) {
-			addSelf |= x < horizontalPad || x > width - 1 - horizontalPad;
-			addUpperLeftCornerPixel &= x >= horizontalPad * 2;
-
-			fwUpperLeftX = x - horizontalPad * 2;
-			fwMatrixXStart = std::max(0, fwUpperLeft + 1);
-
-			U index = y * width + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
-		
-			if (addSelf && !isNan) {
-				randomStratumIndexes[(size_t)val].push_back(index);			
-			}
-
-			if (addUpperLeftCornerPixel) {
-				U upperLeftIndex = (y - verticalPad) * width + (x - horizontalPad);
-				U upperLeftfwIndex = fwUpperLeftY * fwMatrixWidth + fwUpperLeftX;
-				U upperLeftVal;
-				bool upperLeftIsNan = checkNan(upperLeftIndex, &upperLeftVal, p_mask, p_strata, noDataValue);
-
-				//if the corrosponding value in the focal window matrix is true, it means
-				//that every surrounding pixel is the same, so the pixel should be added
-				//to the queinnec group of pixels, otherwise add to the random group of pixels
-				if (focalWindowMatrix[upperLeftfwIndex] && !upperLeftIsNan) {
-					queinnecStratumIndexes[(size_t)upperLeftVal].push_back(upperLeftIndex);
-				}
-				else if (!upperLeftIsNan) {
-					randomStratumIndexes[(size_t)upperLeftVal].push_back(upperLeftIndex);
-				}
-			}
-
-			nextVertSame == !isNan && ((y == height - 1) || val == p_strata[index + width]);
-			nextHoriSame == !isNan && ((x == width - 1) || val == p_strata[index + 1]);
-			
-			if (!nextHoriSame && x <= fwMatrixWidth - 1) {
-				for (U fwIndex = x; fwIndex < fwMatrixWidth * fwMatrixHeight; fwIndex += fwMatrixWidth) {
-					focalWindowMatrix[fwIndex] = false;
-				}
-			}
-
-			if (!nextVertSame && y <= height - wrow - 1) {
-				U startIndex = fwMatrixYEnd * fwMatrixWidth + std::max(fwMatrixXStart - 1, 0);
-				U lastIndex = fwMatrixYEnd * fwMatrixWidth + std::min(fwMatrixWidth - 1, x);
-				for (U fwIndex = startIndex; fwIndex <= lastIndex; fwIndex++) {
-					focalWindowMatrix[fwIndex] = false;
-				}
-			}
-
-			//TODO: could be some problems here if wrow or wcol == 1 or are even... need to check
-			if (prevHoriSame && prevVertSame) {
-				if (!nextHoriSame) {
-					U fwYIndex = fwMatrixYStart != 0 ? fwMatrixYStart - 1 : fwMatrixHeight - 1;
-					U startIndex = (fwYIndex) * fwMatrixWidth + fwMatrixXStart;
-					U lastIndex = (fwYIndex) * fwMatrixWidth + std::min(fwMatrixWidth - 1, x - 1);
-					for (U fwIndex = startIndex; fwIndex <= lastIndex; fwIndex++) {
-						focalWindowMatrix[fwIndex] = false;
-					}
-				}
-				if (!nextVertSame && fwMatrixXStart != 0) {
-					U fwIndex = fwMatrixYStart * fwMatrixWidth + fwMatrixXStart - 1;
-					for (U i = 0; i < wrow - 2; i++) {
-						focalWIndowMatrix[fwIndex] = false;
-						fwIndex += fwMatrixWidth;
-						if (fwIndex >= fwMatrixWidth * fwMatrixHeight) {
-							fwIndex -= fwMatrixWidth * fwMatrixHeight;
-						}
-					}
-				}
-
-				if (!nextHoriSame || !nextVertSame) {
-					for() {
-						for() {
-
-						}
-					}
-				}
-			}
-
-			prevVertSame[x] = nextVertSame;
-			prevHoriSame = nextHoriSame;
-		}
-
-		//TODO set required values in focal window matrix to true
-		fwUpperLeftY++;
-		if (fwUpperLeftY == fwMatrixHeight) {
-			fwUpperLeftY = 0;
-		}
-
-		fwMatrixYEnd++;
-		if (fwMatrixYEnd == fwMatrixHeight) {
-			fwMatrixYEnd++;
-		}
-	}
-	*/		
 	return {{{0.0}, {0.0}}, {""}};
 }
 
