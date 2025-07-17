@@ -20,8 +20,8 @@
  *
  * First, the extent polygon of the raster is determined, then a random
  * point is found within the polygon to act as the origin. An SQL query
- * is conducted using one of the ST_SquareGrid, ST_HexagonalGrid,
- * ST_TriangularGrid spatialite functions to create a grid of polygons
+ * is conducted using one of the ST_SquareGrid, or ST_HexagonalGrid
+ * spatialite functions to create a grid of polygons
  * of the user-specified shape. The grid is then rotated by a randomly
  * generated rotation angle.
  *
@@ -91,11 +91,8 @@ systematic(
 	if (shape == "square") {
 		gridFunction = "ST_SquareGrid";
 	}
-	else if (shape == "hexagon") {
+	else { //shape == "hexagon" 
 		gridFunction = "ST_HexagonalGrid";
-	}
-	else { //shape == "triangle"
-		gridFunction = "ST_TriangularGrid";
 	}
 
 	//create sql query using extent polygon and grid function
@@ -106,10 +103,17 @@ systematic(
 		+ std::to_string(xMax) + " " + std::to_string(yMin) + ", "
 		+ std::to_string(xMin) + " " + std::to_string(yMin) + " ))'";
 
-	std::string queryString = "SELECT RotateCoords(" + gridFunction + "(ST_GeomFromText("
+	std::string queryString = "SELECT RotateCoords(" 
+		+ gridFunction 
+		+ "(RotateCoords("
+		+ "ST_GeomFromText("
 		+ extentPolygon
-		+ "), " + std::to_string(cellSize) + "), "
-		+ std::to_string(rotation) + ")"; 
+		+ "), " + std::to_string(-rotation) + "), "
+		+ std::to_string(cellSize) + "), "
+		+ std::to_string(rotation) + ")";
+
+	std::cout << "query string:" << std::endl;
+	std::cout << queryString << std::endl;	
 
 	//query to create grid
 	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");

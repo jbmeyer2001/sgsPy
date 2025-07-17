@@ -52,7 +52,7 @@ def systematic(
     ValueError
         if cellsize is less than or equal to 0
     ValueError
-        if 'shape' parameter is not one of 'square', 'hexagon', or 'triangle'
+        if 'shape' parameter is not one of 'square', 'hexagon'
     ValueError
         if 'location' parameter is not on e of 'centers', 'corners', 'random'
     """
@@ -60,8 +60,8 @@ def systematic(
     if cellsize <= 0:
         raise ValueError("cellsize must be greater than 0")
 
-    if shape not in ["square", "hexagon", "triangle"]:
-        raise ValueError("shape parameter must be one of 'square', 'hexagon', 'triangle'")
+    if shape not in ["square", "hexagon"]:
+        raise ValueError("shape parameter must be one of 'square', 'hexagon'")
 
     if location not in ["centers", "corners", "random"]:
         raise ValueError("location parameter must be one of 'centers', 'corners', 'random'")
