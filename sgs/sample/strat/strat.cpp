@@ -110,11 +110,11 @@ calculateAllocation(
  *
  */
 template <typename U>
-inline bool checkNan(U index, U& val, uint8_t *p_mask, float *p_strat, double noDataValue) {
+inline bool checkNan(U index, float *val, uint8_t *p_mask, float *p_strata, double noDataValue) {
 	bool isNan = p_mask && p_mask[index] == 0;
 	if (!isNan) {
-		val = p_strat[index];
-		isNan = std::isnan(val) || (double)val = noDataValue;
+		*val = p_strata[index];
+		isNan = std::isnan(*val) || static_cast<double>(*val) == noDataValue;
 	}
 	return isNan;
 }
@@ -203,11 +203,11 @@ strat_random(
 	
 	//make a set of pixels to include as samples
 	std::vector<std::unordered_set<U>> sampleIndexes;
-	std::vector<std::unordered_set<U>::iterator> sampleIterators;
+	std::vector<typename std::unordered_set<U>::iterator> sampleIterators;
 	std::vector<U> samplesAdded;
 	std::vector<U> strataNum;
 
-	std::mt19939::result_type seed = time(nullptr);
+	std::mt19937::result_type seed = time(nullptr);
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
 		sampleIndexes.push_back({});
 		samplesAdded.push_back(0);
@@ -218,7 +218,7 @@ strat_random(
 			std::mt19937(seed)
 		);
 
-		U stratumSamples = std::min((mindist == 0) ? stratumCounts[i] : stratumCounts[i] * 3, stratumIndexes[i].size());
+		U stratumSamples = std::min((mindist == 0) ? (size_t)stratumCounts[i] : (size_t)stratumCounts[i] * 3, stratumIndexes[i].size());
 
 		if (stratumSamples > stratumIndexes[i].size() / 2) {
 			std::unordered_set<U> dontSamplePixels;
@@ -227,14 +227,14 @@ strat_random(
 			}
 			for (size_t j = 0; j < stratumIndexes[i].size(); j++) {
 				if (dontSamplePixels.find(j) == dontSamplePixels.end()) {
-					sampleIndexes[i].insert(stratumIndexes[j]);
+					sampleIndexes[i].insert(stratumIndexes[i][j]);
 				}
 			}
 		}
 		else {
 			size_t samplePixelsStartSize = sampleIndexes.size();
-			while (sampleIndexes.size() < stratumSamples) {
-				sampleIndexes[i].insert(stratumIndexes[rng()]);
+			while (sampleIndexes.size() < samplePixelsStartSize + stratumSamples) {
+				sampleIndexes[i].insert(stratumIndexes[i][rng()]);
 			}
 		}
 
@@ -247,19 +247,19 @@ strat_random(
 	std::vector<OGRPoint> points;
 	std::vector<std::string> wktPoints;
 
-	U i = 0;
+	U sIndex = 0;
 	U completedStratum = 0;
 	double *GT = p_raster->getGeotransform();
-	while (completedStratum < strataCounts.size()) {
+	while (completedStratum < stratumCounts.size()) {
 		//determine strata from i
-		if (i >= strataNum.size()) {
-			i = 0;
+		if (sIndex >= strataNum.size()) {
+			sIndex = 0;
 		}
-		U strata = strataNum[i];
+		U strata = strataNum[sIndex];
 
 		if (sampleIterators[strata] == sampleIndexes[strata].end() || stratumCounts[strata] == samplesAdded[strata]) {
 			completedStratum++;
-			strataNum.erase(strataNum.begin() + index);
+			strataNum.erase(strataNum.begin() + sIndex);
 		}
 		else {
 			U index = *sampleIterators[strata];
@@ -277,7 +277,7 @@ strat_random(
 					pIndex++;
 				}
 				if (pIndex != (U)points.size()) {
-					i++;
+					sIndex++;
 					continue;
 				}
 			}
@@ -287,7 +287,7 @@ strat_random(
 			wktPoints.push_back(newPoint.exportToWkt());
 			xCoords.push_back(xCoord);
 			yCoords.push_back(yCoord);
-			i++;
+			sIndex++;
 		}
 	}
 
@@ -321,13 +321,13 @@ strat_queinnec(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
-	std::string fileName)
+	std::string filename)
 {
 	//step 1: get raster band
-	if (p_raster->getRasterType() != GDTFloat32) {
+	if (p_raster->getRasterType() != GDT_Float32) {
 		throw std::runtime_error("raster band must be of type float32.");
 	}
-	float *p_strat = p_raster->getBand(0);
+	float *p_strata = (float *)p_raster->getRasterBand(0);
 
 	//step 2: create stratum index storing vectors
 	std::vector<std::vector<U>> queinnecStratumIndexes;
@@ -337,61 +337,60 @@ strat_queinnec(
 
 	//step 3: get access mask if access is defined
 	GDALDataset *p_accessMaskDataset = nullptr;
-	void *p_mask = nullptr;
+	uint8_t *p_mask = nullptr;
 	if (p_access) {
 		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
 		p_accessMaskDataset = maskInfo.first;
-		p_mask = maskInfo.second;
+		p_mask = static_cast<uint8_t *>(maskInfo.second);
 	}
 	
 	//step 4: determine size of and allocate focal window matrix
-	int width = p_raster->getWidth();
-	int height = p_raster->getHeight();
-	int horizontalPad = wcol / 2;
-	int verticalPad = wcol / 2;
+	U width = p_raster->getWidth();
+	U height = p_raster->getHeight();
+	U horizontalPad = wcol / 2;
+	U verticalPad = wcol / 2;
 	U fwHeight = wrow;
 	U fwWidth = width - wcol + 1;
-	std::vector<bool> focalWindowMatrix(true, fwMatrixWidth * fwMatrixHeight);
-	std::vector<bool> prevVertSame(true, width);
+	std::vector<bool> focalWindowMatrix(fwWidth * fwHeight, true);
+	std::vector<bool> prevVertSame(width, true);
 	bool prevHoriSame = true;
 	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	U noDataPixelCount = 0;
 	bool nextVertSame;
 	bool nextHoriSame;
 
-	int y = 0;
-	int fwy = -wrow + 1;
-	int x;
-	int fwx;
+	U y = 0;
+	int64_t fwy = -wrow + 1;
+	U x;
+	int64_t fwx;
 	bool addSelf;
 	bool addfw;
 
-
 	while (y < height) {
 		//reset no longer used section of focal window matrix
-		for (int fwxi = 0; fwxi < fwWidth; fwxi++) {
+		for (int64_t fwxi = 0; fwxi < fwWidth; fwxi++) {
 			focalWindowMatrix[((fwy - 1) % wrow) * fwWidth + fwxi] = true;
 		}
 
 		addSelf = (fwy + verticalPad < 0) || (y - verticalPad > height - wrow + 1);
 		addfw = fwy >= 0;
 
-		int fwyStart = std::max(fwy, 0);
-		int fwyEnd = std::min(y, height - wrow + 1);
+		int64_t fwyStart = std::max(fwy, static_cast<int64_t>(0));
+		int64_t fwyEnd = std::min(y, static_cast<U>(height - wrow + 1));
 		
 		x = 0;
 		fwx = -wcol + 1;
 
 		while (x < width) {
 			addSelf |= (fwx + horizontalPad < 0) || (x - verticalPad > fwWidth);
-			addfw = &= fwx >= 0;
+			addfw &= fwx >= 0;
 
-			int fwxStart = std::max(fwx, 0);
-			int fwxEnd = std::min(x, fwWidth);
+			int64_t fwxStart = std::max(fwx, static_cast<int64_t>(0));
+			int64_t fwxEnd = std::min(x, fwWidth);
 		
-			int index = y * width + x;
-			U val;
-			bool isNan = checkNan(index, &val, p_mask, p_strata, noDataValue);
+			U index = y * width + x;
+			float val;
+			bool isNan = checkNan<U>(index, &val, p_mask, p_strata, noDataValue);
 			noDataPixelCount += (U)isNan;
 
 			nextVertSame = !isNan && ((y == height - 1) || val == p_strata[index + width]);
@@ -402,25 +401,25 @@ strat_queinnec(
 			}
 
 			if (addfw) {
-				int fwIndex = (fwy % wrow) * fwWidth + fwx;
+				int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;
 				index = (fwy + verticalPad) * width + fwx + verticalPad;	
-				bool isNan = checkNan(index, &val, p_mask, p_access, noDataValue);
+				bool isNan = checkNan<U>(index, &val, p_mask, p_strata, noDataValue);
 
 				if (!isNan && focalWindowMatrix[fwIndex]) {
 					queinnecStratumIndexes[(size_t)val].push_back(index);
 				}
-				else if (!isnan) {
+				else if (!isNan) {
 					randomStratumIndexes[(size_t)val].push_back(index);
 				}
 
 			}
 
-			int fwi;
+			int64_t fwi;
 			//set the portion of the focal window matrix to false which is impacted
 			//only when the next horizontal pixel value is different than the 
 			//current one.
 			if (!nextHoriSame) {
-				for (int fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
+				for (int64_t fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
 					fwi = (fwyi % wrow) * fwWidth + fwxEnd;
 					focalWindowMatrix[fwi] = false;
 				}
@@ -430,7 +429,7 @@ strat_queinnec(
 			//only when the next vertical pixel value is different than the current
 			//one.
 			if (!nextVertSame) {
-				for (int fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
+				for (int64_t fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
 					fwi = (fwyEnd % wrow) * fwWidth + fwxi;
 					focalWindowMatrix[fwi] = false;
 				}
@@ -448,7 +447,7 @@ strat_queinnec(
 			//changed when the next horizontal pixel is different but the previous
 			//horizontal pixel is the same as the current one.
 			if (!nextHoriSame && prevHoriSame) {
-				for (int fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
+				for (int64_t fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
 					fwi = (fwyStart % wrow) * fwWidth + fwxi;
 					focalWindowMatrix[fwi] = false;
 				}
@@ -457,8 +456,8 @@ strat_queinnec(
 			//set the portion of the focal window matrix to false which must be
 			//changed when the next vertical pixel is different but the previous
 			//vertical pixel is the same as teh current one. 
-			if (!nextVertSame && prevVertSame) {
-				for (int fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
+			if (!nextVertSame && prevVertSame[x]) {
+				for (int64_t fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
 					fwi = (fwyi % wrow) * fwWidth + fwxStart;
 					focalWindowMatrix[fwi] = false;
 				}
@@ -468,15 +467,17 @@ strat_queinnec(
 			//changed when either the next vertical or horizontlal pixel is different,
 			//but both the previous vertical and previous horizontal pixels were the same
 			//as the current one.
-			if ((!nextHoriSame || !nextVertSame) && prevHoriSame && prevVertSame) {
-				for (int fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
-					for (int fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
+			if ((!nextHoriSame || !nextVertSame) && prevHoriSame && prevVertSame[x]) {
+				for (int64_t fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
+					for (int64_t fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
 						fwi = (fwyi % wrow) * fwWidth + fwxi;
 						focalWindowMatrix[fwi] = false;
 					}
 				}
 			}
 			
+			prevHoriSame = nextHoriSame;
+			prevVertSame[x] = nextVertSame;
 			x++;
 			fwx++;
 		}
@@ -484,7 +485,9 @@ strat_queinnec(
 		y++;
 		fwy++;
 	}
-
+	if (p_access) {
+		free(p_accessMaskDataset);	
+	}
 
 	//step 8: calculate allocation of samples depending on stratum sizes 
 	std::vector<U> strataSizes;
@@ -503,7 +506,7 @@ strat_queinnec(
 
 	//step 7: determine queinnec indexes to try including as samples
 	std::vector<std::unordered_set<U>> sampleIndexes;
-	std::vector<std::unordered_set<U>::iterator> sampleIterators;
+	std::vector<typename std::unordered_set<U>::iterator> sampleIterators;
 	std::vector<U> samplesAdded;
 	std::vector<U> strataNum;
 
@@ -518,7 +521,7 @@ strat_queinnec(
 			std::mt19937(seed)
 		);
 
-		U stratumSamples = std::min((mindist == 0) ? stratumCounts[i] : stratumCounts[i] * 3, queinnecStratumIndexes[i].size());
+		U stratumSamples = std::min((mindist == 0) ? (size_t)stratumCounts[i] : (size_t)stratumCounts[i] * 3, queinnecStratumIndexes[i].size());
 
 		if (stratumSamples > queinnecStratumIndexes[i].size() / 2) {
 			std::unordered_set<U> dontSamplePixels;
@@ -527,14 +530,14 @@ strat_queinnec(
 			}
 			for (size_t j = 0; j < queinnecStratumIndexes[i].size(); j++) {
 				if (dontSamplePixels.find(j) == dontSamplePixels.end()) {
-					sampleIndexes[i].insert(queinnecStratumIndexes[j]);
+					sampleIndexes[i].insert(queinnecStratumIndexes[i][j]);
 				}
 			}
 		}
 		else {
 			size_t samplePixelsStartSize = sampleIndexes.size();
-			while (sampleIndexes.size() < stratumSamples) {
-				sampleIndexes[i].insert(queinnecStratumIndexes[rng()]);
+			while (sampleIndexes.size() < samplePixelsStartSize + stratumSamples) {
+				sampleIndexes[i].insert(queinnecStratumIndexes[i][rng()]);
 			}
 		}
 
@@ -550,7 +553,7 @@ strat_queinnec(
 	U sIndex = 0;
 	U completedStratum = 0;
 	double *GT = p_raster->getGeotransform();
-	while (completedStratum < strataCounts.size()) {
+	while (completedStratum < stratumCounts.size()) {
 		//determine strata from i
 		if (sIndex >= strataNum.size()) {
 			sIndex = 0;
@@ -559,7 +562,7 @@ strat_queinnec(
 
 		if (sampleIterators[strata] == sampleIndexes[strata].end() || stratumCounts[strata] == samplesAdded[strata]) {
 			completedStratum++;
-			strataNum.erase(strataNum.begin() + index);
+			strataNum.erase(strataNum.begin() + sIndex);
 		}
 		else {
 			U index = *sampleIterators[strata];
@@ -605,7 +608,7 @@ strat_queinnec(
 				std::mt19937(seed)
 			);
 
-			U stratumSamples = std::min((mindist == 0) ? stratumCounts[i] : stratumCounts[i] * 3, randomStratumIndexes[i].size());
+			U stratumSamples = std::min((mindist == 0) ? (size_t)stratumCounts[i] : (size_t)stratumCounts[i] * 3, randomStratumIndexes[i].size());
 
 			if (stratumSamples > randomStratumIndexes[i].size() / 2) {
 				std::unordered_set<U> dontSamplePixels;
@@ -614,14 +617,14 @@ strat_queinnec(
 				}
 				for (size_t j = 0; j < randomStratumIndexes[i].size(); j++) {
 					if (dontSamplePixels.find(j) == dontSamplePixels.end()) {
-						sampleIndexes[i].insert(randomStratumIndexes[j]);
+						sampleIndexes[i].insert(randomStratumIndexes[i][j]);
 					}
 				}
 			}
 			else {
 				size_t samplePixelsStartSize = sampleIndexes.size();
-				while (sampleIndexes.size() < stratumSamples) {
-					sampleIndexes[i].insert(randomStratumIndexes[rng()]);
+				while (sampleIndexes.size() < samplePixelsStartSize + stratumSamples) {
+					sampleIndexes[i].insert(randomStratumIndexes[i][rng()]);
 				}
 			}
 
@@ -631,7 +634,7 @@ strat_queinnec(
 
 	//step 10: try adding random samples
 	sIndex = 0;
-	while (completedStratum < strataCounts.size()) {
+	while (completedStratum < stratumCounts.size()) {
 		//determine strata from i
 		if (sIndex >= strataNum.size()) {
 			sIndex = 0;
@@ -640,7 +643,7 @@ strat_queinnec(
 
 		if (sampleIterators[strata] == sampleIndexes[strata].end() || stratumCounts[strata] == samplesAdded[strata]) {
 			completedStratum++;
-			strataNum.erase(strataNum.begin() + index);
+			strataNum.erase(strataNum.begin() + sIndex);
 		}
 		else {
 			U index = *sampleIterators[strata];
