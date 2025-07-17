@@ -24,7 +24,7 @@ from strat import (
 )
 
 def strat(
-    strat_rast: SpatialRaster,
+    strat_rast: SpatialRaster, #TODO add band name for strat rast
     num_samples: int,
     num_strata: int,
     wrow: int = 3,
@@ -32,7 +32,7 @@ def strat(
     allocation: str = "prop",
     method: str = "Queinnec",
     weights: Optional[list[float]] = None,
-    mindist: float = None,
+    mindist: Optional[float] = None,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
     buff_inner: Optional[float] = None,
@@ -78,10 +78,13 @@ def strat(
         if buff_inner >= buff_outer:
             raise ValueError("buff_outer must be greater than buff_inner.")
 
-    if allocation != manual:
+    if allocation != "manual":
         weights = []
 
-    if strat_raster.band_count != 1:
+    if mindist is None:
+        mindist = 0
+
+    if strat_rast.band_count != 1:
         raise ValueError("strat_raster must have a single band.")
 
     if access:

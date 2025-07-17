@@ -1,16 +1,101 @@
 import sgs
 import matplotlib.pyplot as plt
 
-rast = sgs.SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
+mrast = sgs.SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
+srast = sgs.stratify.quantiles(mrast, num_strata={"zq90": 5})
 
-for location in ['centers', 'corners', 'random']:
-    for shape in ['square', 'hexagon']:
-        samples = sgs.sample.systematic(
-            rast,
-            500,
-            shape,
-            location,
-            plot=True
-        )
-        #print(samples)
+print("running strat_random with proportional allocation")
+
+sgs.sample.strat(
+    srast,
+    num_samples=100,
+    num_strata=5,
+    allocation="prop",
+    method="random",
+)
+
+print("""
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      """)
+
+print("running strat_random with equal allocation")
+
+sgs.sample.strat(
+    srast,
+    num_samples=100,
+    num_strata=5,
+    allocation = "equal",
+    method="random",
+)
+
+print("""
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      """)
+
+print("running strat_random with weighted allocation")
+
+sgs.sample.strat(
+    srast,
+    num_samples=100,
+    num_strata=5,
+    allocation="manual",
+    method="random",
+    weights=[0.1, 0.1, 0.1, 0.1, 0.6],
+)
+
+
+print("""
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      """)
+
+srast = sgs.stratify.quantiles(mrast, num_strata={"zq90": 7})
+
+print("running strat_random with proportional allocation")
+
+sgs.sample.strat(
+    srast,
+    num_samples=200,
+    num_strata=7,
+    allocation="prop",
+    method="random",
+)
+
+print("""
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      """)
+
+print("running strat_random with equal allocation")
+
+sgs.sample.strat(
+    srast,
+    num_samples=200,
+    num_strata=7,
+    allocation = "equal",
+    method="random",
+)
+
+print("""
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      """)
+
+print("running strat_random with weighted allocation")
+
+sgs.sample.strat(
+    srast,
+    num_samples=199,
+    num_strata=7,
+    allocation="manual",
+    method="random",
+    weights=[0.1, 0.15, 0.15, 0.05, 0.3, 0.05, 0.2],
+)
 

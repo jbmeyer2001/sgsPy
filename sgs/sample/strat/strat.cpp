@@ -28,45 +28,32 @@
 template <typename U>
 std::vector<U>
 calculateAllocation(
-	size_t numSamples,
+	U numSamples,
 	std::string allocation, 
 	std::vector<U> *p_strataSizes, 
 	std::vector<double> *p_weights,
 	U numPixels)
 {
 	std::vector<U> retval;
-	size_t remainder;
+	U remainder = numSamples;
 	size_t numStrata = p_strataSizes->size();
 	if (allocation == "prop") {
 		//allocate the samples per stratum according to stratum size
-		remainder = numSamples;
+		U pixelsPerSample = numPixels / numSamples;
+
 		for (size_t i = 0; i < numStrata; i++) {
-			size_t count = numSamples / (numPixels / p_strataSizes->at(i));
+			U count = p_strataSizes->at(i) / pixelsPerSample;
 			retval.push_back(count);
 			remainder -= count;
-		}
-
-		//redistribute remainder pixels equally among strata
-		size_t i = 0;
-		while (remainder > 0) {
-			retval[i] += 1;
-			remainder -= 1;
-			i++;
 		}
 	}
 	else if (allocation == "equal") { //TODO what if a strata doesn't have enough pixels???
 		//determine the count of samples per strata
-		size_t strataSampleCount = numSamples / numStrata;
+		U strataSampleCount = numSamples / numStrata;
 		
 		for (size_t i = 0; i < numStrata; i++) {
-			if (p_strataSizes->at(i) < strataSampleCount) {
-				retval.push_back(p_strataSizes->at(i));
-				std::cout << "warning: strata " << i << " does not have enough pixels for the full " << strataSampleCount << " samples it should recieve. There will be less than " << numSamples << " final samples." << std::endl;
-			}
-			else {
-				retval.push_back(strataSampleCount);
-			}
-
+			retval.push_back(strataSampleCount);
+			remainder -= strataSampleCount;
 		}
 	}
 	else if (allocation == "manual") { //TODO what if a strata doesn't have enough pixels???
@@ -75,33 +62,29 @@ calculateAllocation(
 		}
 
 		//allocate samples accordign to weights.
-		remainder = numSamples;
 		for (size_t i = 0; i < numStrata; i++) {
-			size_t count = (size_t)((double)p_strataSizes->at(i) * p_weights->at(i));
+			U count = static_cast<U>(static_cast<double>(numSamples) * p_weights->at(i));
 			retval.push_back(count);
 			remainder -= count;
-		}
-
-		//redistribute remainder pixels equally among strata
-		size_t i = 0;
-		while (remainder > 0) {
-			retval[i] += 1;
-			remainder -= 1;
-			i++;
-		}
-
-		//ensure number of strata doesn't exceed maximum
-		for (size_t i = 0; i < retval.size(); i++) {
-			if (retval[i] > p_strataSizes->at(i)) {
-				std::cout << "warning: strata " << i << " does not have enough pixels for the full " << retval[i] << " samples it should recieve. There will be less than " << numSamples << " final samples." << std::endl;
-				retval[i] = p_strataSizes->at(i);
-			}
 		}
 	}
 	else { //allocaiton == "optim"
 		//TODO implement
 		throw std::runtime_error("'optim' has not been implemented!");
-	}	
+	}
+
+	//redistribute remainder pixels among strata, and check strata sizes
+	size_t i = 0;
+	for (size_t i = numStrata; i > 0; i--) {
+		U extra = remainder / i;
+		retval[i - 1] += extra;
+		remainder -= extra;
+
+		if (retval[i - 1] > p_strataSizes->at(i - 1)) {
+			std::cout << "warning: strata " << i - 1 << " does not have enough pixels for the full " << retval[i - 1] << " samples it should recieve. There will be less than " << numSamples << " final samples." << std::endl;
+			retval[i - 1] = p_strataSizes->at(i - 1);
+		}
+	}
 
 	return retval;
 }
@@ -183,13 +166,16 @@ strat_random(
 	}
 
 	U numDataPixels = (p_raster->getWidth() * p_raster->getHeight()) - noDataPixelCount;
-
+	std::cout << "there are " << numDataPixels << " data pixels." << std::endl;
 	//step 5: using the size of the stratum and allocation method,
 	//determine the number of samples to take from each stratum
 	std::vector<U> strataSizes;
 	for (size_t i = 0; i < stratumIndexes.size(); i++) {
+		std::cout << "strata " << i << " contains " << stratumIndexes[i].size() << " pixels." << std::endl;
 		strataSizes.push_back(stratumIndexes[i].size());
 	}
+
+	std::cout << "allocation method is: " << allocation << std::endl;
 
 	std::vector<U> stratumCounts = calculateAllocation<U>(
 		numSamples,
@@ -198,6 +184,12 @@ strat_random(
 		&weights,
 		numDataPixels
 	);
+
+	for (size_t i = 0; i < stratumCounts.size(); i++) {
+		std::cout << stratumCounts[i] << " samples allocated to strata " << i << std::endl; 
+	}
+
+	return {{{0.0}, {0.0}}, {""}};
 
 	//step 7: determine pixel values to include as samples.
 	
@@ -267,6 +259,9 @@ strat_random(
 
 			double yIndex = index / p_raster->getWidth();
 			double xIndex = index - (yIndex * p_raster->getWidth());
+
+			std::cout << "adding index " << index << " which is in strata " << p_strat[index] << "." << std::endl;
+
 			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
@@ -390,6 +385,7 @@ strat_queinnec(
 		
 			U index = y * width + x;
 			float val;
+			//TODO: differentiate between nan and non-accessable, for the sake of the focal window
 			bool isNan = checkNan<U>(index, &val, p_mask, p_strata, noDataValue);
 			noDataPixelCount += (U)isNan;
 
