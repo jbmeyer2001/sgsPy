@@ -49,7 +49,7 @@ template <typename T, typename U>
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
 srs(
 	GDALRasterWrapper *p_raster,
-	unsigned long long numSamples,
+	size_t numSamples,
 	double mindist,
 	GDALVectorWrapper *p_access,
 	std::string layerName,
@@ -121,7 +121,7 @@ srs(
 	//use std::set because we want to iterate in-order because it will be faster
 	std::unordered_set<U> samplePixels = {};
 	std::unordered_set<U> dontSamplePixels = {};	
-	U samplePixelsSize = std::min((mindist == 0.0) ? numSamples : numSamples * 3, numDataPixels);
+	U samplePixelsSize = std::min((mindist == 0.0) ? numSamples : numSamples * 3, (size_t)numDataPixels);
 
 	if (samplePixelsSize > numDataPixels / 2) {
 		while (dontSamplePixels.size() < numDataPixels - samplePixelsSize) {
@@ -175,7 +175,7 @@ srs(
 				break;
 			}	
 
-			index = indexes[i];
+			U index = indexes[i];
 			double yIndex = index / p_raster->getWidth();
 			double xIndex = index - (yIndex * p_raster->getWidth());
 			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
