@@ -125,8 +125,10 @@ def strat(
     if plot:
         fig, ax = plt.subplots()
         #TODO let user know which band is being printed
-        strat_rast.plot(ax, band=rast.bands[0])
+        strat_rast.plot(ax, band=strat_rast.bands[0])
         if access:
             access.plot('LineString', ax)
         ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
         plt.show()
+
+    return sample_points

@@ -166,16 +166,13 @@ strat_random(
 	}
 
 	U numDataPixels = (p_raster->getWidth() * p_raster->getHeight()) - noDataPixelCount;
-	std::cout << "there are " << numDataPixels << " data pixels." << std::endl;
+	
 	//step 5: using the size of the stratum and allocation method,
 	//determine the number of samples to take from each stratum
 	std::vector<U> strataSizes;
 	for (size_t i = 0; i < stratumIndexes.size(); i++) {
-		std::cout << "strata " << i << " contains " << stratumIndexes[i].size() << " pixels." << std::endl;
 		strataSizes.push_back(stratumIndexes[i].size());
 	}
-
-	std::cout << "allocation method is: " << allocation << std::endl;
 
 	std::vector<U> stratumCounts = calculateAllocation<U>(
 		numSamples,
@@ -184,12 +181,6 @@ strat_random(
 		&weights,
 		numDataPixels
 	);
-
-	for (size_t i = 0; i < stratumCounts.size(); i++) {
-		std::cout << stratumCounts[i] << " samples allocated to strata " << i << std::endl; 
-	}
-
-	return {{{0.0}, {0.0}}, {""}};
 
 	//step 7: determine pixel values to include as samples.
 	
@@ -224,8 +215,7 @@ strat_random(
 			}
 		}
 		else {
-			size_t samplePixelsStartSize = sampleIndexes.size();
-			while (sampleIndexes.size() < samplePixelsStartSize + stratumSamples) {
+			while (sampleIndexes[i].size() < stratumSamples) {
 				sampleIndexes[i].insert(stratumIndexes[i][rng()]);
 			}
 		}
@@ -259,8 +249,6 @@ strat_random(
 
 			double yIndex = index / p_raster->getWidth();
 			double xIndex = index - (yIndex * p_raster->getWidth());
-
-			std::cout << "adding index " << index << " which is in strata " << p_strat[index] << "." << std::endl;
 
 			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
@@ -531,8 +519,7 @@ strat_queinnec(
 			}
 		}
 		else {
-			size_t samplePixelsStartSize = sampleIndexes.size();
-			while (sampleIndexes.size() < samplePixelsStartSize + stratumSamples) {
+			while (sampleIndexes[i].size() < stratumSamples) {
 				sampleIndexes[i].insert(queinnecStratumIndexes[i][rng()]);
 			}
 		}
@@ -618,8 +605,7 @@ strat_queinnec(
 				}
 			}
 			else {
-				size_t samplePixelsStartSize = sampleIndexes.size();
-				while (sampleIndexes.size() < samplePixelsStartSize + stratumSamples) {
+				while (sampleIndexes[i].size() < stratumSamples) {
 					sampleIndexes[i].insert(randomStratumIndexes[i][rng()]);
 				}
 			}
