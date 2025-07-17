@@ -61,6 +61,7 @@ srs(
 	GDALDataset *p_dataset = p_raster->getDataset();
 	double *GT = p_raster->getGeotransform();
 
+	//TODO this should use std::vector
 	//step 2: allocate index array which maps the adjusted index to the orignial index
 	U *p_indexArray = (U *)CPLMalloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(U));
 	std::vector<U> indexes;
