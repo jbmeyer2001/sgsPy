@@ -31,7 +31,7 @@ if WIN
     'access_lib', 'access.cpp', 'access.h',
     link_with: [raster_lib, vector_lib],
     link_args: win_link_args,
-    dependencies: [lib_deps],
+    dependencies: [lib_deps, py.dependency()],
     include_directories: inc_dir,
   )
 
