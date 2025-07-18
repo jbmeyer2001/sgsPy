@@ -349,14 +349,12 @@ strat_queinnec(
 	bool addSelf;
 	bool addfw;
 
+	//y < width
 	while (y < height) {
 		//reset no longer used section of focal window matrix
 		for (int64_t fwxi = 0; fwxi < fwWidth; fwxi++) {
 			focalWindowMatrix[((fwy - 1) % wrow) * fwWidth + fwxi] = true;
 		}
-
-		addSelf = (fwy + verticalPad < 0) || (y - verticalPad > height - wrow + 1);
-		addfw = fwy >= 0;
 
 		int64_t fwyStart = std::max(fwy, static_cast<int64_t>(0));
 		int64_t fwyEnd = std::min(y, static_cast<U>(height - wrow + 1));
@@ -364,18 +362,37 @@ strat_queinnec(
 		x = 0;
 		fwx = -wcol + 1;
 
+		//x < width
 		while (x < width) {
-			addSelf |= (fwx + horizontalPad < 0) || (x - verticalPad > fwWidth);
-			addfw &= fwx >= 0;
+			//std::cout << "[" << x << "][" << y << "]" << std::endl;
+			//std::cout << "[" << fwx << "][" << fwy << "]" << std::endl;
+			addSelf = (fwy + verticalPad < 0) || 
+				  (y - verticalPad > height - wrow + 1) || 
+				  (fwx + horizontalPad < 0) || 
+				  (x - verticalPad > fwWidth);
+			//std::cout << "addSelf: " << addSelf << std::endl;
+			addfw = fwy >= 0 && fwx >= 0;
+			//std::cout << "addfw: " << addfw << std::endl;
 
 			int64_t fwxStart = std::max(fwx, static_cast<int64_t>(0));
+			//std::cout << "fwxStart: " << fwxStart << std::endl;
 			int64_t fwxEnd = std::min(x, fwWidth);
-		
+			//std::cout << "fwxEnd: " << fwxEnd << std::endl;
+
+			//std::cout << "fwyStart: " << fwyStart << std::endl;
+		        //std::cout << "fwyEnd: " << fwyEnd << std::endl;	
+
 			U index = y * width + x;
 			float val;
 			//TODO: differentiate between nan and non-accessable, for the sake of the focal window
 			bool isNan = checkNan<U>(index, &val, p_mask, p_strata, noDataValue);
 			noDataPixelCount += (U)isNan;
+
+			std::cout << std::endl;
+			std::cout << "[" << x << "][" << y << "] = " << val << std::endl;
+
+			//std::cout << "val: " << val << std::endl;
+			//std::cout << "isNan: " << isNan << std::endl;
 
 			nextVertSame = !isNan && ((y == height - 1) || val == p_strata[index + width]);
 		       	nextHoriSame = !isNan && ((x == width - 1) || val == p_strata[index + 1]);	
@@ -385,9 +402,14 @@ strat_queinnec(
 			}
 
 			if (addfw) {
+				//std::cout << "fwx: " << fwx << std::endl;
+				//std::cout << "fwy: " << fwy << std::endl;
 				int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;
+				//std::cout << "fwIndex: " << fwIndex << std::endl;
 				index = (fwy + verticalPad) * width + fwx + verticalPad;	
 				bool isNan = checkNan<U>(index, &val, p_mask, p_strata, noDataValue);
+				
+				std::cout << "[" << fwx << "][" << fwy << "] = " << static_cast<bool>(!isNan && focalWindowMatrix[fwIndex]) << std::endl;
 
 				if (!isNan && focalWindowMatrix[fwIndex]) {
 					queinnecStratumIndexes[(size_t)val].push_back(index);
@@ -403,7 +425,8 @@ strat_queinnec(
 			//only when the next horizontal pixel value is different than the 
 			//current one.
 			if (!nextHoriSame) {
-				for (int64_t fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
+				//std::cout << "HERE 1" << std::endl;
+				for (int64_t fwyi = fwyStart; fwyi <= fwyEnd - 1; fwyi++) {
 					fwi = (fwyi % wrow) * fwWidth + fwxEnd;
 					focalWindowMatrix[fwi] = false;
 				}
@@ -413,7 +436,8 @@ strat_queinnec(
 			//only when the next vertical pixel value is different than the current
 			//one.
 			if (!nextVertSame) {
-				for (int64_t fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
+				//std::cout << "HERE 2" << std::endl;
+				for (int64_t fwxi = fwxStart; fwxi <= fwxEnd - 1; fwxi++) {
 					fwi = (fwyEnd % wrow) * fwWidth + fwxi;
 					focalWindowMatrix[fwi] = false;
 				}
@@ -423,6 +447,7 @@ strat_queinnec(
 			//when either the next vertical or the next horizontal pixel is different
 			//than the current one.
 			if (!nextHoriSame || !nextVertSame) {
+				//std::cout << "HERE 3" << std::endl;
 				fwi = (fwyEnd % wrow) * fwWidth + fwxEnd;
 				focalWindowMatrix[fwi] = false;
 			}
@@ -431,6 +456,7 @@ strat_queinnec(
 			//changed when the next horizontal pixel is different but the previous
 			//horizontal pixel is the same as the current one.
 			if (!nextHoriSame && prevHoriSame) {
+				//std::cout << "HERE 4" << std::endl;
 				for (int64_t fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
 					fwi = (fwyStart % wrow) * fwWidth + fwxi;
 					focalWindowMatrix[fwi] = false;
@@ -439,8 +465,9 @@ strat_queinnec(
 
 			//set the portion of the focal window matrix to false which must be
 			//changed when the next vertical pixel is different but the previous
-			//vertical pixel is the same as teh current one. 
+			//vertical pixel is the same as the current one. 
 			if (!nextVertSame && prevVertSame[x]) {
+				//std::cout << "HERE 5" << std::endl;
 				for (int64_t fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
 					fwi = (fwyi % wrow) * fwWidth + fwxStart;
 					focalWindowMatrix[fwi] = false;
@@ -452,6 +479,7 @@ strat_queinnec(
 			//but both the previous vertical and previous horizontal pixels were the same
 			//as the current one.
 			if ((!nextHoriSame || !nextVertSame) && prevHoriSame && prevVertSame[x]) {
+				//std::cout << "HERE 6" << std::endl;
 				for (int64_t fwyi = fwyStart + 1; fwyi <= fwyEnd - 1; fwyi++) {
 					for (int64_t fwxi = fwxStart + 1; fwxi <= fwxEnd - 1; fwxi++) {
 						fwi = (fwyi % wrow) * fwWidth + fwxi;
@@ -460,6 +488,8 @@ strat_queinnec(
 				}
 			}
 			
+			//std::cout << std::endl << std::endl << std::endl << std::endl;
+
 			prevHoriSame = nextHoriSame;
 			prevVertSame[x] = nextVertSame;
 			x++;
@@ -473,12 +503,56 @@ strat_queinnec(
 		free(p_accessMaskDataset);	
 	}
 
+	U numDataPixels = p_raster->getWidth() * p_raster->getHeight() - noDataPixelCount;
+	
+	std::cout << "num data pixels: " << numDataPixels << std::endl;
+
+	U checkNumDataPixels = 0;
+	for (size_t i = 0; i < numStrata; i++) {
+		std::cout << "queinnec pixels in strata " << i << ": " << queinnecStratumIndexes[i].size() << std::endl;
+		std::cout << "random pixels in strata " << i << ": " << randomStratumIndexes[i].size() << std::endl;
+	}
+
+	//TESTING LOOP TODO REMOVE
+	for (size_t i = 0; i < queinnecStratumIndexes.size(); i++) {
+		std::cout << "checking queinnec strata " << i << std::endl;
+		for (size_t j = 0; j < queinnecStratumIndexes[i].size(); j++) {
+			U index = queinnecStratumIndexes[i][j];
+			for (int ii = 0; ii < wrow; ii++) {
+				for (int jj = 0; jj < wcol; jj++) {
+					U checkIndex = index + (ii - (wrow / 2)) * width + (jj - (wcol / 2));
+					if (p_strata[index] != p_strata[checkIndex]) {
+						std::cout << "**BUG**: index " << checkIndex << " different than " << index << std::endl; 
+					}
+				}
+			}
+		}
+	}
+
+	//TESTING LOOP TODO REMOVE
+	for (size_t i = 0; i < randomStratumIndexes.size(); i++) {
+		std::cout << "checking random strata " << i << std::endl;
+		for (size_t j = 0; j < randomStratumIndexes[i].size(); j++) {
+			U index =  randomStratumIndexes[i][j];
+			bool same = true;
+			for (int ii = 0; ii < wrow; ii++) {
+				for (int jj = 0; jj < wcol; jj++) {
+					U checkIndex = index + (ii - (wrow / 2)) * width + (jj - (wcol / 2));
+					same &= (p_strata[index] != p_strata[checkIndex]);
+				}
+			}
+
+			if (same) {
+				std::cout << "**BUG**: index " << index << " is surrounded by all same pixels." << std::endl;
+			}
+		}
+	}
+
 	//step 8: calculate allocation of samples depending on stratum sizes 
 	std::vector<U> strataSizes;
 	for (size_t i = 0; i < queinnecStratumIndexes.size(); i++) {
 		strataSizes.push_back(randomStratumIndexes[i].size() + queinnecStratumIndexes[i].size());
 	}
-	U numDataPixels = p_raster->getWidth() * p_raster->getHeight() - noDataPixelCount;
 
 	std::vector<U> stratumCounts = calculateAllocation<U>(
 		numSamples,
