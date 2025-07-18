@@ -349,7 +349,8 @@ strat_queinnec(
 	bool addSelf;
 	bool addfw;
 
-	//y < width
+	U selfAdded = 0;
+	U fwAdded = 0;
 	while (y < height) {
 		//reset no longer used section of focal window matrix
 		for (int64_t fwxi = 0; fwxi < fwWidth; fwxi++) {
@@ -362,12 +363,11 @@ strat_queinnec(
 		x = 0;
 		fwx = -wcol + 1;
 
-		//x < width
 		while (x < width) {
 			addSelf = (fwy + verticalPad < 0) || 
-				  (y - verticalPad > height - wrow + 1) || 
+				  (y >= height - verticalPad) || 
 				  (fwx + horizontalPad < 0) || 
-				  (x - verticalPad > fwWidth);
+				  (x >= width - horizontalPad);
 			addfw = fwy >= 0 && fwx >= 0;
 
 			int64_t fwxStart = std::max(fwx, static_cast<int64_t>(0));
@@ -384,6 +384,7 @@ strat_queinnec(
 
 			if (addSelf && !isNan) {
 				randomStratumIndexes[(size_t)val].push_back(index);
+				selfAdded++;
 			}
 
 			if (addfw) {
@@ -393,9 +394,11 @@ strat_queinnec(
 				
 				if (!isNan && focalWindowMatrix[fwIndex]) {
 					queinnecStratumIndexes[(size_t)val].push_back(index);
+					fwAdded++;
 				}
 				else if (!isNan) {
 					randomStratumIndexes[(size_t)val].push_back(index);
+					fwAdded++;
 				}
 
 			}
@@ -462,8 +465,6 @@ strat_queinnec(
 				}
 			}
 			
-			//std::cout << std::endl << std::endl << std::endl << std::endl;
-
 			prevHoriSame = nextHoriSame;
 			prevVertSame[x] = nextVertSame;
 			x++;
@@ -478,39 +479,35 @@ strat_queinnec(
 	}
 
 	U numDataPixels = p_raster->getWidth() * p_raster->getHeight() - noDataPixelCount;
-	
-	std::cout << "num data pixels: " << numDataPixels << std::endl;
 
+	//FOR TESTING PURPOSES	
 	size_t checkNumDataPixels = 0;
 	for (size_t i = 0; i < numStrata; i++) {
-		std::cout << "queinnec pixels in strata " << i << ": " << queinnecStratumIndexes[i].size() << std::endl;
-		std::cout << "random pixels in strata " << i << ": " << randomStratumIndexes[i].size() << std::endl;
 		checkNumDataPixels += queinnecStratumIndexes[i].size() + randomStratumIndexes[i].size();
 	}
 
 	if (checkNumDataPixels != numDataPixels) {
-		std::cout << "**BUG** incorrect number of total pixels." << std::endl;
+		throw std::runtime_error("**BUG** incorrect number of pixels added to random and queinnec stratum indexes.");
 	}
 
-	//TESTING LOOP TODO REMOVE
+	//FOR TESTING PURPOSES
 	for (size_t i = 0; i < queinnecStratumIndexes.size(); i++) {
-		std::cout << "checking queinnec strata " << i << std::endl;
 		for (size_t j = 0; j < queinnecStratumIndexes[i].size(); j++) {
 			U index = queinnecStratumIndexes[i][j];
 			for (int ii = 0; ii < wrow; ii++) {
 				for (int jj = 0; jj < wcol; jj++) {
 					U checkIndex = index + (ii - (wrow / 2)) * width + (jj - (wcol / 2));
 					if (p_strata[index] != p_strata[checkIndex]) {
-						std::cout << "**BUG**: index " << checkIndex << " different than " << index << std::endl; 
+						throw std::runtime_error("**BUG** index " + std::to_string(checkIndex) 
+							+ " different than " + std::to_string(index) + ".");
 					}
 				}
 			}
 		}
 	}
 
-	//TESTING LOOP TODO REMOVE
+	//FOR TESTING PURPOSES
 	for (size_t i = 0; i < randomStratumIndexes.size(); i++) {
-		std::cout << "checking random strata " << i << std::endl;
 		for (size_t j = 0; j < randomStratumIndexes[i].size(); j++) {
 			U index =  randomStratumIndexes[i][j];
 			bool same = true;
@@ -522,16 +519,18 @@ strat_queinnec(
 			}
 
 			if (same) {
-				std::cout << "**BUG**: index " << index << " is surrounded by all same pixels." << std::endl;
+				throw std::runtime_error("**BUG** index " + std::to_string(index) + " is surrounded by all same pixels.");
 			}
 		}
 	}
 
+	std::cout << "HERE 1" << std::endl;
 	//step 8: calculate allocation of samples depending on stratum sizes 
 	std::vector<U> strataSizes;
 	for (size_t i = 0; i < queinnecStratumIndexes.size(); i++) {
 		strataSizes.push_back(randomStratumIndexes[i].size() + queinnecStratumIndexes[i].size());
 	}
+	std::cout << "HERE 2" << std::endl;
 
 	std::vector<U> stratumCounts = calculateAllocation<U>(
 		numSamples,
@@ -541,6 +540,7 @@ strat_queinnec(
 		numDataPixels
 	);
 
+	std::cout << "HERE 3" << std::endl;
 	//step 7: determine queinnec indexes to try including as samples
 	std::vector<std::unordered_set<U>> sampleIndexes;
 	std::vector<typename std::unordered_set<U>::iterator> sampleIterators;
@@ -579,7 +579,7 @@ strat_queinnec(
 
 		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
-
+	std::cout << "HERE 4" << std::endl;
 	//step 8: generate coordinate points for each queinnec sample, and only add if they're outside of mindist
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
@@ -629,6 +629,7 @@ strat_queinnec(
 			sIndex++;
 		}
 	}
+	std::cout << "HERE 5" << std::endl;
 
 	//step 9: determine random indexes to try including as samples
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
@@ -666,7 +667,7 @@ strat_queinnec(
 			sampleIterators[i] = sampleIndexes[i].begin();
 		}
 	}
-
+	std::cout << "HERE 6" << std::endl;
 	//step 10: try adding random samples
 	sIndex = 0;
 	while (completedStratum < stratumCounts.size()) {
@@ -710,6 +711,7 @@ strat_queinnec(
 		}
 	}
 
+	std::cout << "HERE 7" << std::endl;
 	if (filename != "") {
 		try {
 			writeSamplePoints(points, filename);
