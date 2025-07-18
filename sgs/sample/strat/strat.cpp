@@ -89,19 +89,6 @@ calculateAllocation(
 	return retval;
 }
 
-/*
- *
- */
-template <typename U>
-inline bool checkNan(U index, float *val, uint8_t *p_mask, float *p_strata, double noDataValue) {
-	bool isNan = p_mask && p_mask[index] == 0;
-	if (!isNan) {
-		*val = p_strata[index];
-		isNan = std::isnan(*val) || static_cast<double>(*val) == noDataValue;
-	}
-	return isNan;
-}
-
 /**
  *
  */
@@ -374,15 +361,17 @@ strat_queinnec(
 			int64_t fwxEnd = std::min(x, fwWidth);
 
 			U index = y * width + x;
-			float val;
+			float val = p_strata[index];
 			//TODO: differentiate between nan and non-accessable, for the sake of the focal window
-			bool isNan = checkNan<U>(index, &val, p_mask, p_strata, noDataValue);
-			noDataPixelCount += (U)isNan;
+			bool isNan = std::isnan(val) || static_cast<double>(val) == noDataValue;
+			bool accessable = !p_access || (p_mask[index] != 0); //check access mask
+			noDataPixelCount += (U)(isNan || !accessable);
 
+			//allow inaccessible pixels to count towards focal window
 			nextVertSame = !isNan && ((y == height - 1) || val == p_strata[index + width]);
 		       	nextHoriSame = !isNan && ((x == width - 1) || val == p_strata[index + 1]);	
 
-			if (addSelf && !isNan) {
+			if (addSelf && !isNan && accessable) {
 				randomStratumIndexes[(size_t)val].push_back(index);
 				selfAdded++;
 			}
@@ -390,13 +379,15 @@ strat_queinnec(
 			if (addfw) {
 				int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;
 				index = (fwy + verticalPad) * width + fwx + verticalPad;	
-				bool isNan = checkNan<U>(index, &val, p_mask, p_strata, noDataValue);
-				
-				if (!isNan && focalWindowMatrix[fwIndex]) {
+				val = p_strata[index];
+				isNan = std::isnan(val) || static_cast<double>(val) == noDataValue;
+				accessable = (!p_access) || (p_mask[index] != 0); //check access mask
+
+				if (!isNan && accessable && focalWindowMatrix[fwIndex]) {
 					queinnecStratumIndexes[(size_t)val].push_back(index);
 					fwAdded++;
 				}
-				else if (!isNan) {
+				else if (!isNan && accessable) {
 					randomStratumIndexes[(size_t)val].push_back(index);
 					fwAdded++;
 				}
