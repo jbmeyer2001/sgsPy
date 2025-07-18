@@ -354,7 +354,7 @@ strat_queinnec(
 	while (y < height) {
 		//reset no longer used section of focal window matrix
 		for (int64_t fwxi = 0; fwxi < fwWidth; fwxi++) {
-			focalWindowMatrix[((fwy - 1) % wrow) * fwWidth + fwxi] = true;
+			focalWindowMatrix[((fwy + wrow - 1) % wrow) * fwWidth + fwxi] = true;
 		}
 
 		int64_t fwyStart = std::max(fwy, static_cast<int64_t>(0));
@@ -524,13 +524,11 @@ strat_queinnec(
 		}
 	}
 
-	std::cout << "HERE 1" << std::endl;
 	//step 8: calculate allocation of samples depending on stratum sizes 
 	std::vector<U> strataSizes;
 	for (size_t i = 0; i < queinnecStratumIndexes.size(); i++) {
 		strataSizes.push_back(randomStratumIndexes[i].size() + queinnecStratumIndexes[i].size());
 	}
-	std::cout << "HERE 2" << std::endl;
 
 	std::vector<U> stratumCounts = calculateAllocation<U>(
 		numSamples,
@@ -540,7 +538,6 @@ strat_queinnec(
 		numDataPixels
 	);
 
-	std::cout << "HERE 3" << std::endl;
 	//step 7: determine queinnec indexes to try including as samples
 	std::vector<std::unordered_set<U>> sampleIndexes;
 	std::vector<typename std::unordered_set<U>::iterator> sampleIterators;
@@ -579,7 +576,6 @@ strat_queinnec(
 
 		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
-	std::cout << "HERE 4" << std::endl;
 	//step 8: generate coordinate points for each queinnec sample, and only add if they're outside of mindist
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
@@ -629,7 +625,6 @@ strat_queinnec(
 			sIndex++;
 		}
 	}
-	std::cout << "HERE 5" << std::endl;
 
 	//step 9: determine random indexes to try including as samples
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
@@ -667,7 +662,6 @@ strat_queinnec(
 			sampleIterators[i] = sampleIndexes[i].begin();
 		}
 	}
-	std::cout << "HERE 6" << std::endl;
 	//step 10: try adding random samples
 	sIndex = 0;
 	while (completedStratum < stratumCounts.size()) {
@@ -711,7 +705,6 @@ strat_queinnec(
 		}
 	}
 
-	std::cout << "HERE 7" << std::endl;
 	if (filename != "") {
 		try {
 			writeSamplePoints(points, filename);
