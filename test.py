@@ -8,6 +8,8 @@ print("running strat_random with proportional allocation")
 
 sgs.sample.strat(
     srast,
+    wrow=3,
+    wcol=3,
     num_samples=100,
     num_strata=5,
     allocation="prop",
