@@ -171,7 +171,7 @@ srs(
 	}
 	else {
 		for (U i = 0; i < indexes.size(); i++) {
-			if (dontSamplePixels.find(i) != 0) {
+			if (dontSamplePixels.find(i) != dontSamplePixels.end()) {
 				break;
 			}	
 
