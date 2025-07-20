@@ -3,7 +3,7 @@
 #  Project: sgs
 #  Purpose: stratified random sampling (srs)
 #  Author: Joseph Meyer
-#  Date: June, 2025
+#  Date: July, 2025
 #
 # ******************************************************************************
 
@@ -40,6 +40,9 @@ def strat(
     plot: bool = False,
     filename: str = "",
     ):
+    """
+    TODO add documentation 
+    """
     if method not in ["random", "Queinnec"]:
         raise ValueError("method must be either 'random' or 'Queinnec'.")
 
@@ -52,16 +55,20 @@ def strat(
     if allocation == "manual":
         if weights is None:
             raise ValueError("for manual allocation, weights must be given.")
+
         if np.sum(weights) != 1:
             raise ValueError("weights must sum to 1.")
 
-    #is this okay?
-    if wrow % 2 == 0:
-        raise ValueError("wrow must be odd.")
+        if len(weights) != num_samples:
+            raise ValueError("length of 'weights' must be the same as the number of samples.")
 
     #is this okay?
-    if wcol % 2 == 0:
-        raise ValueError("wcol must be odd.")
+    if wrow % 2 == 0 or wrow < 1:
+        raise ValueError("wrow must be odd, and greater than 0.")
+
+    #is this okay?
+    if wcol % 2 == 0 or wcol < 1:
+        raise ValueError("wcol must be odd, and greater then 0.")
 
     if access:
         if layer_name is None:
@@ -71,6 +78,12 @@ def strat(
 
         if buff_inner is None:
             buff_inner = 0
+
+        if buff_outer <= 0:
+            raise ValueError("buff_outer must be larger than 0.")
+
+        if buff_inner < 0:
+            raise ValueError("buff_inner can't be less than 0.")
 
         if buff_outer is None:
             raise ValueError("if an access vector is given, buff_outer must be defined.")
@@ -83,6 +96,9 @@ def strat(
 
     if mindist is None:
         mindist = 0
+
+    if mindist < 0:
+        raise ValueError("mindist must be greater than or equal to 0")
 
     if strat_rast.band_count != 1:
         raise ValueError("strat_raster must have a single band.")

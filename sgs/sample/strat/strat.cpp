@@ -3,8 +3,7 @@
  * Project: sgs
  * Purpose: C++ implementation of stratified sampling
  * Author: Joseph Meyer
- * Date: June, 2025
-
+ * Date: July, 2025
  *
  ******************************************************************************/
 
@@ -90,7 +89,7 @@ calculateAllocation(
 }
 
 /**
- *
+ * TODO add documentation
  */
 template <typename U>
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
@@ -274,7 +273,7 @@ strat_random(
 }
 	
 /**
- *
+ * TODO add documentation
  */
 template <typename U>
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
@@ -711,7 +710,7 @@ strat_queinnec(
 }
 
 /**
- *
+ * TODO add documentation
  */
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_cpp_access(
@@ -746,7 +745,7 @@ strat_cpp_access(
 }
 
 /**
- *
+ * TODO add documentation
  */
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_cpp(
