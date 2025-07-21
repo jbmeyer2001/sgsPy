@@ -59,8 +59,8 @@ def strat(
         if np.sum(weights) != 1:
             raise ValueError("weights must sum to 1.")
 
-        if len(weights) != num_samples:
-            raise ValueError("length of 'weights' must be the same as the number of samples.")
+        if len(weights) != num_strata:
+            raise ValueError("length of 'weights' must be the same as the number of strata.")
 
     #is this okay?
     if wrow % 2 == 0 or wrow < 1:
@@ -114,7 +114,7 @@ def strat(
             method,
             weights,
             mindist,
-            access,
+            access.cpp_vector,
             layer_name,
             buff_inner,
             buff_outer,

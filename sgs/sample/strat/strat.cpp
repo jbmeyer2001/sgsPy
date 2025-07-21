@@ -40,6 +40,9 @@ calculateAllocation(
 		//allocate the samples per stratum according to stratum size
 		U pixelsPerSample = numPixels / numSamples;
 
+		//add 1 if pixelsPerSample was truncated down, to avoid adding too many samples
+		pixelsPerSample += static_cast<U>(pixelsPerSample * numSamples < numPixels);
+
 		for (size_t i = 0; i < numStrata; i++) {
 			U count = p_strataSizes->at(i) / pixelsPerSample;
 			retval.push_back(count);
