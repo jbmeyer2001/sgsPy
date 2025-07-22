@@ -526,7 +526,6 @@ class TestStrat:
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
     
-    @pytest.mark.skip
     def test_queinnec_focal_window(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -550,10 +549,11 @@ class TestStrat:
             self.check_focal_window(srast, samples, 3, 3)
 
         #test 5x5 focal window
-        for _ in range(20):
+        for _ in range(100):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
-                num_samples=25,
+                num_samples=5,
+                num_strata=5,
                 wrow=5,
                 wcol=5,
                 allocation="equal",
@@ -562,33 +562,36 @@ class TestStrat:
             self.check_focal_window(srast, samples, 5, 5)
 
         #test 3x5 focal window
-        for _ in range(20):
+        for _ in range(100):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
-                num_samples=25,
+                num_samples=5,
+                num_strata=5,
                 wrow=3,
                 wcol=5,
                 allocation="equal",
                 method="Queinnec",
             ))
-            self.check_focal_window(srast, samples, 3, 5)
+            self.check_focal_window(srast, samples, wrow=3, wcol=5)
 
         #test 5x3 focal window
-        for _ in range(20):
+        for _ in range(100):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
-                num_samples=25,
+                num_samples=5,
+                num_strata=5,
                 wrow=5,
                 wcol=3,
                 allocation="equal",
                 method="Queinnec",
             ))
-            self.check_focal_window(srast, samples, 5, 3)
+            self.check_focal_window(srast, samples, wrow=5, wcol=3)
 
-        for _ in range(20):
+        for _ in range(100):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
                 num_samples=5,
+                num_strata=5,
                 wrow=7,
                 wcol=7,
                 allocation="equal",
