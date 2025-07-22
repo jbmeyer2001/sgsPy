@@ -468,7 +468,6 @@ strat_queinnec(
 
 	U numDataPixels = p_raster->getWidth() * p_raster->getHeight() - noDataPixelCount;
 
-	/*
 	//FOR TESTING PURPOSES	
 	size_t checkNumDataPixels = 0;
 	for (size_t i = 0; i < numStrata; i++) {
@@ -512,7 +511,6 @@ strat_queinnec(
 			}
 		}
 	}
-	*/
 
 	//step 8: calculate allocation of samples depending on stratum sizes 
 	std::vector<U> strataSizes;

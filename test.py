@@ -2,24 +2,10 @@ import sgs
 import matplotlib.pyplot as plt
 import geopandas as gpd
 
-mrast = sgs.SpatialRaster('/home/jbmeyer/extdata/mraster_small.tif')
+mrast = sgs.SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
 srast = sgs.stratify.quantiles(mrast, num_strata={"zq90": 5})
 
-samples = sgs.sample.strat(
-    srast,
-    wrow=3,
-    wcol=5,
-    num_samples=100,
-    num_strata=5,
-    allocation="prop",
-    method="Queinnec",
-    mindist=60
-)
 
-gs = gpd.GeoSeries.from_wkt(samples)
-print(len(gs[0].distance(gs[1:])))
-
-"""
 print("running strat_random with proportional allocation")
 
 sgs.sample.strat(
@@ -91,4 +77,3 @@ sgs.sample.strat(
     weights=[0.1, 0.15, 0.15, 0.05, 0.3, 0.05, 0.2],
     plot=True
 )
-"""
