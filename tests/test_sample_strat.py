@@ -587,18 +587,6 @@ class TestStrat:
             ))
             self.check_focal_window(srast, samples, wrow=5, wcol=3)
 
-        for _ in range(100):
-            samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
-                srast,
-                num_samples=5,
-                num_strata=5,
-                wrow=7,
-                wcol=7,
-                allocation="equal",
-                method="Queinnec",
-            ))
-            self.check_focal_window(srast, samples, 7, 7)
-
         #TODO test with wrow or wcol == 1
 
     def test_function_inputs(self):

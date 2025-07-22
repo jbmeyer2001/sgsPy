@@ -7,7 +7,7 @@ srast = sgs.stratify.quantiles(mrast, num_strata={"zq90": 5})
 
 samples = sgs.sample.strat(
     srast,
-    wrow=5,
+    wrow=3,
     wcol=5,
     num_samples=100,
     num_strata=5,

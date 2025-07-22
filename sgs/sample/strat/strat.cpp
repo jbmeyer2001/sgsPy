@@ -320,7 +320,7 @@ strat_queinnec(
 	U width = p_raster->getWidth();
 	U height = p_raster->getHeight();
 	U horizontalPad = wcol / 2;
-	U verticalPad = wcol / 2;
+	U verticalPad = wrow / 2;
 	U fwHeight = wrow;
 	U fwWidth = width - wcol + 1;
 	std::vector<bool> focalWindowMatrix(fwWidth * fwHeight, true);
@@ -338,8 +338,6 @@ strat_queinnec(
 	bool addSelf;
 	bool addfw;
 
-	U selfAdded = 0;
-	U fwAdded = 0;
 	while (y < height) {
 		//reset no longer used section of focal window matrix
 		for (int64_t fwxi = 0; fwxi < fwWidth; fwxi++) {
@@ -368,30 +366,27 @@ strat_queinnec(
 			bool isNan = std::isnan(val) || static_cast<double>(val) == noDataValue;
 			bool accessable = !p_access || (p_mask[index] != 0); //check access mask
 			noDataPixelCount += (U)(isNan || !accessable);
-
+			
 			//allow inaccessible pixels to count towards focal window
 			nextVertSame = !isNan && ((y == height - 1) || val == p_strata[index + width]);
 		       	nextHoriSame = !isNan && ((x == width - 1) || val == p_strata[index + 1]);	
 
 			if (addSelf && !isNan && accessable) {
 				randomStratumIndexes[(size_t)val].push_back(index);
-				selfAdded++;
 			}
 
 			if (addfw) {
 				int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;
-				index = (fwy + verticalPad) * width + fwx + verticalPad;	
+				index = (fwy + verticalPad) * width + fwx + horizontalPad;	
 				val = p_strata[index];
 				isNan = std::isnan(val) || static_cast<double>(val) == noDataValue;
 				accessable = (!p_access) || (p_mask[index] != 0); //check access mask
 
 				if (!isNan && accessable && focalWindowMatrix[fwIndex]) {
 					queinnecStratumIndexes[(size_t)val].push_back(index);
-					fwAdded++;
 				}
 				else if (!isNan && accessable) {
 					randomStratumIndexes[(size_t)val].push_back(index);
-					fwAdded++;
 				}
 
 			}
