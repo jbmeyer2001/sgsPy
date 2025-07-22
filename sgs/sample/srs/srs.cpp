@@ -106,10 +106,6 @@ srs(
 
 	U numDataPixels = (U)p_raster->getWidth() * (U)p_raster->getHeight() - noDataPixelCount;
 
-	if (numSamples > numDataPixels) {
-		throw std::runtime_error("num_samples cannot be greater than the number of data pixels in the image.");
-	}
-
 	//Step 6: generate random number generator using mt19937	
 	std::mt19937::result_type seed = time(nullptr);
 	auto rng = std::bind(
@@ -172,7 +168,7 @@ srs(
 	else {
 		for (U i = 0; i < indexes.size(); i++) {
 			if (dontSamplePixels.find(i) != dontSamplePixels.end()) {
-				break;
+				continue;
 			}	
 
 			U index = indexes[i];

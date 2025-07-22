@@ -31,9 +31,6 @@ class TestSrs:
         samples = sgs.srs(self.rast, num_samples=2000)
         assert len(samples) == 2000
 
-        with pytest.raises(RuntimeError):
-            samples = sgs.srs(self.rast, num_samples=200000)
-
     def test_mindist(self):
         def check_samples(mindist, samples):
             gs = gpd.GeoSeries.from_wkt(samples)
@@ -99,25 +96,25 @@ class TestSrs:
         gs_access = gpd.read_file(access_shapefile_path)
 
         #test just buff_outer working
-        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 500, access=self.access, buff_outer=100))
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, access=self.access, buff_outer=100))
         accessable = gs_access.buffer(100).union_all()
         for sample in samples:
             assert accessable.contains(sample)
 
         #test buff_outer works with mindist
-        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 500, 200, access=self.access, buff_outer=100))
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, 200, access=self.access, buff_outer=100))
         #accessable stays the same because buff_outer is the same
         for sample in samples:
             assert accessable.contains(sample)
 
         #test buff_outer and buff_inner works
         bad_points=[]
-        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 500, access=self.access, buff_outer=200, buff_inner=100))
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, access=self.access, buff_outer=200, buff_inner=100))
         accessable = gs_access.buffer(200).union_all().difference(gs_access.buffer(100).union_all())
         for sample in samples:
             assert accessable.contains(sample)
 
-        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 500, 200, access=self.access, buff_outer=200, buff_inner=100))
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, 200, access=self.access, buff_outer=200, buff_inner=100))
         #accessable stays the same because buff_outer and buff_inner are the same
         for sample in samples:
             assert accessable.contains(sample)
