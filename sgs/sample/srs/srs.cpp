@@ -49,7 +49,7 @@ template <typename T, typename U>
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
 srs(
 	GDALRasterWrapper *p_raster,
-	unsigned long long numSamples,
+	size_t numSamples,
 	double mindist,
 	GDALVectorWrapper *p_access,
 	std::string layerName,
@@ -64,7 +64,7 @@ srs(
 	//TODO this should use std::vector
 	//step 2: allocate index array which maps the adjusted index to the orignial index
 	U *p_indexArray = (U *)CPLMalloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(U));
-	U *p_indexArrayUnfilledPointer = p_indexArray;
+	std::vector<U> indexes;
 	U noDataPixelCount = 0;
 	
 	//step 3: get first raster band
@@ -81,7 +81,6 @@ srs(
 
 	//Step 5: iterate through raster band
 	double noDataValue = p_dataset->GetRasterBand(1)->GetNoDataValue();
-	U j = 0;
 	for (U i = 0; i < (U)p_raster->getWidth() * (U)p_raster->getHeight(); i++) {
 		if (p_access) {
 			//step 5.1: if the current pixel is not accessable, mark it as nodata and don't read it
@@ -98,8 +97,7 @@ srs(
 		}
 		else {
 			//Step 5.3: add data index to indexArray
-			p_indexArrayUnfilledPointer[j] = i;
-			j++;
+			indexes.push_back(i);
 		}
 	}
 	if (p_access) {
@@ -121,81 +119,89 @@ srs(
 
 	//Step 7: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
 	//use std::set because we want to iterate in-order because it will be faster
-	std::set<U> samplePixels = {}; 	
-	
-	//use std::unordered_set because we want to iterate out-of-order because it is required by the implementation
-	std::unordered_set<U> backupSamplePixels = {};
+	std::unordered_set<U> samplePixels = {};
+	std::unordered_set<U> dontSamplePixels = {};	
+	U samplePixelsSize = std::min((mindist == 0.0) ? numSamples : numSamples * 3, (size_t)numDataPixels);
 
-	while(samplePixels.size() < numSamples) {
-		samplePixels.insert(rng());
+	if (samplePixelsSize > numDataPixels / 2) {
+		while (dontSamplePixels.size() < numDataPixels - samplePixelsSize) {
+			dontSamplePixels.insert(rng());
+		}
+		std::shuffle(indexes.begin(), indexes.end(), std::mt19937(seed));
 	}
-	if (mindist != 0.0)  {
-		while(backupSamplePixels.size() < numSamples * 2) {
-			U pixel = rng();
-			if (samplePixels.find(pixel) == samplePixels.end()) {
-				backupSamplePixels.insert(pixel);
-			}
+	else {
+		while (samplePixels.size() < samplePixelsSize) {
+			samplePixels.insert(rng());
 		}
 	}
-
+	
 	//Step 8: generate coordinate points for each sample index, and only add if they're outside of mindist
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
 	std::vector<OGRPoint> points;
 	std::vector<std::string> wktPoints;
 
-	for( auto samplePixel : samplePixels ) {
-		U index = p_indexArray[samplePixel];	
-		double yIndex = index / p_raster->getWidth();
-		double xIndex = index - (yIndex * p_raster->getWidth());
-		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
-		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
-		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-	
-		if (mindist != 0.0 && points.size() != 0) {
-			U pIndex = 0;
-			while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-				pIndex++;
-			}
-			if (pIndex != (U)points.size()) {
-				continue;
-			}
-		}
-		points.push_back(newPoint);
-		wktPoints.push_back(newPoint.exportToWkt());
-		xCoords.push_back(xCoord);
-		yCoords.push_back(yCoord);
-	}
-
-	//if we need more sample points, iterate through the backups until we have
-	//either run out of backups or have the required number of samples
-	if (mindist != 0.0 && points.size() < numSamples) {
-		for ( auto samplePixel : backupSamplePixels ) {
-			U index = p_indexArray[samplePixel];
+	if (dontSamplePixels.size() == 0) {
+		for( auto samplePixel : samplePixels ) {
+			U index = indexes[samplePixel];	
 			double yIndex = index / p_raster->getWidth();
 			double xIndex = index - (yIndex * p_raster->getWidth());
 			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-
-			U pIndex = 0;
-			while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-				pIndex++;
+		
+			if (mindist != 0.0 && points.size() != 0) {
+				U pIndex = 0;
+				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
+					pIndex++;
+				}
+				if (pIndex != (U)points.size()) {
+					continue;
+				}
 			}
-
-			if (pIndex == points.size()) {
-				points.push_back(newPoint);
-				wktPoints.push_back(newPoint.exportToWkt());
-				xCoords.push_back(xCoord);
-				yCoords.push_back(yCoord);
-			}
-
-			if (points.size() == numSamples) { 
+			points.push_back(newPoint);
+			wktPoints.push_back(newPoint.exportToWkt());
+			xCoords.push_back(xCoord);
+			yCoords.push_back(yCoord);
+	
+			if (wktPoints.size() == numSamples) {
 				break;
 			}
 		}
 	}
+	else {
+		for (U i = 0; i < indexes.size(); i++) {
+			if (dontSamplePixels.find(i) != dontSamplePixels.end()) {
+				break;
+			}	
 
+			U index = indexes[i];
+			double yIndex = index / p_raster->getWidth();
+			double xIndex = index - (yIndex * p_raster->getWidth());
+			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
+		
+			if (mindist != 0.0 && points.size() != 0) {
+				U pIndex = 0;
+				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
+					pIndex++;
+				}
+				if (pIndex != (U)points.size()) {
+					continue;
+				}
+			}
+			points.push_back(newPoint);
+			wktPoints.push_back(newPoint.exportToWkt());
+			xCoords.push_back(xCoord);
+			yCoords.push_back(yCoord);
+	
+			if (wktPoints.size() == numSamples) {
+				break;
+			}
+
+		}
+	}
 	//Step 9: free no longer required index array
 	CPLFree(p_indexArray);
 

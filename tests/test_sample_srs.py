@@ -122,3 +122,4 @@ class TestSrs:
         for sample in samples:
             assert accessable.contains(sample)
 
+    #TODO test input values
