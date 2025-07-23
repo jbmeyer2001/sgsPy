@@ -112,9 +112,6 @@ systematic(
 		+ std::to_string(cellSize) + "), "
 		+ std::to_string(rotation) + ")";
 
-	std::cout << "query string:" << std::endl;
-	std::cout << queryString << std::endl;	
-
 	//query to create grid
 	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");
 
