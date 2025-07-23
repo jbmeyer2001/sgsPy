@@ -53,12 +53,6 @@ class TestStrat:
                 for col in range(wcol):
                     y_check = y + row - wrow // 2
                     x_check = x + col - wcol // 2
-                    if (srast[0, int(y), int(x)] != srast[0, int(y_check), int(x_check)]):
-                        print("y: " + str(y))
-                        print("x: " + str(x))
-                        print("strata: " + str(srast[0, int(y), int(x)]))
-                        print("y_check: " + str(y_check))
-                        print("x_check: " + str(x_check))
                     assert(srast[0, int(y), int(x)] == srast[0, int(y_check), int(x_check)])
 
     def get_allocation_percentages(self, srast, samples):
