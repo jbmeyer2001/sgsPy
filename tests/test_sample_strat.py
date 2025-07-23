@@ -99,6 +99,7 @@ class TestStrat:
             mindist=150,
         ))
         
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(150, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -118,6 +119,7 @@ class TestStrat:
             buff_outer = 300,
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 90, 300)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -137,6 +139,7 @@ class TestStrat:
             mindist=90,
         ))
 
+        assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)
         self.check_mindist(90, samples)
@@ -156,6 +159,7 @@ class TestStrat:
             method="random"
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         percentages = self.get_allocation_percentages(srast, samples)
         for percentage in percentages.values():
@@ -171,6 +175,7 @@ class TestStrat:
             mindist=150,
         ))
         
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(150, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -190,6 +195,7 @@ class TestStrat:
             buff_outer = 300,
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 90, 300)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -209,6 +215,7 @@ class TestStrat:
             mindist=90,
         ))
 
+        assert len(samples) == 128
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)
         self.check_mindist(90, samples)
@@ -228,6 +235,7 @@ class TestStrat:
             weights=[0.5, 0.25, 0.1, 0.15],
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         percentages = self.get_allocation_percentages(srast, samples)
         assert percentages[0] - 0.5 == pytest.approx(0, abs=0.03)
@@ -246,6 +254,7 @@ class TestStrat:
             mindist=90,
         ))
 
+        assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(90, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -268,6 +277,7 @@ class TestStrat:
             buff_outer=1200,
         ))
 
+        assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 120, 1200)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -290,6 +300,7 @@ class TestStrat:
             mindist=90
         ))
 
+        assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 1200)
         self.check_mindist(90, samples)
@@ -311,6 +322,7 @@ class TestStrat:
             method="Queinnec",
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         percentages = self.get_allocation_percentages(srast, samples)
         for percentage in percentages.values():
@@ -325,7 +337,8 @@ class TestStrat:
             method="Queinnec",
             mindist=150,
         ))
-        
+       
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(150, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -345,6 +358,7 @@ class TestStrat:
             buff_outer = 300,
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 90, 300)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -364,6 +378,7 @@ class TestStrat:
             mindist=90,
         ))
 
+        assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)
         self.check_mindist(90, samples)
@@ -383,6 +398,7 @@ class TestStrat:
             method="Queinnec"
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         percentages = self.get_allocation_percentages(srast, samples)
         for percentage in percentages.values():
@@ -398,6 +414,7 @@ class TestStrat:
             mindist=150,
         ))
         
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(150, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -417,6 +434,7 @@ class TestStrat:
             buff_outer = 300,
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 90, 300)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -436,6 +454,7 @@ class TestStrat:
             mindist=90,
         ))
 
+        assert len(samples) == 128
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)
         self.check_mindist(90, samples)
@@ -455,6 +474,7 @@ class TestStrat:
             weights=[0.5, 0.25, 0.1, 0.15],
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         percentages = self.get_allocation_percentages(srast, samples)
         assert percentages[0] - 0.5 == pytest.approx(0, abs=0.03)
@@ -473,6 +493,7 @@ class TestStrat:
             mindist=90,
         ))
 
+        assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(90, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -495,6 +516,7 @@ class TestStrat:
             buff_outer=1200,
         ))
 
+        assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 120, 1200)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -517,6 +539,7 @@ class TestStrat:
             mindist=90
         ))
 
+        assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 1200)
         self.check_mindist(90, samples)
