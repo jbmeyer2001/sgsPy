@@ -26,7 +26,6 @@ from .sample import (
     nc,
     srs,
     strat,
-    sys_strat,
     systematic,
 )
 
