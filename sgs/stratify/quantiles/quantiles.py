@@ -133,9 +133,6 @@ def quantiles(
                     if 1.0 in probabilities_dict[band_num]:
                         probabilities_dict[band_num].remove(1.0)
 
-    print('probabilities_dict')
-    print(probabilities_dict)
-    print()
     #call stratify quantiles function
     strat_raster = quantiles_cpp(rast.cpp_raster, probabilities_dict, map, filename)
 
