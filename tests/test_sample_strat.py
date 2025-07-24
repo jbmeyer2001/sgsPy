@@ -84,6 +84,7 @@ class TestStrat:
             method="random",
         ))
 
+        assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         percentages = self.get_allocation_percentages(srast, samples)
         for percentage in percentages.values():
@@ -99,7 +100,7 @@ class TestStrat:
             mindist=150,
         ))
         
-        assert len(samples) == 500
+        assert len(samples) > 490 #mindist means we might not get the full 500
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(150, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -139,7 +140,7 @@ class TestStrat:
             mindist=90,
         ))
 
-        assert len(samples) == 100
+        assert len(samples) > 90 #mindist means we may not get the full 100
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)
         self.check_mindist(90, samples)
@@ -175,7 +176,7 @@ class TestStrat:
             mindist=150,
         ))
         
-        assert len(samples) == 500
+        assert len(samples) > 490 #mindist means we may not get the full 500
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(150, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -215,7 +216,7 @@ class TestStrat:
             mindist=90,
         ))
 
-        assert len(samples) == 128
+        assert len(samples) > 115 #mindist means we may not get the full 128 
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)
         self.check_mindist(90, samples)
@@ -254,7 +255,7 @@ class TestStrat:
             mindist=90,
         ))
 
-        assert len(samples) == 100
+        assert len(samples) > 90 #mindist means we may not get the full 100
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(90, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -300,7 +301,7 @@ class TestStrat:
             mindist=90
         ))
 
-        assert len(samples) == 100
+        assert len(samples) > 90 #mindist means we may not get the full 90 
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 1200)
         self.check_mindist(90, samples)
@@ -338,7 +339,7 @@ class TestStrat:
             mindist=150,
         ))
        
-        assert len(samples) == 500
+        assert len(samples) > 490 #mindist means we may not get the full 500 
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(150, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -378,7 +379,7 @@ class TestStrat:
             mindist=90,
         ))
 
-        assert len(samples) == 100
+        assert len(samples) > 90 #mindist means we may not get the full 90 
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)
         self.check_mindist(90, samples)
@@ -414,7 +415,7 @@ class TestStrat:
             mindist=150,
         ))
         
-        assert len(samples) == 500
+        assert len(samples) > 490 #mindist means we may not get the full 500 
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(150, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -454,7 +455,7 @@ class TestStrat:
             mindist=90,
         ))
 
-        assert len(samples) == 128
+        assert len(samples) > 115 #mindist means we may not get the full 128 
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)
         self.check_mindist(90, samples)
@@ -493,7 +494,7 @@ class TestStrat:
             mindist=90,
         ))
 
-        assert len(samples) == 100
+        assert len(samples) > 90 #mindist means we may not get the full 100 
         self.check_points_in_bounds(srast, samples)
         self.check_mindist(90, samples)
         percentages = self.get_allocation_percentages(srast, samples)
@@ -539,7 +540,7 @@ class TestStrat:
             mindist=90
         ))
 
-        assert len(samples) == 100
+        assert len(samples) > 90 #mindist means we may not get the full 100 
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 1200)
         self.check_mindist(90, samples)
