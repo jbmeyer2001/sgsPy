@@ -43,8 +43,6 @@ def quantiles(
         specification of the quantiles to stratify
     map : bool
         whether to map the stratifiction of multiple raster bands onto a single band
-    plot : bool
-        whether to plot the distribution or not
     filename : str
         filename to write to or ''  if no file should be written
 
@@ -56,8 +54,13 @@ def quantiles(
         if quantiles specified by a list of floats (list[float]) have a maximum over 1
     ValueError
         if quantiles specified by a list of floats (list[float]) have a minimum under 0
+    RuntimeError (C++)
+        if the data type of the raster is not accepted
+    RuntimeError (C++)
+        if num_strata is too large to the point where it would result in integer overflow
+    RuntimeError (C++)
+        if the number of strata required by mapping is too large to the point where it would result in integer overflow    
     """
-    #TODO add cpp runtime errors
 
     if type(num_strata) is list and len(num_strata) < 1:
         raise ValueError("num_strata list must contain at least one element")
@@ -135,9 +138,5 @@ def quantiles(
 
     #call stratify quantiles function
     strat_raster = quantiles_cpp(rast.cpp_raster, probabilities_dict, map, filename)
-
-    #plot distribution of stratum if requested
-    if plot:
-        print('plotting not implemented on strat.quantiles yet')
 
     return SpatialRaster(strat_raster)
