@@ -17,18 +17,44 @@ from poly import poly_cpp
 def poly(
     raster: SpatialRaster,
     vector: SpatialVector,
-    attribute: str,
     layer_name: str,
+    attribute: str,
     features: list[str|list[str]],
-    filename:str = '',
-    plot: bool = False):
+    filename:str = ''):
     """
+    this function conducts stratification on a polygon by rasterizing a polygon
+    layer, and using its values to determine stratifications.
 
-    note that I'm using the GDAL rasterize sql functionality because it
-    can all be condensed into one, somewhat concise query. No columns
-    will need to be added to the dataset, and no dataset parameters
-    will have to be modified
+    the layer_name parameter is the layer to be rasterized, and the attribute
+    is the attribute within the layer to check. The features parameter specifies
+    the feature values within the attribute, and which stratification they will
+    be a part of.
 
+    The features parameter is a list containing strings and lists of strings.
+    The index within this list determines the stratification value. For example:
+    
+    features = ["low", "medium", "high"] 
+        would result in 3 stratifications (0, 1, 2) where 'low' would correspond
+        to stratification 0, medium to 1, and hight to 2
+
+    features = ["low", ["medium", "high"]]
+        would result in 2 stratifications (0, 1) where 'low' would correspond
+        to stratification 0, and both medium and hight to 1
+
+    Parameters
+    --------------------
+    rast : SpatialRaster
+        raster data structure which will determine height, width, geotransform, and projection
+    vector : SpatialVector
+        the vector of polygons to stratify
+    layer_name : str
+        the layer in the vector to be stratified
+    attribute : str
+        the attribute in the layer to be stratified
+    features : list[str|list[str]]
+        the stratification values of each feature value, represented as the index in the list
+    filename : str
+        the output filename to write to, if desired
     """
 
     cases = ""
@@ -55,10 +81,5 @@ def poly(
         filename
     )
 
-    retval = SpatialRaster(strat_rast)
-
-    if plot:
-        retval.plot()
-
-    return retval
+    return SpatialRaster(strat_rast)
 
