@@ -12,8 +12,7 @@ from sgs.utils import SpatialRaster
 from map_stratifications import map_stratifications_cpp
 
 def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
-        filename: str = '',
-        plot: bool = False):
+        filename: str = ''):
     """
     this function conducts mapping on existing stratifications.
 
@@ -31,7 +30,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
      - an int, specifying a single band.
      - a str, specifying a single band.
      - a list of ints, specifying the indexes of bands.
-     - a lsit of strings, specifying the names of bands.
+     - a list of strings, specifying the names of bands.
     
     The num_stratum argument MUST be
      - an int, if bands is an int or string, specifiying the exact number of stratum in the 
@@ -43,8 +42,6 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     --------------------
     *args : tuple[SpatialRaster, int|list[int]|list[str], int|list[int]]
         tuples specifying raster bands and their number of stratifications
-    plot : bool
-        whether to plot the distribution or not
     filename : str
         filename to write to or '' if not file should be written
     Raises
@@ -59,8 +56,11 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         if a string within the bands argument does not exist in the raster
     ValueError
         if an int within the bands argument does not exist in the raster
+    RuntimeError (C++)
+        if raster pixel type is not GDT_Float32
+    RuntimeError (C++)
+        if the number of mappings is large enought that it would cause integer overflow
     """
-    #TODO add cpp runtime errors
 
     raster_list = []
     band_lists = []
@@ -109,9 +109,5 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
 
     #call cpp map function
     mapped_raster = map_stratifications_cpp(raster_list, band_lists, stratum_lists, filename)
-
-    #plot distribtion of stratum if requested
-    if plot:
-        print('plotting not implemented on strat.map yet')
 
     return SpatialRaster(mapped_raster)
