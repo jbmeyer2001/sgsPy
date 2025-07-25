@@ -16,7 +16,8 @@
 #include "write.h"
 
 /**
- * Helper function which calculates the count of values for each strata.
+ * Helper function which calculates the count of values for each strata
+ * depending on the allocation method.
  *
  * @param std::string allocation method
  * @param std::vector<size_t>& sizes of each strata
@@ -49,7 +50,7 @@ calculateAllocation(
 			remainder -= count;
 		}
 	}
-	else if (allocation == "equal") { //TODO what if a strata doesn't have enough pixels???
+	else if (allocation == "equal") {
 		//determine the count of samples per strata
 		U strataSampleCount = numSamples / numStrata;
 		
@@ -58,7 +59,7 @@ calculateAllocation(
 			remainder -= strataSampleCount;
 		}
 	}
-	else if (allocation == "manual") { //TODO what if a strata doesn't have enough pixels???
+	else if (allocation == "manual") {
 		if (numStrata != p_weights->size()) {
 			throw std::runtime_error("size of weights is not equal to the number of strata.");
 		}
@@ -92,7 +93,35 @@ calculateAllocation(
 }
 
 /**
- * TODO add documentation
+ * This function conducts stratified random sampling on the provided stratified raster.
+ *
+ *
+ * First, the raster is iterated over, the no data pixels, and the pixels which
+ * are inaccessable are ignored. The remaining accessable data pixel indexes
+ * are placed into vectors corresponding to their strata. After this iteration,
+ * there will be a a number of vectors equivalent to the number of strata,
+ * and they will contain the indexes of the pixels which are their
+ * corresponding strata.
+ *
+ *
+ * Next, the calculate_allocation function is used to determine the the total
+ * number of samples which should be allocated to each strata, depending on the
+ * number of pixels in each strata and the allocation method specified by the
+ * user.
+ *
+ *
+ * Finally, random indexes in the strata vectors are selected, and using
+ * their index value in the stratified raster and geotransform, a point
+ * geometry is calculated.
+ *
+ * When a stratum is allocated more than half the number of total pixels the 
+ * strata vector contains, random indexes in the strat vectors are selected 
+ * which WONT be included, and the remaining are iterated over in a random order.
+ *
+ * When mindist is inequal to zero, three times the number of samples are 
+ * randomly selected in order to ensure a number of samples as close to the 
+ * desired number are selected, as having a large mindist may mean some samples
+ * can't be included due to their proximity to other already-selected pixels. 
  */
 template <typename U>
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
@@ -156,8 +185,7 @@ strat_random(
 
 	U numDataPixels = (p_raster->getWidth() * p_raster->getHeight()) - noDataPixelCount;
 	
-	//step 5: using the size of the stratum and allocation method,
-	//determine the number of samples to take from each stratum
+	//step 5: determine the number of samples to take from each strata
 	std::vector<U> strataSizes;
 	for (size_t i = 0; i < stratumIndexes.size(); i++) {
 		strataSizes.push_back(stratumIndexes[i].size());
@@ -171,9 +199,7 @@ strat_random(
 		numDataPixels
 	);
 
-	//step 7: determine pixel values to include as samples.
-	
-	//make a set of pixels to include as samples
+	//step 6: determine pixel values to include as samples.
 	std::vector<std::unordered_set<U>> sampleIndexes;
 	std::vector<typename std::unordered_set<U>::iterator> sampleIterators;
 	std::vector<U> samplesAdded;
@@ -212,7 +238,7 @@ strat_random(
 		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
 
-	//step 8: generate coordinate points for each sample index, and only add if they're outside of mindist
+	//step 7: generate coordinate points for each sample index.
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
 	std::vector<OGRPoint> points;
@@ -222,7 +248,6 @@ strat_random(
 	U completedStratum = 0;
 	double *GT = p_raster->getGeotransform();
 	while (completedStratum < stratumCounts.size()) {
-		//determine strata from i
 		if (sIndex >= strataNum.size()) {
 			sIndex = 0;
 		}
@@ -263,6 +288,7 @@ strat_random(
 		}
 	}
 
+	//step 8: write vector if filename is not "".
 	if (filename != "") {
 		try {
 			writeSamplePoints(points, filename);
@@ -276,8 +302,65 @@ strat_random(
 }
 	
 /**
- * TODO add documentation
+ * This function conducts stratified sampling on the provided stratified raster
+ * using the Queinnec method. The queinnec method first tries to sample pixels which 
+ * are surrounded entirely by pixels of the same strata within a user-defined 
+ * focal window. If there are not enough focal-window pixels to sample the desired number,
+ * pixels are randomly sampled.
+ *
+ *
+ * First, the raster is iterated over, the no data pixels and the pixels which
+ * are inaccessable are not considered for sampling, however the inaccessable
+ * pixels are still considered as part of a valid focal window for accessable pixels.
+ *
+ * The remaining accessable data pixel indexes are placed into either 
+ * queinnec-sampling vectors or random-sampling vectors corresponding to their strata. 
+ *
+ * Rather than checking the surrounding focal window pixels for every single pixel --
+ * a computationally expensive method -- a moving focal window of boolean values
+ * (the 'focal window matrix') is used to determine whether a pixel should go into
+ * the queinnec vectors or the random vectors. The focal window matrix is initialized
+ * to 'true', and as the stratified raster is iterated though, each pixel checks the
+ * next vertical and next horizontal pixel to see if they are the same -- boolean 
+ * values for the previous pixels are also saved. Then, using these 4 booleans (
+ * 'next horizontal same', 'next vertical same', 'previous horizontal same',
+ * and 'previous vertical same') the corresponding pixels in the focal window
+ * matrix are set to false if required. When all of the pixels which may
+ * influence a given focal window pixel are checked, that pixel is added to
+ * the queinnec vectors if the focal window value is true, and the
+ * random vectors otherwise.
+ *
+ * Due to the relatively complex nature of the focal window matrix, inline
+ * tests are included to ensure the correct pixels are added to the queinnec
+ * vectors and random vectors. They are commented out, but are left there
+ * for if the implementation requires future adjustments.
+ *
+ *
+ * Next, the calculate_allocation function is used to determine the the total
+ * number of samples which should be allocated to each strata, depending on the
+ * number of pixels in each strata and the allocation method specified by the
+ * user.
+ *
+ *
+ * Finally, random indexes in the queinnec strata vectors are selected, 
+ * and using their index value in the stratified raster and geotransform, 
+ * a point geometry is calculated.
+ *
+ * When a stratum is allocated more than half the number of pixels in the 
+ * queinnec strata vector, random indexes in the queinnec strata vectors
+ * are selected which WONT be included, and the remaining are iterated over
+ * in a random order.
+ *
+ * When mindist is inequal to zero, three times the number of samples are 
+ * randomly selected in order to ensure a number of samples as close to the 
+ * desired number are selected, as having a large mindist may mean some samples
+ * can't be included due to their proximity to other already-selected pixels.
+ *
+ * If a strata does not have the desired number of samples, the random
+ * strata vectors are then used to added any required remaining
+ * samples using the same random selection technique. 
  */
+
 template <typename U>
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_queinnec(
@@ -338,6 +421,7 @@ strat_queinnec(
 	bool addSelf;
 	bool addfw;
 
+	//step 5: iterate through strat raster.
 	while (y < height) {
 		//reset no longer used section of focal window matrix
 		for (int64_t fwxi = 0; fwxi < fwWidth; fwxi++) {
@@ -374,10 +458,12 @@ strat_queinnec(
 			nextVertSame = !isNan && ((y == height - 1) || val == p_strata[index + width]);
 		       	nextHoriSame = !isNan && ((x == width - 1) || val == p_strata[index + 1]);	
 
+			//add the current pixel if it is not within the focal window matrix (too close to raster edges)
 			if (addSelf && !isNan && accessable) {
 				randomStratumIndexes[(size_t)val].push_back(index);
 			}
 
+			//add the focal window pixel which can no longer be altered by future pixel values
 			if (addfw) {
 				int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;
 				index = (fwy + verticalPad) * width + fwx + horizontalPad;	
@@ -471,6 +557,7 @@ strat_queinnec(
 
 	U numDataPixels = p_raster->getWidth() * p_raster->getHeight() - noDataPixelCount;
 
+	//step 6: test to ensure focal queinnec/random vector additions are correct
 	/*
 	//FOR TESTING PURPOSES	
 	size_t checkNumDataPixels = 0;
@@ -522,7 +609,7 @@ strat_queinnec(
 	}
 	*/
 
-	//step 8: calculate allocation of samples depending on stratum sizes 
+	//step 7: calculate allocation of samples depending on stratum sizes 
 	std::vector<U> strataSizes;
 	for (size_t i = 0; i < queinnecStratumIndexes.size(); i++) {
 		strataSizes.push_back(randomStratumIndexes[i].size() + queinnecStratumIndexes[i].size());
@@ -536,7 +623,7 @@ strat_queinnec(
 		numDataPixels
 	);
 
-	//step 7: determine queinnec indexes to try including as samples
+	//step 8: determine queinnec indexes to try including as samples
 	std::vector<std::unordered_set<U>> sampleIndexes;
 	std::vector<typename std::unordered_set<U>::iterator> sampleIterators;
 	std::vector<U> samplesAdded;
@@ -574,7 +661,8 @@ strat_queinnec(
 
 		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
-	//step 8: generate coordinate points for each queinnec sample, and only add if they're outside of mindist
+
+	//step 9: generate coordinate points for each queinnec sample, and only add if they're outside of mindist
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
 	std::vector<OGRPoint> points;
@@ -584,7 +672,6 @@ strat_queinnec(
 	U completedStratum = 0;
 	double *GT = p_raster->getGeotransform();
 	while (completedStratum < stratumCounts.size()) {
-		//determine strata from i
 		if (sIndex >= strataNum.size()) {
 			sIndex = 0;
 		}
@@ -624,7 +711,7 @@ strat_queinnec(
 		}
 	}
 
-	//step 9: determine random indexes to try including as samples
+	//step 10: determine random indexes to try including as samples
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
 		stratumCounts[i] -= samplesAdded[i];
 		if (stratumCounts[i] > 0) {
@@ -660,7 +747,7 @@ strat_queinnec(
 			sampleIterators[i] = sampleIndexes[i].begin();
 		}
 	}
-	//step 10: try adding random samples
+	//step 11: try adding random samples
 	sIndex = 0;
 	while (completedStratum < stratumCounts.size()) {
 		//determine strata from i
@@ -703,6 +790,7 @@ strat_queinnec(
 		}
 	}
 
+	//step 12: write to file if filename is not ""
 	if (filename != "") {
 		try {
 			writeSamplePoints(points, filename);
@@ -716,7 +804,12 @@ strat_queinnec(
 }
 
 /**
- * TODO add documentation
+ * This function is called by the Python side of the application
+ * if the user provided access information. Depending on the
+ * method ("random", or "Queinnec"), and depending on the max
+ * potential index required, call either strat_queinnec() or 
+ * strat_random(), with provided arguments and required template
+ * parameters.
  */
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_cpp_access(
@@ -751,7 +844,12 @@ strat_cpp_access(
 }
 
 /**
- * TODO add documentation
+ * This function is called by the Python side of the application
+ * if the user did not provided access information. Depending on the
+ * method ("random", or "Queinnec"), and depending on the max
+ * potential index required, call either strat_queinnec() or 
+ * strat_random(), with provided arguments and required template
+ * parameters.
  */
 std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
 strat_cpp(
