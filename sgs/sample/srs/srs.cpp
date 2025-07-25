@@ -22,15 +22,13 @@
  * of sample plots given a raster image which may contain nodata
  * pixels.
  *
- * //TODO add access vector information when functionality
- * is implemented.
- *
  * A single raster band is read from the raster, and each pixel
  * is checked to ensure a sample is not located on a nodata
- * pixel. The indeces of the data pixels are saved in another 
- * allocated matrix. When all pixels have been read, the indexes
- * are randomly drawn from the data pixels, converted to 
- * geographic coordinates using the geotransform, and returned.
+ * pixel, and the pixel is accessable if access information is provided. 
+ * The indeces of the data pixels are saved in a vector. 
+ * When all pixels have been read, the indexes are randomly 
+ * drawn from the data pixels, converted to geographic coordinates 
+ * using the geotransform, and returned.
  *
  * The function is a template function which contains the data
  * type of the raster (T), as well as the type of the 
