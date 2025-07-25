@@ -136,15 +136,21 @@ def strat(
         )
 
     #plot new vector if requested
-    #TODO do this in try/catch so that error won't cause 
-    #sampling to be thrown out
     if plot:
-        fig, ax = plt.subplots()
-        #TODO let user know which band is being printed
-        strat_rast.plot(ax, band=strat_rast.bands[0])
-        if access:
-            access.plot('LineString', ax)
-        ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
-        plt.show()
+        try:
+            fig, ax = plt.subplots()
+            strat_rast.plot(ax, band=strat_rast.bands[0])
+            title = "samples on " + strat_rast.bands[0]
 
+            if access:
+                access.plot('LineString', ax)
+                title += " with access"
+
+            ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
+            ax.set_title(label=title)
+            plt.show()
+        except Exception as e:
+            print("unable to plot output: " + str(e))
+
+    #TODO return spatialVector
     return sample_points

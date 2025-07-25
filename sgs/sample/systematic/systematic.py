@@ -75,14 +75,13 @@ def systematic(
         filename
     )
 
+    #plot new vector if requested
     if plot:
         fig, ax = plt.subplots()
         ax.set_xlim([rast.xmin, rast.xmax])
         ax.set_ylim([rast.ymin, rast.ymax])
-
-        #TODO let user know which band is being printed
-        #plot raster
         rast.plot(ax, band=rast.bands[0])
+        title="samples on " + rast.bands[0]
         
         #plot grid
         for shape in grid:
@@ -90,6 +89,7 @@ def systematic(
 
         #plot sample points
         ax.plot(points[0], points[1], '.r')
+        ax.set_title(label=title)
         plt.show()
 
     return samples

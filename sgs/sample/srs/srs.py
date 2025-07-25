@@ -115,16 +115,22 @@ def srs(
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, len(sample_points)))
 
     #plot new vector if requested
-    #TODO do this in try/catch so that error won't cause
-    #sampling to be thrown out
     if plot:
-        fig, ax = plt.subplots()
-        #TODO let user know which band is being printed
-        rast.plot(ax, band=rast.bands[0])
-        if access:
-            access.plot('LineString', ax)
-        ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
-        plt.show()
+        try:
+            fig, ax = plt.subplots()
+            rast.plot(ax, band=rast.bands[0])
+            title = "samples on " + rast.bands[0]
+            
+            if access:
+                access.plot('LineString', ax)
+                title += " with access"
+
+            ax.plot(sample_coordinates[0], sample_coordinates[1], '.r')
+            ax.set_title(label=title)
+            plt.show()
+
+        except Exception as e:
+            print("unable to plot output: " + str(e))
 
     #TODO return SpatialVector???
     return sample_points
