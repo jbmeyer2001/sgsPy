@@ -17,7 +17,6 @@ def breaks(
     rast: SpatialRaster,
     breaks: list[float | list[float]] | dict[str, list[float]],
     map: bool = False,
-    plot: bool = False,
     filename: str = ''):
     """
     This function conducts stratification on the raster given
@@ -51,8 +50,13 @@ def breaks(
         if a break contains a value less than the minimum in the corresponding raster band
     ValueError
         if a break contains a value greater than the maximum in the corresponding raster band
+    RuntimeError (C++)
+        if the raster data type is not accepted
+    RuntimeError (C++)
+        if the number of output strata (break indexes) is large enough to cause integer overflow
+    RuntimeError (C++)
+        if the number of output strata in mapped raster would be large enough to cause integer overflow
     """
-    #TODO add cpp runtime errors
 
     breaks_dict = {}
 
@@ -83,10 +87,6 @@ def breaks(
 
     #call stratify breaks function
     strat_raster = breaks_cpp(rast.cpp_raster, breaks_dict, map, filename)
-
-    #plot distribution of breaks if requested
-    if plot:
-        print('plotting not implemented on strat.breaks yet')
 
     return SpatialRaster(strat_raster)
 
