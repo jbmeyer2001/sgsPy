@@ -611,7 +611,32 @@ class TestStrat:
             ))
             self.check_focal_window(srast, samples, wrow=5, wcol=3)
 
-        #TODO test with wrow or wcol == 1
+        #test 1x3 focal window
+        for _ in range(20):
+            samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+                srast,
+                num_samples=50,
+                num_strata=5,
+                wrow=1,
+                wcol=3,
+                allocation="equal",
+                method="Queinnec",
+            ))
+            self.check_focal_window(srast, samples, wrow=1, wcol=3)
+
+        #test 3x1 focal window
+        for _ in range(20):
+            samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+                srast,
+                num_samples=50,
+                num_strata=5,
+                wrow=3,
+                wcol=1,
+                allocation="equal",
+                method="Queinnec",
+            ))
+            self.check_focal_window(srast, samples, wrow=3, wcol=1)
+
 
     def test_function_inputs(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
@@ -687,11 +712,3 @@ class TestStrat:
                 method="random",
                 mindist=-1,
             )
-
-        #test access
-        #TODO add
-                
-
-    #def test_write_functionality(self):
-
-
