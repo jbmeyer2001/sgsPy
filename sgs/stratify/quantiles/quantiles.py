@@ -17,7 +17,6 @@ def quantiles(
     rast: SpatialRaster,
     num_strata: int | list[float] | list[int|list[float]] | dict[str,int|list[float]],
     map: bool = False,
-    plot: bool = False,
     filename: str = ''):
     """
     This function conducts stratification on the raster given by generating quantile
