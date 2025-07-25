@@ -23,9 +23,9 @@ class TestPoly:
         test_rast = sgs.poly(
             self.rast, 
             self.vect, 
-            'NUTRIENTS', 
-            'inventory_polygons',
-            ['poor', 'rich', 'medium'],
+            attribute='NUTRIENTS', 
+            layer_name='inventory_polygons',
+            features=['poor', 'rich', 'medium'],
         )
         test = test_rast[:]
         correct = self.test1_output_rast[:].astype(np.float32)
@@ -36,9 +36,9 @@ class TestPoly:
         test_rast = sgs.poly(
             self.rast,
             self.vect,
-            'NUTRIENTS',
-            'inventory_polygons',
-            ['poor', ['rich', 'medium']],
+            attribute='NUTRIENTS',
+            layer_name='inventory_polygons',
+            features=['poor', ['rich', 'medium']],
         )
         test = test_rast[:]
         correct = self.test2_output_rast[:].astype(np.float32)
@@ -54,9 +54,9 @@ class TestPoly:
         sgs.poly(
             self.rast, 
             self.vect, 
-            'NUTRIENTS', 
-            'inventory_polygons',
-            ['poor', 'rich', 'medium'],
+            attribute='NUTRIENTS', 
+            layer_name='inventory_polygons',
+            features=['poor', 'rich', 'medium'],
             filename=str(temp_file),
         )
         test_rast = sgs.SpatialRaster(str(temp_file))
