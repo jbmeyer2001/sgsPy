@@ -60,10 +60,6 @@ calculateAllocation(
 		}
 	}
 	else if (allocation == "manual") {
-		if (numStrata != p_weights->size()) {
-			throw std::runtime_error("size of weights is not equal to the number of strata.");
-		}
-
 		//allocate samples accordign to weights.
 		for (size_t i = 0; i < numStrata; i++) {
 			U count = static_cast<U>(static_cast<double>(numSamples) * p_weights->at(i));
