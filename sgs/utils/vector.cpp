@@ -7,6 +7,8 @@
  *
  ******************************************************************************/
 
+#include <iostream>
+
 #include "vector.h"
 
 /******************************************************************************
@@ -21,6 +23,13 @@ GDALVectorWrapper::GDALVectorWrapper(std::string filename) {
 	if (!this->p_dataset) {
 		throw std::runtime_error("dataset pointer is null after initialization, dataset unable to be initialized.");
 	}
+}
+
+/******************************************************************************
+			      GDALVectorWrapper()
+******************************************************************************/
+GDALVectorWrapper::GDALVectorWrapper(GDALDataset *p_dataset) {
+	this->p_dataset = GDALDatasetUniquePtr(p_dataset);
 }
 
 /******************************************************************************
@@ -146,4 +155,28 @@ GDALVectorWrapper::getLineStrings(std::string layerName) {
 	}
 
 	return retval;
+}
+
+/******************************************************************************
+				    write()
+******************************************************************************/
+void GDALVectorWrapper::write(std::string filename) {
+	GDALDataset *datasetCopy = CreateCopy(
+		filename.c_str(),
+		this->p_dataset.get(),
+		FALSE,
+		nullptr,
+		nullptr,
+		nullptr
+	);
+
+	if (!datasetCopy) {
+		std::cout << "failed to create dataset with filename " << filename << "." << std::endl;
+	}
+
+	CPLErr err = DatasetClose(datasetCopy);
+
+	if (err != CE_NONE) {
+		std::cout << "failed to close dataset of file " << filename << ". The file output may not be correct." << std::endl;
+	}
 }

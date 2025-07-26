@@ -40,7 +40,7 @@ class SpatialVector:
         takes an optional argument specify the band, and prints vector metadata to console
     """
     def __init__(self, 
-                 image: str):
+                 image: str | GDALVectorWrapper):
         """
         Constructing method for the SpatialVector class.
 
@@ -51,15 +51,19 @@ class SpatialVector:
 
         Parameters
         --------------------
-        image: str
-           specifies a path to a vector file
+        image: str | GDALVectorWrapper
+           specifies a path to a vector file or the C++ class object itself
 
         Raises
         --------------------
         RuntimeError (from C++):
             if dataset is not initialized correctly 
         """
-        self.cpp_vector = GDALVectorWrapper(image)
+        if (type(image) is str):
+            self.cpp_vector = GDALVectorWrapper(image)
+        else:
+            self.cpp_vector = image
+
         self.layers = self.cpp_vector.get_layer_names() 
 
     def print_info(self, 

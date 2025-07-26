@@ -98,7 +98,7 @@ def srs(
 
     #call random sampling function
     if (access):
-        [sample_coordinates, sample_points] = srs_cpp_access(
+        [sample_coordinates, cpp_vector] = srs_cpp_access(
             rast.cpp_raster,
             num_samples,
             mindist,
@@ -109,10 +109,10 @@ def srs(
             filename
         )
     else:
-        [sample_coordinates, sample_points] = srs_cpp(rast.cpp_raster, num_samples, mindist, filename)
+        [sample_coordinates, cpp_vector] = srs_cpp(rast.cpp_raster, num_samples, mindist, filename)
     
-    if (len(sample_points)) < num_samples:
-        print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, len(sample_points)))
+    if (len(sample_coordinates[0])) < num_samples:
+        print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, len(sample_coordinates[0])))
 
     #plot new vector if requested
     if plot:
@@ -132,5 +132,4 @@ def srs(
         except Exception as e:
             print("unable to plot output: " + str(e))
 
-    #TODO return SpatialVector???
-    return sample_points
+    return SpatialVector(cpp_vector)

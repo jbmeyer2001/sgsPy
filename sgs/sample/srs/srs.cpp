@@ -28,7 +28,7 @@
  * The indeces of the data pixels are saved in a vector. 
  * When all pixels have been read, the indexes are randomly 
  * drawn from the data pixels, converted to geographic coordinates 
- * using the geotransform, and returned.
+ * using the geotransform, and returned as a new GDALVectorWrapper object.
  *
  * The function is a template function which contains the data
  * type of the raster (T), as well as the type of the 
@@ -40,11 +40,11 @@
  * @param GDALRasterWrapper * a pointer to the raster image we're sampling
  * @param GDALRasterVector * a pointer to an access vector image if it exists
  * @param U <unsigned short, unsigned, unsigned long, unsigned long long> the number of samples
- * @returns std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
- * 	coordinate and wkt representation of samples
+ * @returns std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+ * 	coordinate and dataset representation of samples
  */
 template <typename T, typename U>
-std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *> 
 srs(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
@@ -59,9 +59,7 @@ srs(
 	GDALDataset *p_dataset = p_raster->getDataset();
 	double *GT = p_raster->getGeotransform();
 
-	//TODO this should use std::vector
 	//step 2: allocate index array which maps the adjusted index to the orignial index
-	U *p_indexArray = (U *)CPLMalloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(U));
 	std::vector<U> indexes;
 	U noDataPixelCount = 0;
 	
@@ -129,11 +127,16 @@ srs(
 		}
 	}
 	
-	//Step 8: generate coordinate points for each sample index, and only add if they're outside of mindist
+	//step 8: create new in-memory dataset to store sample points
+	//TODO error check this?
+	GDALAllRegister();
+	GDALDriver *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	OGRLayer *p_layer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+
+	//Step 9: generate coordinate points for each sample index, and only add if they're outside of mindist
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
-	std::vector<OGRPoint> points;
-	std::vector<std::string> wktPoints;
+	size_t pointsIndex = 0;
 
 	if (dontSamplePixels.size() == 0) {
 		for( auto samplePixel : samplePixels ) {
@@ -145,20 +148,28 @@ srs(
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 		
 			if (mindist != 0.0 && points.size() != 0) {
-				U pIndex = 0;
-				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-					pIndex++;
+				bool add = true;
+				for (const auto &p_feature : *p_layer) {
+					OGRPoint *p_point = p_feature.GetGeometryRef()->toPoint();
+					if (newPoint.Distance(p_point) < mindist) {
+						add = false;
+						continue;
+					}
 				}
-				if (pIndex != (U)points.size()) {
+				if (!add) {
 					continue;
 				}
 			}
-			points.push_back(newPoint);
-			wktPoints.push_back(newPoint.exportToWkt());
+			
+			OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+			p_feature->SetGeometry(&newPoint);
+			p_layer->CreateFeature(p_feature);
+			OGRFeature::DestroyFeature(p_feature);
+
 			xCoords.push_back(xCoord);
 			yCoords.push_back(yCoord);
 	
-			if (wktPoints.size() == numSamples) {
+			if (xCoords.size() == numSamples) {
 				break;
 			}
 		}
@@ -177,40 +188,47 @@ srs(
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 		
 			if (mindist != 0.0 && points.size() != 0) {
-				U pIndex = 0;
-				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-					pIndex++;
+				bool add = true;
+				for (const auto &p_feature : *p_layer) {
+					OGRPoint *p_point = p_feature.GetGeometryRef()->toPoint();
+					if (newPoint.Distance(p_point) < mindist) {
+						add = false;
+						continue;
+					}
 				}
-				if (pIndex != (U)points.size()) {
+				if (!add) {
 					continue;
 				}
 			}
-			points.push_back(newPoint);
-			wktPoints.push_back(newPoint.exportToWkt());
+				
+			OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+			p_feature->SetGeometry(&newPoint);
+			p_layer->CreateFeature(p_feature);
+			OGRFeature::DestroyFeature(p_feature);
+			
 			xCoords.push_back(xCoord);
 			yCoords.push_back(yCoord);
-	
-			if (wktPoints.size() == numSamples) {
+		
+			if (xCoords.size() == numSamples) {
 				break;
-			}
-
+			}		
 		}
 	}
-	//Step 9: free no longer required index array
-	CPLFree(p_indexArray);
 
-	//Step 10: write vector of points if given filename
+	//step 10: create GDALVectorWrapper with dataset containing points
+	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+
+	//Step 11: write vector of points if given filename
 	if (filename != "") {
 		try {
-			writeSamplePoints(points, filename);
+			p_sampleVectorWrapper->write(filename);
 		}
 		catch (const std::exception& e) {
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
 	}
 
-	//Step 11: return as coordinates and wkt
-	return {{xCoords, yCoords}, wktPoints};
+	return {{xCoords, yCoords}, p_sampleVectorWrapper};
 }
 
 /**
