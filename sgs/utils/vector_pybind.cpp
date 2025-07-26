@@ -19,5 +19,6 @@ PYBIND11_MODULE(vector, m) {
 		.def("get_layer_names", &GDALVectorWrapper::getLayerNames)
 		.def("get_layer_info", &GDALVectorWrapper::getLayerInfo)
 		.def("get_points", &GDALVectorWrapper::getPoints)
+		.def("get_wkt_points", &GDALVectorWrapper::getPointsAsWkt)
 		.def("get_linestrings", &GDALVectorWrapper::getLineStrings);
 }

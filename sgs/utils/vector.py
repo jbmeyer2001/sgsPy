@@ -110,6 +110,28 @@ class SpatialVector:
             for layer in self.layers:
                 self.print_info(layer, self.cpp_vector.get_layer_info(layer))
 
+    def samples_as_wkt(self):
+        """
+        Calls get_wkt_points on the underlying cpp class, to return
+        the samples as wkt strings. 
+
+        This function requires that there be a layer named 'samples' which
+        is comprised entirely of Points or MultiPoints. These conditions
+        will be satisfied if this SpatialVector is the output of one of the
+        sampling functions in the sgs package.
+
+        Raises
+        --------------------
+        ValueError:
+            if this vector does not have a layer called 'samples'
+        RuntimeError (from C++):
+            if the 'samples' layer has at least one geometry other than Point or MultiPoint
+        """
+        if "samples" not in self.layers:
+            print("this vector does not have a layer 'samples'")
+        else:
+            return self.cpp_vector.get_wkt_points('samples')
+
     def plot(self,
         geomtype: str,
         ax: Optional[matplotlib.axes.Axes] = None,

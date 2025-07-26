@@ -111,6 +111,18 @@ class GDALVectorWrapper {
 	std::vector<std::vector<double>> getPoints(std::string layerName);
 
 	/**
+	 * Getter method for the layer geometries, where every geometry
+	 * must be of type Point or MultiPoint.
+	 *
+	 * the points are stored as wkt (well known text) strings in the
+	 * return vector.
+	 *
+	 * @param std::string layer name
+	 * @returns std::vector<std::string> vector of points as wkt
+	 */
+	std::vector<std::string> getPointsAsWkt(std::string layerName);
+
+	/**
 	 * Getter method for the layer Geometries. Note that every geometry
 	 * within the layer must be of type LineString or MultiLineString.
 	 *

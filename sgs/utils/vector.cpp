@@ -107,11 +107,41 @@ GDALVectorWrapper::getPoints(std::string layerName) {
 				break;
 			}
 			default:
-				throw std::runtime_error("encountered a point which was not of type Point or MultiPoint");
+				throw std::runtime_error("encountered a geometry which was not of type Point or MultiPoint.");
 		}
 	}
 
 	return {xCoords, yCoords};
+}
+
+/******************************************************************************
+				  getPointsAsWkt()
+******************************************************************************/
+std::vector<std::string>
+GDALVectorWrapper::getPointsAsWkt(std::string layerName) {
+	OGRLayer *p_layer = this->p_dataset->GetLayerByName(layerName.c_str());
+	std::vector<std::string> retval;
+
+	for (const auto& p_feature : *p_layer) {
+		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		switch (wkbFlatten(p_geometry->getGeometryType())) {
+			case OGRwkbGeometryType::wkbPoint: {
+				OGRPoint *p_point = p_geometry->toPoint();
+				retval.push_back(p_point->exportToWkt());
+				break;
+			}
+			case OGRwkbGeometryType::wkbMultiPoint: {
+				for (const auto& p_point : *p_geometry->toMultiPoint()) {
+					retval.push_back(p_point->exportToWkt());
+				}
+				break;
+			}
+			default:
+				throw std::runtime_error("encountered a geometry which was not of type Point or MultiPoint.");
+		}
+	}
+
+	return retval;
 }
 
 /******************************************************************************
