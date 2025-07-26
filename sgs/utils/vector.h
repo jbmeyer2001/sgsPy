@@ -9,6 +9,9 @@
 
 #pragma once
 
+#include <iostream>
+#include <filesystem>
+
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>

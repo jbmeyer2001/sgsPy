@@ -130,13 +130,13 @@ srs(
 	//step 8: create new in-memory dataset to store sample points
 	//TODO error check this?
 	GDALAllRegister();
-	GDALDriver *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
 	OGRLayer *p_layer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
 
 	//Step 9: generate coordinate points for each sample index, and only add if they're outside of mindist
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
-	size_t pointsIndex = 0;
+	size_t pointsAdded = 0;
 
 	if (dontSamplePixels.size() == 0) {
 		for( auto samplePixel : samplePixels ) {
@@ -147,13 +147,13 @@ srs(
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 		
-			if (mindist != 0.0 && points.size() != 0) {
+			if (mindist != 0.0 && pointsAdded != 0) {
 				bool add = true;
 				for (const auto &p_feature : *p_layer) {
-					OGRPoint *p_point = p_feature.GetGeometryRef()->toPoint();
+					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
 					if (newPoint.Distance(p_point) < mindist) {
 						add = false;
-						continue;
+						break;
 					}
 				}
 				if (!add) {
@@ -166,10 +166,11 @@ srs(
 			p_layer->CreateFeature(p_feature);
 			OGRFeature::DestroyFeature(p_feature);
 
+			pointsAdded++;
 			xCoords.push_back(xCoord);
 			yCoords.push_back(yCoord);
 	
-			if (xCoords.size() == numSamples) {
+			if (pointsAdded == numSamples) {
 				break;
 			}
 		}
@@ -187,13 +188,13 @@ srs(
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 		
-			if (mindist != 0.0 && points.size() != 0) {
+			if (mindist != 0.0 && pointsAdded != 0) {
 				bool add = true;
 				for (const auto &p_feature : *p_layer) {
-					OGRPoint *p_point = p_feature.GetGeometryRef()->toPoint();
+					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
 					if (newPoint.Distance(p_point) < mindist) {
 						add = false;
-						continue;
+						break;
 					}
 				}
 				if (!add) {
@@ -206,10 +207,11 @@ srs(
 			p_layer->CreateFeature(p_feature);
 			OGRFeature::DestroyFeature(p_feature);
 			
+			pointsAdded++;
 			xCoords.push_back(xCoord);
 			yCoords.push_back(yCoord);
 		
-			if (xCoords.size() == numSamples) {
+			if (pointsAdded == numSamples) {
 				break;
 			}		
 		}
@@ -249,7 +251,7 @@ srs(
  * @returns std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
  * 		coordinate and wkt representation of samples
  */
-std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *> 
 srsTypeSpecifier(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
@@ -315,7 +317,7 @@ srsTypeSpecifier(
  * srs function for when access has not been specified. 
  * Calls srsTypeSpecifier() which calls srs().
  */
-std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *> 
 srs_cpp(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
@@ -338,7 +340,7 @@ srs_cpp(
  * srs function for when access has been specified.
  * Calls srsTypeSpecifier() which calls srs().
  */
-std::pair<std::vector<std::vector<double>>, std::vector<std::string>> 
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *> 
 srs_cpp_access(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,

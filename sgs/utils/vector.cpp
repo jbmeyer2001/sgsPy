@@ -7,8 +7,6 @@
  *
  ******************************************************************************/
 
-#include <iostream>
-
 #include "vector.h"
 
 /******************************************************************************
@@ -161,7 +159,22 @@ GDALVectorWrapper::getLineStrings(std::string layerName) {
 				    write()
 ******************************************************************************/
 void GDALVectorWrapper::write(std::string filename) {
-	GDALDataset *datasetCopy = CreateCopy(
+	std::filesystem::path filepath = filename;
+	std::string extension = filepath.extension().string();
+		
+	GDALAllRegister();
+	GDALDriver *p_driver; 
+	if (extension == ".geojson") {
+		p_driver = GetGDALDriverManager()->GetDriverByName("GeoJSON");
+	}
+	else if (extension == ".shp") {
+		p_driver = GetGDALDriverManager()->GetDriverByName("ESRI Shapefile");
+	}
+	else {
+		throw std::runtime_error("file extension must be one of : .geojson, .shp");
+	}
+
+	GDALDataset *datasetCopy = p_driver->CreateCopy(
 		filename.c_str(),
 		this->p_dataset.get(),
 		FALSE,
@@ -174,9 +187,9 @@ void GDALVectorWrapper::write(std::string filename) {
 		std::cout << "failed to create dataset with filename " << filename << "." << std::endl;
 	}
 
-	CPLErr err = DatasetClose(datasetCopy);
+	CPLErr err = GDALClose(datasetCopy);
 
-	if (err != CE_NONE) {
+	if (err != CE_None) {
 		std::cout << "failed to close dataset of file " << filename << ". The file output may not be correct." << std::endl;
 	}
 }

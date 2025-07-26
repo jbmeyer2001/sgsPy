@@ -28,7 +28,7 @@ void writeSamplePoints(std::vector<OGRPoint>& points, std::string filename) {
 		p_driver = GetGDALDriverManager()->GetDriverByName("ESRI Shapefile");
 	}
 	else {
-		throw std::runtime_error("file extension must be one of: .gdb, .geojson, .shp");
+		throw std::runtime_error("file extension must be one of: .geojson, .shp");
 	}
 
 	//ensure vector driver was created
