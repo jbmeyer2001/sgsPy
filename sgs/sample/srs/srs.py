@@ -71,6 +71,14 @@ def srs(
     --------------------
         ValueError
             if num_samples is less than 1
+        ValueError
+            if there access vector is provided and has multiple layers, but layer_name is not provided
+        ValueError
+            if 'layer_name' does not exist in the provided access vector
+        ValueError
+            if access vector is passed, and buff_outer is either not provided or less than or equal to 0
+        ValueError
+            if buff_inner is greater than buff_outer
         RuntimeError (from C++)
             if the number of samples is greater than the number of data pixels in the image
         RuntimeError (from C++)
@@ -84,17 +92,26 @@ def srs(
     if (access):
         if layer_name is None:
             if len(access.layers) > 1:
-                raise ValueError("if there are multiple layers in the access vector, layer_name must be defined.")
+                raise ValueError("if there are multiple layers in the access vector, layer_name parameter must be passed.")
             layer_name = access.layers[0]
 
-        if buff_inner is None:
+        if layer_name not in access.layers:
+            raise ValueError("layer specified by 'layer_name' does not exist in the access vector")
+
+        if buff_inner is None or buff_inner < 0:
             buff_inner = 0
 
-        if buff_outer is None:
-            raise ValueError("if an access vector is given, buff_outer must be defined.")
+        if buff_outer is None or buff_outer < 0:
+            raise ValueError("if an access vector is given, buff_outer must be a float greater than 0.")
 
         if buff_inner >= buff_outer:
             raise ValueError("buff_outer must be greater than buff_inner")
+
+    if mindist is None:
+        mindist = 0
+
+    if mindist < 0:
+        raise ValueError("mindist must be greater than or equal to 0")
 
     #call random sampling function
     if (access):

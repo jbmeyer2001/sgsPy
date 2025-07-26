@@ -91,6 +91,8 @@ def strat(
     Raises
     --------------------
     ValueError
+        if num_samples is less than 1
+    ValueError
         if method is not either 'random' or 'Queinnec'
     ValueError
         if allocation is not one of 'prop', 'optim', 'equal', or 'manual'
@@ -106,8 +108,6 @@ def strat(
     ValueError
         if layer_name is not the name of a layer in the access vector
     ValueError
-        if an access vector is given, and buff_inner is either not given or is less than 0
-    ValueError
         if an access vector is given, and buff_outer is zero or less
     ValueError
         if an access vector is given, and buff_inner is greater than buff_outer
@@ -116,6 +116,9 @@ def strat(
     RuntimeError (C++)
         if strat_raster pixel type is not Float32
     """
+    if num_samples < 1:
+        raise ValueError("num_samples must be greater than 0")
+
     if method not in ["random", "Queinnec"]:
         raise ValueError("method must be either 'random' or 'Queinnec'.")
 
@@ -141,26 +144,23 @@ def strat(
     if wcol % 2 == 0 or wcol < 1:
         raise ValueError("wcol must be odd, and greater then 0.")
 
-    if access:
+    if (access):
         if layer_name is None:
             if len(access.layers) > 1:
                 raise ValueError("if there are multiple layers in the access vector, layer_name must be defined.")
             layer_name = access.layers[0]
 
-        if buff_inner is None:
+        if layer_name not in access.layers:
+            raise ValueError("layer specified by 'layer_name' does not exist in the access vector")
+
+        if buff_inner is None or buff_inner < 0:
             buff_inner = 0
 
-        if buff_outer <= 0:
-            raise ValueError("buff_outer must be larger than 0.")
-
-        if buff_inner < 0:
-            raise ValueError("buff_inner can't be less than 0.")
-
-        if buff_outer is None:
-            raise ValueError("if an access vector is given, buff_outer must be defined.")
+        if buff_outer is None or buff_outer <= 0:
+            raise ValueError("if an access vector is given, buff_outer must be a float greater than 0.")
 
         if buff_inner >= buff_outer:
-            raise ValueError("buff_outer must be greater than buff_inner.")
+            raise ValueError("buff_outer must be greater than buff_inner")
 
     if allocation != "manual":
         weights = []
