@@ -175,7 +175,7 @@ def strat(
         raise ValueError("strat_raster must have a single band.")
 
     if access:
-        [sample_coordinates, sample_points] = strat_cpp_access(
+        [sample_coordinates, samples] = strat_cpp_access(
             strat_rast.cpp_raster,
             num_samples,
             num_strata,
@@ -193,7 +193,7 @@ def strat(
         )
 
     else:
-        [sample_coordinates, sample_points] = strat_cpp(
+        [sample_coordinates, samples] = strat_cpp(
             strat_rast.cpp_raster,
             num_samples,
             num_strata,
@@ -223,5 +223,4 @@ def strat(
         except Exception as e:
             print("unable to plot output: " + str(e))
 
-    #TODO return spatialVector
-    return sample_points
+    return SpatialVector(samples)

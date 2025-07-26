@@ -13,7 +13,6 @@
 #include "access.h"
 #include "raster.h"
 #include "vector.h"
-#include "write.h"
 
 /**
  * Helper function which calculates the count of values for each strata
@@ -120,7 +119,7 @@ calculateAllocation(
  * can't be included due to their proximity to other already-selected pixels. 
  */
 template <typename U>
-std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 strat_random(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
@@ -195,7 +194,12 @@ strat_random(
 		numDataPixels
 	);
 
-	//step 6: determine pixel values to include as samples.
+	//step 6: create new in-memory dataset to store sample points
+	GDALAllRegister();
+	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+
+	//step 7: determine pixel values to include as samples.
 	std::vector<std::unordered_set<U>> sampleIndexes;
 	std::vector<typename std::unordered_set<U>::iterator> sampleIterators;
 	std::vector<U> samplesAdded;
@@ -234,11 +238,9 @@ strat_random(
 		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
 
-	//step 7: generate coordinate points for each sample index.
+	//step 8: generate coordinate points for each sample index.
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
-	std::vector<OGRPoint> points;
-	std::vector<std::string> wktPoints;
 
 	U sIndex = 0;
 	U completedStratum = 0;
@@ -264,37 +266,47 @@ strat_random(
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 	
-			if (mindist != 0.0 && points.size() != 0) {
-				U pIndex = 0;
-				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-					pIndex++;
+			if (mindist != 0.0 && p_sampleLayer->GetFeatureCount() != 0) {
+				bool add = true;
+				for (const auto& p_feature : *p_sampleLayer) {
+					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
+					if (newPoint.Distance(p_point) < mindist) {
+						add = false;
+						break;
+					}
 				}
-				if (pIndex != (U)points.size()) {
+				if (!add) {
 					sIndex++;
 					continue;
 				}
 			}
 
+			OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
+			p_feature->SetGeometry(&newPoint);
+			p_sampleLayer->CreateFeature(p_feature);
+			OGRFeature::DestroyFeature(p_feature);
+
 			samplesAdded[strata]++;
-			points.push_back(newPoint);
-			wktPoints.push_back(newPoint.exportToWkt());
 			xCoords.push_back(xCoord);
 			yCoords.push_back(yCoord);
 			sIndex++;
 		}
 	}
 
-	//step 8: write vector if filename is not "".
+	//step 9: create GDALVectorWrapper to store dataset of sample points
+	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+
+	//step 10: write vector if filename is not "".
 	if (filename != "") {
 		try {
-			writeSamplePoints(points, filename);
+			p_sampleVectorWrapper->write(filename);
 		}
 		catch (const std::exception& e) {
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
 	}
 
-	return {{xCoords, yCoords}, wktPoints};
+	return {{xCoords, yCoords}, p_sampleVectorWrapper};
 }
 	
 /**
@@ -358,7 +370,7 @@ strat_random(
  */
 
 template <typename U>
-std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 strat_queinnec(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
@@ -619,7 +631,12 @@ strat_queinnec(
 		numDataPixels
 	);
 
-	//step 8: determine queinnec indexes to try including as samples
+	//step 8: create new in-memory dataset to store sample points
+	GDALAllRegister();
+	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+
+	//step 9: determine queinnec indexes to try including as samples
 	std::vector<std::unordered_set<U>> sampleIndexes;
 	std::vector<typename std::unordered_set<U>::iterator> sampleIterators;
 	std::vector<U> samplesAdded;
@@ -658,11 +675,9 @@ strat_queinnec(
 		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
 
-	//step 9: generate coordinate points for each queinnec sample, and only add if they're outside of mindist
+	//step 10: generate coordinate points for each queinnec sample, and only add if they're outside of mindist
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
-	std::vector<OGRPoint> points;
-	std::vector<std::string> wktPoints;
 
 	U sIndex = 0;
 	U completedStratum = 0;
@@ -687,27 +702,34 @@ strat_queinnec(
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 	
-			if (mindist != 0.0 && points.size() != 0) {
-				U pIndex = 0;
-				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-					pIndex++;
+			if (mindist != 0.0 && p_sampleLayer->GetFeatureCount() != 0) {
+				bool add = true;
+				for (const auto& p_feature : *p_sampleLayer) {
+					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
+					if (newPoint.Distance(p_point) < mindist) {
+						add = false;
+						break;
+					}
 				}
-				if (pIndex != (U)points.size()) {
+				if (!add) {
 					sIndex++;
 					continue;
 				}
 			}
 
+			OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
+			p_feature->SetGeometry(&newPoint);
+			p_sampleLayer->CreateFeature(p_feature);
+			OGRFeature::DestroyFeature(p_feature);
+
 			samplesAdded[strata]++;
-			points.push_back(newPoint);
-			wktPoints.push_back(newPoint.exportToWkt());
 			xCoords.push_back(xCoord);
 			yCoords.push_back(yCoord);
 			sIndex++;
 		}
 	}
 
-	//step 10: determine random indexes to try including as samples
+	//step 11: determine random indexes to try including as samples
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
 		stratumCounts[i] -= samplesAdded[i];
 		if (stratumCounts[i] > 0) {
@@ -743,7 +765,7 @@ strat_queinnec(
 			sampleIterators[i] = sampleIndexes[i].begin();
 		}
 	}
-	//step 11: try adding random samples
+	//step 12: try adding random samples
 	sIndex = 0;
 	while (completedStratum < stratumCounts.size()) {
 		//determine strata from i
@@ -766,37 +788,47 @@ strat_queinnec(
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 	
-			if (mindist != 0.0 && points.size() != 0) {
-				U pIndex = 0;
-				while ((pIndex < points.size()) && (newPoint.Distance(&points[pIndex]) > mindist)) {
-					pIndex++;
+			if (mindist != 0.0 && p_sampleLayer->GetFeatureCount() != 0) {
+				bool add = true;
+				for (const auto& p_feature : *p_sampleLayer) {
+					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
+					if (newPoint.Distance(p_point) < mindist) {
+						add = false;
+						break;
+					}
 				}
-				if (pIndex != (U)points.size()) {
+				if (!add) {
 					sIndex++;
 					continue;
 				}
 			}
 
+			OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
+			p_feature->SetGeometry(&newPoint);
+			p_sampleLayer->CreateFeature(p_feature);
+			OGRFeature::DestroyFeature(p_feature);
+
 			samplesAdded[strata]++;
-			points.push_back(newPoint);
-			wktPoints.push_back(newPoint.exportToWkt());
 			xCoords.push_back(xCoord);
 			yCoords.push_back(yCoord);
 			sIndex++;
 		}
 	}
 
-	//step 12: write to file if filename is not ""
+	//step 13: create GDALVectorWrapper with dataset containing points
+	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+
+	//step 14: write to file if filename is not ""
 	if (filename != "") {
 		try {
-			writeSamplePoints(points, filename);
+			p_sampleVectorWrapper->write(filename);
 		}
 		catch (const std::exception& e) {
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
 	}
 
-	return {{xCoords, yCoords}, wktPoints};
+	return {{xCoords, yCoords}, p_sampleVectorWrapper};
 }
 
 /**
@@ -807,7 +839,7 @@ strat_queinnec(
  * strat_random(), with provided arguments and required template
  * parameters.
  */
-std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 strat_cpp_access(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
@@ -847,7 +879,7 @@ strat_cpp_access(
  * strat_random(), with provided arguments and required template
  * parameters.
  */
-std::pair<std::vector<std::vector<double>>, std::vector<std::string>>
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 strat_cpp(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,

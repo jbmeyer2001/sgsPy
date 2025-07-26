@@ -13,7 +13,6 @@
 
 #include "raster.h"
 #include "vector.h"
-#include "write.h"
 
 /*
  * This function conducts Systematic sampling on an input raster image.

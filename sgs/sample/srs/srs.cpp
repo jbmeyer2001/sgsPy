@@ -15,7 +15,6 @@
 #include "access.h"
 #include "raster.h"
 #include "vector.h"
-#include "write.h"
 
 /**
  * This function uses random sampling to determine the location
