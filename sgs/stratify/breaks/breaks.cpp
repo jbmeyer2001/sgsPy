@@ -75,7 +75,6 @@ GDALRasterWrapper *breaks(
 		//error checking on band count
 		if (maxBreaks < val.size() + 1) {
 			throw std::runtime_error("number of break indexes exceeds maximum");
-			//throw std::runtime_error("number of break indexes (" + std::to_string(val.size() + 1) + ") exceeds maximum of " + std::to_string(maxBreaks) ".");
 		}
 
 		newBandNames.push_back("strat_" + bandNames[key]);
@@ -158,7 +157,7 @@ GDALRasterWrapper *breaks(
  *
  * This function uses type information of the raster pixel type.
  *
- * A call ismade to breads() with the necessary data type template
+ * A call ismade to breaks() with the necessary data type template
  * argument.
  *
  * @returns GDALRasterWrapper *stratified raster

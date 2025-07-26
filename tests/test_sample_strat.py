@@ -82,7 +82,7 @@ class TestStrat:
             num_strata=5,
             allocation="equal",
             method="random",
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -98,7 +98,8 @@ class TestStrat:
             allocation="equal",
             method="random",
             mindist=150,
-        ))
+        ).samples_as_wkt())
+
         
         assert len(samples) > 490 #mindist means we might not get the full 500
         self.check_points_in_bounds(srast, samples)
@@ -118,7 +119,7 @@ class TestStrat:
             layer_name = 'access',
             buff_inner = 90,
             buff_outer = 300,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -138,7 +139,8 @@ class TestStrat:
             layer_name = 'access',
             buff_outer=600,
             mindist=90,
-        ))
+        ).samples_as_wkt())
+
 
         assert len(samples) > 90 #mindist means we may not get the full 100
         self.check_points_in_bounds(srast, samples)
@@ -158,7 +160,7 @@ class TestStrat:
             num_strata=8,
             allocation="prop",
             method="random"
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -174,7 +176,7 @@ class TestStrat:
             allocation="prop",
             method="random",
             mindist=150,
-        ))
+        ).samples_as_wkt())
         
         assert len(samples) > 490 #mindist means we may not get the full 500
         self.check_points_in_bounds(srast, samples)
@@ -194,7 +196,7 @@ class TestStrat:
             layer_name = 'access',
             buff_inner = 90,
             buff_outer = 300,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -214,7 +216,7 @@ class TestStrat:
             layer_name = 'access',
             buff_outer=600,
             mindist=90,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) > 115 #mindist means we may not get the full 128 
         self.check_points_in_bounds(srast, samples)
@@ -234,7 +236,7 @@ class TestStrat:
             allocation="manual",
             method="random",
             weights=[0.5, 0.25, 0.1, 0.15],
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -253,7 +255,7 @@ class TestStrat:
             method="random",
             weights=[0.5, 0.25, 0.1, 0.15],
             mindist=90,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) > 90 #mindist means we may not get the full 100
         self.check_points_in_bounds(srast, samples)
@@ -276,7 +278,7 @@ class TestStrat:
             layer_name='access',
             buff_inner=120,
             buff_outer=1200,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
@@ -299,7 +301,7 @@ class TestStrat:
             layer_name='access',
             buff_outer=1200,
             mindist=90
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) > 90 #mindist means we may not get the full 90 
         self.check_points_in_bounds(srast, samples)
@@ -321,7 +323,7 @@ class TestStrat:
             num_strata=5,
             allocation="equal",
             method="Queinnec",
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -337,7 +339,7 @@ class TestStrat:
             allocation="equal",
             method="Queinnec",
             mindist=150,
-        ))
+        ).samples_as_wkt())
        
         assert len(samples) > 490 #mindist means we may not get the full 500 
         self.check_points_in_bounds(srast, samples)
@@ -357,7 +359,7 @@ class TestStrat:
             layer_name = 'access',
             buff_inner = 90,
             buff_outer = 300,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -377,7 +379,7 @@ class TestStrat:
             layer_name = 'access',
             buff_outer=600,
             mindist=90,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) > 90 #mindist means we may not get the full 90 
         self.check_points_in_bounds(srast, samples)
@@ -397,7 +399,7 @@ class TestStrat:
             num_strata=8,
             allocation="prop",
             method="Queinnec"
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -413,7 +415,7 @@ class TestStrat:
             allocation="prop",
             method="Queinnec",
             mindist=150,
-        ))
+        ).samples_as_wkt())
         
         assert len(samples) > 490 #mindist means we may not get the full 500 
         self.check_points_in_bounds(srast, samples)
@@ -433,7 +435,7 @@ class TestStrat:
             layer_name = 'access',
             buff_inner = 90,
             buff_outer = 300,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -453,7 +455,7 @@ class TestStrat:
             layer_name = 'access',
             buff_outer=600,
             mindist=90,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) > 115 #mindist means we may not get the full 128 
         self.check_points_in_bounds(srast, samples)
@@ -473,7 +475,7 @@ class TestStrat:
             allocation="manual",
             method="Queinnec",
             weights=[0.5, 0.25, 0.1, 0.15],
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -492,7 +494,7 @@ class TestStrat:
             method="Queinnec",
             weights=[0.5, 0.25, 0.1, 0.15],
             mindist=90,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) > 90 #mindist means we may not get the full 100 
         self.check_points_in_bounds(srast, samples)
@@ -515,7 +517,7 @@ class TestStrat:
             layer_name='access',
             buff_inner=120,
             buff_outer=1200,
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) == 100
         self.check_points_in_bounds(srast, samples)
@@ -538,7 +540,7 @@ class TestStrat:
             layer_name='access',
             buff_outer=1200,
             mindist=90
-        ))
+        ).samples_as_wkt())
 
         assert len(samples) > 90 #mindist means we may not get the full 100 
         self.check_points_in_bounds(srast, samples)
@@ -569,7 +571,7 @@ class TestStrat:
                 wcol=3,
                 allocation="equal",
                 method="Queinnec",
-            ))
+            ).samples_as_wkt())
             self.check_focal_window(srast, samples, 3, 3)
 
         #test 5x5 focal window
@@ -582,7 +584,7 @@ class TestStrat:
                 wcol=5,
                 allocation="equal",
                 method="Queinnec",
-            ))
+            ).samples_as_wkt())
             self.check_focal_window(srast, samples, 5, 5)
 
         #test 3x5 focal window
@@ -595,7 +597,7 @@ class TestStrat:
                 wcol=5,
                 allocation="equal",
                 method="Queinnec",
-            ))
+            ).samples_as_wkt())
             self.check_focal_window(srast, samples, wrow=3, wcol=5)
 
         #test 5x3 focal window
@@ -608,7 +610,7 @@ class TestStrat:
                 wcol=3,
                 allocation="equal",
                 method="Queinnec",
-            ))
+            ).samples_as_wkt())
             self.check_focal_window(srast, samples, wrow=5, wcol=3)
 
         #test 1x3 focal window
@@ -621,7 +623,7 @@ class TestStrat:
                 wcol=3,
                 allocation="equal",
                 method="Queinnec",
-            ))
+            ).samples_as_wkt())
             self.check_focal_window(srast, samples, wrow=1, wcol=3)
 
         #test 3x1 focal window
@@ -634,7 +636,7 @@ class TestStrat:
                 wcol=1,
                 allocation="equal",
                 method="Queinnec",
-            ))
+            ).samples_as_wkt())
             self.check_focal_window(srast, samples, wrow=3, wcol=1)
 
 

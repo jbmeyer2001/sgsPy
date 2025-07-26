@@ -26,6 +26,13 @@ GDALVectorWrapper::GDALVectorWrapper(std::string filename) {
 /******************************************************************************
 			      GDALVectorWrapper()
 ******************************************************************************/
+GDALVectorWrapper::GDALVectorWrapper(GDALDataset *p_dataset) {
+	this->p_dataset = GDALDatasetUniquePtr(p_dataset);
+}
+
+/******************************************************************************
+			      GDALVectorWrapper()
+******************************************************************************/
 GDALDataset *GDALVectorWrapper::getDataset() {
 	return this->p_dataset.get();
 }
@@ -100,11 +107,41 @@ GDALVectorWrapper::getPoints(std::string layerName) {
 				break;
 			}
 			default:
-				throw std::runtime_error("encountered a point which was not of type Point or MultiPoint");
+				throw std::runtime_error("encountered a geometry which was not of type Point or MultiPoint.");
 		}
 	}
 
 	return {xCoords, yCoords};
+}
+
+/******************************************************************************
+				  getPointsAsWkt()
+******************************************************************************/
+std::vector<std::string>
+GDALVectorWrapper::getPointsAsWkt(std::string layerName) {
+	OGRLayer *p_layer = this->p_dataset->GetLayerByName(layerName.c_str());
+	std::vector<std::string> retval;
+
+	for (const auto& p_feature : *p_layer) {
+		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		switch (wkbFlatten(p_geometry->getGeometryType())) {
+			case OGRwkbGeometryType::wkbPoint: {
+				OGRPoint *p_point = p_geometry->toPoint();
+				retval.push_back(p_point->exportToWkt());
+				break;
+			}
+			case OGRwkbGeometryType::wkbMultiPoint: {
+				for (const auto& p_point : *p_geometry->toMultiPoint()) {
+					retval.push_back(p_point->exportToWkt());
+				}
+				break;
+			}
+			default:
+				throw std::runtime_error("encountered a geometry which was not of type Point or MultiPoint.");
+		}
+	}
+
+	return retval;
 }
 
 /******************************************************************************
@@ -146,4 +183,43 @@ GDALVectorWrapper::getLineStrings(std::string layerName) {
 	}
 
 	return retval;
+}
+
+/******************************************************************************
+				    write()
+******************************************************************************/
+void GDALVectorWrapper::write(std::string filename) {
+	std::filesystem::path filepath = filename;
+	std::string extension = filepath.extension().string();
+		
+	GDALAllRegister();
+	GDALDriver *p_driver; 
+	if (extension == ".geojson") {
+		p_driver = GetGDALDriverManager()->GetDriverByName("GeoJSON");
+	}
+	else if (extension == ".shp") {
+		p_driver = GetGDALDriverManager()->GetDriverByName("ESRI Shapefile");
+	}
+	else {
+		throw std::runtime_error("file extension must be one of : .geojson, .shp");
+	}
+
+	GDALDataset *datasetCopy = p_driver->CreateCopy(
+		filename.c_str(),
+		this->p_dataset.get(),
+		FALSE,
+		nullptr,
+		nullptr,
+		nullptr
+	);
+
+	if (!datasetCopy) {
+		std::cout << "failed to create dataset with filename " << filename << "." << std::endl;
+	}
+
+	CPLErr err = GDALClose(datasetCopy);
+
+	if (err != CE_None) {
+		std::cout << "failed to close dataset of file " << filename << ". The file output may not be correct." << std::endl;
+	}
 }

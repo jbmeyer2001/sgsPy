@@ -40,7 +40,7 @@ class SpatialVector:
         takes an optional argument specify the band, and prints vector metadata to console
     """
     def __init__(self, 
-                 image: str):
+                 image: str | GDALVectorWrapper):
         """
         Constructing method for the SpatialVector class.
 
@@ -51,15 +51,19 @@ class SpatialVector:
 
         Parameters
         --------------------
-        image: str
-           specifies a path to a vector file
+        image: str | GDALVectorWrapper
+           specifies a path to a vector file or the C++ class object itself
 
         Raises
         --------------------
         RuntimeError (from C++):
             if dataset is not initialized correctly 
         """
-        self.cpp_vector = GDALVectorWrapper(image)
+        if (type(image) is str):
+            self.cpp_vector = GDALVectorWrapper(image)
+        else:
+            self.cpp_vector = image
+
         self.layers = self.cpp_vector.get_layer_names() 
 
     def print_info(self, 
@@ -105,6 +109,28 @@ class SpatialVector:
         else:
             for layer in self.layers:
                 self.print_info(layer, self.cpp_vector.get_layer_info(layer))
+
+    def samples_as_wkt(self):
+        """
+        Calls get_wkt_points on the underlying cpp class, to return
+        the samples as wkt strings. 
+
+        This function requires that there be a layer named 'samples' which
+        is comprised entirely of Points or MultiPoints. These conditions
+        will be satisfied if this SpatialVector is the output of one of the
+        sampling functions in the sgs package.
+
+        Raises
+        --------------------
+        ValueError:
+            if this vector does not have a layer called 'samples'
+        RuntimeError (from C++):
+            if the 'samples' layer has at least one geometry other than Point or MultiPoint
+        """
+        if "samples" not in self.layers:
+            print("this vector does not have a layer 'samples'")
+        else:
+            return self.cpp_vector.get_wkt_points('samples')
 
     def plot(self,
         geomtype: str,

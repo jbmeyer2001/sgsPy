@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 from sgs.utils import (
     SpatialRaster,
+    SpatialVector,
     plot,
 )
 
@@ -92,4 +93,4 @@ def systematic(
         ax.set_title(label=title)
         plt.show()
 
-    return samples
+    return SpatialVector(samples)

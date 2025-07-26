@@ -22,13 +22,13 @@ class TestSrs:
         with pytest.raises(ValueError):
             samples = sgs.srs(self.rast, num_samples=0)
 
-        samples = sgs.srs(self.rast, num_samples=1)
-        assert len(samples) == 1
+        sample = sgs.srs(self.rast, num_samples=1).samples_as_wkt()
+        assert len(sample) == 1
 
-        samples = sgs.srs(self.rast, num_samples=50)
+        samples = sgs.srs(self.rast, num_samples=50).samples_as_wkt()
         assert len(samples) == 50
 
-        samples = sgs.srs(self.rast, num_samples=2000)
+        samples = sgs.srs(self.rast, num_samples=2000).samples_as_wkt()
         assert len(samples) == 2000
 
     def test_mindist(self):
@@ -39,23 +39,23 @@ class TestSrs:
                 assert 0 == int(np.sum(np.array([distances < mindist]).astype(int)))
 
         mindist = 1
-        samples = sgs.srs(self.rast, mindist=mindist, num_samples=1000) 
+        samples = sgs.srs(self.rast, mindist=mindist, num_samples=1000).samples_as_wkt() 
         check_samples(mindist, samples)
 
         mindist = 50
-        samples = sgs.srs(self.rast, mindist=mindist, num_samples=1000) 
+        samples = sgs.srs(self.rast, mindist=mindist, num_samples=1000).samples_as_wkt()
         check_samples(mindist, samples)
 
         mindist = 200.5
-        samples = sgs.srs(self.rast, mindist=mindist, num_samples=1000) 
+        samples = sgs.srs(self.rast, mindist=mindist, num_samples=1000).samples_as_wkt()
         check_samples(mindist, samples)
 
         mindist = 6000
-        samples = sgs.srs(self.rast, mindist=mindist, num_samples=1000) 
+        samples = sgs.srs(self.rast, mindist=mindist, num_samples=1000).samples_as_wkt()
         check_samples(mindist, samples)
 
     def test_points_in_bounds(self):
-        samples = sgs.srs(self.rast, num_samples=1000)
+        samples = sgs.srs(self.rast, num_samples=1000).samples_as_wkt()
         gs = gpd.GeoSeries.from_wkt(samples)
         
         #ensure all points are within raster bounds
@@ -66,7 +66,7 @@ class TestSrs:
            assert point.y >= self.rast.ymin
 
     def test_points_not_nan(self):
-        samples = sgs.srs(self.rast, num_samples=1000)
+        samples = sgs.srs(self.rast, num_samples=1000).samples_as_wkt()
         gs = gpd.GeoSeries.from_wkt(samples)
 
         #find indexes for all points and ensure they're not nan pixels.
@@ -86,7 +86,7 @@ class TestSrs:
         temp_dir.mkdir()
 
         temp_file = temp_dir / "vect.shp"
-        samples = sgs.srs(self.rast, num_samples = 1000, filename=str(temp_file))
+        samples = sgs.srs(self.rast, num_samples = 1000, filename=str(temp_file)).samples_as_wkt()
         gs_samples = gpd.GeoSeries.from_wkt(samples)
         gs_file = gpd.read_file(temp_file)
         
@@ -96,25 +96,25 @@ class TestSrs:
         gs_access = gpd.read_file(access_shapefile_path)
 
         #test just buff_outer working
-        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, access=self.access, buff_outer=100))
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, access=self.access, buff_outer=100).samples_as_wkt())
         accessable = gs_access.buffer(100).union_all()
         for sample in samples:
             assert accessable.contains(sample)
 
         #test buff_outer works with mindist
-        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, 200, access=self.access, buff_outer=100))
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, 200, access=self.access, buff_outer=100).samples_as_wkt())
         #accessable stays the same because buff_outer is the same
         for sample in samples:
             assert accessable.contains(sample)
 
         #test buff_outer and buff_inner works
         bad_points=[]
-        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, access=self.access, buff_outer=200, buff_inner=100))
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, access=self.access, buff_outer=200, buff_inner=100).samples_as_wkt())
         accessable = gs_access.buffer(200).union_all().difference(gs_access.buffer(100).union_all())
         for sample in samples:
             assert accessable.contains(sample)
 
-        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, 200, access=self.access, buff_outer=200, buff_inner=100))
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 50000, 200, access=self.access, buff_outer=200, buff_inner=100).samples_as_wkt())
         #accessable stays the same because buff_outer and buff_inner are the same
         for sample in samples:
             assert accessable.contains(sample)
