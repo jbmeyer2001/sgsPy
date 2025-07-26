@@ -27,11 +27,10 @@
  *
  * Next, the resulting grid polygons are iterated through, and a sample
  * point is determined for each polygon depending on the user-defined
- * location parameter (centers, corners, or random). Plot-required data
+ * location parameter (centers, corners, or random), and the samples are
+ * saved to an OGRLayer which is part of GDALDataset. Plot-required data
  * is saved if plot is true (to later be utilized by the Python side
- * of the application with matplotlib). Additionally, a vector of 
- * points may be generated and used to write if the user specified a
- * valid filename.
+ * of the application with matplotlib).
  *
  * @param GDALRasterWrapper *p_raster raster to be systematically sampled
  * @param double cellSize the size of the grid cell shapes
@@ -40,16 +39,16 @@
  * @param bool plot whether to save and return plot-required data
  * @param std::string filename to write to or "" if not to write
  * @returns std::tuple<
- * 		std::vector<std::string>,
+ * 		GDALVectorWrapper *,
  * 		std::vector<std::vector<double>>,
  * 		std::vector<std::vector<std::vector<double>>>
  * 	>
- * 	the vector of strings is a wkt strings of the sample points,
+ * 	Wrapper containing GDALDataset vector of sample points,
  * 	the 2d vector of doubles contains sample points to plot
  * 	the 3d vector of doubles contains grid cells to plot
  */
 std::tuple<
-	std::vector<std::string>, //wkt samples
+	GDALVectorWrapper *, //GDALDataset containing sample points
 	std::vector<std::vector<double>>, //array of samples to plot
 	std::vector<std::vector<std::vector<double>>> //array of grid to plot
 >
@@ -115,11 +114,10 @@ systematic(
 	//query to create grid
 	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");
 
-	//OGRPoints to be written, if filename is set
-	std::vector<OGRPoint> points;
-
-	//wktPoints represents the samples as well known text, and is returned to the (Python) caller
-	std::vector<std::string> wktPoints;	
+	//TODO error check this?
+	GDALAllRegister();
+	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);	
 
 	//coordinate representations the samples as vectors only if PLOT is true, returned to the (Python) caller
 	std::vector<double> xCoords, yCoords;
@@ -162,14 +160,15 @@ systematic(
 
 			//only add (and potentially plot/write) a point if it is within the grid polygon
 			if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
-				wktPoints.push_back(point.exportToWkt());
 				if (plot) {
 					xCoords.push_back(x);
 					yCoords.push_back(y);
 				}
-				if (filename != "") {
-					points.push_back(point);
-				}
+
+				OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
+				p_feature->SetGeometry(&point);
+				p_sampleLayer->CreateFeature(p_feature);
+				OGRFeature::DestroyFeature(p_feature);
 			}
 
 			//set grid vector to be plot
@@ -187,16 +186,18 @@ systematic(
 		}
 	}
 
+	GDALVectorWrapper * p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+
 	if (filename != "") {
 		try {
-			writeSamplePoints(points, filename);
+			p_sampleVectorWrapper->write(filename);
 		}
 		catch (const std::exception& e) {
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
 	}	
 
-	return {wktPoints, {xCoords, yCoords}, grid};
+	return {p_sampleVectorWrapper, {xCoords, yCoords}, grid};
 }
 
 PYBIND11_MODULE(systematic, m) {
