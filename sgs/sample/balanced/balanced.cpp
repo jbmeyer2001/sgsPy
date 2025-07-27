@@ -41,6 +41,7 @@ std::vector<size_t> lcube_cpp(
 	double eps = 1e-12;
 	int treeMethod = 2; //'kdtree2' method
 
+	/*
 	std::cout << "initialized default params" << std::endl;
 		
 	//if (access) {
@@ -64,6 +65,25 @@ std::vector<size_t> lcube_cpp(
 	std::cout << "pbal: " << pbal << std::endl;
 	std::cout << "pspread: " << pspread << std::endl;
 	std::cout << "defined remaining variables, calling Cube constructor" << std::endl;
+	*/
+
+	//create vectors which will hold the data pixels of all the bands
+	
+	//resize them initially
+	
+	//get the GDAL block size
+	
+	//allocate pointers to bands with the block size
+	
+	//read first block into the pointers
+	
+	//iterate through indexes, then bands
+	
+	//if any band has a nodata, consider it a nodata for all the bands
+	
+	//look at 'adjust_nodata' branch for how to go about keeping track of original indexes
+	
+	//
 
   	Cube cube(
     		p_prob, 			//const double*
