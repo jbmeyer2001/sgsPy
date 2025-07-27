@@ -4,12 +4,10 @@ from . import sample
 from . import stratify
 
 from .utils import (
-    access,
-    plot,
     SpatialRaster,
     SpatialVector,
-    write,
 )
+
 from .calculate import (
     allocation,
     coobs,
@@ -19,6 +17,7 @@ from .calculate import (
     representation,
     sample_size,
 )
+
 from .sample import (
     ahels,
     balanced,
@@ -27,9 +26,9 @@ from .sample import (
     nc,
     srs,
     strat,
-    sys_strat,
     systematic,
 )
+
 from .stratify import (
     breaks,
     kmeans,

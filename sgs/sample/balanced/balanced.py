@@ -3,11 +3,14 @@ from typing import Optional
 import numpy as np
 
 from sgs.utils import (
-        access,
         SpatialRaster,
         SpatialVector,
         plot,
-        write,
+)
+from balanced import (
+        lcube_cpp, 
+        lcube_stratified_cpp, 
+        hlpm2_cpp
 )
 from balanced import (
         lcube_cpp, 
@@ -66,9 +69,5 @@ def balanced(rast: SpatialRaster,
     if plot:
         #TODO add when plot has been implemented
         sgs.utils.plot()
-
-    if filename:
-        #TODO add when write has been implemented
-        sgs.utils.write(filename, overwrite)
 
     return samples

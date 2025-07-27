@@ -1,2 +1,2 @@
-from . import map
-from .map import map
+from . import map_stratifications
+from .map_stratifications import map

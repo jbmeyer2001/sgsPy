@@ -8,11 +8,16 @@
 # ******************************************************************************
 
 import json
+from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib #for type checking matplotlib.axes.Axes
 
 from raster import GDALRasterWrapper
+
+from .import plot
+from .plot import plot_raster
 
 class SpatialRaster:
     """
@@ -59,38 +64,38 @@ class SpatialRaster:
 
     Plotting raster:
 
-        the plot_image() function provides a wrapper around matplotlibs imshow 
-        functionality (matplotlib.pyplot.imshow). As such, either a single band 
-        can be plotted, or three bands can be plotted as an RGB image.
+        the plot() function provides a wrapper around matplotlibs imshow 
+        functionality (matplotlib.pyplot.imshow). Only a single band can
+        be plotted, and for multi-band rasters an indication must be given
+        for which band to plot. 
 
-        If no 'bands' argument is given, the function may throw an error if the
-        image does not contain 1 or 3 bands.
+        Target width and heights can be given in the parameters 
+        target_width and target_height. Default parameters are 1000 pixels for both. 
+        Information on the actual downsampling can be found here:
+        https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
 
-        The 'bands' argument allows the end-user to specify either the band
-        index or the band name for either a scalar or rgb image. 'bands' may
-        be an int, str, list, or dict.
+        If no 'band' argument is given, the function will throw an error if the
+        image does not contain a single.
+
+        The 'band' argument allows the end-user to specify either the band
+        index or the band name. 'band' may be an int or str.
 
         Optionally, any of the arguments which may be passed to the matplotlib
         imshow function may also be passed to plot_image(), such as cmap
         for a specific color mapping.
 
         examples:
-        rast = sgs.utils.raster.SpatialRaster('test.tif')
-
-        #plots either scalar or RGB image depending on number of bands 
+        #plots the single band 
+        rast = sgs.SpatialRaster('test_single_band_raster.tif') 
         rast.plot_image()
 
-        #plots the second band (index 1) as a scalar image
-        rast.plot_image(bands=1)
+        #plots the second band
+        rast = sgs.SpatialRaster('test_multi_band_raster.tif')
+        rast.plot_image(band=1)
 
-        #plots the zq90 band as a scalar image
-        rast.plot_image(bands='zq90')
-
-        #plots an RGB image with 0 as red, 2 as green, and 1 as blue
-        rast.plot_image(bands=[0,2,1])
-
-        #plots an RGB image with red green and blue bands specified
-        rast.plot_image(bands={'red':0, 'green':'zsd', 'blue':1}
+        #plots the 'zq90' band
+        rast = sgs.SpatialRaster('test_multi_band_raster.tif')
+        rast.plot_image(band='zq90')
 
     Public Attributes
     --------------------
@@ -124,13 +129,14 @@ class SpatialRaster:
     info()
         takes no arguments, prints raster information to the console
     plot_image()
-        takes one optional 'bands' argument of type int, str, list, or dict specifying
-        the bands to be used in the scalar or RGB image. 
-        Optionally, any of the arguments that can be passed to matplotlib.pyplot.imshow 
+        takes one optional 'band' argument of type int, or str
+        
+    Optionally, any of the arguments that can be passed to matplotlib.pyplot.imshow 
         can also be passed to plot_image().
     """
 
-    def __init__(self, image):
+    def __init__(self, 
+                 image: str | GDALRasterWrapper):
         """
         Constructing method for the SpatialRaster class.
 
@@ -162,8 +168,6 @@ class SpatialRaster:
 
         Raises
         --------------------
-        TypeError: 
-            if 'image' parameter is not of type str
         RuntimeError (from C++):
             if dataset is not initialized correctly
         RuntimeError (from C++):
@@ -171,10 +175,10 @@ class SpatialRaster:
         RuntimeError (from C++):
             if unable to get coordinate reference system
         """
-        if type(image) == str:
+        if (type(image) is str):
             self.cpp_raster = GDALRasterWrapper(image)
         else:
-            raise TypeError(f"SpatialRaster does not accept input of type {type(image)}")
+            self.cpp_raster = image
 
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
@@ -212,9 +216,13 @@ class SpatialRaster:
         RuntimeError (from C++):
             if unable to read raster band
         """
-        self.arr = np.asarray(self.cpp_raster.get_raster_as_memoryview().toreadonly(), copy=False)
+        self.arr = np.asarray(
+            self.cpp_raster.get_raster_as_memoryview(self.width, self.height).toreadonly(), 
+            copy=False
+        )
 
-    def get_band_index(self, band):
+    def get_band_index(self, 
+                       band: str | int):
         """
         Utilizes the band_name_dict to convert a band name to an index if requried.
 
@@ -227,7 +235,8 @@ class SpatialRaster:
 
         return band
 
-    def __getitem__(self, index):
+    def __getitem__(self, 
+                    index: int | str | tuple | slice):
         """
         Implements numpy array accesses on self.arr attribute, allowing bands
         to be specified by their name as opposed to index if desired.
@@ -239,8 +248,6 @@ class SpatialRaster:
 
         Raises
         ---------------------
-        TypeError: 
-            if the index is not of type int, str, tuple, or slice.
         RuntimeError (from C++):
             if unable to read raster band
         """
@@ -251,91 +258,43 @@ class SpatialRaster:
             index = (self.get_band_index(index[0]),) + index[1:]
         elif type(index) == slice:
             index = slice(self.get_band_index(index.start), self.get_band_index(index.stop))
-        elif type(index) == int or type(index) == str:
-            index = self.get_band_index(index)
         else:
-            raise TypeError("index must be of type int, str, tuple, or slice")
+            index = self.get_band_index(index)
 
         return self.arr[index]
 
-    def arrange_bands_from_list(self, bands_list):
+    def plot(self, 
+             ax: Optional[matplotlib.axes.Axes] = None,
+             target_width: int = 1000, 
+             target_height: int = 1000, 
+             band: Optional[int | str] = None, 
+             **kwargs):
         """
-        Used by plot_image function. Converts all bands in initial list to int indexes
-        using self.get_band_index().
+        Calls plot_raster() on self.
 
         Parameters
         --------------------
-        bands_list: list
-            a list containing str or int variables specify bands
-
-        Raises
-        --------------------
-        ValueError:
-            if the number of bands in the band list is not 1 or 3
-        """
-        num_items = len(bands_list)
-        if num_items != 1 and num_items != 3:
-            raise ValueError("number of bands must be either 1 (for scalar iamges) or 3 (for RGB images).")
-
-        for i in range(num_items):
-            bands_list[i] = self.get_band_index(bands_list[i])
-
-        return bands_list
-
-    def arrange_bands_from_dict(self, bands_dict):
-        """
-        Used by plot_image function. Converts a dict which specifies RGB values
-        into a list of  indexes using self.get_band_index().
-
-        Parameters
-        --------------------
-        bands_dict: dict
-            dict specifying 'red', 'green', and 'blue' bands
-
-        Raises
-        --------------------
-        ValueError:
-            if the bands dict does not have three items, or if the items have incorrect names
-        """
-        if len(bands_dict) != 3 or 'red' not in bands_dict or 'green' not in bands_dict or 'blue' not in bands_dict:
-            raise ValueError("if bands is a dict, it must to have three items with the keys 'red', 'green', and 'blue'.")
-
-        return [
-            self.get_band_index(bands_dict["red"]),
-            self.get_band_index(bands_dict["green"]),
-            self.get_band_index(bands_dict["blue"])
-        ]
-
-    def plot_image(self, bands=None, **kwargs):
-        """
-        Plots the specified bands using matplotlib.pyplot.imshow function.
-
-        Parameters
-        --------------------
-        bands (optional) : int or str or list or dict
+        ax : matplotlib.axes.Axes
+            axes to plot the raster on
+        target_width : int
+            maximum width in pixels for the image (after downsampling)
+        target_height : int
+            maximum height in pixeils for the image (after downsampling)
+        band (optional) : int or str
             specification of which bands to plot
         **kwargs (optional)
             any parameters which may be passed to matplotlib.pyplot.imshow
 
         Raises
         --------------------
-        TypeError:
-            if 'bands' is not of type int, str, list, or dict
+        RuntimeError (from C++)
+            if unable to read raster band
         """
-        if bands is None:
-            bands = self.arrange_bands_from_list([*range(self.band_count)])
-        elif type(bands) == list:
-            bands = self.arrange_bands_from_list(bands)
-        elif type(bands) == dict:
-            bands = self.arrange_bands_from_dict(bands)
-        elif type(bands) in [str, int]: 
-            bands = [self.get_band_index(bands)]
+
+        if ax is not None:
+            plot_raster(self, ax, target_width, target_width, band, **kwargs)
         else:
-            raise TypeError("'bands' parameter must be of type None, list, dict, str, or int.")
-
-        if self.arr is None:
-            self.load_arr()
-
-        display_arr = np.moveaxis(self.arr[bands, :, :], 0, 2)
-        plt.imshow(display_arr, **kwargs)
-        plt.show()
+            fig, ax = plt.subplots()
+            plot_raster(self, ax, target_width, target_width, band, **kwargs)
+            plt.show()
+        

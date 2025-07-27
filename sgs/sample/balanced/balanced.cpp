@@ -54,7 +54,8 @@ std::vector<size_t> lcube_cpp(
   	std::unique_ptr<double> xbal(new double[raster->getHeight() * raster->getWidth()]);
 	std::memcpy(xbal.get(), p_prob, sizeof(double) * N);
 	size_t pbal = 1;
-	double *xspread = (double *)raster->getRaster();
+	//what if it's a float???
+	double *xspread = nullptr; //(double *)raster->getRaster();
   	size_t pspread = (size_t)raster->getBandCount();
 
 	std::cout << "probs: " << *p_prob << std::endl;

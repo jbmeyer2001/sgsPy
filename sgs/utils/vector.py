@@ -7,7 +7,15 @@
 #
 # ******************************************************************************
 
+from typing import Optional
+
+import matplotlib.pyplot as plt
+import matplotlib #fpr type checking matplotlib.axes.Axes
+
 from vector import GDALVectorWrapper
+
+from.import plot
+from .plot import plot_vector
 
 class SpatialVector:
     """
@@ -31,7 +39,8 @@ class SpatialVector:
     info()
         takes an optional argument specify the band, and prints vector metadata to console
     """
-    def __init__(self, image):
+    def __init__(self, 
+                 image: str | GDALVectorWrapper):
         """
         Constructing method for the SpatialVector class.
 
@@ -42,24 +51,24 @@ class SpatialVector:
 
         Parameters
         --------------------
-        image: str
-           specifies a path to a vector file
+        image: str | GDALVectorWrapper
+           specifies a path to a vector file or the C++ class object itself
 
         Raises
         --------------------
-        TypeError:
-            if 'image' parameter is not of type str
         RuntimeError (from C++):
             if dataset is not initialized correctly 
         """
-        if type(image) == str:
+        if (type(image) is str):
             self.cpp_vector = GDALVectorWrapper(image)
         else:
-            raise TypeError(f"SpatialVector does not accept input of type {type(image)}")
+            self.cpp_vector = image
 
         self.layers = self.cpp_vector.get_layer_names() 
 
-    def print_info(self, name, layer_info):
+    def print_info(self, 
+                   layer_name: str, 
+                   layer_info: dict):
         """
         prints layer information using the layer_info from self.cpp_vector.
 
@@ -70,7 +79,7 @@ class SpatialVector:
         layer_info : dict
             dict containing 'feature_count', 'field_count', 'geometry_type', 'xmax', 'xmin', 'ymax', and 'ymin' items
         """
-        print("{} layer info:".format(name))
+        print("{} layer info:".format(layer_name))
         print("feature count: {}".format(layer_info['feature_count']))
         print("field count: {}".format(layer_info['field_count']))
         print("geometry type: {}".format(layer_info['geometry_type']))
@@ -82,7 +91,8 @@ class SpatialVector:
         ))
         print()
 
-    def info(self, layer=None):
+    def info(self, 
+             layer: Optional[int | str] = None):
         """
         calls self.print_info depending on layer parameter. If no layer is given,
         print all layers. A layer may be specified by either a str or an int.
@@ -91,18 +101,70 @@ class SpatialVector:
         --------------------
         layer (optional) : str or int
             specifies the layer to print information on
+        """
+        if type(layer) == str:
+            self.print_info(layer, self.cpp_vector.get_layer_info(layer))
+        elif type(layer) == int:
+            self.print_info(self.layers[layer], self.cpp_vector.get_layer_info(self.layers[layer]))
+        else:
+            for layer in self.layers:
+                self.print_info(layer, self.cpp_vector.get_layer_info(layer))
+
+    def samples_as_wkt(self):
+        """
+        Calls get_wkt_points on the underlying cpp class, to return
+        the samples as wkt strings. 
+
+        This function requires that there be a layer named 'samples' which
+        is comprised entirely of Points or MultiPoints. These conditions
+        will be satisfied if this SpatialVector is the output of one of the
+        sampling functions in the sgs package.
 
         Raises
         --------------------
-        TypeError:
-            if the layer parameter is not of type None, str, or int
+        ValueError:
+            if this vector does not have a layer called 'samples'
+        RuntimeError (from C++):
+            if the 'samples' layer has at least one geometry other than Point or MultiPoint
         """
-        if layer is None:
-            for layer in self.layers:
-                self.print_info(layer, self.cpp_vector.get_layer_info(layer))
-        elif type(layer) == str:
-            self.print_info(layer, self.cpp_vector.get_layer_info(layer))
-        elif type(layer) == int:
-            self.print_info(layers[layer], self.cpp_vector.get_layer_info(layers[layer]))
+        if "samples" not in self.layers:
+            print("this vector does not have a layer 'samples'")
         else:
-              TypeError("layer parameter cannot be of type {}".format(type(layer)))
+            return self.cpp_vector.get_wkt_points('samples')
+
+    def plot(self,
+        geomtype: str,
+        ax: Optional[matplotlib.axes.Axes] = None,
+        layer: Optional[int | str] = None, 
+        **kwargs):
+        """
+        Calls plot_vector on self.
+
+        Paramters
+        --------------------
+        ax : matplotlib.axes.Axes
+            axes to plot the raster on
+        geomtype : str
+            the geometry type to try to print
+        layer : None | int | str
+            specification of which layer to print
+        **kwargs (optional)
+            any parameter which may be passed ot matplotlib.pyplot.plot
+
+        Raises
+        --------------------
+        ValueError:
+            if no layer was specified, and the image contains more than one layer
+        ValueError:
+            if geomtype is not one of 'Point', 'MultiPoint', 'LineString', 'MultiLineString'
+        RuntimeError (from C++):
+            if the layer contains a geometry NOT of an acceptable type
+        """
+
+        if ax is not None: 
+            plot_vector(self, ax, geomtype, layer, **kwargs)
+        else:
+            fig, ax = plt.subplots()
+            plot_vector(self, ax, geomtype, layer, **kwargs)
+            plt.show()
+
