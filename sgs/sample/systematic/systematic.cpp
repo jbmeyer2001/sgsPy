@@ -130,11 +130,13 @@ systematic(
 		for (const auto& p_polygon : *p_geometry->toMultiPolygon()) {
 			//generate sample depending on 'location' parameter
 			OGRPoint point;
+			OGRPoint secondPoint;
 			if (location == "centers") {
 				p_polygon->Centroid(&point);
 			}
 			else if (location == "corners") {
-				(*p_polygon->begin())->StartPoint(&point);
+				(*p_polygon->begin())->getPoint(0, &point);
+				(*p_polygon->begin())->getPoint(1, &secondPoint);
 			}
 			else { //location == "random"
 				OGREnvelope envelope;
@@ -168,6 +170,24 @@ systematic(
 				p_feature->SetGeometry(&point);
 				p_sampleLayer->CreateFeature(p_feature);
 				OGRFeature::DestroyFeature(p_feature);
+			}
+
+			//if location is corners, there will be a second point
+			if (location == "corners") {
+				x = secondPoint.getX();
+				y = secondPoint.getY();
+
+				if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
+					if (plot) {
+						xCoords.push_back(x);
+						yCoords.push_back(y);
+					}
+
+					OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
+					p_feature->SetGeometry(&secondPoint);
+					p_sampleLayer->CreateFeature(p_feature);
+					OGRFeature::DestroyFeature(p_feature);
+				}
 			}
 
 			//set grid vector to be plot
