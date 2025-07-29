@@ -29,10 +29,19 @@
 /**
  *
  */
-std::vector<size_t> lcube_cpp(
-	GDALRasterWrapper *raster,
-	//GDALVectorWrapper *access,
- 	py::buffer prob) 
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+balanced(
+	GDALRasterWrapper *p_raster,
+	std::vector<size_t> bandIndexes;
+	GDALRasterWrapper *p_sraster,
+	size_t stratBand,
+	GDALVectorWrapper *p_access,
+	std::string layerName,
+	double buffInner,
+	double buffOuter,
+	std::string method,
+ 	py::buffer prob,
+	std::string filename) 
 {
 	//set default parameters according to 
 	//https://github.com/envisim/BalancedSampling/blob/2.1.1/R/lcube.R
@@ -40,232 +49,428 @@ std::vector<size_t> lcube_cpp(
 	size_t treeBucketSize = 50;
 	double eps = 1e-12;
 	int treeMethod = 2; //'kdtree2' method
+	
+	size_t maxIndex = std::numeric_limits<size_t>::max();
+	size_t height = static_cast<size_t>(p_raster->getHeight());
+	size_t width = static_cast<size_t>(p_raster->getWidth());
+	size_t bandCount = bandIndexes.size();
 
-	/*
-	std::cout << "initialized default params" << std::endl;
+	//error checking for potential overflow problems
+	//since the balanced sampling package requires that all raster data be allocated at once
+	if (
+		(maxIndex / bandCount) < sizeof(double) ||
+		(maxIndex / width) < (bandCount * sizeof(double) ||
+		(maxIndex / height) < (width * bandCount * sizeof(double)
+	) {
+		throw runtime_error("max index is too large to be processed by the current operating system, "
+				+ "because the balanced sampling package requires the full raster to be in memory at once.");
+	}
+
+	//create vectors which will hold data pixels of bands
+	std::vector<double> xspread(height * width * bandCount);
+	std::vector<int> strata;
+	if (p_sraster) {
+		strata = std::vector<int>(height * width);
+	}	
+
+	//create band storing data structure and allocate memory
+	std::vector<double *> bands(bandCount, nullptr);
+	int *p_strataBand;
+	for (band = 0; band < bandCount; band++) {
+		bands[band] = (double *) VSIMalloc2(width, sizeof(double));
+		if (!bands[band]) {
+			throw std::runtime_error("unable to allocate band " + std::to_string(band + 1));
+		}
+	}
+	if (p_sraster) {
+		p_strataBand = (int *) VSIMalloc(width, sizeof(int));
+	}
+	
+	//get access mask if defined
+	GDALDataset *p_accessMaskDataset = nullptr;
+	void *p_mask = nullptr;
+	if (p_access) {
+		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
+		p_accessMaskDataset = maskInfo.first; //GDALDataset to free after using band
+		p_mask = maskInfo.second; //pointer to mask
+	}
+
+	double noDataValue = p_raster->getDataset->GetRasterBand(1)->getNoDataValue();
+	int strataNoDataValue = static_cast<int>(p_sraster->getDataset->GetRasterBand(stratBand + 1)->getNoDataValue());
+
+	std::cout << "strataNoDataValue is " << strataNoDataValue << std::endl;
+	
+	//noDataCount, originalIndexes vector, and adjustedIndexes vector work to 
+	//map the values of a raster band with all the noData pixels removed back
+	//to it's original index.
+	size_t noDataCount = 0;
+	std::vector<size_t> originalIndexes(width * 2);
+	std::vector<size_t> adjustedIndexes(width * 2);
+	size_t storedIndexesIndex = 0;
+	bool prevNan = false;
+	bool isNan = false;
+	size_t bandIndex, originalIndex, adjustedIndex, xspreadIndex;
+
+	for (size_t y = 0; y < height; y++) {
+		//read scanline from each raster band into bands vector
+		for (size_t i = 0; i < bandCount; i++) {
+			CPLErr err = p_raster->getDataset->GetRasterBand(bandIndexes[i] + 1)->ReadRaster(
+				bands[band],	//pData
+			       	width,		//nArrayEltCount
+				0,		//dfXOff
+				y,		//dfYOff
+				width,		//dfXSize
+				1,		//dfYSize
+				width,		//nBufXSize
+				1,		//nBufYSize
+				nullptr,	//eResampleAlg
+				nullptr,	//pfnProgress
+				nullptr		//pProgressData
+			);
+			if (err) {
+				std::cout << "ReadRaster failed with CPLError code: " << err << std::endl;
+			}
+		}
+		if (p_sraster) {
+			CPLErr err = p_sraster->getDataset->GetRasterBand(stratBand + 1)->ReadRaster(
+				p_strataBand,	//pData
+				width,		//nArrayEltCount
+				0,		//dfXOff
+				y,		//dfYOff
+				width,		//dfXSize
+				1,		//dfYSize
+				width,		//nBufXSize
+				1,		//nBufYSize
+				nullptr,	//eResampleAlg
+				nullptr,	//pfnProgress
+				nullptr		//pProgressData
+			)	
+		}
+
+
+		size_t startIndex = y * width;
 		
-	//if (access) {
-		//implement later once access functionality is implemented
-	//}
+		//special case for first index, to set up originalIndexes and adjustedIndexes vectors as required
+		if (y == 0) {
+			for (size_t band = 0; band < bands.size(); band++) {
+				double val = bands[band][0];
+				xspread[band] = val;
+				isNan |= (std::isnan(val) || val == noDataValue);
+			}
+			if (p_sraster) {
+				int val = p_strataBand[0];
+				strata[0] = val;
+				isNan |= val == strataNoDataValue;
+			}
+			isNan |= (p_access && ((uint8_t *)p_mask)[0] == 0)
+			prevNan = isNan;
+			noDataCount += isNan;
 
-	std::cout << "passed access stuff" << std::endl;
+			//update the adjusted and original indexes, they will be overwritten if isNan is true
+			originalIndexes[storedIndexesIndex] = 0;
+			adjustedIndexes[storedIndexesIndex] = 0;
+			storedIndexesIndex += (!isNan);
+		}
 
-	double *p_prob = (double *)prob.request().ptr;
-  	size_t N = (size_t)raster->getWidth() * (size_t)raster->getHeight();
-  	std::unique_ptr<double> xbal(new double[raster->getHeight() * raster->getWidth()]);
-	std::memcpy(xbal.get(), p_prob, sizeof(double) * N);
-	size_t pbal = 1;
-	//what if it's a float???
-	double *xspread = nullptr; //(double *)raster->getRaster();
-  	size_t pspread = (size_t)raster->getBandCount();
+		//iterate through indexes
+		//write the values over to xspread
+		//if any band as nodata all values written will be overwritten at next iteration 
+		for (x = 0 + (y == 0); x < width; x++) {
+			isNan = false;
+			bandIndex = x;
+			xspreadIndex = (startIndex + x - noDataCount) * bandCount;
+			originalIndex = startIndex + x;
+			adjustedIndex = startIndex + x - noDataCount;
+			for (size_t band = 0; band < bandCount; band++) {
+				double val = bands[band][bandIndex];
+				xspread[xspreadIndex + band] = val;
+				isNan |= (std::isnan(val) || val == noDataValue);
+			}	
+			if (p_sraster) { 
+				int val = p_strataBand[bandIndex];
+				strata[adjustedIndex] = val;
+				isNan |= val == strataNoDataValue;
+			}
+			isNan = (p_access && ((uint8_t *)p_mask)[originalIndex] == 0);
+		
+			//update the adjusted and original indexes, they will be overwritten if isNan is true	
+			originalIndexes[storedIndexesIndex] = originalIndex;
+			adjustedIndexes[storedIndexesIndex] = adjustedIndex;
+			storedIndexesIndex += (!isNan && prevNan);
+			
+			noDataCount += isNan;
+			prevNan = isNan;
+		}
 
-	std::cout << "probs: " << *p_prob << std::endl;
-	std::cout << "N: " << N << std::endl;
-	std::cout << "xbal first: " << *xbal.get() << std::endl;
-	std::cout << "pbal: " << pbal << std::endl;
-	std::cout << "pspread: " << pspread << std::endl;
-	std::cout << "defined remaining variables, calling Cube constructor" << std::endl;
-	*/
+		xspread.resize(height * width * bandCount - noDataCout * bandCount);
+		
+		if (originalIndexes.size() < storedIndexesIndex + (width / 2)) {
+			originalIndexes.resize(originalIndexes.size() + width * 4);
+			adjustedIndexes.resize(originalIndexes.size() + with * 4);
+		}
+	}
 
-	//create vectors which will hold the data pixels of all the bands
-	
-	//resize them initially
-	
-	//get the GDAL block size
-	
-	//allocate pointers to bands with the block size
-	
-	//read first block into the pointers
-	
-	//iterate through indexes, then bands
-	
-	//if any band has a nodata, consider it a nodata for all the bands
-	
-	//look at 'adjust_nodata' branch for how to go about keeping track of original indexes
-	
-	//
+	size_t noNanBandSize = height * width - noDataCount;
 
-  	Cube cube(
-    		p_prob, 			//const double*
-    		xbal.get(), 	//double *
-    		N,				//const size_t
-    		pbal,			//const size_t
-    		eps,			//const double
-    		xspread, 		//double *
-    		pspread,		//const size_t
-    		treeBucketSize,	//const size_t
-    		treeMethod		//const int
-  	);
+	//free no longer used band data and adjust size of vectors
+	for (size_t band = 0; band < bands.size(); band++) {
+		CPLFree(bands[band]);
+	}
+	xspread.resize(noNanBandSize * bandCount);
+	xspread.shrink_to_fit();
+	originalIndexes.resize(storedIndexesIndex + 1);
+	originalIndexes.shrink_to_fit();
+	adjustedIndexes.resize(storedIndexesIndex + 1);
+	originalIndexes.shrink_to_fit();
+	if (p_sraster) {
+		strata.resize(noNanBandSize);
+		strata.shrink_to_fit();
+	}
 
-	std::cout << "calling cube.Run()" << std::endl;
-  	cube.Run();
+	//determine probability list (vector)
+	double *p_prob, p_xbal;
+	std::vector<double> prob, xbal;
 
-	std::cout << "getting vector" << std::endl;
-	std::vector<size_t> sample(cube.sample.begin(), cube.sample.end());
+	//TODO remove
+	if (prob.request().ndim != 1) {
+		throw std::runtime_error("this messes up future calculation");
+	}
 
-	std::cout << "returning" << std::endl;
-  	return sample;
+	ssize_t probLength = prob.request().shape[0];
+	if (probLength != 0 && probLength != noNanBandSize) {
+		std::cout << "**warning** length of prob list provided (" 
+			  << std::to_string(probLength) +
+			  << ") does not match size of band without nan values (" 
+			  << std::to_string(noNanBandSize) 
+			  << ")." << std::endl;
+
+		std::cout << "creating prob of correct size with equal probabilities." << std::endl;
+	}
+
+	if (probLength != noNanBandSize) {
+		prob = std::vector<double>(noDataBandSize, (double)numSamples / (double)noNanBandSize);
+		p_prob = prob.data();
+	}
+	else {
+		p_prob = (double *)prob.request().ptr;
+	}
+
+	if (method != "lpm_kdtree") {
+		//lpm_kdtree doesn't need xbal, but the others do
+		xbal.resize(noNanBandSize);
+		std::memcpy(
+			reinterpret_cast<void *>(xbal.data()),	//dst
+			reinterpret_cast<void *>(p_prob), 	//src
+			noNanBandSize * sizeof(double)		//num bytes
+		);
+		p_xbal = xbal.data();
+	}
+
+	std::vector<size_t> *samples;
+	std::unique_ptr<Cube *> p_cube;
+	std::unique_ptr<CubeStratified *> p_scube;
+	std::unique_ptr<Lpm *> p_lpm;
+	if (method == "lcube") {
+		p_cube = std::make_unique<Cube *>(
+    			p_prob, 		//const double*
+    			p_xbal, 		//double *
+    			noNanBandSize,		//const size_t
+    			1,			//const size_t
+    			eps,			//const double
+    			xspread.data(), 	//double *
+    			bandCount,		//const size_t
+    			treeBucketSize,		//const size_t
+    			treeMethod		//const int
+  		);
+		p_cube->Run();
+		samples = &(p_cube->sample);
+	}
+	else if (method == "lcubestratified") {
+		p_scube = std::make_unique<CubeStratified *>(
+			strata.data(),		//int *
+			p_prob,			//const double *
+			p_xbal,			//double *
+			noNanBandSize,		//const size_t
+			1,			//const size_t
+			eps,			//const double
+			xspread.data(),		//double *
+			bandCount,		//const size_t
+			treeBucketSize,		//const size_t
+			treeMethod		//const int
+		);
+		p_scube.Run();
+		samples = &(p_scube->sample_);
+	}
+	else {// method == "lpm2_kdtree"
+		p_lpm = std::make_unique<Lpm *>(
+			lpmMethod::lpm2,	//const LpmMethod
+			p_prob,			//const double *
+			xspread.data(),		//double *
+			noNanBandSize,		//const size_t
+			1,			//const size_t
+			eps,			//const double
+			treeBucketSize,		//const size_t
+			treeMethod		//const int
+		);
+		p_lpm->Run();
+		samples = &(p_lpm->sample);
+	}
+  
+	//don't keep vectors full if we're not using them
+	//as it may allow memory to be released
+	xspread.clear();
+	xspread.shrink_to_fit();
+	strata.clear();
+	strata.shrink_to_fit();
+	prob.clear();
+	prob.shrink_to_fit();
+	xbal.clear();
+	xbal.shrink_to_fit();
+	originalIndexes.clear();
+	originalIndexes.shrink_to_fit();
+	adjustedIndexes.clear();
+	adjustedIndexes.shrink_to_fit();
+
+	//TODO error check this???
+	GDALAllRegister();
+	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+
+	std::vector<double> xCoords;
+	std::vector<double> yCoords;
+	double *GT = p_raster->getGeotransform();
+
+	for (const size_t& sample : *samples) {
+		//get original index from adjusted sample index using the adjustedIndexes and originalIndexes vectors
+		auto boundIt = std::upper_bound(adjustedIndexes.begin(), adjustedIndexes.end(), sample);
+		aize_t boundIndex = (boundIt == adjustedIndexes.end()) ? adjustedIndexes.back() : std::distance(adjustedIndexes.begin(), boundIt) - 1;
+		size_t index = sample + originalIndexes[boundIndex] - adjustedIndexes[boundIndex];
+
+		//calculate and create coordinate point
+		double yIndex = index / p_raster->getWidth();
+		double xIndex = index - (yIndex * p_raster->getWidth());
+		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
+			
+		//add point to dataset
+		OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+		p_feature->SetGeometry(&newPoint);
+		p_layer->CreateFeature(p_feature);
+		OGRFeature::DestroyFeature(p_feature);
+
+		//add to xCoords and yCoords for plotting
+		xCoords.push_back(xCoord);
+		yCoords.push_back(yCoord);
+	}
+
+	//free up unique_ptr which may have been allocated
+	p_cube.reset();
+	p_scube.reset();
+	p_lpm.reset();
+
+	//create new GDALVectorWrapper using dataset
+	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+
+	if (filename != "") {
+		try {
+			p_sampleVectorWrapper->write(filename);
+		}
+		catch () {
+			std::cout << "Exception thrown while trying to write file: " << e.what() << std::endl;
+		}
+	}
+  	return {{xCoords, yCoords}, p_sampleVectorWrapper};
 }
 
 /**
  *
  */
-void lcube_stratified_cpp(
-	GDALRasterWrapper *raster,
-	//GDALVectorWrapper *access,
-	double *prob) 
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+balanced_cpp(
+	GDALRasterWrapper *p_raster,
+	std::vector<size_t> bandIndexes,
+	std::string method,
+	py::buffer prob,
+	std::string filename)
 {
-	std::cout << "lcube_stratified_cpp() has not been implemented!!!" << std::endl;
+	return balanced(
+		p_raster,
+		bandIndexes,
+		nullptr,
+		0,
+		nullptr,
+		"",
+		0,
+		0,
+		method,
+		prob,
+		filename
+	);
 }
 
-/*
-// [[Rcpp::export(.lcube_stratified_cpp)]]
-Rcpp::IntegerVector lcube_stratified_cpp(
-  Rcpp::NumericVector &prob,
-  Rcpp::NumericMatrix &xbalance,
-  Rcpp::NumericMatrix &xspread,
-  Rcpp::IntegerVector &strata,
-  const size_t bucketSize,
-  const int method,
-  const double eps
-) {
-  size_t N = xbalance.nrow();
-  size_t p = xbalance.ncol();
-  size_t pxs = xspread.nrow();
-
-  if (N != (size_t)prob.length())
-    throw std::invalid_argument("prob and x does not match");
-  if (N != (size_t)strata.length())
-    throw std::range_error("strata and x does not match");
-  if (N != (size_t)xspread.ncol())
-    throw std::range_error("xspread and xbal does not match");
-
-  CubeStratified cube(
-    INTEGER(strata),
-    REAL(prob),
-    REAL(xbalance),
-    N,
-    p,
-    eps,
-    REAL(xspread),
-    pxs,
-    bucketSize,
-    method
-  );
-
-  cube.Run();
-
-  Rcpp::IntegerVector sample(cube.sample_.begin(), cube.sample_.end());
-
-  return sample;
-}
-*/
-
-void hlpm2_cpp(
-	GDALRasterWrapper *raster,
-	//GDALVectorWrapper *vector,
-	double *prob) 
+/**
+ *
+ */
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+balanced_access_cpp(
+	GDALRasterWrapper *p_raster,
+	std::vector<size_t> bandIndexes,
+	GDALVectorWrapper *p_access,
+	std::string layerName,
+	double buffInner,
+	double buffOuter,
+	std::string method,
+	py::buffer prob,
+	std::string filename)
 {
-	std::cout << "hlpm2_cpp() has not been implemented!!!" << std::endl;
+	return balanced(
+		p_raster,
+		bandIndexes,
+		nullptr,
+		0,
+		p_access,
+		layerName,
+		buffInner,
+		buffOuter,
+		method,
+		prob,
+		filename
+	);
 }
 
-/*
-// [[Rcpp::export(.hlpm2_cpp)]]
-Rcpp::IntegerMatrix hlpm2_cpp(
-  Rcpp::NumericVector &prob,
-  Rcpp::NumericMatrix &x,
-  Rcpp::IntegerVector &sizes,
-  size_t treeBucketSize,
-  int treeMethod,
-  double eps
-) {
-  size_t sn = sizes.length();
-  size_t N = x.ncol();
-  size_t p = x.nrow();
-
-  if (N != (size_t)prob.length())
-    throw std::invalid_argument("prob an x does not match");
-
-  Lpm lpm(
-    LpmMethod::lpm2,
-    REAL(prob),
-    REAL(x),
-    N,
-    p,
-    eps,
-    treeBucketSize,
-    treeMethod
-  );
-
-  // Make a copy of the tree for reuse later
-  KDTree* orgTree = lpm.tree->Copy();
-  IndexList* orgIdx = lpm.idx;
-
-  // Run the algorithm to get a base sample
-  lpm.Run();
-
-  orgIdx->Fill();
-  delete lpm.tree;
-
-  // Set the return matrix
-  size_t orgSampleSize = lpm.sample.size();
-  Rcpp::IntegerMatrix sample(orgSampleSize, 2);
-
-  for (size_t i = 0, j = 0; i < N; i++) {
-    if (j < orgSampleSize && i == lpm.sample[j] - 1) {
-      sample(j, 0) = lpm.sample[j];
-      sample(j, 1) = sn;
-      j += 1;
-    } else {
-      orgTree->RemoveUnit(i);
-      orgIdx->Erase(i);
-    }
-  }
-
-  size_t remainingSize = orgSampleSize;
-
-  for (size_t i = 0; i < sn - 1; i++) {
-    double subprob = (double)sizes[i] / (double)remainingSize;
-    lpm.tree = orgTree->Copy();
-    lpm.idx = orgIdx->CopyLen();
-    lpm.sample.resize(0);
-
-    for (size_t j = 0; j < orgIdx->Length(); j++) {
-      lpm.probabilities[orgIdx->Get(j)] = subprob;
-    }
-
-    lpm.Run();
-
-    // Remove all selected unit from orgTree and orgIdx, and set their subsample
-    for (size_t j = 0, k = 0; j < orgSampleSize && k < lpm.sample.size(); j++) {
-      if ((size_t)sample(j, 0) != lpm.sample[k])
-        continue;
-
-      size_t id = lpm.sample[k] - 1;
-      orgTree->RemoveUnit(id);
-      orgIdx->Erase(id);
-      sample(j, 1) = i + 1;
-      k += 1;
-    }
-
-    remainingSize -= lpm.sample.size();
-    delete lpm.tree;
-    delete lpm.idx;
-  }
-
-  lpm.tree = nullptr;
-  lpm.idx = nullptr;
-  delete orgTree;
-  delete orgIdx;
-
-  return sample;
+/**
+ *
+ */
+std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+balanced_strata_cpp(
+	GDALRasterWrapper *p_raster,
+	std::vector<size_t> bandIndexes,
+	GDALRasterWrapper *p_sraster,
+	size_t stratBand,
+	std::string method,
+	py::buffer prob,
+	std::string filename)
+{
+	return balanced(
+		p_raster,
+		bandIndexes,
+		p_sraster,
+		strataBand,
+		nullptr,
+		"",
+		0,
+		0,
+		method.
+		prob,
+		filename
+	);
 }
-*/
+
 
 PYBIND11_MODULE(balanced, m) {
-	m.def("lcube_cpp", &lcube_cpp);
-	m.def("lcube_stratified_cpp", &lcube_stratified_cpp);
-	m.def("hlpm2_cpp", &hlpm2_cpp);
+	m.def("balanced_cpp", &balanced_cpp);
+	m.def("balanced_access_cpp", &balanced_access_cpp);
+	m.def("balanced_strata_cpp", &balanced_strata_cpp);
+	m.def("balanced_access_strata_cpp", &balanced)
 }
-
-

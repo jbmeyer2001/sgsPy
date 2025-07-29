@@ -18,11 +18,14 @@ from balanced import (
         hlpm2_cpp
 )
 
+#optional srast for lcube_stratified ?????
 def balanced(rast: SpatialRaster,
              num_samples: int,
+             bands = Optional[list[str]] = None;
              algorithm: str = "lpm2_kdtree",
              prob: Optional[list[float]] = None,
              access: Optional[SpatialVector] = None,
+             layer_name: Optional[str] = None
              buf_inner: Optional[int | float] = None,
              buf_outer: Optional[int | float] = None,
              plot: bool = False,
@@ -41,30 +44,24 @@ def balanced(rast: SpatialRaster,
         raise ValueError("algorithm parameter must specify one of: 'lpm2_kdtree', 'lcube', 'lcubestratified'.")
 
     if prob:
-        if len(prob) != rast.width * rast.height:
-            ValueError("length of probability list must be equal to the number of pixels in the image")
         prob = np.ascontiguousarray(
             prob, 
             dtype=np.float64
         )
     else:
-        prob = np.full(
-            shape = rast.width * rast.height, 
-            fill_value = num_samples / (rast.width * rast.height),
-            dtype = np.float64,
-            order = 'C',
-        )
+        prob = np.ascontiguousarray([], dtype=np.float64)
+
+    
 
     if algorithm == "lpm2_kdtree":
         samples = hlpm2_cpp(rast.cpp_raster, prob.data)
     elif algorithm == "lcube":
         samples = lcube_cpp(rast.cpp_raster, prob.data)
     else:
+        #change this as the band may not be named 'strata' exactly
         if 'strata' not in raster.bands:
             raise ValueError("raster must have a band 'strata' if using lcubestratified method.")
         samples = lcube_stratified_cpp(rast.cpp_raster, prob.data)
-    
-    #TODO: convert coordinates to spatial points
 
     if plot:
         #TODO add when plot has been implemented
