@@ -1,5 +1,6 @@
 /******************************************************************************
  *
+ *
  * Project: sgs
  * Purpose: Integrate BalancedSampling package into sgs
  * Author: Joseph Meyer
@@ -18,6 +19,7 @@
 //sgs/utils cpp code
 #include "raster.h"
 #include "vector.h"
+#include "access.h"
 
 //Balanced Sampling package
 #include "CubeClass.h"
@@ -32,7 +34,8 @@
 std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 balanced(
 	GDALRasterWrapper *p_raster,
-	std::vector<size_t> bandIndexes;
+	size_t numSamples,
+	std::vector<size_t> bandIndexes,
 	GDALRasterWrapper *p_sraster,
 	size_t stratBand,
 	GDALVectorWrapper *p_access,
@@ -59,11 +62,10 @@ balanced(
 	//since the balanced sampling package requires that all raster data be allocated at once
 	if (
 		(maxIndex / bandCount) < sizeof(double) ||
-		(maxIndex / width) < (bandCount * sizeof(double) ||
-		(maxIndex / height) < (width * bandCount * sizeof(double)
+		(maxIndex / width) < (bandCount * sizeof(double)) ||
+		(maxIndex / height) < (width * bandCount * sizeof(double))
 	) {
-		throw runtime_error("max index is too large to be processed by the current operating system, "
-				+ "because the balanced sampling package requires the full raster to be in memory at once.");
+		throw std::runtime_error("max index is too large to be processed, because the balanced sampling package requires the full raster in memory.");
 	}
 
 	//create vectors which will hold data pixels of bands
@@ -76,14 +78,14 @@ balanced(
 	//create band storing data structure and allocate memory
 	std::vector<double *> bands(bandCount, nullptr);
 	int *p_strataBand;
-	for (band = 0; band < bandCount; band++) {
+	for (size_t band = 0; band < bandCount; band++) {
 		bands[band] = (double *) VSIMalloc2(width, sizeof(double));
 		if (!bands[band]) {
 			throw std::runtime_error("unable to allocate band " + std::to_string(band + 1));
 		}
 	}
 	if (p_sraster) {
-		p_strataBand = (int *) VSIMalloc(width, sizeof(int));
+		p_strataBand = (int *) VSIMalloc2(width, sizeof(int));
 	}
 	
 	//get access mask if defined
@@ -95,8 +97,8 @@ balanced(
 		p_mask = maskInfo.second; //pointer to mask
 	}
 
-	double noDataValue = p_raster->getDataset->GetRasterBand(1)->getNoDataValue();
-	int strataNoDataValue = static_cast<int>(p_sraster->getDataset->GetRasterBand(stratBand + 1)->getNoDataValue());
+	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
+	int strataNoDataValue = static_cast<int>(p_sraster->getDataset()->GetRasterBand(stratBand + 1)->GetNoDataValue());
 
 	std::cout << "strataNoDataValue is " << strataNoDataValue << std::endl;
 	
@@ -114,47 +116,50 @@ balanced(
 	for (size_t y = 0; y < height; y++) {
 		//read scanline from each raster band into bands vector
 		for (size_t i = 0; i < bandCount; i++) {
-			CPLErr err = p_raster->getDataset->GetRasterBand(bandIndexes[i] + 1)->ReadRaster(
-				bands[band],	//pData
-			       	width,		//nArrayEltCount
-				0,		//dfXOff
-				y,		//dfYOff
-				width,		//dfXSize
-				1,		//dfYSize
-				width,		//nBufXSize
-				1,		//nBufYSize
-				nullptr,	//eResampleAlg
-				nullptr,	//pfnProgress
-				nullptr		//pProgressData
+			CPLErr err = p_raster->getDataset()->GetRasterBand(bandIndexes[i] + 1)->ReadRaster(
+				bands[i],			//pData
+			       	width,				//nArrayEltCount
+				0,				//dfXOff
+				y,				//dfYOff
+				width,				//dfXSize
+				1,				//dfYSize
+				width,				//nBufXSize
+				1,				//nBufYSize
+				GRIORA_NearestNeighbour,	//eResampleAlg (default)
+				nullptr,			//pfnProgress
+				nullptr				//pProgressData
 			);
 			if (err) {
-				std::cout << "ReadRaster failed with CPLError code: " << err << std::endl;
+				std::string errorStr = "ReadRaster failed with CPLError code: " + std::to_string(err);
+				throw std::runtime_error(errorStr);
 			}
 		}
 		if (p_sraster) {
-			CPLErr err = p_sraster->getDataset->GetRasterBand(stratBand + 1)->ReadRaster(
-				p_strataBand,	//pData
-				width,		//nArrayEltCount
-				0,		//dfXOff
-				y,		//dfYOff
-				width,		//dfXSize
-				1,		//dfYSize
-				width,		//nBufXSize
-				1,		//nBufYSize
-				nullptr,	//eResampleAlg
-				nullptr,	//pfnProgress
-				nullptr		//pProgressData
-			)	
-		}
+			CPLErr err = p_sraster->getDataset()->GetRasterBand(stratBand + 1)->ReadRaster(
+				p_strataBand,			//pData
+				width,				//nArrayEltCount
+				0,				//dfXOff
+				y,				//dfYOff
+				width,				//dfXSize
+				1,				//dfYSize
+				width,				//nBufXSize
+				1,				//nBufYSize
+				GRIORA_NearestNeighbour,	//eResampleAlg (default)
+				nullptr,			//pfnProgress
+				nullptr				//pProgressData
+			);
+			std::string errorStr = "ReadRaster failed with CPLError code: " + std::to_string(err);
+			throw std::runtime_error(errorStr);
 
+		}
 
 		size_t startIndex = y * width;
 		
 		//special case for first index, to set up originalIndexes and adjustedIndexes vectors as required
 		if (y == 0) {
-			for (size_t band = 0; band < bands.size(); band++) {
-				double val = bands[band][0];
-				xspread[band] = val;
+			for (size_t i = 0;i < bands.size(); i++) {
+				double val = bands[i][0];
+				xspread[i] = val;
 				isNan |= (std::isnan(val) || val == noDataValue);
 			}
 			if (p_sraster) {
@@ -162,7 +167,7 @@ balanced(
 				strata[0] = val;
 				isNan |= val == strataNoDataValue;
 			}
-			isNan |= (p_access && ((uint8_t *)p_mask)[0] == 0)
+			isNan |= (p_access && ((uint8_t *)p_mask)[0] == 0);
 			prevNan = isNan;
 			noDataCount += isNan;
 
@@ -175,15 +180,15 @@ balanced(
 		//iterate through indexes
 		//write the values over to xspread
 		//if any band as nodata all values written will be overwritten at next iteration 
-		for (x = 0 + (y == 0); x < width; x++) {
+		for (size_t x = 0 + (y == 0); x < width; x++) {
 			isNan = false;
 			bandIndex = x;
 			xspreadIndex = (startIndex + x - noDataCount) * bandCount;
 			originalIndex = startIndex + x;
 			adjustedIndex = startIndex + x - noDataCount;
-			for (size_t band = 0; band < bandCount; band++) {
-				double val = bands[band][bandIndex];
-				xspread[xspreadIndex + band] = val;
+			for (size_t i = 0; i < bandCount; i++) {
+				double val = bands[i][bandIndex];
+				xspread[xspreadIndex + i] = val;
 				isNan |= (std::isnan(val) || val == noDataValue);
 			}	
 			if (p_sraster) { 
@@ -202,12 +207,15 @@ balanced(
 			prevNan = isNan;
 		}
 
-		xspread.resize(height * width * bandCount - noDataCout * bandCount);
+		xspread.resize(height * width * bandCount - noDataCount * bandCount);
 		
 		if (originalIndexes.size() < storedIndexesIndex + (width / 2)) {
 			originalIndexes.resize(originalIndexes.size() + width * 4);
-			adjustedIndexes.resize(originalIndexes.size() + with * 4);
+			adjustedIndexes.resize(originalIndexes.size() + width * 4);
 		}
+	}
+	if (p_access) {
+		free(p_accessMaskDataset);
 	}
 
 	size_t noNanBandSize = height * width - noDataCount;
@@ -228,18 +236,18 @@ balanced(
 	}
 
 	//determine probability list (vector)
-	double *p_prob, p_xbal;
-	std::vector<double> prob, xbal;
+	double *p_prob;
+	std::vector<double> probVect, xbal;
 
 	//TODO remove
 	if (prob.request().ndim != 1) {
 		throw std::runtime_error("this messes up future calculation");
 	}
 
-	ssize_t probLength = prob.request().shape[0];
+	size_t probLength = static_cast<size_t>(prob.request().shape[0]);
 	if (probLength != 0 && probLength != noNanBandSize) {
 		std::cout << "**warning** length of prob list provided (" 
-			  << std::to_string(probLength) +
+			  << std::to_string(probLength)
 			  << ") does not match size of band without nan values (" 
 			  << std::to_string(noNanBandSize) 
 			  << ")." << std::endl;
@@ -248,8 +256,8 @@ balanced(
 	}
 
 	if (probLength != noNanBandSize) {
-		prob = std::vector<double>(noDataBandSize, (double)numSamples / (double)noNanBandSize);
-		p_prob = prob.data();
+		probVect = std::vector<double>(noNanBandSize, (double)numSamples / (double)noNanBandSize);
+		p_prob = probVect.data();
 	}
 	else {
 		p_prob = (double *)prob.request().ptr;
@@ -263,17 +271,16 @@ balanced(
 			reinterpret_cast<void *>(p_prob), 	//src
 			noNanBandSize * sizeof(double)		//num bytes
 		);
-		p_xbal = xbal.data();
 	}
 
 	std::vector<size_t> *samples;
-	std::unique_ptr<Cube *> p_cube;
-	std::unique_ptr<CubeStratified *> p_scube;
-	std::unique_ptr<Lpm *> p_lpm;
+	Cube * p_cube = nullptr;
+	CubeStratified * p_scube = nullptr;
+	Lpm * p_lpm = nullptr;
 	if (method == "lcube") {
-		p_cube = std::make_unique<Cube *>(
+		p_cube = new Cube(
     			p_prob, 		//const double*
-    			p_xbal, 		//double *
+    			xbal.data(), 		//double *
     			noNanBandSize,		//const size_t
     			1,			//const size_t
     			eps,			//const double
@@ -286,10 +293,10 @@ balanced(
 		samples = &(p_cube->sample);
 	}
 	else if (method == "lcubestratified") {
-		p_scube = std::make_unique<CubeStratified *>(
+		p_scube = new CubeStratified(
 			strata.data(),		//int *
 			p_prob,			//const double *
-			p_xbal,			//double *
+			xbal.data(),		//double *
 			noNanBandSize,		//const size_t
 			1,			//const size_t
 			eps,			//const double
@@ -298,12 +305,12 @@ balanced(
 			treeBucketSize,		//const size_t
 			treeMethod		//const int
 		);
-		p_scube.Run();
+		p_scube->Run();
 		samples = &(p_scube->sample_);
 	}
 	else {// method == "lpm2_kdtree"
-		p_lpm = std::make_unique<Lpm *>(
-			lpmMethod::lpm2,	//const LpmMethod
+		p_lpm = new Lpm(
+			LpmMethod::lpm2,	//const LpmMethod
 			p_prob,			//const double *
 			xspread.data(),		//double *
 			noNanBandSize,		//const size_t
@@ -322,8 +329,8 @@ balanced(
 	xspread.shrink_to_fit();
 	strata.clear();
 	strata.shrink_to_fit();
-	prob.clear();
-	prob.shrink_to_fit();
+	probVect.clear();
+	probVect.shrink_to_fit();
 	xbal.clear();
 	xbal.shrink_to_fit();
 	originalIndexes.clear();
@@ -343,7 +350,7 @@ balanced(
 	for (const size_t& sample : *samples) {
 		//get original index from adjusted sample index using the adjustedIndexes and originalIndexes vectors
 		auto boundIt = std::upper_bound(adjustedIndexes.begin(), adjustedIndexes.end(), sample);
-		aize_t boundIndex = (boundIt == adjustedIndexes.end()) ? adjustedIndexes.back() : std::distance(adjustedIndexes.begin(), boundIt) - 1;
+		size_t boundIndex = (boundIt == adjustedIndexes.end()) ? adjustedIndexes.back() : std::distance(adjustedIndexes.begin(), boundIt) - 1;
 		size_t index = sample + originalIndexes[boundIndex] - adjustedIndexes[boundIndex];
 
 		//calculate and create coordinate point
@@ -354,9 +361,9 @@ balanced(
 		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
 			
 		//add point to dataset
-		OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+		OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
 		p_feature->SetGeometry(&newPoint);
-		p_layer->CreateFeature(p_feature);
+		p_sampleLayer->CreateFeature(p_feature);
 		OGRFeature::DestroyFeature(p_feature);
 
 		//add to xCoords and yCoords for plotting
@@ -364,10 +371,10 @@ balanced(
 		yCoords.push_back(yCoord);
 	}
 
-	//free up unique_ptr which may have been allocated
-	p_cube.reset();
-	p_scube.reset();
-	p_lpm.reset();
+	//free up pointers we may have allocated
+	delete p_cube;
+	delete p_scube;
+	delete p_lpm;
 
 	//create new GDALVectorWrapper using dataset
 	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
@@ -376,7 +383,7 @@ balanced(
 		try {
 			p_sampleVectorWrapper->write(filename);
 		}
-		catch () {
+		catch (const std::exception& e) {
 			std::cout << "Exception thrown while trying to write file: " << e.what() << std::endl;
 		}
 	}
@@ -389,6 +396,7 @@ balanced(
 std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 balanced_cpp(
 	GDALRasterWrapper *p_raster,
+	size_t numSamples,
 	std::vector<size_t> bandIndexes,
 	std::string method,
 	py::buffer prob,
@@ -396,6 +404,7 @@ balanced_cpp(
 {
 	return balanced(
 		p_raster,
+		numSamples,
 		bandIndexes,
 		nullptr,
 		0,
@@ -415,6 +424,7 @@ balanced_cpp(
 std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 balanced_access_cpp(
 	GDALRasterWrapper *p_raster,
+	size_t numSamples,
 	std::vector<size_t> bandIndexes,
 	GDALVectorWrapper *p_access,
 	std::string layerName,
@@ -426,6 +436,7 @@ balanced_access_cpp(
 {
 	return balanced(
 		p_raster,
+		numSamples,
 		bandIndexes,
 		nullptr,
 		0,
@@ -445,6 +456,7 @@ balanced_access_cpp(
 std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 balanced_strata_cpp(
 	GDALRasterWrapper *p_raster,
+	size_t numSamples,
 	std::vector<size_t> bandIndexes,
 	GDALRasterWrapper *p_sraster,
 	size_t stratBand,
@@ -454,14 +466,15 @@ balanced_strata_cpp(
 {
 	return balanced(
 		p_raster,
+		numSamples,
 		bandIndexes,
 		p_sraster,
-		strataBand,
+		stratBand,
 		nullptr,
 		"",
 		0,
 		0,
-		method.
+		method,
 		prob,
 		filename
 	);
@@ -472,5 +485,5 @@ PYBIND11_MODULE(balanced, m) {
 	m.def("balanced_cpp", &balanced_cpp);
 	m.def("balanced_access_cpp", &balanced_access_cpp);
 	m.def("balanced_strata_cpp", &balanced_strata_cpp);
-	m.def("balanced_access_strata_cpp", &balanced)
+	m.def("balanced_access_strata_cpp", &balanced);
 }
