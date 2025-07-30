@@ -10,7 +10,7 @@ from . import (
 )
 
 from .ahels import ahels
-#from .balanced import balanced
+from .balanced import balanced
 from .clhs import clhs
 from .existing import existing
 from .nc import nc

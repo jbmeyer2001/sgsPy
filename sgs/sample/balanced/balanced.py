@@ -1,38 +1,34 @@
 from typing import Optional
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from sgs.utils import (
         SpatialRaster,
         SpatialVector,
         plot,
 )
-from balanced import (
-        lcube_cpp, 
-        lcube_stratified_cpp, 
-        hlpm2_cpp
-)
+
 from balanced import (
         balanced_cpp, 
-        balanced_strat_cpp,
+        balanced_strata_cpp,
         balanced_access_cpp,
-        balanced_access_strat_cpp
+        balanced_access_strata_cpp
 )
 
-#optional srast for lcube_stratified ?????
 def balanced(rast: SpatialRaster,
              num_samples: int,
-             bands = Optional[list[str|int]] = None;
+             bands: Optional[list[str|int]] = None,
              algorithm: str = "lpm2_kdtree",
              srast: Optional[SpatialRaster] = None,
              srast_band: Optional[str|int] = None,
              prob: Optional[list[float]] = None,
              access: Optional[SpatialVector] = None,
-             layer_name: Optional[str] = None
+             layer_name: Optional[str] = None,
              buf_inner: Optional[int | float] = None,
              buf_outer: Optional[int | float] = None,
              plot: bool = False,
-             filename: Optional[str] = None,
+             filename: str = "",
              overwrite: bool = False):
     """
     Balanced sampling using #### package ...
@@ -57,7 +53,7 @@ def balanced(rast: SpatialRaster,
         for band in bands:
             if type(band) == int:
                 if band > len(rast.bands) - 1:
-                    raise ValueError("band argument " + str(band) + "too large to be a zero-indexed band number"
+                    raise ValueError("band argument " + str(band) + "too large to be a zero-indexed band number")
                 else:
                     band_ints.append(band)
             else: #type(bands) == str
@@ -110,7 +106,7 @@ def balanced(rast: SpatialRaster,
 
     if algorithm == "lcubestratified":
         if access:
-            [sample_coordinates, cpp_vector] = balanced_access_strat_cpp(
+            [sample_coordinates, cpp_vector] = balanced_access_strata_cpp(
                 rast.cpp_raster,
                 num_samples,
                 band_ints,
@@ -125,7 +121,7 @@ def balanced(rast: SpatialRaster,
                 filename
             )
         else:
-            [sample_coordinates, cpp_vector] = balanced_strat_cpp(
+            [sample_coordinates, cpp_vector] = balanced_strata_cpp(
                 rast.cpp_raster,
                 num_samples,
                 band_ints,

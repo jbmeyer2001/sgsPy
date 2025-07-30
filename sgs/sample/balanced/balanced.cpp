@@ -98,9 +98,11 @@ balanced(
 	}
 
 	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
-	int strataNoDataValue = static_cast<int>(p_sraster->getDataset()->GetRasterBand(stratBand + 1)->GetNoDataValue());
-
-	std::cout << "strataNoDataValue is " << strataNoDataValue << std::endl;
+	int strataNoDataValue = -1;
+	if (method == "lcubestratified") {
+		strataNoDataValue = static_cast<int>(p_sraster->getDataset()->GetRasterBand(stratBand + 1)->GetNoDataValue());
+		std::cout << "strataNoDataValue is " << strataNoDataValue << std::endl;
+	}
 	
 	//noDataCount, originalIndexes vector, and adjustedIndexes vector work to 
 	//map the values of a raster band with all the noData pixels removed back
@@ -196,8 +198,8 @@ balanced(
 				strata[adjustedIndex] = val;
 				isNan |= val == strataNoDataValue;
 			}
-			isNan = (p_access && ((uint8_t *)p_mask)[originalIndex] == 0);
-		
+			isNan |= (p_access && ((uint8_t *)p_mask)[originalIndex] == 0);
+
 			//update the adjusted and original indexes, they will be overwritten if isNan is true	
 			originalIndexes[storedIndexesIndex] = originalIndex;
 			adjustedIndexes[storedIndexesIndex] = adjustedIndex;
@@ -272,7 +274,7 @@ balanced(
 			noNanBandSize * sizeof(double)		//num bytes
 		);
 	}
-
+	
 	std::vector<size_t> *samples;
 	Cube * p_cube = nullptr;
 	CubeStratified * p_scube = nullptr;
@@ -309,12 +311,13 @@ balanced(
 		samples = &(p_scube->sample_);
 	}
 	else {// method == "lpm2_kdtree"
+	      	//TODO no band count??? 
 		p_lpm = new Lpm(
 			LpmMethod::lpm2,	//const LpmMethod
 			p_prob,			//const double *
 			xspread.data(),		//double *
 			noNanBandSize,		//const size_t
-			1,			//const size_t
+			bandCount,		//const size_t
 			eps,			//const double
 			treeBucketSize,		//const size_t
 			treeMethod		//const int
@@ -322,7 +325,7 @@ balanced(
 		p_lpm->Run();
 		samples = &(p_lpm->sample);
 	}
-  
+ 
 	//don't keep vectors full if we're not using them
 	//as it may allow memory to be released
 	xspread.clear();
@@ -333,10 +336,6 @@ balanced(
 	probVect.shrink_to_fit();
 	xbal.clear();
 	xbal.shrink_to_fit();
-	originalIndexes.clear();
-	originalIndexes.shrink_to_fit();
-	adjustedIndexes.clear();
-	adjustedIndexes.shrink_to_fit();
 
 	//TODO error check this???
 	GDALAllRegister();
@@ -387,6 +386,7 @@ balanced(
 			std::cout << "Exception thrown while trying to write file: " << e.what() << std::endl;
 		}
 	}
+
   	return {{xCoords, yCoords}, p_sampleVectorWrapper};
 }
 
