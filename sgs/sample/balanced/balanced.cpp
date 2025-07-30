@@ -4,12 +4,12 @@
  * Project: sgs
  * Purpose: Integrate BalancedSampling package into sgs
  * Author: Joseph Meyer
- * Date: June, 2025
+ * Date: July, 2025
  *
- * Adapted from code authored by Wilmer Prentius in the following files:
- * https://github.com/envisim/BalancedSampling/blob/2.1.1/src/cube.cc
- * https://github.com/envisim/BalancedSampling/blob/2.1.1/src/cube_stratified.cc
- * https://github.com/envisim/BalancedSampling/blob/2.1.1/src/hlpm2.cc
+ * Using the BalancedSampling package:
+ * https://github.com/envisim/BalancedSampling/tree/2.1.1/src
+ * which has been adapted for use directly from C++ rather than R
+ * 
  * License: GPL (>=2)
  *
  ******************************************************************************/
@@ -29,7 +29,30 @@
 #include "LpmClass.h"
 
 /**
+ * This function conducts balanced sampling on the raster image.
  *
+ * To start out, the raster bands are iterated through as scanlines
+ * and copied over to a vector whose data will be passed to the balanced
+ * sampling function. They are copied, because the pixels being passed
+ * to the BalancedSampling function should not be nan. 
+ *
+ * During this iteration two vectors keep track of specific indexes and 
+ * their adjusted index after the nodata pixels are removed. 
+ * These vectors are later used to calculate the original index (and thus points) 
+ * of the samples. This is done instead of keeping track of x/y values
+ * for every pixel, because for large images keeping track of the x/y values
+ * of every pixel would be quite memory intensive.
+ *
+ * The probabilities for each pixel are either taken from a user input
+ * (py buffer) or are determined equally for all pixels.
+ *
+ * The data, as well as the probabilities and any required dimension
+ * information is passed to functions from the BalancedSampling R 
+ * package. The functions/classes are all in C++ so are able to be compiled
+ * and used by C++ just fine.
+ *
+ * Once the samples are returned, the points are calculated and returned
+ * as a GDALVectorWrapper containing a vector dataset with the points.
  */
 std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 balanced(
@@ -46,20 +69,18 @@ balanced(
  	py::buffer prob,
 	std::string filename) 
 {
-	//set default parameters according to 
+	//step 1: set default paramters according to
 	//https://github.com/envisim/BalancedSampling/blob/2.1.1/R/lcube.R
 	//https://github.com/envisim/BalancedSampling/blob/2.1.1/R/utils.R
 	size_t treeBucketSize = 50;
 	double eps = 1e-12;
 	int treeMethod = 2; //'kdtree2' method
 	
+	//step 2: determine height/width/band count and error check the raster size
 	size_t maxIndex = std::numeric_limits<size_t>::max();
 	size_t height = static_cast<size_t>(p_raster->getHeight());
 	size_t width = static_cast<size_t>(p_raster->getWidth());
 	size_t bandCount = bandIndexes.size();
-
-	//error checking for potential overflow problems
-	//since the balanced sampling package requires that all raster data be allocated at once
 	if (
 		(maxIndex / bandCount) < sizeof(double) ||
 		(maxIndex / width) < (bandCount * sizeof(double)) ||
@@ -68,14 +89,14 @@ balanced(
 		throw std::runtime_error("max index is too large to be processed, because the balanced sampling package requires the full raster in memory.");
 	}
 
-	//create vectors which will hold data pixels of bands
+	//step 3: initialize vectors to pass raster data to balancedSampling classes
 	std::vector<double> xspread(height * width * bandCount);
 	std::vector<int> strata;
 	if (p_sraster) {
 		strata = std::vector<int>(height * width);
 	}	
 
-	//create band storing data structure and allocate memory
+	//step 4: allocate bands which will hold raster scanline buffers
 	std::vector<double *> bands(bandCount, nullptr);
 	int *p_strataBand;
 	for (size_t band = 0; band < bandCount; band++) {
@@ -86,9 +107,12 @@ balanced(
 	}
 	if (p_sraster) {
 		p_strataBand = (int *) VSIMalloc2(width, sizeof(int));
+		if (!p_StrataBand) {
+			throw std::runtime_error("unable to allocate band " + std::to_string(band + 1));
+		}
 	}
 	
-	//get access mask if defined
+	//step 5: get access mask if access is defined
 	GDALDataset *p_accessMaskDataset = nullptr;
 	void *p_mask = nullptr;
 	if (p_access) {
@@ -104,9 +128,8 @@ balanced(
 		std::cout << "strataNoDataValue is " << strataNoDataValue << std::endl;
 	}
 	
-	//noDataCount, originalIndexes vector, and adjustedIndexes vector work to 
-	//map the values of a raster band with all the noData pixels removed back
-	//to it's original index.
+	//step 5: initialize and set up data structures used to keep track of the original raster indexes
+	//since only data pixels will be passed.
 	size_t noDataCount = 0;
 	std::vector<size_t> originalIndexes(width * 2);
 	std::vector<size_t> adjustedIndexes(width * 2);
@@ -115,8 +138,9 @@ balanced(
 	bool isNan = false;
 	size_t bandIndex, originalIndex, adjustedIndex, xspreadIndex;
 
+	//step 6: Iterate through raster scanlines and bands
 	for (size_t y = 0; y < height; y++) {
-		//read scanline from each raster band into bands vector
+		//step 6.1: read scanline from each raster band into bands vector
 		for (size_t i = 0; i < bandCount; i++) {
 			CPLErr err = p_raster->getDataset()->GetRasterBand(bandIndexes[i] + 1)->ReadRaster(
 				bands[i],			//pData
@@ -157,7 +181,7 @@ balanced(
 
 		size_t startIndex = y * width;
 		
-		//special case for first index, to set up originalIndexes and adjustedIndexes vectors as required
+		//step 6.2: special case for first index, to set up originalIndexes and adjustedIndexes vectors as required
 		if (y == 0) {
 			for (size_t i = 0;i < bands.size(); i++) {
 				double val = bands[i][0];
@@ -179,9 +203,7 @@ balanced(
 			storedIndexesIndex += (!isNan);
 		}
 
-		//iterate through indexes
-		//write the values over to xspread
-		//if any band as nodata all values written will be overwritten at next iteration 
+		//step 6.3: iterate through raster bands copying to vector and keeping track of nodata
 		for (size_t x = 0 + (y == 0); x < width; x++) {
 			isNan = false;
 			bandIndex = x;
@@ -209,8 +231,8 @@ balanced(
 			prevNan = isNan;
 		}
 
+		//resize vectors as required
 		xspread.resize(height * width * bandCount - noDataCount * bandCount);
-		
 		if (originalIndexes.size() < storedIndexesIndex + (width / 2)) {
 			originalIndexes.resize(originalIndexes.size() + width * 4);
 			adjustedIndexes.resize(originalIndexes.size() + width * 4);
@@ -222,7 +244,7 @@ balanced(
 
 	size_t noNanBandSize = height * width - noDataCount;
 
-	//free no longer used band data and adjust size of vectors
+	//step 7: free no longer used band data and adjust size of vectors
 	for (size_t band = 0; band < bands.size(); band++) {
 		CPLFree(bands[band]);
 	}
@@ -237,7 +259,7 @@ balanced(
 		strata.shrink_to_fit();
 	}
 
-	//determine probability list (vector)
+	//step 8: determine probability list (vector)
 	double *p_prob;
 	std::vector<double> probVect, xbal;
 
@@ -275,6 +297,7 @@ balanced(
 		);
 	}
 	
+	//step 9: call BalancedSampling function according to desired method
 	std::vector<size_t> *samples;
 	Cube * p_cube = nullptr;
 	CubeStratified * p_scube = nullptr;
@@ -311,7 +334,6 @@ balanced(
 		samples = &(p_scube->sample_);
 	}
 	else {// method == "lpm2_kdtree"
-	      	//TODO no band count??? 
 		p_lpm = new Lpm(
 			LpmMethod::lpm2,	//const LpmMethod
 			p_prob,			//const double *
@@ -326,8 +348,7 @@ balanced(
 		samples = &(p_lpm->sample);
 	}
  
-	//don't keep vectors full if we're not using them
-	//as it may allow memory to be released
+	//step 10: allow memory to be freed if helpful
 	xspread.clear();
 	xspread.shrink_to_fit();
 	strata.clear();
@@ -337,6 +358,7 @@ balanced(
 	xbal.clear();
 	xbal.shrink_to_fit();
 
+	//step 11: create GDAL Dataset to hold samples
 	//TODO error check this???
 	GDALAllRegister();
 	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
@@ -346,6 +368,7 @@ balanced(
 	std::vector<double> yCoords;
 	double *GT = p_raster->getGeotransform();
 
+	//step 12: turn the BalancedSample return samples into their original indexes and calculate points to add
 	for (const size_t& sample : *samples) {
 		//get original index from adjusted sample index using the adjustedIndexes and originalIndexes vectors
 		auto boundIt = std::upper_bound(adjustedIndexes.begin(), adjustedIndexes.end(), sample);
@@ -370,14 +393,15 @@ balanced(
 		yCoords.push_back(yCoord);
 	}
 
-	//free up pointers we may have allocated
+	//step 13: free up pointers which may have been allocated
 	delete p_cube;
 	delete p_scube;
 	delete p_lpm;
 
-	//create new GDALVectorWrapper using dataset
+	//step 14: create new GDALVectorWrapper using dataset
 	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
 
+	//step 15: write to file if filename is given
 	if (filename != "") {
 		try {
 			p_sampleVectorWrapper->write(filename);
