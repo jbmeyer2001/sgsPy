@@ -28,17 +28,84 @@ def balanced(rast: SpatialRaster,
              buf_inner: Optional[int | float] = None,
              buf_outer: Optional[int | float] = None,
              plot: bool = False,
-             filename: str = "",
-             overwrite: bool = False):
+             filename: str = ""):
     """
-    Balanced sampling using #### package ...
-    (add documentation)
+    This function conducts balanced sampling on the raster by calling a C++
+    function, which makes use of the BalancedSampling R package C++ code.
 
-    something about zero indexed bands
+    The lpm2_kdtree, lcube, and lcubestratified functionality are used, which 
+    selects spatialy balanced samples. 
 
-    something about algorithm constraints
+    For the lcubestratified functionality,
+    an additional raster, srast, containing a stratification must be passed
+    alongside srast_band, a string or integer indication of which band to
+    use within the srast raster.
 
-    something about access
+    the access parameter accepts a vector of Lines or Linestrings which
+    represent road networks, rivers, etc. which impact the areas which
+    are able to be sampled. The layer_name parameter represents the
+    layer within the access vecter that should be used. The buff_inner
+    parameter specifies the distance from the access netwrok which cannot be
+    sampled within, the buff_outer paramter specifies the distance from
+    the access network which must be sampled within.
+    
+    When the plot parameter is True, the resulting sample points will be
+    plot on top of the raster and access vector if there is one.
+
+    When the filename parameter is given, the output samples will be written
+    to the given filename.
+
+    Parameters
+    --------------------
+    rast : SpatialRaster
+        raster data structure containing the raster to sample
+    num_samples : int
+        the target number of samples
+    bands : Optional[list[str|int]]
+        the bands in rast (either as a string or 0-indexed index value) to use for sampling
+    algorithm : str
+        indictation of balanced sampling method ('lmp2_kdtree', 'lcube', or 'lcubestratified')
+    srast: Optional[SpatialRaster]
+        must be given in algorithm is lcubestratified, the stratification raster
+    srast_band : Optional[str|int]
+        the band within srast which is the raster stratification
+    prob : Optional[list[float]]
+        the probabilities of each pixel for being in the final sample
+    access : Optional[SpatialVector]
+        vector of LineString or MultiLineString representing access network
+    layer_name : Optional[str]
+        the layer within the access vector to use
+    buff_inner : Optional[int|float]
+        buffer boundary specifying distance from access which CANNOT be sampled
+    buff_outer : Optional[int|float]
+        buffer boundary specifying distance from access which CAN be sampled
+    plot : bool
+        whether to plot the samples or not
+    filename : str
+        the filename to write to, or '' if file should not be written
+
+    Raises
+    --------------------
+    ValueError
+        if num_samples is less than 1
+    ValueError
+        if algorithm is not one of 'lpm2_kdtree', 'lcube', 'lcubestratified'
+    ValueError
+        if a band specified in teh bands list does not exist in the raster
+    ValueError
+        if lcubestratified is the algorithm but srast is not provided
+    ValueError
+        if lcubestratified is the algorithm and srast_band does not exist in srast
+    ValueError
+        if access vector is passed, and buff_outer is either not provided or less than or equal to 0
+    ValueError
+        if buff_inner is greater than buff_outer
+    ValueError
+        if access vector is passed, and layer_name is not in the access vector
+    RuntimeError (C++)
+        if allocating all the required memory for the BalancedSampling package is too large
+    RuntimeError (C++)
+        if the c++ code attempts to allocate data and is unable to
     """
     if num_samples < 1:
         raise ValueError("num_samples must be greater than 0")

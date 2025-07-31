@@ -29,12 +29,13 @@
 #include "LpmClass.h"
 
 /**
- * This function conducts balanced sampling on the raster image.
+ * This function conducts balanced sampling on the given raster image.
  *
  * To start out, the raster bands are iterated through as scanlines
  * and copied over to a vector whose data will be passed to the balanced
  * sampling function. They are copied, because the pixels being passed
- * to the BalancedSampling function should not be nan. 
+ * to the BalancedSampling function should not be nan, and only the data
+ * pixels are copied. 
  *
  * During this iteration two vectors keep track of specific indexes and 
  * their adjusted index after the nodata pixels are removed. 
@@ -44,12 +45,12 @@
  * of every pixel would be quite memory intensive.
  *
  * The probabilities for each pixel are either taken from a user input
- * (py buffer) or are determined equally for all pixels.
+ * (py buffer) or are set to be equal for all pixels.
  *
  * The data, as well as the probabilities and any required dimension
  * information is passed to functions from the BalancedSampling R 
- * package. The functions/classes are all in C++ so are able to be compiled
- * and used by C++ just fine.
+ * package. The functions/classes are all in C++ and so are complied
+ * and used by C++ without their R wrappers.
  *
  * Once the samples are returned, the points are calculated and returned
  * as a GDALVectorWrapper containing a vector dataset with the points.
@@ -107,8 +108,8 @@ balanced(
 	}
 	if (p_sraster) {
 		p_strataBand = (int *) VSIMalloc2(width, sizeof(int));
-		if (!p_StrataBand) {
-			throw std::runtime_error("unable to allocate band " + std::to_string(band + 1));
+		if (!p_strataBand) {
+			throw std::runtime_error("unable to allocate strat raster band");
 		}
 	}
 	
@@ -415,7 +416,11 @@ balanced(
 }
 
 /**
+ * balanced sampling function which is called when the user does
+ * not include either an access vector or a strat raster.
  *
+ * calls balanced() where all access-related and sraster-related
+ * paramters are null/0/"".
  */
 std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 balanced_cpp(
@@ -443,7 +448,11 @@ balanced_cpp(
 }
 
 /**
+ * balanced sampling function when the user does not include a strat
+ * raster.
  *
+ * calls balanced() where all sraster-related parameters are
+ * null/0/"".
  */
 std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 balanced_access_cpp(
@@ -475,7 +484,10 @@ balanced_access_cpp(
 }
 
 /**
+ * balanced sampling function when the user does not include an
+ * access vector.
  *
+ * calls balanced() where all access-related parameters are null/0/"".
  */
 std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
 balanced_strata_cpp(
