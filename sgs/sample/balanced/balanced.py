@@ -1,3 +1,12 @@
+# ******************************************************************************
+#
+#  Project: sgs
+#  Purpose: balanced sampling
+#  Author: Joseph Meyer
+#  Date: July, 2025
+#
+# ******************************************************************************
+
 from typing import Optional
 
 import numpy as np

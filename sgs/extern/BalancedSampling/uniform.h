@@ -4,9 +4,8 @@
 #include <random>
 
 //BAD CHANGE THIS IN FUTURE TO NOT USE GLOBAL VARS
-//static std::random_device rd;
-//static std::mt19937 gen(rd());
-static std::mt19937 gen(1000); //temporary
+static std::random_device rd;
+static std::mt19937 gen(rd());
 static std::uniform_real_distribution dist(0.0, 1.0);
 
 inline double stduniform() {

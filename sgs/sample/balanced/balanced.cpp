@@ -132,14 +132,7 @@ balanced(
 		if (err) {
 			throw std::runtime_error("CPL error reading raster band, CPL error code: " + std::to_string(err));
 		}
-
-		//TODO remove 
-		for (size_t i = 0; i < 12; i++) {
-			std::cout << "[" << i << "] = " << p_balanced[i] << std::endl;;
-		}
-		std::cout << std::endl;
 	}
-	std::cout << std::endl << std::endl << std::endl;
 	if (method == "lcubestratified") {
 		GDALRasterBand *p_band = p_sraster->getDataset()->GetRasterBand(stratBand + 1);
 		bandNoDataValues.push_back(p_band->GetNoDataValue());
@@ -164,8 +157,8 @@ balanced(
 	size_t noDataCount = 0;
 	size_t readIndex = 0;
 	size_t writeIndex = 0;
-	for (size_t y = 0; y < width; y++) {
-		for (size_t x = 0; x < height; x++) {
+	for (size_t y = 0; y < height; y++) {
+		for (size_t x = 0; x < width; x++) {
 			p_spread[writeIndex * 2] = static_cast<double>(x);
 			p_spread[writeIndex * 2 + 1] = static_cast<double>(y);
 
@@ -199,22 +192,12 @@ balanced(
 		free(p_accessMaskDataset);
 	}
 
-	std::cout << "noDataCount: " << noDataCount << std::endl;
-	std::cout << "readIndex: " << readIndex << std::endl;
-	std::cout << "writeIndex: " << writeIndex << std::endl;
-
 	size_t dataPixelCount = (height * width) - noDataCount;
-	std::cout << std::endl << std::endl << std::endl;
-	std::cout << "p_balanced realloc size: " << (dataPixelCount * bandCount * sizeof(double)) << std::endl;
-	std::cout << "p_spread realloc size: " << (dataPixelCount * 2 * sizeof(double)) << std::endl;
 	VSIRealloc(p_balanced, dataPixelCount * bandCount * sizeof(double));
-	std::cout << "passed p_balanced reallocation" << std::endl;
 	VSIRealloc(p_spread, dataPixelCount * 2 * sizeof(double));
 	if (!p_balanced || !p_spread) {
 		throw std::runtime_error("unable to re allocate rasters");
 	}
-	std::cout << "reallocated p_balanced to size: " << (dataPixelCount * bandCount * sizeof(double)) << std::endl;
-	std::cout << "reallocated p_spread to size: " << (dataPixelCount * 2 * sizeof(double)) << std::endl;
 
 	//determine prob == if prob is not already defined, ensure noData or inaccessable pixels are set to probability 0
 	double *p_prob;
