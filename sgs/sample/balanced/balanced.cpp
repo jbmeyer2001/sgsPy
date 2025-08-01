@@ -77,19 +77,273 @@ balanced(
 	double eps = 1e-12;
 	int treeMethod = 2; //'kdtree2' method
 	
-	//step 2: determine height/width/band count and error check the raster size
+	//step 2: determine raster info from passed raster
 	size_t maxIndex = std::numeric_limits<size_t>::max();
 	size_t height = static_cast<size_t>(p_raster->getHeight());
 	size_t width = static_cast<size_t>(p_raster->getWidth());
 	size_t bandCount = bandIndexes.size();
+
+	//error check allocated raster size
 	if (
-		(maxIndex / bandCount) < sizeof(double) ||
-		(maxIndex / width) < (bandCount * sizeof(double)) ||
-		(maxIndex / height) < (width * bandCount * sizeof(double))
+		(maxIndex / std::max(bandCount, static_cast<size_t>(2))) < sizeof(double) ||
+		(maxIndex / width) < (std::max(bandCount, static_cast<size_t>(2)) * sizeof(double)) ||
+		(maxIndex / height) < (width * std::max(bandCount, static_cast<size_t>(2)) * sizeof(double))
 	) {
 		throw std::runtime_error("max index is too large to be processed, because the balanced sampling package requires the full raster in memory.");
 	}
 
+	GDALDataset *p_accessMaskDataset = nullptr;
+	void *p_mask = nullptr;
+	if (p_access) {
+		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
+		p_accessMaskDataset = maskInfo.first; //GDALDataset to free after using band
+		p_mask = maskInfo.second; //pointer to mask
+	}
+
+	//allocate spread, balanced, and potentially strata matrices, error check their allocation
+	double * p_balanced = (double *) VSIMalloc3(height, width, bandCount * sizeof(double));
+	double * p_spread = (double *) ((method != "lpm2_kdtree") ? nullptr : VSIMalloc3(height, width, 2 * sizeof(double)));
+	int * p_strata = (int *)((method == "lcubestratified") ? nullptr : VSIMalloc3(height, width, sizeof(int)));
+	if (!p_balanced || (method != "lpm2_kdtree" && !p_spread) || (method == "lcubestratified" && !p_strata)) {
+		throw std::runtime_error("unable to allocate raster band to memory");
+	}
+
+	//BalancedSampling package expects balancing variables matrix in either row-major or column-major depending on 
+	//which method is used...
+	//
+	//Define incrementation values so that when buffers are read from the GDAL Dataset, the memory is oriented correctly.
+	size_t dataBufferIncrement;
+	GSpacing pixelSpace, lineSpace;
+	if (method == "lpm2_kdtree") {
+		dataBufferIncrement = sizeof(double);
+		pixelSpace = bandCount * sizeof(double);
+		lineSpace = width * bandCount * sizeof(double);
+	}
+	else {
+		dataBufferIncrement = height * width * sizeof(double);
+		pixelSpace = 0; //defaulted, will be set automatically
+		lineSpace = 0;	//defaulted, will be set automatically
+	}
+
+	std::vector<double> bandNoDataValues;
+	for (size_t i = 0; i < bandCount; i++) {
+		GDALRasterBand *p_band = p_raster->getDataset()->GetRasterBand(bandIndexes[i] + 1);
+		bandNoDataValues.push_back(p_band->GetNoDataValue());
+		CPLErr err = p_band->RasterIO(
+			GF_Read,
+			0,
+			0,
+			width,
+			height,
+			p_balanced + (dataBufferIncrement * i),
+			width,
+			height,
+			GDT_Float64,
+			pixelSpace,
+			lineSpace
+		);
+		if (err) {
+			throw std::runtime_error("CPL error reading raster band, CPL error code: " + std::to_string(err));
+		}
+	}
+	if (method == "lcubestratified") {
+		GDALRasterBand *p_band = p_sraster->getDataset()->GetRasterBand(stratBand + 1);
+		bandNoDataValues.push_back(p_band->GetNoDataValue());
+		CPLErr err = p_band->RasterIO(
+			GF_Read,
+			0,
+			0,
+			width,
+			height,
+			p_strata,
+			width,
+			height,
+			GDT_Int32,
+			0,
+			0
+		);
+		if (err) {
+			throw std::runtime_error("CPL error reading raster band, CPL error code: " + std::to_string(err));
+		}
+	}
+
+	std::vector<size_t> noDataIndexes;
+	for (size_t y = 0; y < width; y++) {
+		size_t indexStart = y * width;
+		for (size_t x = 0; x < height; x++) {
+			size_t i = indexStart + x;
+			if (method != "lpm2_kdtree") {
+				p_spread[i * 2] = static_cast<double>(x);
+				p_spread[i * 2 + 1] = static_cast<double>(y);
+			}
+
+			if (p_access && ((uint8_t *)p_mask)[i] == 0) {
+				noDataIndexes.push_back(i);
+				continue;
+			}
+
+			if (method == "lcubestratified" && (std::isnan(p_strata[i]) || p_strata[i] == static_cast<int>(bandNoDataValues.back()))) {
+				noDataIndexes.push_back(i);
+				continue;
+			}
+
+			size_t pixelStart = i * bandCount;
+			for (size_t j = 0; j < bandCount; j++) {
+				double val = p_balanced[pixelStart + j];
+				if (std::isnan(val) || val == bandNoDataValues[j]) {
+					noDataIndexes.push_back(i);
+					continue;
+				}
+			}
+		}
+	}
+	if (p_access) {
+		free(p_accessMaskDataset);
+	}
+
+	//determine prob == if prob is not already defined, ensure noData or inaccessable pixels are set to probability 0
+	double *p_prob;
+	std::vector<double> probVect;
+	std::vector<double> xbal;
+	if (prob.request().ndim != 1) {
+		throw std::runtime_error("this messes up future calculation");
+	}
+
+	size_t probLength = static_cast<size_t>(prob.request().shape[0]);
+	if (probLength == height * width) {
+		std::cout << "note: sgs.sample.balanced() is using user-input pirobability values. "
+			  << "If a nodata pixel has a probability other than 0 "
+			  << "it will influence the overall distribution of points."
+			  << std::endl;
+	}
+	else if (probLength != 0) {
+		std::cout << "**warning** length of prob list provided (" 
+			  << std::to_string(probLength)
+			  << ") does not match size of band (" 
+			  << std::to_string(height * width) 
+			  << ")." << std::endl;
+
+		std::cout << "creating prob of correct size with equal probabilities." << std::endl;
+	}
+
+	if (probLength != height * width) {
+		probVect = std::vector<double>(width * height, (double)numSamples / (double)(height * width - noDataIndexes.size()));
+		for (size_t i = 0; i < noDataIndexes.size(); i++) {
+			probVect[noDataIndexes[i]] = 0.0;
+		}
+		p_prob = probVect.data();
+	}
+	else {
+		p_prob = (double *)prob.request().ptr;
+	}
+
+	//call BalancedSampling function according to desired method
+	std::vector<size_t> *indexes;
+	Cube * p_cube = nullptr;
+	CubeStratified * p_scube = nullptr;
+	Lpm * p_lpm = nullptr;
+	if (method == "lcube") {
+		p_cube = new Cube(
+    			p_prob, 		//const double *
+    			p_balanced, 		//double *
+    			height * width,		//const size_t
+    			bandCount,		//const size_t
+    			eps,			//const double
+    			p_spread, 		//double *
+    			2,			//const size_t
+    			treeBucketSize,		//const size_t
+    			treeMethod		//const int
+  		);
+		p_cube->Run();
+		indexes = &(p_cube->sample);
+	}
+	else if (method == "lcubestratified") {
+		p_scube = new CubeStratified(
+			p_strata,		//int *
+			p_prob,			//const double *
+			p_balanced,		//double *
+			height * width,		//const size_t
+			bandCount,		//const size_t
+			eps,			//const double
+			p_spread,		//double *
+			2,			//const size_t
+			treeBucketSize,		//const size_t
+			treeMethod		//const int
+		);
+		p_scube->Run();
+		indexes = &(p_scube->sample_);
+	}
+	else {// method == "lpm2_kdtree"
+		p_lpm = new Lpm(
+			LpmMethod::lpm2,	//const LpmMethod
+			p_prob,			//const double *
+			p_balanced,		//double *
+			height * width,		//const size_t
+			bandCount,		//const size_t
+			eps,			//const double
+			treeBucketSize,		//const size_t
+			treeMethod		//const int
+		);
+		p_lpm->Run();
+		indexes = &(p_lpm->sample);
+	}
+
+	//free up any allocated matrices
+	CPLFree(p_balanced);
+	CPLFree(p_spread);
+	CPLFree(p_strata);
+
+	//step X: create GDAL Dataset to hold samples
+	//TODO error check this???
+	GDALAllRegister();
+	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+
+	std::vector<double> xCoords;
+	std::vector<double> yCoords;
+	double *GT = p_raster->getGeotransform();
+
+	//step X: turn the BalancedSampling return samples into their original indexes and calculate points to add
+	for (const size_t& index : *indexes) {
+		//calculate and create coordinate point
+		double yIndex = index / p_raster->getWidth();
+		double xIndex = index - (yIndex * p_raster->getWidth());
+		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
+		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
+			
+		//add point to dataset
+		OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
+		p_feature->SetGeometry(&newPoint);
+		p_sampleLayer->CreateFeature(p_feature);
+		OGRFeature::DestroyFeature(p_feature);
+
+		//add to xCoords and yCoords for plotting
+		xCoords.push_back(xCoord);
+		yCoords.push_back(yCoord);
+	}
+
+	//step X: free up allocated BalancedSampling class
+	delete p_cube;
+	delete p_scube;
+	delete p_lpm;
+
+	//step X: create new GDALVectorWrapper using dataset
+	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+
+	//step X: write to file if filename is given
+	if (filename != "") {
+		try {
+			p_sampleVectorWrapper->write(filename);
+		}
+		catch (const std::exception& e) {
+			std::cout << "Exception thrown while trying to write file: " << e.what() << std::endl;
+		}
+	}
+
+  	return {{xCoords, yCoords}, p_sampleVectorWrapper};
+
+	/*
 	//step 3: initialize vectors to pass raster data to balancedSampling classes
 	std::vector<double> xspread(height * width * bandCount);
 	std::vector<int> strata;
@@ -413,6 +667,7 @@ balanced(
 	}
 
   	return {{xCoords, yCoords}, p_sampleVectorWrapper};
+	*/
 }
 
 /**
