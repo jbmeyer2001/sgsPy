@@ -92,10 +92,6 @@ balanced(
 		throw std::runtime_error("max index is too large to be processed, because the balanced sampling package requires the full raster in memory.");
 	}
 
-	if (method == "lpm2_kdtree") {
-		throw std::runtime_error("this not implemented yet.");
-	}
-
 	GDALDataset *p_accessMaskDataset = nullptr;
 	void *p_mask = nullptr;
 	if (p_access) {
@@ -107,10 +103,28 @@ balanced(
 	//allocate spread, balanced, and potentially strata matrices, error check their allocation
 	double * p_balanced = (double *) VSIMalloc3(height, width, bandCount * sizeof(double));
 	double * p_spread = (double *) VSIMalloc3(height, width, 2 * sizeof(double));
-	int * p_strata = (int *)((method == "lcubestratified") ? nullptr : VSIMalloc3(height, width, sizeof(int)));
+	int * p_strata = (int *)((method == "lcubestratified") ? VSIMalloc3(height, width, sizeof(int)) : nullptr);
 	if (!p_balanced || !p_spread || (method == "lcubestratified" && !p_strata)) {
 		throw std::runtime_error("unable to allocate raster band to memory");
 	}	
+
+	//for testing!
+	size_t balancedMin = (size_t)p_balanced;
+	size_t balancedMax = balancedMin + height * width * bandCount * sizeof(double);
+
+	size_t dataPointerIncrement;
+	size_t pixelSpace;
+	size_t lineSpace;
+	if (method == "lpm2_kdtree") {
+		dataPointerIncrement = height * width * sizeof(double);
+		pixelSpace = 0; //when 0 GDAL sets to appropriate value
+		lineSpace = 0; //when 0 GDAL sets to appropriate value
+	}
+	else {
+		dataPointerIncrement = sizeof(double);
+		pixelSpace = bandCount * sizeof(double);
+		lineSpace = width * bandCount * sizeof(double);
+	}
 
 	std::vector<double> bandNoDataValues;
 	for (size_t i = 0; i < bandCount; i++) {
@@ -122,12 +136,12 @@ balanced(
 			0,
 			width,
 			height,
-			(void *)((size_t)p_balanced + i * sizeof(double)),
+			(void *)((size_t)p_balanced + i * dataPointerIncrement),
 			width,
 			height,
 			GDT_Float64,
-			bandCount * sizeof(double),
-			width * bandCount * sizeof(double)
+			pixelSpace,
+			lineSpace
 		);
 		if (err) {
 			throw std::runtime_error("CPL error reading raster band, CPL error code: " + std::to_string(err));
@@ -173,13 +187,29 @@ balanced(
 				}	
 			}
 
-			size_t readPixelStart = readIndex * bandCount;
-			size_t writePixelStart = writeIndex * bandCount;
-			for (size_t j = 0; j < bandCount; j++) {
-				double val = p_balanced[readPixelStart + j];
-				isNan |= (std::isnan(val) || val == bandNoDataValues[j]);
-				if (readIndex != writeIndex) {
-					p_balanced[writePixelStart + j] = val;
+			if (method == "lcubestratified" || method == "lcube") {
+				//for lcube methods there are N rows of pixels, and columns equal to the number of bands
+				size_t readPixelStart = readIndex * bandCount;
+				size_t writePixelStart = writeIndex * bandCount;
+				for (size_t j = 0; j < bandCount; j++) {
+					double val = p_balanced[readPixelStart + j];
+					isNan |= (std::isnan(val) || val == bandNoDataValues[j]);
+					if (readIndex != writeIndex) {
+						p_balanced[writePixelStart + j] = val;
+					}
+				}
+			}
+			else {
+				//for lpm2_kdtree method there rows equal to the number of bands, and N columns of pixels
+				for (size_t j = 0; j < bandCount; j++) {
+					size_t bandStart = j * height * width;
+					size_t readPixel = bandStart + readIndex;
+					size_t writePixel = bandStart + writeIndex;
+					double val = p_balanced[readPixel];
+					isNan |= (std::isnan(val) || val == bandNoDataValues[j]);
+					if (readIndex != writeIndex) {
+						p_balanced[writePixel] = val;
+					}
 				}
 			}
 
@@ -193,16 +223,62 @@ balanced(
 	}
 
 	size_t dataPixelCount = (height * width) - noDataCount;
-	VSIRealloc(p_balanced, dataPixelCount * bandCount * sizeof(double));
-	VSIRealloc(p_spread, dataPixelCount * 2 * sizeof(double));
+
+	if (method == "lpm2_kdtree") {
+		for (size_t band = 0; band < bandCount; band++) {
+			size_t start = band * height * width;
+			for (size_t i = 0; i < dataPixelCount; i++) {
+				double val = p_balanced[start + i];
+				if (std::isnan(val) || val == bandNoDataValues[band]) {
+					std::cout << "band " << band << " index " << i << " is NODATA!!!" << std::endl;
+				}
+			}
+		}
+	}
+
+	if (method == "lpm2_kdtree") {
+		for (size_t band = 1; band < bandCount; band++) {
+			void *dst = (void *)((size_t)p_balanced + band * dataPixelCount * sizeof(double));
+			void *src = (void *)((size_t)p_balanced + band * height * width * sizeof(double));
+
+			size_t toCopy = dataPixelCount * sizeof(double);
+			size_t maxChunkSize = (size_t)src - (size_t)dst;
+
+			while (toCopy > 0) {
+				size_t copyAmount = std::min(maxChunkSize, toCopy);
+				std::memcpy(
+					dst,
+					src,
+					copyAmount
+				);
+				dst = (void *)((size_t)dst + copyAmount);
+				src = (void *)((size_t)src + copyAmount);
+				toCopy -= copyAmount;
+			}
+		}
+	}
+
+	//testing function -- remove eventually
+	if (method == "lpm2_kdtree") {
+		for (size_t band = 0; band < bandCount; band++) {
+			size_t start = band * dataPixelCount;
+			for (size_t i = 0; i < dataPixelCount; i++) {
+				double val = p_balanced[start + i];
+				if (std::isnan(val) || val == bandNoDataValues[band]) {
+					std::cout << "band " << band << " index " << i << " is NODATA!!!" << std::endl;
+				}
+			}
+		}
+	}
+
+	p_balanced = (double *)VSIRealloc(p_balanced, dataPixelCount * bandCount * sizeof(double));
+	p_spread = (double *)VSIRealloc(p_spread, dataPixelCount * 2 * sizeof(double));
 	if (!p_balanced || !p_spread) {
 		throw std::runtime_error("unable to re allocate rasters");
 	}
 
-	//determine prob == if prob is not already defined, ensure noData or inaccessable pixels are set to probability 0
 	double *p_prob;
 	std::vector<double> probVect;
-	std::vector<double> xbal;
 	if (prob.request().ndim != 1) {
 		throw std::runtime_error("this messes up future calculation");
 	}
@@ -230,6 +306,7 @@ balanced(
 	std::vector<size_t> *indexes;
 	Cube * p_cube = nullptr;
 	CubeStratified * p_scube = nullptr;
+	Lpm * p_lpm = nullptr;
 	if (method == "lcube") {
 		p_cube = new Cube(
     			p_prob, 		//const double *
@@ -260,6 +337,20 @@ balanced(
 		);
 		p_scube->Run();
 		indexes = &(p_scube->sample_);
+	}
+	else if (method == "lpm2_kdtree") {
+		p_lpm = new Lpm(
+			LpmMethod::lpm2,
+			p_prob,
+			p_balanced,
+			dataPixelCount,
+			bandCount,
+			eps,
+			treeBucketSize,
+			treeMethod
+		);
+		p_lpm->Run();
+		indexes = &(p_lpm->sample);
 	}
 
 	//free up any allocated matrices
@@ -300,6 +391,7 @@ balanced(
 	free(p_spread);
 	delete p_cube;
 	delete p_scube;
+	delete p_lpm;
 
 	//step X: create new GDALVectorWrapper using dataset
 	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
