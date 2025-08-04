@@ -11,6 +11,7 @@ if WIN
     'balanced',
     ['balanced.cpp'],
     link_with: [
+      access_lib,
       raster_lib,
       vector_lib,
       balanced_sampling_lib,
@@ -39,6 +40,7 @@ else #linux
       #from sgs/utils
       raster_obj,
       vector_obj,
+      access_obj,
 
       #from sgs/extern/BalancedSampling
       cube_class_obj,

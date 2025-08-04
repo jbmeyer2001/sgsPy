@@ -126,7 +126,7 @@ getAccessMask(
 	p_band->Fill(1);
 
 	//step 9: generate options list for rasterization	
-	char **argv;
+	char **argv = nullptr;
 
 	//specify invert rasterization and ALL_TOUCHED true
 	//this ensures pixels whos upper-left corner is outside the
