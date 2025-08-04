@@ -34,8 +34,8 @@ def balanced(rast: SpatialRaster,
              prob: Optional[list[float]] = None,
              access: Optional[SpatialVector] = None,
              layer_name: Optional[str] = None,
-             buf_inner: Optional[int | float] = None,
-             buf_outer: Optional[int | float] = None,
+             buff_inner: Optional[int | float] = None,
+             buff_outer: Optional[int | float] = None,
              plot: bool = False,
              filename: str = ""):
     """
@@ -141,7 +141,7 @@ def balanced(rast: SpatialRaster,
         band_ints = [i for i in range(len(rast.bands))]
 
     #prob argument modification
-    if prob:
+    if prob is not None:
         prob = np.ascontiguousarray(prob, dtype=np.float64)
     else:
         prob = np.ascontiguousarray([], dtype=np.float64)

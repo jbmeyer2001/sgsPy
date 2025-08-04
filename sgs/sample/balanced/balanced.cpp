@@ -31,18 +31,19 @@
 /**
  * This function conducts balanced sampling on the given raster image.
  *
- * To start out, the raster bands are iterated through as scanlines
- * and copied over to a vector whose data will be passed to the balanced
- * sampling function. They are copied, because the pixels being passed
- * to the BalancedSampling function should not be nan, and only the data
- * pixels are copied. 
+ * To start out, the raster bands are read from their corrosponding
+ * GDALRasterBand into a data buffer. The lpm2_kdtree method is different
+ * than the lcube methods in that the number of columns should be the number
+ * of pixels and the number of rows should be the band count, whereas
+ * in the lcube methods the opposite is true.
  *
- * During this iteration two vectors keep track of specific indexes and 
- * their adjusted index after the nodata pixels are removed. 
- * These vectors are later used to calculate the original index (and thus points) 
- * of the samples. This is done instead of keeping track of x/y values
- * for every pixel, because for large images keeping track of the x/y values
- * of every pixel would be quite memory intensive.
+ * a buffer p_spread is kept which keeps track of the x and y indexes of
+ * each pixel.
+ *
+ * The bands are then iterated through, and adjusted to ensure there are
+ * no nodata pixels. The original indexes are presered within the
+ * p_spread buffer, as after the nodata pixels are removed the indexes
+ * will be shifted down from their original.
  *
  * The probabilities for each pixel are either taken from a user input
  * (py buffer) or are set to be equal for all pixels.
@@ -83,7 +84,7 @@ balanced(
 	size_t width = static_cast<size_t>(p_raster->getWidth());
 	size_t bandCount = bandIndexes.size();
 
-	//error check allocated raster size
+	//step 3: error check the allocated raster size
 	if (
 		(maxIndex / std::max(bandCount, static_cast<size_t>(2))) < sizeof(double) ||
 		(maxIndex / width) < (std::max(bandCount, static_cast<size_t>(2)) * sizeof(double)) ||
@@ -92,6 +93,7 @@ balanced(
 		throw std::runtime_error("max index is too large to be processed, because the balanced sampling package requires the full raster in memory.");
 	}
 
+	//step 4: get access mask if access is given
 	GDALDataset *p_accessMaskDataset = nullptr;
 	void *p_mask = nullptr;
 	if (p_access) {
@@ -100,7 +102,7 @@ balanced(
 		p_mask = maskInfo.second; //pointer to mask
 	}
 
-	//allocate spread, balanced, and potentially strata matrices, error check their allocation
+	//step 5: allocate spread, balanced, and potentially strata matrices, then error check their allocation
 	double * p_balanced = (double *) VSIMalloc3(height, width, bandCount * sizeof(double));
 	//double * p_balancedCheck = (double *) VSIMalloc3(height, width, bandCount * sizeof(double)); // for testing purposes
 	double * p_spread = (double *) VSIMalloc3(height, width, 2 * sizeof(double));
@@ -109,6 +111,7 @@ balanced(
 		throw std::runtime_error("unable to allocate raster band to memory");
 	}	
 
+	//step 6: write raster bands into buffers
 	size_t dataPointerIncrement;
 	size_t pixelSpace;
 	size_t lineSpace;
@@ -122,7 +125,6 @@ balanced(
 		pixelSpace = bandCount * sizeof(double);
 		lineSpace = width * bandCount * sizeof(double);
 	}
-
 	std::vector<double> bandNoDataValues;
 	for (size_t i = 0; i < bandCount; i++) {
 		GDALRasterBand *p_band = p_raster->getDataset()->GetRasterBand(bandIndexes[i] + 1);
@@ -174,6 +176,7 @@ balanced(
 	);
 	*/
 
+	//step 7: iterate through raster bands, populating p_spread and altering the raster bands so there are no nodata pixels
 	size_t noDataCount = 0;
 	size_t readIndex = 0;
 	size_t writeIndex = 0;
@@ -230,6 +233,8 @@ balanced(
 
 	size_t dataPixelCount = (height * width) - noDataCount;
 
+	//step 8: since lpm2_kdtree method assumes raster bands have a full raster in a row rather than column (like other methods)
+	//move the shortened raster bands so that they are now one after another.
 	if (method == "lpm2_kdtree") {
 		for (size_t band = 1; band < bandCount; band++) {
 			void *dst = (void *)((size_t)p_balanced + band * dataPixelCount * sizeof(double));
@@ -295,12 +300,14 @@ balanced(
 	}
 	*/
 
+	//step 9: reallocate bandsm, freeing up no longer used memory
 	p_balanced = (double *)VSIRealloc(p_balanced, dataPixelCount * bandCount * sizeof(double));
 	p_spread = (double *)VSIRealloc(p_spread, dataPixelCount * 2 * sizeof(double));
 	if (!p_balanced || !p_spread) {
 		throw std::runtime_error("unable to re allocate rasters");
 	}
 
+	//step 10: determine prob buffer
 	double *p_prob;
 	std::vector<double> probVect;
 	if (prob.request().ndim != 1) {
@@ -308,7 +315,7 @@ balanced(
 	}
 
 	size_t probLength = static_cast<size_t>(prob.request().shape[0]);
-	if (probLength != 0 && probLength != (height * width) - noDataCount) {
+	if (probLength != 0 && probLength != dataPixelCount) {
 		std::cout << "**warning** length of prob list provided (" 
 			  << std::to_string(probLength)
 			  << ") does not match size of band (" 
@@ -318,7 +325,7 @@ balanced(
 		std::cout << "creating prob of correct size with equal probabilities." << std::endl;
 	}
 
-	if (probLength != height * width) {
+	if (probLength != dataPixelCount) {
 		probVect = std::vector<double>(dataPixelCount, (double)numSamples / (double)(dataPixelCount));
 		p_prob = probVect.data();
 	}
@@ -326,7 +333,7 @@ balanced(
 		p_prob = (double *)prob.request().ptr;
 	}
 
-	//call BalancedSampling function according to desired method
+	//step 11: call BalancedSampling function according to desired method
 	std::vector<size_t> *indexes;
 	Cube * p_cube = nullptr;
 	CubeStratified * p_scube = nullptr;
@@ -377,11 +384,11 @@ balanced(
 		indexes = &(p_lpm->sample);
 	}
 
-	//free up any allocated matrices
+	//step 12: free up any allocated matrice which are no longer required
 	CPLFree(p_balanced);
 	CPLFree(p_strata);
 
-	//step X: create GDAL Dataset to hold samples
+	//step 13: create GDAL Dataset to hold samples
 	//TODO error check this???
 	GDALAllRegister();
 	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
@@ -391,7 +398,7 @@ balanced(
 	std::vector<double> yCoords;
 	double *GT = p_raster->getGeotransform();
 
-	//step X: turn the BalancedSampling return samples into their original indexes and calculate points to add
+	//step 14: turn the BalancedSampling return samples into their original indexes and calculate points to add
 	for (const size_t& index : *indexes) {
 		//calculate and create coordinate point
 		double y = p_spread[index * 2 + 1];
@@ -411,16 +418,16 @@ balanced(
 		yCoords.push_back(yCoord);
 	}
 	
-	//step X: free up allocated BalancedSampling class
+	//step 15: free up allocated BalancedSampling class
 	free(p_spread);
 	delete p_cube;
 	delete p_scube;
 	delete p_lpm;
 
-	//step X: create new GDALVectorWrapper using dataset
+	//step 16: create new GDALVectorWrapper using dataset
 	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
 
-	//step X: write to file if filename is given
+	//step 17: write to file if filename is given
 	if (filename != "") {
 		try {
 			p_sampleVectorWrapper->write(filename);
