@@ -102,15 +102,12 @@ balanced(
 
 	//allocate spread, balanced, and potentially strata matrices, error check their allocation
 	double * p_balanced = (double *) VSIMalloc3(height, width, bandCount * sizeof(double));
+	//double * p_balancedCheck = (double *) VSIMalloc3(height, width, bandCount * sizeof(double)); // for testing purposes
 	double * p_spread = (double *) VSIMalloc3(height, width, 2 * sizeof(double));
 	int * p_strata = (int *)((method == "lcubestratified") ? VSIMalloc3(height, width, sizeof(int)) : nullptr);
 	if (!p_balanced || !p_spread || (method == "lcubestratified" && !p_strata)) {
 		throw std::runtime_error("unable to allocate raster band to memory");
 	}	
-
-	//for testing!
-	size_t balancedMin = (size_t)p_balanced;
-	size_t balancedMax = balancedMin + height * width * bandCount * sizeof(double);
 
 	size_t dataPointerIncrement;
 	size_t pixelSpace;
@@ -167,6 +164,15 @@ balanced(
 			throw std::runtime_error("CPL error reading raster band, CPL error code: " + std::to_string(err));
 		}
 	}
+
+	//for testing purposes
+	/*
+	std::memcpy(
+		p_balancedCheck,
+		p_balanced,
+		height * width * bandCount * sizeof(double)
+	);
+	*/
 
 	size_t noDataCount = 0;
 	size_t readIndex = 0;
@@ -225,18 +231,6 @@ balanced(
 	size_t dataPixelCount = (height * width) - noDataCount;
 
 	if (method == "lpm2_kdtree") {
-		for (size_t band = 0; band < bandCount; band++) {
-			size_t start = band * height * width;
-			for (size_t i = 0; i < dataPixelCount; i++) {
-				double val = p_balanced[start + i];
-				if (std::isnan(val) || val == bandNoDataValues[band]) {
-					std::cout << "band " << band << " index " << i << " is NODATA!!!" << std::endl;
-				}
-			}
-		}
-	}
-
-	if (method == "lpm2_kdtree") {
 		for (size_t band = 1; band < bandCount; band++) {
 			void *dst = (void *)((size_t)p_balanced + band * dataPixelCount * sizeof(double));
 			void *src = (void *)((size_t)p_balanced + band * height * width * sizeof(double));
@@ -258,18 +252,48 @@ balanced(
 		}
 	}
 
-	//testing function -- remove eventually
+	//these for loops are used to ensure the data is copied to buffers correctly
+	//they are only to be used for testing.
+	/*
 	if (method == "lpm2_kdtree") {
 		for (size_t band = 0; band < bandCount; band++) {
 			size_t start = band * dataPixelCount;
+			size_t checkStart = band * height * width;
+
+			size_t checkIndex = 0;
 			for (size_t i = 0; i < dataPixelCount; i++) {
-				double val = p_balanced[start + i];
-				if (std::isnan(val) || val == bandNoDataValues[band]) {
-					std::cout << "band " << band << " index " << i << " is NODATA!!!" << std::endl;
+				double checkVal = p_balancedCheck[checkStart + checkIndex];
+				while (std::isnan(checkVal) || checkVal == bandNoDataValues[band]) {
+					checkIndex++;
+					checkVal = p_balancedCheck[checkStart + checkIndex];
 				}
+				double val = p_balanced[start + i];
+				if (checkVal != val) {
+					std::cout << "[ " << checkIndex << "] = " << checkVal << " NOT EQUAL TO [" << i << "] = " << val << std::endl;
+				}
+				checkIndex++;
 			}
 		}
 	}
+	else {
+		for (size_t band = 0; band < bandCount; band++) {
+
+			size_t checkIndex = 0;
+			for (size_t i = 0; i < dataPixelCount; i++) {
+				double val = p_balanced[i * bandCount + band];
+				double checkVal = p_balancedCheck[checkIndex * bandCount + band];
+				while(std::isnan(checkVal) || checkVal == bandNoDataValues[band]) {
+					checkIndex++;
+					checkVal = p_balancedCheck[checkIndex * bandCount + band];
+				}
+				if (checkVal != val) {
+					std::cout << "[ " << checkIndex << "] = " << checkVal << " NOT EQUAL TO [" << i << "] = " << val << std::endl;
+				}
+				checkIndex++;
+			}
+		}
+	}
+	*/
 
 	p_balanced = (double *)VSIRealloc(p_balanced, dataPixelCount * bandCount * sizeof(double));
 	p_spread = (double *)VSIRealloc(p_spread, dataPixelCount * 2 * sizeof(double));
@@ -407,332 +431,6 @@ balanced(
 	}
 
   	return {{xCoords, yCoords}, p_sampleVectorWrapper};
-
-	/*
-	//step 3: initialize vectors to pass raster data to balancedSampling classes
-	std::vector<double> xspread(height * width * bandCount);
-	std::vector<int> strata;
-	if (p_sraster) {
-		strata = std::vector<int>(height * width);
-	}	
-
-	//step 4: allocate bands which will hold raster scanline buffers
-	std::vector<double *> bands(bandCount, nullptr);
-	int *p_strataBand;
-	for (size_t band = 0; band < bandCount; band++) {
-		bands[band] = (double *) VSIMalloc2(width, sizeof(double));
-		if (!bands[band]) {
-			throw std::runtime_error("unable to allocate band " + std::to_string(band + 1));
-		}
-	}
-	if (p_sraster) {
-		p_strataBand = (int *) VSIMalloc2(width, sizeof(int));
-		if (!p_strataBand) {
-			throw std::runtime_error("unable to allocate strat raster band");
-		}
-	}
-	
-	//step 5: get access mask if access is defined
-	GDALDataset *p_accessMaskDataset = nullptr;
-	void *p_mask = nullptr;
-	if (p_access) {
-		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
-		p_accessMaskDataset = maskInfo.first; //GDALDataset to free after using band
-		p_mask = maskInfo.second; //pointer to mask
-	}
-
-	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
-	int strataNoDataValue = -1;
-	if (method == "lcubestratified") {
-		strataNoDataValue = static_cast<int>(p_sraster->getDataset()->GetRasterBand(stratBand + 1)->GetNoDataValue());
-		std::cout << "strataNoDataValue is " << strataNoDataValue << std::endl;
-	}
-	
-	//step 5: initialize and set up data structures used to keep track of the original raster indexes
-	//since only data pixels will be passed.
-	size_t noDataCount = 0;
-	std::vector<size_t> originalIndexes(width * 2);
-	std::vector<size_t> adjustedIndexes(width * 2);
-	size_t storedIndexesIndex = 0;
-	bool prevNan = false;
-	bool isNan = false;
-	size_t bandIndex, originalIndex, adjustedIndex, xspreadIndex;
-
-	//step 6: Iterate through raster scanlines and bands
-	for (size_t y = 0; y < height; y++) {
-		//step 6.1: read scanline from each raster band into bands vector
-		for (size_t i = 0; i < bandCount; i++) {
-			CPLErr err = p_raster->getDataset()->GetRasterBand(bandIndexes[i] + 1)->ReadRaster(
-				bands[i],			//pData
-			       	width,				//nArrayEltCount
-				0,				//dfXOff
-				y,				//dfYOff
-				width,				//dfXSize
-				1,				//dfYSize
-				width,				//nBufXSize
-				1,				//nBufYSize
-				GRIORA_NearestNeighbour,	//eResampleAlg (default)
-				nullptr,			//pfnProgress
-				nullptr				//pProgressData
-			);
-			if (err) {
-				std::string errorStr = "ReadRaster failed with CPLError code: " + std::to_string(err);
-				throw std::runtime_error(errorStr);
-			}
-		}
-		if (p_sraster) {
-			CPLErr err = p_sraster->getDataset()->GetRasterBand(stratBand + 1)->ReadRaster(
-				p_strataBand,			//pData
-				width,				//nArrayEltCount
-				0,				//dfXOff
-				y,				//dfYOff
-				width,				//dfXSize
-				1,				//dfYSize
-				width,				//nBufXSize
-				1,				//nBufYSize
-				GRIORA_NearestNeighbour,	//eResampleAlg (default)
-				nullptr,			//pfnProgress
-				nullptr				//pProgressData
-			);
-			std::string errorStr = "ReadRaster failed with CPLError code: " + std::to_string(err);
-			throw std::runtime_error(errorStr);
-
-		}
-
-		size_t startIndex = y * width;
-		
-		//step 6.2: special case for first index, to set up originalIndexes and adjustedIndexes vectors as required
-		if (y == 0) {
-			for (size_t i = 0;i < bands.size(); i++) {
-				double val = bands[i][0];
-				xspread[i] = val;
-				isNan |= (std::isnan(val) || val == noDataValue);
-			}
-			if (p_sraster) {
-				int val = p_strataBand[0];
-				strata[0] = val;
-				isNan |= val == strataNoDataValue;
-			}
-			isNan |= (p_access && ((uint8_t *)p_mask)[0] == 0);
-			prevNan = isNan;
-			noDataCount += isNan;
-
-			//update the adjusted and original indexes, they will be overwritten if isNan is true
-			originalIndexes[storedIndexesIndex] = 0;
-			adjustedIndexes[storedIndexesIndex] = 0;
-			storedIndexesIndex += (!isNan);
-		}
-
-		//step 6.3: iterate through raster bands copying to vector and keeping track of nodata
-		for (size_t x = 0 + (y == 0); x < width; x++) {
-			isNan = false;
-			bandIndex = x;
-			xspreadIndex = (startIndex + x - noDataCount) * bandCount;
-			originalIndex = startIndex + x;
-			adjustedIndex = startIndex + x - noDataCount;
-			for (size_t i = 0; i < bandCount; i++) {
-				double val = bands[i][bandIndex];
-				xspread[xspreadIndex + i] = val;
-				isNan |= (std::isnan(val) || val == noDataValue);
-			}	
-			if (p_sraster) { 
-				int val = p_strataBand[bandIndex];
-				strata[adjustedIndex] = val;
-				isNan |= val == strataNoDataValue;
-			}
-			isNan |= (p_access && ((uint8_t *)p_mask)[originalIndex] == 0);
-
-			//update the adjusted and original indexes, they will be overwritten if isNan is true	
-			originalIndexes[storedIndexesIndex] = originalIndex;
-			adjustedIndexes[storedIndexesIndex] = adjustedIndex;
-			storedIndexesIndex += (!isNan && prevNan);
-			
-			noDataCount += isNan;
-			prevNan = isNan;
-		}
-
-		//resize vectors as required
-		xspread.resize(height * width * bandCount - noDataCount * bandCount);
-		if (originalIndexes.size() < storedIndexesIndex + (width / 2)) {
-			originalIndexes.resize(originalIndexes.size() + width * 4);
-			adjustedIndexes.resize(originalIndexes.size() + width * 4);
-		}
-	}
-	if (p_access) {
-		free(p_accessMaskDataset);
-	}
-
-	size_t noNanBandSize = height * width - noDataCount;
-
-	//step 7: free no longer used band data and adjust size of vectors
-	for (size_t band = 0; band < bands.size(); band++) {
-		CPLFree(bands[band]);
-	}
-	xspread.resize(noNanBandSize * bandCount);
-	xspread.shrink_to_fit();
-	originalIndexes.resize(storedIndexesIndex + 1);
-	originalIndexes.shrink_to_fit();
-	adjustedIndexes.resize(storedIndexesIndex + 1);
-	originalIndexes.shrink_to_fit();
-	if (p_sraster) {
-		strata.resize(noNanBandSize);
-		strata.shrink_to_fit();
-	}
-
-	//step 8: determine probability list (vector)
-	double *p_prob;
-	std::vector<double> probVect, xbal;
-
-	//TODO remove
-	if (prob.request().ndim != 1) {
-		throw std::runtime_error("this messes up future calculation");
-	}
-
-	size_t probLength = static_cast<size_t>(prob.request().shape[0]);
-	if (probLength != 0 && probLength != noNanBandSize) {
-		std::cout << "**warning** length of prob list provided (" 
-			  << std::to_string(probLength)
-			  << ") does not match size of band without nan values (" 
-			  << std::to_string(noNanBandSize) 
-			  << ")." << std::endl;
-
-		std::cout << "creating prob of correct size with equal probabilities." << std::endl;
-	}
-
-	if (probLength != noNanBandSize) {
-		probVect = std::vector<double>(noNanBandSize, (double)numSamples / (double)noNanBandSize);
-		p_prob = probVect.data();
-	}
-	else {
-		p_prob = (double *)prob.request().ptr;
-	}
-
-	if (method != "lpm_kdtree") {
-		//lpm_kdtree doesn't need xbal, but the others do
-		xbal.resize(noNanBandSize);
-		std::memcpy(
-			reinterpret_cast<void *>(xbal.data()),	//dst
-			reinterpret_cast<void *>(p_prob), 	//src
-			noNanBandSize * sizeof(double)		//num bytes
-		);
-	}
-	
-	//step 9: call BalancedSampling function according to desired method
-	std::vector<size_t> *samples;
-	Cube * p_cube = nullptr;
-	CubeStratified * p_scube = nullptr;
-	Lpm * p_lpm = nullptr;
-	if (method == "lcube") {
-		p_cube = new Cube(
-    			p_prob, 		//const double*
-    			xbal.data(), 		//double *
-    			noNanBandSize,		//const size_t
-    			1,			//const size_t
-    			eps,			//const double
-    			xspread.data(), 	//double *
-    			bandCount,		//const size_t
-    			treeBucketSize,		//const size_t
-    			treeMethod		//const int
-  		);
-		p_cube->Run();
-		samples = &(p_cube->sample);
-	}
-	else if (method == "lcubestratified") {
-		p_scube = new CubeStratified(
-			strata.data(),		//int *
-			p_prob,			//const double *
-			xbal.data(),		//double *
-			noNanBandSize,		//const size_t
-			1,			//const size_t
-			eps,			//const double
-			xspread.data(),		//double *
-			bandCount,		//const size_t
-			treeBucketSize,		//const size_t
-			treeMethod		//const int
-		);
-		p_scube->Run();
-		samples = &(p_scube->sample_);
-	}
-	else {// method == "lpm2_kdtree"
-		p_lpm = new Lpm(
-			LpmMethod::lpm2,	//const LpmMethod
-			p_prob,			//const double *
-			xspread.data(),		//double *
-			noNanBandSize,		//const size_t
-			bandCount,		//const size_t
-			eps,			//const double
-			treeBucketSize,		//const size_t
-			treeMethod		//const int
-		);
-		p_lpm->Run();
-		samples = &(p_lpm->sample);
-	}
- 
-	//step 10: allow memory to be freed if helpful
-	xspread.clear();
-	xspread.shrink_to_fit();
-	strata.clear();
-	strata.shrink_to_fit();
-	probVect.clear();
-	probVect.shrink_to_fit();
-	xbal.clear();
-	xbal.shrink_to_fit();
-
-	//step 11: create GDAL Dataset to hold samples
-	//TODO error check this???
-	GDALAllRegister();
-	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
-	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
-
-	std::vector<double> xCoords;
-	std::vector<double> yCoords;
-	double *GT = p_raster->getGeotransform();
-
-	//step 12: turn the BalancedSample return samples into their original indexes and calculate points to add
-	for (const size_t& sample : *samples) {
-		//get original index from adjusted sample index using the adjustedIndexes and originalIndexes vectors
-		auto boundIt = std::upper_bound(adjustedIndexes.begin(), adjustedIndexes.end(), sample);
-		size_t boundIndex = (boundIt == adjustedIndexes.end()) ? adjustedIndexes.back() : std::distance(adjustedIndexes.begin(), boundIt) - 1;
-		size_t index = sample + originalIndexes[boundIndex] - adjustedIndexes[boundIndex];
-
-		//calculate and create coordinate point
-		double yIndex = index / p_raster->getWidth();
-		double xIndex = index - (yIndex * p_raster->getWidth());
-		double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
-		double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
-		OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-			
-		//add point to dataset
-		OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
-		p_feature->SetGeometry(&newPoint);
-		p_sampleLayer->CreateFeature(p_feature);
-		OGRFeature::DestroyFeature(p_feature);
-
-		//add to xCoords and yCoords for plotting
-		xCoords.push_back(xCoord);
-		yCoords.push_back(yCoord);
-	}
-
-	//step 13: free up pointers which may have been allocated
-	delete p_cube;
-	delete p_scube;
-	delete p_lpm;
-
-	//step 14: create new GDALVectorWrapper using dataset
-	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
-
-	//step 15: write to file if filename is given
-	if (filename != "") {
-		try {
-			p_sampleVectorWrapper->write(filename);
-		}
-		catch (const std::exception& e) {
-			std::cout << "Exception thrown while trying to write file: " << e.what() << std::endl;
-		}
-	}
-
-  	return {{xCoords, yCoords}, p_sampleVectorWrapper};
-	*/
 }
 
 /**
