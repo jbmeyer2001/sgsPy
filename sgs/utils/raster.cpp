@@ -56,6 +56,8 @@ void GDALRasterWrapper::createFromDataset(GDALDataset *p_dataset) {
 	this->rasterBandRead = std::vector<bool>(this->getBandCount(), false);
 	this->displayRasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
 	this->displayRasterBandRead = std::vector<bool>(this->getBandCount(), false);	
+
+	this->p_dataset->GetRasterBand(1)->GetBlockSize(&this->blockXSize, &this->blockYSize);
 }
 
 /******************************************************************************
@@ -296,18 +298,58 @@ double GDALRasterWrapper::getMaxPixelVal(int band) {
 void GDALRasterWrapper::allocateRaster(bool display) {
 	//This is not an ideal usage of CPLMalloc because it may be very large
 	//In the future, this will likely be swapped out.
+	
+	size_t max = std::numeric_limits<size_t>::max();
 	if (display) {
-		size_t bandSize = this->getRasterTypeSize() * this->displayRasterWidth * this->displayRasterHeight;
-		this->p_displayRaster = CPLRealloc(this->p_displayRaster, bandSize * this->getBandCount());
+		if (this->displayRasterWidth < 0 || this->displayRasterHeight < 0) {
+		throw std::runtime_error("display raster width and height should never be less than 0");
+	}
+		size_t height = static_cast<size_t>(this->displayRasterHeight);
+		size_t width = static_cast<size_t>(this->displayRasterWidth);
+		size_t bandCount = this->getBandCount();
+		size_t size = this->getRasterTypeSize();
+
+		if (max / size < width ||
+		    max / (size * width) < height ||
+		    max / (size * width * height) < bandCount) {
+			throw std::runtime_error("display raster too large to fit in memory.");
+		}	
+
+		size_t bandSize = height * width * size;
+		size_t rasterSize = height * width * size * bandCount;
+		if (rasterSize > GIGABYTE) {
+			throw std::runtime_error("sgs does not allow allocation of a raster into memory for display purposes if it would be larger than 1 gigabyte.");
+		}
+
+		this->p_displayRaster = CPLRealloc(this->p_displayRaster, rasterSize);
 		this->displayRasterAllocated = true;
-		for (int i = 0; i < this->getBandCount(); i++) {
+		for (int i = 0; i < bandCount; i++) {
 			this->displayRasterBandPointers[i] = (void *)((size_t)this->p_displayRaster + ((size_t)i * bandSize));
 			this->displayRasterBandRead[i] = false;
 		}
 	}
 	else {
-		size_t bandSize = this->getRasterTypeSize() * this->getWidth() * this->getHeight();
-		this->p_raster = CPLMalloc(bandSize * this->getBandCount());
+		if (this->getWidth() < 0 || this->getHeight() < 0) {
+			throw std::runtime_error("display raster width and height should never be less than 0");
+		}
+		size_t height = static_cast<size_t>(this->getHeight());
+		size_t width = static_cast<size_t>(this->getWidth());
+		size_t bandCount = this->getBandCount();
+		size_t size = this->getRasterTypeSize();
+
+		if (max / size < width ||
+		    max / (size * width) < height ||
+		    max / (size * width * height) < bandCount) {
+			throw std::runtime_error("raster too large to fit in memory.");
+		}	
+
+		size_t bandSize = height * width * size;
+		size_t rasterSize = height * width * size * bandCount;
+		if (rasterSize > GIGABYTE) {
+			throw std::runtime_error("sgs does not allow allocation of a raster into memory for direct pixel access purposes if it would be larger than 1 gigabyte.");
+		}
+
+		this->p_raster = CPLMalloc(rasterSize);
 		this->rasterAllocated = true;
 		for (int i = 0; i < this->getBandCount(); i++) {
 			this->rasterBandPointers[i] = (void *)((size_t)this->p_raster + ((size_t)i * bandSize));
@@ -489,4 +531,41 @@ void GDALRasterWrapper::write(std::string filename) {
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("GTiff");
 
 	GDALClose(p_driver->CreateCopy(filename.c_str(), this->p_dataset.get(), (int)false, nullptr, nullptr, nullptr));
+}
+
+/******************************************************************************
+			  getActualBlockSizeFromBand()				     
+******************************************************************************/
+void GDALRasterWrapper::getActualBlockSizeFromBand(int band, int *validXSize, int *validYSize) {
+	GDALRasterBand *p_band = this->p_dataset->GetRasterBand(band);
+	p_band->GetActualBlockSize(
+		this->blockXSize,
+		this->blockYSize,
+		validXSize,
+		validYSize
+	);
+}
+
+/******************************************************************************
+			      ReadBlockFromBand()				     
+******************************************************************************/
+void GDALRasterWrapper::readBlockFromBand(int band, int xBlockOff, int yBlockOff, void *p_data) {
+	GDALRasterBand *p_band = this->p_dataset->GetRasterBand(band);
+	p_band->ReadBlock(
+		xBlockOff,
+		yBlockOff,
+		p_data
+	);
+}
+
+/******************************************************************************
+			       writeBlockToBand()				     
+******************************************************************************/
+void GDALRasterWrapper::writeBlockToBand(int band, int xBlockOff, int yBlockOff, void *p_data) {
+	GDALRasterBand *p_band = this->p_dataset->GetRasterBand(band);
+	p_band->ReadBlock(
+		xBlockOff,
+		yBlockOff,
+		p_data
+	);
 }

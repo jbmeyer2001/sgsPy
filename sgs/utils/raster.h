@@ -15,6 +15,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+//used as cutoff for max band allowed in memory
+#define GIGABYTE 1073741824
+
 namespace py = pybind11;
 using namespace pybind11::literals;
 
@@ -57,7 +60,6 @@ class GDALRasterWrapper {
 	int displayRasterHeight = -1;
 
 	double geotransform[6];
-
 	/**
 	 * Internal function used to allocate the full or display rasters.
 	 * If this function is being called, it's assumed that the raster
@@ -106,6 +108,9 @@ class GDALRasterWrapper {
 	py::buffer getBuffer(size_t size, void *p_raster, int width, int height);
 	
 	public:
+	int blockXSize;
+	int blockYSize;
+
 	/**
 	 * Constructor for GDALRasterWrapper class.
 	 * Creates GDALDataset using drivers and given file, then calls
@@ -358,4 +363,37 @@ class GDALRasterWrapper {
 	 * @param std::string filename
 	 */
 	void write(std::string filename);
+
+	/**
+	 * Gets the actual block size of the given band. The
+	 * GetActualBlockSize function from GDAL, which this
+	 * member function calls, takes into account partial blocks.
+	 *
+	 * @param int band 1-indexed raster band
+	 * @param int * holds valid x size
+	 * @param int * holds valid y size
+	 */
+	void getActualBlockSizeFromBand(int band, int *validXSize, int *validYSize);
+
+	/**
+	 * Read blocked data from specified band, using 
+	 * GDALRasterBand::ReadBlock().
+	 *
+	 * @param int band 1-indexed raster band
+	 * @param int x block offset
+	 * @param int y block offset
+	 * @param void * data buffer
+	 */
+	void readBlockFromBand(int band, int xBlockOff, int yBlockOff, void *p_data);
+
+	/**
+	 * Write blocked data to specified band, using
+	 * GDALRasterBand::WriteBlock().
+	 *
+	 * @param int band 1-indexed rasterband
+	 * @param int x block offset
+	 * @param int y block offset
+	 * @param void * data buffer
+	 */
+	void writeBlockToBand(int band, int xBlockOff, int yBlockOff, void *p_data);
 };
