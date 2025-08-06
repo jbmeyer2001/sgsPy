@@ -56,6 +56,8 @@ void GDALRasterWrapper::createFromDataset(GDALDataset *p_dataset) {
 	this->rasterBandRead = std::vector<bool>(this->getBandCount(), false);
 	this->displayRasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
 	this->displayRasterBandRead = std::vector<bool>(this->getBandCount(), false);	
+
+	this->p_dataset->GetRasterBand(1)->GetBlockSize(&this->blockXSize, &this->blockYSize);
 }
 
 /******************************************************************************
@@ -529,4 +531,41 @@ void GDALRasterWrapper::write(std::string filename) {
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("GTiff");
 
 	GDALClose(p_driver->CreateCopy(filename.c_str(), this->p_dataset.get(), (int)false, nullptr, nullptr, nullptr));
+}
+
+/******************************************************************************
+			  getActualBlockSizeFromBand()				     
+******************************************************************************/
+void GDALRasterWrapper::getActualBlockSizeFromBand(int band, int *validXSize, int *validYSize) {
+	GDALRasterBand *p_band = this->p_dataset->GetRasterBand(band);
+	p_band->GetActualBlockSize(
+		this->blockXSize,
+		this->blockYSize,
+		validXSize,
+		validYSize
+	);
+}
+
+/******************************************************************************
+			      ReadBlockFromBand()				     
+******************************************************************************/
+void GDALRasterWrapper::readBlockFromBand(int band, int xBlockOff, int yBlockOff, void *p_data) {
+	GDALRasterBand *p_band = this->p_dataset->GetRasterBand(band);
+	p_band->ReadBlock(
+		xBlockOff,
+		yBlockOff,
+		p_data
+	);
+}
+
+/******************************************************************************
+			       writeBlockToBand()				     
+******************************************************************************/
+void GDALRasterWrapper::writeBlockToBand(int band, int xBlockOff, int yBlockOff, void *p_data) {
+	GDALRasterBand *p_band = this->p_dataset->GetRasterBand(band);
+	p_band->ReadBlock(
+		xBlockOff,
+		yBlockOff,
+		p_data
+	);
 }
