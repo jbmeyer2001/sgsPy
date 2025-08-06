@@ -15,6 +15,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+//used as cutoff for max band allowed in memory
+#define GIGABYTE 1073741824
+
 namespace py = pybind11;
 using namespace pybind11::literals;
 
