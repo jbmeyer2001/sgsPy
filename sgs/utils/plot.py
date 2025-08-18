@@ -45,6 +45,7 @@ def plot_raster(raster,
         band = 0
     else:
         band = raster.get_band_index(band)
+    title = raster.bands[band]
     
     #calculate downsampled resolution and get downsampled raster
     #for info on downsample resolution calculation:
@@ -72,6 +73,7 @@ def plot_raster(raster,
 
     #add image to matplotlib
     display_arr = np.moveaxis(arr[[band], :, :], 0, 2)
+    plt.title(label=title)
     ax.imshow(display_arr, origin='upper', extent=extent, **kwargs)
 
 def plot_vector(vector, 
