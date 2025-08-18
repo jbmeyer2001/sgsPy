@@ -238,10 +238,23 @@ strat_random(
 		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
 
+	//TEST
+	for (size_t i = 0; i < sampleIndexes.size(); i++) {
+		std::cout << "size " << sampleIndexes[i].size() << std::endl;
+		for (auto index : sampleIndexes[i]) {
+			if (p_strat[index] != static_cast<float>(i)) {
+				std::cout << i << std::endl;
+				std::cout << index << std::endl;
+				throw std::runtime_error("NOT IN CORRECT PLACE");
+			}
+		}
+	}
+
 	//step 8: generate coordinate points for each sample index.
 	std::vector<double> xCoords;
 	std::vector<double> yCoords;
 
+	std::cout << std::endl;
 	U sIndex = 0;
 	U completedStratum = 0;
 	double *GT = p_raster->getGeotransform();
@@ -256,8 +269,13 @@ strat_random(
 			strataNum.erase(strataNum.begin() + sIndex);
 		}
 		else {
-			U index = *sampleIterators[strata];
+			std::cout << "here 1" << std::endl;
+			auto it = sampleIterators[strata];
+			std::cout << "here 2" << std::endl;
+			U index = *it;
+			std::cout << "here 3" << std::endl;
 			sampleIterators[strata] = std::next(sampleIterators[strata]);
+			std::cout << "here 4" << std::endl;
 
 			double yIndex = index / p_raster->getWidth();
 			double xIndex = index - (yIndex * p_raster->getWidth());

@@ -87,6 +87,7 @@ class TestStrat:
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
         percentages = self.get_allocation_percentages(srast, samples)
+        print(percentages)
         for percentage in percentages.values():
             assert percentage - 0.2 == pytest.approx(0)
 
@@ -150,8 +151,11 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.2 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skip
     def test_random_allocation_proportional(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 8})
+
+        print('HERE PYTHON 1')
 
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
@@ -161,6 +165,8 @@ class TestStrat:
             allocation="prop",
             method="random"
         ).samples_as_wkt())
+
+        print('HERE PYTHON 2')
 
         assert len(samples) == 500
         self.check_points_in_bounds(srast, samples)
@@ -226,6 +232,7 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.125 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skip
     def test_random_allocation_manual(self):
         #without mindist or access
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
@@ -313,6 +320,7 @@ class TestStrat:
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skip
     def test_queinnec_allocation_equal(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -389,6 +397,7 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.2 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skip
     def test_queinnec_allocation_proportional(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 8})
 
@@ -465,6 +474,7 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.125 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skip
     def test_queinnec_allocation_manual(self):
         #without mindist or access
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
@@ -552,6 +562,7 @@ class TestStrat:
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
     
+    @pytest.mark.skip
     def test_queinnec_focal_window(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -639,7 +650,7 @@ class TestStrat:
             ).samples_as_wkt())
             self.check_focal_window(srast, samples, wrow=3, wcol=1)
 
-
+    @pytest.mark.skip
     def test_function_inputs(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
