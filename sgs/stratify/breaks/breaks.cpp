@@ -63,9 +63,13 @@ GDALRasterWrapper *breaks(
 	std::vector<T *> rasterBands;
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
+	std::vector<double> noDataValues;
 	for (auto const& [key, val] : breaks) {
 		//add requested band to rasterBands
 		rasterBands.push_back((T *)p_raster->getRasterBand(key));		
+		
+		//add nodata value to vector
+		noDataValues.push_back(p_raster->getDataset()->GetRasterBand(key + 1)->GetNoDataValue());
 
 		//and band breaks vectori
 		std::vector<double> valCopy = val; //have to create copy to alter the band breaks in iteration loop
@@ -92,19 +96,19 @@ GDALRasterWrapper *breaks(
 		}
 
 		newBandNames.push_back("strat_map");
-	}
-	
+	}	
+
 	//TODO: multithread and consider cache thrashing
 	//step 4: iterate through indices and update the stratified raster bands
-	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
+	float noDataFloat = std::nan("-1");
 	for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
 		float mappedStrat = 0;
 		bool nan = false;
 		for (int i = 0; i < bandCount; i++) {
 			T val = rasterBands[i][j];
 
-			if (std::isnan(val) || (double)val == noDataValue) {
-				((float *)stratRasterBands[i])[j] = (float)noDataValue;
+			if (std::isnan(val) || (double)val == noDataValues[i]) {
+				((float *)stratRasterBands[i])[j] = noDataFloat;
 				nan = true;
 				continue;
 			}
@@ -120,7 +124,7 @@ GDALRasterWrapper *breaks(
 		}
 		
 		if (map) {
-			((float *)stratRasterBands[bandCount])[j] = nan ? (float)noDataValue : mappedStrat;
+			((float *)stratRasterBands[bandCount])[j] = nan ? noDataFloat : mappedStrat;
 		}
 	}
 
@@ -136,8 +140,8 @@ GDALRasterWrapper *breaks(
 		std::string(p_raster->getDataset()->GetProjectionRef())
 	);
 	GDALDataset *p_dataset = stratRaster->getDataset();
-	for (size_t i = 1; i < stratRasterBands.size(); i++) {
-		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataValue);
+	for (size_t i = 1; i <= stratRasterBands.size(); i++) {
+		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataFloat);
 	}
 	
 	//step 6: write raster if desired

@@ -20,8 +20,6 @@ GDALRasterWrapper *poly(
 	//step 1: get required info from vector and raster objects
 	GDALDataset *p_vectorDS = p_vector->getDataset();
 	GDALDataset *p_rasterDS = p_raster->getDataset();
-	double noDataValue = p_rasterDS->GetRasterBand(1)->GetNoDataValue();
-	
 	//step 2: create in-memory dataset
 	GDALAllRegister();
 	GDALDataset *p_dataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
@@ -46,8 +44,8 @@ GDALRasterWrapper *poly(
 	p_dataset->SetProjection(p_rasterDS->GetProjectionRef());
 	GDALRasterBand *p_band = p_dataset->GetRasterBand(1);
 	p_band->SetDescription("strata");
-	p_band->SetNoDataValue(noDataValue);
-	p_band->Fill(noDataValue);
+	p_band->SetNoDataValue(std::nan("-1"));
+	p_band->Fill(std::nan("-1"));
 
 	//step 4: generate options list for GDALRasterize()
 	char ** argv = nullptr;

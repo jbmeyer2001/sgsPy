@@ -70,8 +70,10 @@ GDALRasterWrapper *quantiles(
 	std::vector<std::vector<std::tuple<T, U, float>>> stratVects;
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
+	std::vector<double> noDataValues;
 	for (auto const& [key, value] : userProbabilites) {
 		rasterBands.push_back((T *)p_raster->getRasterBand(key));
+		noDataValues.push_back(p_raster->getDataset()->GetRasterBand(key + 1)->GetNoDataValue());
 
 		if (value.size() > maxStratum) {
 			throw std::runtime_error("too many stratum given, result would overflow");
@@ -101,22 +103,22 @@ GDALRasterWrapper *quantiles(
 	
 	//TODO this can all be done in parallel without much use of locks	
 	//step 4 iterate through rasters
-	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
+	float noDataFloat = std::nan("-1");
 	for (int i = 0; i < bandCount; i++) {
 		std::vector<std::tuple<T, U, float>> *stratVect = &stratVects[i];
 
 		for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
 			T val = rasterBands[i][j];
 
-			if (std::isnan(val) || (double)val == noDataValue) {
+			if (std::isnan(val) || (double)val == noDataValues[i]) {
 				//step 4.1 write nodata in nodata ares
-				((float *)stratRasterBands[i])[j] = (float)noDataValue;
+				((float *)stratRasterBands[i])[j] = noDataFloat;
 				
 				//if we're in the first band and we're mapping, write nodata to the map
 				//only do this in the first band so we're not writing to the map a bunch
 				//of times unecessarily
 				if (i == 0 && map) {
-					((float *)stratRasterBands[bandCount])[j] = (float)noDataValue;
+					((float *)stratRasterBands[bandCount])[j] = noDataFloat;
 				}
 
 				continue;
@@ -219,7 +221,7 @@ GDALRasterWrapper *quantiles(
 	);
 	GDALDataset *p_dataset = stratRaster->getDataset();
 	for (size_t i = 1; i <= stratRasterBands.size(); i++) {
-		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataValue);
+		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataFloat);
 	}
 
 	//Step 10 write raster if desired

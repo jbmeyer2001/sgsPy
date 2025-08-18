@@ -41,11 +41,11 @@ GDALRasterWrapper *mapStratifications(
 	size_t maxStratum = std::numeric_limits<float>::max();
 	size_t numPixels = rasters[0]->getWidth() * rasters[0]->getHeight();
 	size_t bandSize = numPixels * sizeof(float);
-	double noDataValue = rasters[0]->getDataset()->GetRasterBand(1)->GetNoDataValue();
 
 	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
 	std::vector<size_t> bandStratMultipliers(1, 1);	
 	std::vector<float *>rasterBands;
+	std::vector<double> noDataValues;
 	for (size_t i = 0; i < rasters.size(); i++) {
 		GDALRasterWrapper *p_raster = rasters[i];
 		std::vector<float> stratumVect = stratums[i];
@@ -64,6 +64,7 @@ GDALRasterWrapper *mapStratifications(
 			bandStratMultipliers.push_back(bandStratMultipliers.back() * stratum);
 
 			rasterBands.push_back((float *)p_raster->getRasterBand(band));
+			noDataValues.push_back(p_raster->getDataset()->GetRasterBand(band + 1)->GetNoDataValue());
 		}
 	}
 
@@ -77,20 +78,20 @@ GDALRasterWrapper *mapStratifications(
 
 	//step 3 allocate mapped raster
 	void * p_mappedRaster = CPLMalloc(bandSize);
-
+	float noDataFloat = std::nan("-1");
 	//step 4 iterate through pixels populating mapped raster with stratum values
 	for (size_t j = 0; j < numPixels; j++) {
 		float mappedStrat = 0;
 		for (size_t i = 0; i < rasterBands.size(); i++) {
 			float strat = rasterBands[i][j];
-			if (std::isnan(strat) || (double)strat == noDataValue) {
-				mappedStrat = (float)noDataValue;
+			if (std::isnan(strat) || (double)strat == noDataValues[i]) {
+				mappedStrat = noDataFloat;
 				break;
 			}
 
 			mappedStrat += strat * bandStratMultipliers[i];
 		}
-		
+			
 		((float *)p_mappedRaster)[j] = mappedStrat;
 	}
 
@@ -105,7 +106,7 @@ GDALRasterWrapper *mapStratifications(
 		rasters[0]->getGeotransform(),
 		std::string(rasters[0]->getDataset()->GetProjectionRef())
 	);
-	stratRaster->getDataset()->GetRasterBand(1)->SetNoDataValue(noDataValue);
+	stratRaster->getDataset()->GetRasterBand(1)->SetNoDataValue(std::nan("-1"));
 
 	//step 6 write raster if desired
 	if (filename != "") {
