@@ -87,7 +87,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
 
             #if a string is passed, check and return corresponding int
             if band not in raster.bands:
-                raise ValueError("bands {} is not a band within the raster.".format(band))
+                msg = "band {} is not a band within the raster.".format(band)
+                raise ValueError(msg)
             return raster.band_name_dict[band]
 
 
