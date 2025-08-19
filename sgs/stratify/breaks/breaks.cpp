@@ -1,11 +1,14 @@
 /******************************************************************************
  *
+ *
  * Project: sgs
  * Purpose: C++ implementation of raster stratification using breaks
  * Author: Joseph Meyer
  * Date: June, 2025
  *
  ******************************************************************************/
+
+#include <iostream>
 
 #include "raster.h"
 
@@ -38,7 +41,6 @@
  * @param bool map whether to add a mapped stratification
  * @param std::string filename the filename to write to (if desired)
  */
-template <typename T>
 GDALRasterWrapper *breaks(
 	GDALRasterWrapper *p_raster,
 	std::map<int, std::vector<double>> breaks,
@@ -46,7 +48,6 @@ GDALRasterWrapper *breaks(
 	std::string filename)
 {
 	//find band count and the maximum number of breaks
-	size_t maxBreaks = std::numeric_limits<float>::max();
 	int bandCount = breaks.size();
 
 	//step 1: allocate new stratification raster
@@ -60,26 +61,49 @@ GDALRasterWrapper *breaks(
 	}
 	
 	//step 2: get the raster bands needed from the datset
-	std::vector<T *> rasterBands;
+	std::vector<void *> rasterBands;
+	std::vector<GDALDataType> rasterBandTypes;
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
 	std::vector<double> noDataValues;
 	for (auto const& [key, val] : breaks) {
-		//add requested band to rasterBands
-		rasterBands.push_back((T *)p_raster->getRasterBand(key));		
-		
-		//add nodata value to vector
-		noDataValues.push_back(p_raster->getDataset()->GetRasterBand(key + 1)->GetNoDataValue());
+		GDALRasterBand *p_band = p_raster->getRasterBand(key);
 
-		//and band breaks vectori
+		//add band type
+		GDALDataType type = p_raster->getRasterBandType(key);
+		rasterBandTypes.push_back(type);
+		
+		//allocate and read raster band buffer
+		void *p_data = VSIMalloc3(
+			p_raster->getHeight(), 
+			p_raster->getWidth(), 
+			p_raster->getRasterBandTypeSize(key)
+		);	
+		CPLErr err = p_band->RasterIO(
+			GF_Read,		//GDALRWFlag eRWFlag
+			0,			//int nXOff
+			0,			//int nYOff
+			p_raster->getWidth(),	//int nXSize
+			p_raster->getHeight(),	//int nYSize
+			p_data,			//void *pData
+			p_raster->getWidth(),	//int nBufXSize
+			p_raster->getHeight(),	//int nBufYSize
+			type,			//GDALDataType eBufType
+			0,			//int nPixelSpace
+			0			//int nLineSpace
+		);
+		if (err) {
+			throw std::runtime_error("error reading raster band from dataset.");
+		}
+		rasterBands.push_back(p_data);
+			
+		//add nodata value to vector
+		noDataValues.push_back(p_band->GetNoDataValue());
+
+		//and band breaks vector
 		std::vector<double> valCopy = val; //have to create copy to alter the band breaks in iteration loop
 		std::sort(valCopy.begin(), valCopy.end());
 		bandBreaks.push_back(valCopy);
-
-		//error checking on band count
-		if (maxBreaks < val.size() + 1) {
-			throw std::runtime_error("number of break indexes exceeds maximum");
-		}
 
 		newBandNames.push_back("strat_" + bandNames[key]);
 	}
@@ -89,10 +113,6 @@ GDALRasterWrapper *breaks(
 		//determine the stratification band index multipliers of the mapped band and error check maxes
 		for (int i = 0; i < bandCount - 1; i++) {
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (bandBreaks[i].size() + 1);
-		}
-
-		if (maxBreaks < bandStratMultipliers.back() * bandBreaks.back().size()) {
-			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum.");
 		}
 
 		newBandNames.push_back("strat_map");
@@ -105,7 +125,33 @@ GDALRasterWrapper *breaks(
 		float mappedStrat = 0;
 		bool nan = false;
 		for (int i = 0; i < bandCount; i++) {
-			T val = rasterBands[i][j];
+			void *p_data = rasterBands[i];
+			double val;
+			switch (rasterBandTypes[i]) {
+				case GDT_Int8:
+					val = static_cast<double>(((int8_t *)p_data)[j]);
+					break;
+				case GDT_UInt16:
+					val = static_cast<double>(((uint16_t *)p_data)[j]);
+					break;
+				case GDT_Int16:
+					val = static_cast<double>(((int16_t *)p_data)[j]);
+					break;
+				case GDT_UInt32:
+					val = static_cast<double>(((uint32_t *)p_data)[j]);
+					break;
+				case GDT_Int32:
+					val = static_cast<double>(((int32_t *)p_data)[j]);
+					break;
+				case GDT_Float32:
+					val = static_cast<double>(((float *)p_data)[j]);
+					break;
+				case GDT_Float64:
+					val = ((double *)p_data)[j];
+					break;
+				default:
+					throw std::runtime_error("raster pixel data type not supported.");
+			}
 
 			if (std::isnan(val) || (double)val == noDataValues[i]) {
 				((float *)stratRasterBands[i])[j] = noDataFloat;
@@ -152,46 +198,6 @@ GDALRasterWrapper *breaks(
 	return stratRaster;
 }
 
-/**
- * Having template types which rely on dynamic information (such as pixel
- * type of the raster) require an unfortunate amount of boilerplate code.
- *
- * This is an attempt to condense as much of the annoying boilerplate into
- * a single place.
- *
- * This function uses type information of the raster pixel type.
- *
- * A call ismade to breaks() with the necessary data type template
- * argument.
- *
- * @returns GDALRasterWrapper *stratified raster
- */
-GDALRasterWrapper *breaksTypeSpecifier(
-	GDALRasterWrapper *p_raster,
-	std::map<int, std::vector<double>> userDefinedBreaks,
-	bool map,
-	std::string filename)
-{
-	switch(p_raster->getRasterType()) {
-		case GDT_Int8:
-		return breaks<int8_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_UInt16:
-		return breaks<uint16_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_Int16:
-		return breaks<int16_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_UInt32:
-		return breaks<uint32_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_Int32:
-		return breaks<int32_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_Float32:
-		return breaks<float>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_Float64:
-		return breaks<double>(p_raster, userDefinedBreaks, map, filename);
-		default:
-		throw std::runtime_error("GDATDataType not one of the accepted types.");
-	}
-}
-
 PYBIND11_MODULE(breaks, m) {
-	m.def("breaks_cpp", &breaksTypeSpecifier);
+	m.def("breaks_cpp", &breaks);
 }

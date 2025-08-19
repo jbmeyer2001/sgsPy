@@ -10,6 +10,7 @@
 #pragma once
 
 #include <filesystem>
+#include <iostream>
 
 #include <gdal_priv.h>
 #include <pybind11/pybind11.h>
@@ -45,7 +46,6 @@ using namespace pybind11::literals;
 class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
-	GDALExtendedDataType rasterType = GDALExtendedDataType::Create(GDT_Unknown);
 
 	void *p_raster = nullptr;
 	bool rasterAllocated = false;
@@ -88,10 +88,11 @@ class GDALRasterWrapper {
 	 * @param int width
 	 * @param int height
 	 * @param int band zero-indexed
+	 * @param GDALDataType the data type to read as
 	 * @returns void * allocated raster buffer
 	 * @throws std::runtime_error if unable to read raster band
 	 */
-	void readRasterBand(void *p_band, int width, int height, int band);
+	void readRasterBand(void *p_band, int width, int height, int band, GDALDataType type);
 
 	/**
 	 * Internal function which returns a pybuffer of the raster band, using
@@ -314,27 +315,29 @@ class GDALRasterWrapper {
 	py::buffer getRasterAsMemView(int width, int height);
 
 	/**
-	 * Getter method for a band in the raster image, used by the C++ side of the application.
+	 * Getter method for a GDALRasterBand in the raster, used by the C++ side of the application.
 	 *
-	 * @param int band zero indexed
+	 * @param int band zero-indexed
 	 * @returns void *pointer to band
 	 * @throws std::runtime_error if unable to read raster band during allocation
 	 */
-	void *getRasterBand(int band);
+	GDALRasterBand *getRasterBand(int band);
 
 	/**
 	 * Getter method for the pixel / raster data type.
 	 *
+	 * @param int band to get type from
 	 * @returns GDALDataType the data type
 	 */
-	GDALDataType getRasterType();
+	GDALDataType getRasterBandType(int band);
 
 	/**
 	 * Getter method for the pixel /raster data type size.
 	 *
+	 * @param int band to get type size from
 	 * @returns size_t the data type size in bytes
 	 */
-	size_t getRasterTypeSize();
+	size_t getRasterBandTypeSize(int band);
 
 	/**
 	 * Gets an unsigned int type as a string. This will be
@@ -369,7 +372,7 @@ class GDALRasterWrapper {
 	 * GetActualBlockSize function from GDAL, which this
 	 * member function calls, takes into account partial blocks.
 	 *
-	 * @param int band 1-indexed raster band
+	 * @param int band 0-indexed raster band
 	 * @param int * holds valid x size
 	 * @param int * holds valid y size
 	 */
@@ -379,7 +382,7 @@ class GDALRasterWrapper {
 	 * Read blocked data from specified band, using 
 	 * GDALRasterBand::ReadBlock().
 	 *
-	 * @param int band 1-indexed raster band
+	 * @param int band 0-indexed raster band
 	 * @param int x block offset
 	 * @param int y block offset
 	 * @param void * data buffer
@@ -390,7 +393,7 @@ class GDALRasterWrapper {
 	 * Write blocked data to specified band, using
 	 * GDALRasterBand::WriteBlock().
 	 *
-	 * @param int band 1-indexed rasterband
+	 * @param int band 0-indexed rasterband
 	 * @param int x block offset
 	 * @param int y block offset
 	 * @param void * data buffer
