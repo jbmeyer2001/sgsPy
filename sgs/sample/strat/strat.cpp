@@ -238,9 +238,12 @@ strat_random(
 		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
 
+	std::cout << sampleIndexes.size() << std::endl;
+	std::cout << sampleIterators.size() << std::endl;
 	//TEST
 	for (size_t i = 0; i < sampleIndexes.size(); i++) {
 		std::cout << "size " << sampleIndexes[i].size() << std::endl;
+		std::cout << "distance: " << std::distance(sampleIterators[i], sampleIndexes[i].end()) << std::endl;
 		for (auto index : sampleIndexes[i]) {
 			if (p_strat[index] != static_cast<float>(i)) {
 				std::cout << i << std::endl;
