@@ -24,8 +24,8 @@ from .sample import (
     clhs,
     existing,
     nc,
-    srs,
-    strat,
+#    srs,
+#    strat,
     systematic,
 )
 
@@ -33,8 +33,8 @@ from .stratify import (
     breaks,
     kmeans,
     poly,
-    quantiles,
-    map,
+#    quantiles,
+#    map,
 )
 
 __all__ = list(
