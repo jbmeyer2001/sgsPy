@@ -4,7 +4,7 @@ from . import (
     clhs,
     existing,
     nc,
-#    srs,
+    srs,
 #    strat,
     systematic,
 )
@@ -14,7 +14,7 @@ from .balanced import balanced
 from .clhs import clhs
 from .existing import existing
 from .nc import nc
-#from .srs import srs
+from .srs import srs
 #from .strat import strat
 from .systematic import systematic
 
@@ -24,7 +24,7 @@ __all__ = [
     "clhs",
     "existing",
     "nc",
-#    "srs",
+    "srs",
 #    "strat",
     "systematic",
 ]

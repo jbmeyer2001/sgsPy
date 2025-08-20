@@ -33,7 +33,6 @@ std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vec
 
 	//add values which occur at quantile probabilities to return vector
 	std::vector<double> quantiles(probabilities.size());
-	size_t splitIndex;
 	for (size_t i = 0; i < probabilities.size(); i++) {
 		double prob = probabilities[i];
 		size_t quantileIndex = (size_t)((double)numDataPixels * prob);

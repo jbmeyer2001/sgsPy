@@ -24,7 +24,7 @@ from .sample import (
     clhs,
     existing,
     nc,
-#    srs,
+    srs,
 #    strat,
     systematic,
 )
