@@ -32,14 +32,15 @@ std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vec
 	std::sort(values.begin(), values.end());
 
 	//add values which occur at quantile probabilities to return vector
-	std::vector<double> quantileVals(probabilities.size());
+	std::vector<double> quantiles(probabilities.size());
 	size_t splitIndex;
-	for (const double& prob : probabilities) {
+	for (size_t i = 0; i < probabilities.size(); i++) {
+		double prob = probabilities[i];
 		size_t quantileIndex = (size_t)((double)numDataPixels * prob);
-		quantileVals.push_back((double)values[quantileIndex]);
+		quantiles[i] = (double)values[quantileIndex];
 	}
 
-	return quantileVals;
+	return quantiles;
 }
 
 /**
@@ -230,6 +231,7 @@ GDALRasterWrapper *quantiles(
 
 		for (int i = 0; i < bandCount; i++) {
 			std::vector<double> quantiles = quantileVals[i];
+
 			double val;
 			switch(rasterBandTypes[i]) {
 				case GDT_Int8:
@@ -256,20 +258,22 @@ GDALRasterWrapper *quantiles(
 				default:
 					throw std::runtime_error("GDALDataType not supported.");
 			}
+
 			if (std::isnan(val) || val == noDataValues[i]) {
 				strat = noDataFloat;
 				mappedStrat = noDataFloat;
 			}
-			else {
+			else {	
 				strat = static_cast<float>(std::distance(
 					quantiles.begin(), 
 					std::lower_bound(quantiles.begin(), quantiles.end(), val)
 				));
 			}
+
 			((float *)stratRasterBands[i])[j] = strat;
 			
 			if (map) {
-				//will not change if this pixel should be nodata
+				//mappedStrat will remain nodata if it is supposed to be nodata
 				mappedStrat += strat * bandStratMultipliers[i] * (mappedStrat != noDataFloat);
 			}
 		}
