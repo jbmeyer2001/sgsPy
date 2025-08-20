@@ -38,7 +38,6 @@ GDALRasterWrapper *mapStratifications(
 	std::string filename)
 {
 	//define useful variables
-	size_t maxStratum = std::numeric_limits<float>::max();
 	size_t numPixels = rasters[0]->getWidth() * rasters[0]->getHeight();
 	size_t bandSize = numPixels * sizeof(float);
 
@@ -50,29 +49,44 @@ GDALRasterWrapper *mapStratifications(
 		GDALRasterWrapper *p_raster = rasters[i];
 		std::vector<float> stratumVect = stratums[i];
 
-		if (p_raster->getRasterType() != GDT_Float32) {
-			throw std::runtime_error("raster MUST have pixel type GDT_Float32");
-		}
-
 		for (size_t j = 0; j < bands[i].size(); j++) {
 			int band = bands[i][j];
 			float stratum = stratums[i][j];
+			GDALRasterBand *p_band = p_raster->getRasterBand(band);
 
 			//we initialized with 1 element and append one for every band.
 			//so, we need to remove 1 element (which wouldn't have been used anyway)
 			//when we are done looping through bands.
 			bandStratMultipliers.push_back(bandStratMultipliers.back() * stratum);
 
-			rasterBands.push_back((float *)p_raster->getRasterBand(band));
-			noDataValues.push_back(p_raster->getDataset()->GetRasterBand(band + 1)->GetNoDataValue());
-		}
-	}
+			void *p_data = VSIMalloc3(
+				p_raster->getHeight(), 
+				p_raster->getWidth(), 
+				sizeof(float)
+			);
+			CPLErr err = p_band->RasterIO(
+				GF_Read,		//GDALRWFlag eRWFlag
+				0,			//int nXOff
+				0,			//int nYOff
+				p_raster->getWidth(),	//int nXSize
+				p_raster->getHeight(),	//int nYSize
+				p_data,			//void *pData
+				p_raster->getWidth(),	//int nBufXSize
+				p_raster->getHeight(),	//int nBufYSize
+				GDT_Float32,//TODO 	//GDALDataType eBufTypew
+				0,			//int nPixelSpace
+				0			//int nLineSpace
+			);
+			if (err) {
+				throw std::runtime_error("error reading raster band from dataset.");
+			}
+			rasterBands.push_back((float *)p_data);
+			noDataValues.push_back(p_band->GetNoDataValue());
 
-	//step 2 check max stratum, and remove unused bandStratMultiplier
-	//bandStratMultipliers.back() contains the largest index possible given all the stratification
-	//combinations.
-	if (bandStratMultipliers.back() > maxStratum) {
-		throw std::runtime_error("the number of possible strata given by the raster bands exceeds the maximum allowed (the maximum index which can occur without integer overflow).");
+			if (p_raster->getRasterBandType(band) != GDT_Float32) {
+				std::cout << "**warning** band " << band << " of raster " << i << " will be converted to float type to be consistent with the packages standard." << std::endl;
+			}
+		}
 	}
 	bandStratMultipliers.pop_back();
 
@@ -93,6 +107,11 @@ GDALRasterWrapper *mapStratifications(
 		}
 			
 		((float *)p_mappedRaster)[j] = mappedStrat;
+	}
+
+	//free allocated band data
+	for (size_t i = 0; i < rasterBands.size(); i++) {
+		free(rasterBands[i]);
 	}
 
 	//step 5 create new GDALRasterWrapper in-memory

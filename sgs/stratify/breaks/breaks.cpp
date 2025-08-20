@@ -174,6 +174,11 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
+	//free allocated band data
+	for (size_t i = 0; i < rasterBands.size(); i++) {
+		free(rasterBands[i]);
+	}
+
 	//step 5: create GDALRasterWrapper object from bands
 	//this dynamically-allocated object will be cleaned up by python
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
@@ -189,7 +194,7 @@ GDALRasterWrapper *breaks(
 	for (size_t i = 1; i <= stratRasterBands.size(); i++) {
 		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataFloat);
 	}
-	
+		
 	//step 6: write raster if desired
 	if (filename != "") {
 		stratRaster->write(filename);

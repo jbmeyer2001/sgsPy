@@ -56,6 +56,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         if a string within the bands argument does not exist in the raster
     ValueError
         if an int within the bands argument does not exist in the raster
+    ValueError
+        if the height or width of all rasters doesn't match
     RuntimeError (C++)
         if raster pixel type is not GDT_Float32
     RuntimeError (C++)
@@ -66,7 +68,16 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     band_lists = []
     stratum_lists = []
 
+    height = args[0][0].height
+    width = args[0][0].width
+
     for (raster, bands, num_stratum) in args: 
+        if raster.height != height:
+            raise ValueError("height is not the same across all rasters.")
+
+        if raster.width != width:
+            raise ValueError("width is not the same across all rasters.")
+
         #error checking on bands and num_stratum lists
         if type(bands) is list and type(num_stratum) is list and len(bands) != len(num_stratum):
             raise ValueError("if bands and num_stratum arguments are lists, they must have the same length.")
@@ -90,7 +101,6 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
                 msg = "band {} is not a band within the raster.".format(band)
                 raise ValueError(msg)
             return raster.band_name_dict[band]
-
 
         #error checking on band int/string values
         band_list = []

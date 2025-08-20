@@ -9,6 +9,36 @@
 
 #include "raster.h"
 
+template <typename T>
+std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vector<double> probabilities, double noDataValue) {
+	std::vector<T> values(pixelCount);
+
+	//write values which aren't nodata into values matrix
+	bool isNan;
+	size_t dataPixelIndex = 0;
+	for (size_t i = 0; i < pixelCount; i++) {
+		T val = reinterpret_cast<T *>(p_data)[i];
+		isNan = std::isnan(val) && (double)val != noDataValue;
+		values[dataPixelIndex] = val;
+		dataPixelIndex += !isNan;
+	}
+	size_t numDataPixels = dataPixelIndex + 1;
+	values.resize(numDataPixels);
+
+	//sort values matrix in ascending order
+	std::sort(values.begin(), values.end());
+
+	//add values which occur at quantile probabilities to return vector
+	std::vector<double> quantileVals(probabilities.size());
+	size_t splitIndex;
+	for (const double& prob : probabilities) {
+		quantileIndex = (size_t)((double)numDataPixels * prob);
+		quantileVals.push_back((double)values[quantileIndex]);
+	}
+
+	return quantileVals;
+}
+
 /**
  * This function stratifies a given raster using user-defined probabilities.
  * The probabilities (quantiles) are provided as a vector of doubles mapped
@@ -53,8 +83,8 @@ GDALRasterWrapper *quantiles(
 	bool map,
 	std::string filename) 
 {
-	size_t maxStratum = std::numeric_limits<float>::max();
 	int bandCount = userProbabilites.size();
+	size_t pixelCount = p_raster->getHeight() * p_raster->getWidth();
 
 	//step 1 allocate new rasters
 	std::vector<void *>stratRasterBands;
@@ -65,25 +95,45 @@ GDALRasterWrapper *quantiles(
 	}
 
 	//step 2 get raster bands from GDALRasterWrapper
-	std::vector<T *>rasterBands;
+	std::vector<void *>rasterBands;
+	std::vector<GDALDataType> rasterBandTypes;
 	std::vector<std::vector<double>> probabilities;
-	std::vector<std::vector<std::tuple<T, U, float>>> stratVects;
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
 	std::vector<double> noDataValues;
 	for (auto const& [key, value] : userProbabilites) {
-		rasterBands.push_back((T *)p_raster->getRasterBand(key));
-		noDataValues.push_back(p_raster->getDataset()->GetRasterBand(key + 1)->GetNoDataValue());
+		GDALRasterBand *p_band = p_raster->getRasterBand(key);
 
-		if (value.size() > maxStratum) {
-			throw std::runtime_error("too many stratum given, result would overflow");
+		//add band type
+		GDALDataType type = p_raster->getRasterBandType(key);
+		rasterBandTypes.push_back(type);
+
+		//allocate and read raster band buffer
+		void *p_data = VSIMalloc3(
+			p_raster->getHeight(),
+			p_raster->getWidth(),
+			p_raster->getRasterBandTypeSize(key)
+		);
+		CPLErr err = p_band->RasterIO(
+			GF_Read,		//GDALRWFlag eRWFlag
+			0,			//int nXOff
+			0,			//int nYOff
+			p_raster->getWidth(),	//int nXSize
+			p_raster->getHeight(),	//int nYSize
+			p_data,			//void *pData
+			p_raster->getWidth(),	//int nBufXSize
+			p_raster->getHeigth(),	//int nBUfYSize
+			type,			//GDALDataType eBufType
+			0,			//int nPixelSpace
+			0			//int nLineSpace
+		);
+		if (err) {
+			throw std::runtime_error("error reading raster band from dataset.");
 		}
 
+		rasterBands.push_back(p_data);
+		noDataValues.push_back(p_band->GetNoDataValue());
 		probabilities.push_back(value);	
-
-		std::vector<std::tuple<T, U, float>> stratVect;
-		stratVects.push_back(stratVect);
-
 		newBandNames.push_back("strat_" + bandNames[key]);
 	}
 
@@ -103,109 +153,137 @@ GDALRasterWrapper *quantiles(
 	
 	//TODO this can all be done in parallel without much use of locks	
 	//step 4 iterate through rasters
-	float noDataFloat = std::nan("-1");
+	std::vector<std::vector<double>> quantileVals;
 	for (int i = 0; i < bandCount; i++) {
-		std::vector<std::tuple<T, U, float>> *stratVect = &stratVects[i];
+		//CALL calculateQuantiles
+		std::vector<double> quantiles;
+		switch (rasterBandTypes[i]) {
+			case GDT_Int8:
+				quantiles = calculateQuantiles<int8_t>(
+					rasterBands[i],
+					pixelCount,
+					probabilities[i],
+					noDataValues[i]
+				);
+				break;
+			case GDT_UInt16:
+				quantiles = calculateQuantiles<uint16_t>(
+					rasterBands[i],
+					pixelCount,
+					probabilities[i],
+					noDataValues[i]
+				);
+				break;
+			case GDT_Int16:
+				quantiles = calculateQuantiles<int32_t>(
+					rasterBands[i],
+					pixelCount,
+					probabilities[i],
+					noDataValues[i]
+				);
+				break;
 
-		for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
-			T val = rasterBands[i][j];
+			case GDT_UInt32:
+				quantiles = calculateQuantiles<uint32_t>(
+					rasterBands[i],
+					pixelCount,
+					probabilities[i],
+					noDataValues[i]
+				);
+				break;
 
-			if (std::isnan(val) || (double)val == noDataValues[i]) {
-				//step 4.1 write nodata in nodata ares
-				((float *)stratRasterBands[i])[j] = noDataFloat;
-				
-				//if we're in the first band and we're mapping, write nodata to the map
-				//only do this in the first band so we're not writing to the map a bunch
-				//of times unecessarily
-				if (i == 0 && map) {
-					((float *)stratRasterBands[bandCount])[j] = noDataFloat;
-				}
+			case GDT_Int32:
+				quantiles = calculateQuantiles<int32_t>(
+					rasterBands[i],
+					pixelCount,
+					probabilities[i],
+					noDataValues[i]
+				);
+				break;
 
-				continue;
-			}
-			else {
-				//step 4.2 populate vectors with index/value
-				stratVect->push_back({val, j, 0});
-			}
-		}	
-		
-		//step 4.3 sort vectors in ascending order by pixel val
-		std::sort(stratVect->begin(), stratVect->end(), [](auto const& t1, auto const& t2){
-			return std::get<0>(t1) < std::get<0>(t2);	
-		});
-
-		//step 4.4 assign stratum values depending on user defined probability breaks
-		size_t numDataPixels = stratVect->size();
-		std::vector<size_t> stratumSplittingIndexes;		
-		std::vector<T> stratumSplittingValues;
-		stratumSplittingIndexes.push_back(0);
-		for (const double& prob : probabilities[i]) {
-			size_t splitIndex = (size_t)((double)numDataPixels * prob); 
-			stratumSplittingIndexes.push_back(splitIndex + 1);
-			stratumSplittingValues.push_back(std::get<0>(stratVect->at(splitIndex)));
+			case GDT_Float32:
+				quantiles = calculateQuantiles<float>(
+					rasterBands[i],
+					pixelCount,
+					probabilities[i],
+					noDataValues[i]
+				);
+				break;
+			case GDT_Float64:
+				quantiles = calculateQuantiles<double>(
+					rasterBands[i],
+					pixelCount,
+					probabilities[i],
+					noDataValues[i]
+				);
+				break;
+			default:
+				throw std::runtime_error("GDALDataType not supported.");
 		}
-		stratumSplittingIndexes.push_back(numDataPixels);
-
-		/**
-		 * TODO its possible runtime will be faster if I just write the stratum values here
-		 * directly. However, my aim is to take advantage of spatial locality -- to re-sort
-		 * the pixels by index then assign them sequentially. For large images, I figure 
-		 * the advantage of cache hits will yield a higher runtime despite the additional sort
-		 * and memory used to store the stratum value.
-		 *
-		 * However, this is just a guess, and it may depend on the specific image.
-		 *
-		 * Regardless, this requires some testing in the future.
-		 */
-		for (float stratum = 0; stratum < stratumSplittingIndexes.size() - 1; stratum++) {
-			for (size_t index = stratumSplittingIndexes[stratum]; index < stratumSplittingIndexes[stratum + 1]; index++) {
-				if (stratum == 0) {
-					std::get<2>(stratVect->at(index)) = stratum;
-					continue;
-				}
-
-				//values should not occur in multiple stratum. 
-				//If this value occured in a previous stratum (due to overlap)
-				//then add it to that stratum.
-				T val = std::get<0>(stratVect->at(index));
-				if (val != stratumSplittingValues[(size_t)stratum - 1]) {
-					std::get<2>(stratVect->at(index)) = stratum;
-				}
-				else {
-					float newStratum = stratum - 1;
-					while (newStratum >= 0 && val == stratumSplittingValues[(size_t)newStratum]) {
-						newStratum--;
-					}
-					std::get<2>(stratVect->at(index)) = newStratum + 1;
-				}
-			}
-		}
-
-		//step 4.5 sort by index
-		std::sort(stratVect->begin(), stratVect->end(), [](auto const& t1, auto const& t2){
-			return std::get<1>(t1) < std::get<1>(t2);		
-		});
+		quantileVals.push_back(quantiles);
 	}
 
 	//TODO this may be parallelizable
 	//step 8 iterate through vectors and assign stratum value
-	for (size_t j = 0; j < stratVects[0].size(); j++) {
+	float noDataFloat = std::nan("-1");
+	for (size_t j = 0; j < pixelCount; j++) {
 		float mappedStrat = 0;
+		float strat = 0;
 
- 		//I'm assuming if there are nodata pixels, they're all in the same indexes.
-		//if that's not true there could be errors here.
-		U index = std::get<1>(stratVects[0][j]);
 		for (int i = 0; i < bandCount; i++) {
-			float strat = std::get<2>(stratVects[i][j]);
-			((float *)stratRasterBands[i])[index] = strat;
+			std::vector<double> quantiles = quantileVals[i];
+			double val;
+			switch(rasterBandTypes[i]) {
+				case GDT_Int8:
+					val = static_cast<double>(reinterpret_cast<int8_t *>(rasterBands[i])[j]);
+					break;
+				case GDT_UInt16:
+					val = static_cast<double>(reinterpret_cast<uint16_t *>(rasterBands[i])[j]);
+					break;
+				case GDT_Int16:
+					val = static_cast<double>(reinterpret_cast<int16_t *>(rasterBands[i])[j]);
+					break;
+				case GDT_UInt32:
+					val = static_cast<double>(reinterpret_cast<uint32_t *>(rasterBands[i])[j]);
+					break;
+				case GDT_Int32:
+					val = static_cast<double>(reinterpret_cast<int32_t *>(rasterBands[i])[j]);
+					break;
+				case GDT_Float32:
+					val = static_cast<double>(reinterpret_cast<float *>(rasterBands[i])[j]);
+					break;
+				case GDT_Float64:
+					val = static_cast<double>(reinterpret_cast<double *>(rasterBands[i])[j]);
+					break;
+				default:
+					throw std::runtime_error("GDALDataType not supported.");
+			}
+			if (std::isnan(val) || val == noDataValues[i]) {
+				strat = noDataFloat;
+				mappedStrat = noDataFloat;
+			}
+			else {
+				strat = static_cast<float>(std::distance(
+					quantiles.begin(), 
+					std::lower_bound(quantiles.begin(), quantiles.end())
+				));
+			}
+			((float *)stratRasterBands[i])[j] = strat;
+			
 			if (map) {
-				mappedStrat += strat * bandStratMultipliers[i];
+				//will not change if this pixel should be nodata
+				mappedStrat += strat * bandStratMultipliers[i] * (mappedStrat != noDataFloat);
 			}
 		}
 
 		if (map) {
-			((float *)stratRasterBands[bandCount])[index] = mappedStrat;
+			((float *)stratRasterBands[bandCount])[j] = mappedStrat;
 		}
+	}
+
+	//free allocated band data
+	for (size_t i = 0; i < rasterBands.size(); i++) {
+		free(rasterBands[i]);
 	}
 
 	//step 9 create new GDALRasterWrapper in-memory

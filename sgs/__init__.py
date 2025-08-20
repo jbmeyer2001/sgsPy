@@ -33,8 +33,8 @@ from .stratify import (
     breaks,
     kmeans,
     poly,
-#    quantiles,
-#    map,
+    quantiles,
+    map,
 )
 
 __all__ = list(
