@@ -9,6 +9,9 @@
 
 #include "raster.h"
 
+/*
+ *
+ */
 template <typename T>
 std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vector<double> probabilities, double noDataValue) {
 	std::vector<T> values(pixelCount);
@@ -32,7 +35,7 @@ std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vec
 	std::vector<double> quantileVals(probabilities.size());
 	size_t splitIndex;
 	for (const double& prob : probabilities) {
-		quantileIndex = (size_t)((double)numDataPixels * prob);
+		size_t quantileIndex = (size_t)((double)numDataPixels * prob);
 		quantileVals.push_back((double)values[quantileIndex]);
 	}
 
@@ -76,7 +79,6 @@ std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vec
  * @param bool map whether to add a mapped stratification
  * @param std::string filename the filename to write to (if desired)
  */
-template <typename T, typename U>
 GDALRasterWrapper *quantiles(
 	GDALRasterWrapper *p_raster,
 	std::map<int, std::vector<double>> userProbabilites,
@@ -122,7 +124,7 @@ GDALRasterWrapper *quantiles(
 			p_raster->getHeight(),	//int nYSize
 			p_data,			//void *pData
 			p_raster->getWidth(),	//int nBufXSize
-			p_raster->getHeigth(),	//int nBUfYSize
+			p_raster->getHeight(),	//int nBUfYSize
 			type,			//GDALDataType eBufType
 			0,			//int nPixelSpace
 			0			//int nLineSpace
@@ -142,10 +144,6 @@ GDALRasterWrapper *quantiles(
 	if (map) {
 		for (int i = 0; i < bandCount - 1; i++) {
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (probabilities[i].size() + 1);
-		}
-
-		if (maxStratum < bandStratMultipliers.back() * probabilities.back().size()) {
-			throw std::runtime_error("number of stratum in mapped stratification exceeds maximum.");
 		}
 
 		newBandNames.push_back("strat_map");
@@ -265,7 +263,7 @@ GDALRasterWrapper *quantiles(
 			else {
 				strat = static_cast<float>(std::distance(
 					quantiles.begin(), 
-					std::lower_bound(quantiles.begin(), quantiles.end())
+					std::lower_bound(quantiles.begin(), quantiles.end(), val)
 				));
 			}
 			((float *)stratRasterBands[i])[j] = strat;
@@ -310,80 +308,6 @@ GDALRasterWrapper *quantiles(
 	return stratRaster;
 }
 
-/**
- * Having template types which rely on dynamic information (such as
- * the pixel type of the added raster, or the number of pixels in
- * the raster) require an unfortunate amount of boilerplate code.
- *
- * This is an attempt to condense as much of the annoyting boilerplate
- * into a single place.
- *
- * This function uses type information of the raster pixel type,
- * as well as the minimally sized unsigned int type which can represent
- * all necessary indices.
- *
- * A call is made to quantiles() with the necessary data type template
- * arguments depending on raster parameters.
- *
- * @returns GDALRasterWraper * newly generated raster image of stratum
- */
-GDALRasterWrapper *quantilesTypeSpecifier(
-	GDALRasterWrapper *p_raster,
-	std::map<int, std::vector<double>> userProbabilites,
-	bool map,
-	std::string filename) 
-{
-	//TODO add switch with minIndexIntType and more template arguments
-	std::string minIndexIntType = p_raster->getMinIndexIntType(false); //singleBand = false
-	switch(p_raster->getRasterType()) {
-		case GDT_Int8:
-		if (minIndexIntType == "unsigned_short") { return quantiles<int8_t, unsigned short>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned") { return quantiles<int8_t, unsigned>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long") { return quantiles<int8_t, unsigned long>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long_long") { return quantiles<int8_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
-		break;
-		case GDT_UInt16:
-		if (minIndexIntType == "unsigned_short") { return quantiles<uint16_t, unsigned short>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned") { return quantiles<uint16_t, unsigned>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long") { return quantiles<uint16_t, unsigned long>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long_long") { return quantiles<uint16_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
-		break;
-		case GDT_Int16:
-		if (minIndexIntType == "unsigned_short") { return quantiles<int16_t, unsigned short>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned") { return quantiles<int16_t, unsigned>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long") { return quantiles<int16_t, unsigned long>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long_long") { return quantiles<int16_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
-		break;
-		case GDT_UInt32:
-		if (minIndexIntType == "unsigned_short") { return quantiles<uint32_t, unsigned short>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned") { return quantiles<uint32_t, unsigned>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long") { return quantiles<uint32_t, unsigned long>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long_long") { return quantiles<uint32_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
-		break;
-		case GDT_Int32:
-		if (minIndexIntType == "unsigned_short") { return quantiles<int32_t, unsigned short>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned") { return quantiles<int32_t, unsigned>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long") { return quantiles<int32_t, unsigned long>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long_long") { return quantiles<int32_t, unsigned long long>(p_raster, userProbabilites, map, filename); }
-		break;
-		case GDT_Float32:
-		if (minIndexIntType == "unsigned_short") { return quantiles<float, unsigned short>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned") { return quantiles<float, unsigned>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long") { return quantiles<float, unsigned long>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long_long") { return quantiles<float, unsigned long long>(p_raster, userProbabilites, map, filename); }
-		break;
-		case GDT_Float64:
-		if (minIndexIntType == "unsigned_short") { return quantiles<double, unsigned short>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned") { return quantiles<double, unsigned>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long") { return quantiles<double, unsigned long>(p_raster, userProbabilites, map, filename); }
-		if (minIndexIntType == "unsigned_long_long") { return quantiles<double, unsigned long long>(p_raster, userProbabilites, map, filename); }
-		break;
-		default:
-		throw std::runtime_error("GDATDataType not one of the accepted types.");
-	}
-	throw std::runtime_error("type " + minIndexIntType + " not a valid type.");
-}
-
 PYBIND11_MODULE(quantiles, m) {
-	m.def("quantiles_cpp", &quantilesTypeSpecifier);
+	m.def("quantiles_cpp", &quantiles);
 }
