@@ -11,6 +11,8 @@ from sgs.utils import SpatialRaster
 
 from map_stratifications import map_stratifications_cpp
 
+MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
+
 def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         filename: str = ''):
     """
@@ -58,6 +60,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         if an int within the bands argument does not exist in the raster
     ValueError
         if the height or width of all rasters doesn't match
+    ValueError
+        if the maximum strata value would result in an integer overflow error
     RuntimeError (C++)
         if raster pixel type is not GDT_Float32
     RuntimeError (C++)
@@ -66,7 +70,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
 
     raster_list = []
     band_lists = []
-    stratum_lists = []
+    strata_lists = []
 
     height = args[0][0].height
     width = args[0][0].width
@@ -116,9 +120,17 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         #prepare cpp function arguments
         raster_list.append(raster.cpp_raster)
         band_lists.append(band_list)
-        stratum_lists.append(stratum_list)
+        strata_lists.append(stratum_list)
+
+    #error check max value for potential overflow error 
+    max_mapped_strata = 1
+    for strata_list in strata_lists:
+        for strata_count in strata_list:
+            max_mapped_strata = max_mapped_strata * strata_count
+    if max_mapped_strata > MAX_STRATA_VAL:
+        raise ValueError("the mapped strata will cause an overflow error because the max strata number is too large.")
 
     #call cpp map function
-    mapped_raster = map_stratifications_cpp(raster_list, band_lists, stratum_lists, filename)
+    mapped_raster = map_stratifications_cpp(raster_list, band_lists, strata_lists, filename)
 
     return SpatialRaster(mapped_raster)

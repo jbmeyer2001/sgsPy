@@ -13,6 +13,8 @@ from sgs.utils import SpatialRaster
 
 from breaks import breaks_cpp
 
+MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
+
 def breaks(
     rast: SpatialRaster,
     breaks: list[float | list[float]] | dict[str, list[float]],
@@ -50,6 +52,8 @@ def breaks(
         if a break contains a value less than the minimum in the corresponding raster band
     ValueError
         if a break contains a value greater than the maximum in the corresponding raster band
+    ValueError
+        if maximum strata value would result in an integer overflow error
     RuntimeError (C++)
         if the raster data type is not accepted
     RuntimeError (C++)
@@ -84,6 +88,18 @@ def breaks(
                 breaks_dict[rast.band_name_dict[key]] = val
             else:
                 raise ValueError("breaks dict key must be a valid band name (see SpatialRaster.bands for list of names)")
+
+    #error check max value for potential overflow error
+    max_mapped_strata = int(map)
+    for _, val in breaks_dict.items():
+        strata_count = len(val) + 1
+        if strata_count > MAX_STRATA_VAL:
+            raise ValueError("one of the breaks given will cause an integer overflow error because the max strata number is too large.")
+
+        max_mapped_strata = max_mapped_strata * strata_count
+
+    if max_mapped_strata > MAX_STRATA_VAL:
+        raise ValueError("the mapped strata will cause an overflow error because the max strata number is too large.")    
 
     #call stratify breaks function
     strat_raster = breaks_cpp(rast.cpp_raster, breaks_dict, map, filename)

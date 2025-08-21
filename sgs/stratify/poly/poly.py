@@ -14,6 +14,8 @@ from sgs.utils import (
 
 from poly import poly_cpp
 
+MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
+
 def poly(
     raster: SpatialRaster,
     vector: SpatialVector,
@@ -55,10 +57,19 @@ def poly(
         the stratification values of each feature value, represented as the index in the list
     filename : str
         the output filename to write to, if desired
+
+    Raises
+    --------------------
+    ValueError
+        if the maximum strata value would result in an integer overflow error
     """
 
     cases = ""
     where_entries = []
+
+    if len(features) > MAX_STRATA_VAL:
+        raise ValueError("the number of features (and resulting max strata) will cause an overflow error because the max strata number is too large.")
+
     #generate query cases and where clause using features and attribute
     for i in range(len(features)):
         if type(features[i]) is str:
