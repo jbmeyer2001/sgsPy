@@ -5,7 +5,7 @@ from . import (
     existing,
     nc,
     srs,
-#    strat,
+    strat,
     systematic,
 )
 
@@ -15,7 +15,7 @@ from .clhs import clhs
 from .existing import existing
 from .nc import nc
 from .srs import srs
-#from .strat import strat
+from .strat import strat
 from .systematic import systematic
 
 __all__ = [
@@ -25,6 +25,6 @@ __all__ = [
     "existing",
     "nc",
     "srs",
-#    "strat",
+    "strat",
     "systematic",
 ]

@@ -1,4 +1,4 @@
 subdir('balanced')
 subdir('srs')
-#subdir('strat')
+subdir('strat')
 subdir('systematic')
