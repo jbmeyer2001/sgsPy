@@ -147,9 +147,9 @@ class GDALRasterWrapper {
 	GDALRasterWrapper(
 		std::vector<void *> rasterBands, 
 		std::vector<std::string> rasterBandNames,
+		std::vector<GDALDataType> rasterBandTypes,
 		int width, 
 		int height, 
-		GDALDataType type, 
 		double *geotransform,
 		std::string projection
 	);

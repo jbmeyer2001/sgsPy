@@ -32,9 +32,9 @@ from .sample import (
 from .stratify import (
     breaks,
     kmeans,
-    poly,
-    quantiles,
-    map,
+#    poly,
+#    quantiles,
+#    map,
 )
 
 __all__ = list(

@@ -63,9 +63,9 @@ void GDALRasterWrapper::createFromDataset(GDALDataset *p_dataset) {
 GDALRasterWrapper::GDALRasterWrapper(
 	std::vector<void *> rasterBands,
 	std::vector<std::string> rasterBandNames,
+	std::vector<GDALDataType> rasterBandTypes,
 	int width,
 	int height,
-	GDALDataType type,
 	double *geotransform,
 	std::string projection)
 {
@@ -79,11 +79,11 @@ GDALRasterWrapper::GDALRasterWrapper(
 		width,
 		height,
 		0,
-		type,
+		rasterBandTypes[0],
 		nullptr
 	));
 	if (!this->p_dataset) {
-		throw std::runtime_error("dataset pointer is null after initialization, dataset unabel to be initialized.");
+		throw std::runtime_error("dataset pointer is null after initialization, dataset unable to be initialized.");
 	}
 
 	//set crs
@@ -96,11 +96,13 @@ GDALRasterWrapper::GDALRasterWrapper(
 	for (size_t i = 0; i < rasterBands.size(); i++) {
 		char **papszOptions = nullptr;
 		papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", std::to_string((size_t)rasterBands[i]).c_str());
-		err = this->p_dataset->AddBand(type, papszOptions);
+		err = this->p_dataset->AddBand(rasterBandTypes[i], papszOptions);
 		if (err) {
 			throw std::runtime_error("error adding band.");
 		}
-		this->p_dataset->GetRasterBand(i + 1)->SetDescription(rasterBandNames[i].c_str());
+		GDALRasterBand *p_band = this->p_dataset->GetRasterBand(i + 1);
+		p_band->SetDescription(rasterBandNames[i].c_str());
+		p_band->SetNoDataValue(-1); //all strat rasters processed by this package will have nodata -1 
 	}	
 
 	//copy geotransform values (not pointers) and set dataset geotransform

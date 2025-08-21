@@ -50,22 +50,29 @@ GDALRasterWrapper *breaks(
 	//find band count and the maximum number of breaks
 	int bandCount = breaks.size();
 
-	//step 1: allocate new stratification raster
-	std::vector<size_t> bandStratMultipliers(breaks.size(), 1);
+	//determine max strata for different data types
+	int maxInt8 = std::numeric_limits<int8_t>::max();
+	int maxInt16 = std::numeric_limits<int16_t>::max();
+
+	//band break locations
 	std::vector<std::vector<double>> bandBreaks;
-	std::vector<void *> stratRasterBands;
-	size_t stratRasterBandSize = p_raster->getWidth() * p_raster->getHeight() * sizeof(float);
-	void *p_stratRaster = CPLMalloc(stratRasterBandSize * (bandCount + (size_t)map));
-	for (size_t i = 0; i < bandCount + (size_t)map; i++) {
-		stratRasterBands.push_back((void *)((size_t)p_stratRaster + (stratRasterBandSize * i)));
-	}
 	
-	//step 2: get the raster bands needed from the datset
+	//raster bands and each raster band type
 	std::vector<void *> rasterBands;
 	std::vector<GDALDataType> rasterBandTypes;
+	
+	//output strat raster bands and type
+	std::vector<void *> stratBands;
+	std::vector<GDALDataType> stratBandTypes;
+
+	//band output names
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
+
+	//per-band nodata values
 	std::vector<double> noDataValues;
+
+	//step 1: allocate, read, and initialize raster data and breaks information
 	for (auto const& [key, val] : breaks) {
 		GDALRasterBand *p_band = p_raster->getRasterBand(key);
 
@@ -105,25 +112,70 @@ GDALRasterWrapper *breaks(
 		std::sort(valCopy.begin(), valCopy.end());
 		bandBreaks.push_back(valCopy);
 
+		//determine pixel type and allocate strata bands
+		size_t pixelTypeSize = 0;
+		size_t maxStrata = val.size() + 1;
+		if (maxStrata <= static_cast<size_t>(maxInt8)) {
+			stratBandTypes.push_back(GDT_Int8);
+			pixelTypeSize = sizeof(int8_t);
+		}
+		else if (maxStrata <= maxInt16) {
+			stratBandTypes.push_back(GDT_Int16);
+			pixelTypeSize = sizeof(int16_t);
+		}
+		else { //Python side of the application does checking for overflow errors with int32
+			stratBandTypes.push_back(GDT_Int32);
+			pixelTypeSize = sizeof(int32_t);
+		}
+		void *p_strata = VSIMalloc3(
+			p_raster->getWidth(),
+			p_raster->getHeight(),
+			pixelTypeSize
+		);
+		stratBands.push_back(p_strata);
+
 		newBandNames.push_back("strat_" + bandNames[key]);
 	}
 
-	//step 3: set bandStratMultipliers and check max size if mapped stratification	
+	//step 2: set bandStratMultipliers and check max size if mapped stratification	
+	std::vector<size_t> bandStratMultipliers(breaks.size(), 1);
 	if (map) {
 		//determine the stratification band index multipliers of the mapped band and error check maxes
 		for (int i = 0; i < bandCount - 1; i++) {
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (bandBreaks[i].size() + 1);
 		}
 
+		//determine pixel type and allocate map strata
+		size_t maxStrata = bandStratMultipliers.back() * (bandBreaks.back().size() + 1);
+		size_t pixelTypeSize;
+		if (maxStrata <= maxInt8) {
+			stratBandTypes.push_back(GDT_Int8);
+			pixelTypeSize = sizeof(int8_t);
+		}
+		else if (maxStrata <= maxInt16) {
+			stratBandTypes.push_back(GDT_Int16);
+			pixelTypeSize = sizeof(int16_t);
+		}
+		else { //Python side of the application does checking for overflow errors with int32
+			stratBandTypes.push_back(GDT_Int32);
+			pixelTypeSize = sizeof(int32_t);
+		}
+		void *p_strata = VSIMalloc3(
+			p_raster->getWidth(),
+			p_raster->getHeight(),
+			pixelTypeSize
+		);
+		stratBands.push_back(p_strata);
+
 		newBandNames.push_back("strat_map");
 	}	
 
 	//TODO: multithread and consider cache thrashing
-	//step 4: iterate through indices and update the stratified raster bands
+	//step 3: iterate through indices and update the stratified raster bands
 	float noDataFloat = std::nan("-1");
 	for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
-		float mappedStrat = 0;
-		bool nan = false;
+		size_t mappedStrat = 0;
+		bool mapNan = false;
 		for (int i = 0; i < bandCount; i++) {
 			void *p_data = rasterBands[i];
 			double val;
@@ -153,24 +205,56 @@ GDALRasterWrapper *breaks(
 					throw std::runtime_error("raster pixel data type not supported.");
 			}
 
-			if (std::isnan(val) || (double)val == noDataValues[i]) {
-				((float *)stratRasterBands[i])[j] = noDataFloat;
-				nan = true;
-				continue;
+			//determine if pixel is nan
+			bool isNan = std::isnan(val) || (double)val == noDataValues[i];
+			mapNan |= isNan;
+
+			//calculate strata value if not nan
+			size_t strat = 0;
+			if (!isNan) {
+				std::vector<double> curBandBreaks = bandBreaks[i];
+				auto it = std::lower_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
+				strat = (it == curBandBreaks.end()) ? curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
 			}
 
-			std::vector<double> curBandBreaks = bandBreaks[i];	
-			auto it = std::lower_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
-			float strat = (it == curBandBreaks.end()) ? (float)curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
-			((float *)(stratRasterBands[i]))[j] = strat;
+			//assign pixel value
+			switch(stratBandTypes[i]) {
+				case GDT_Int8:
+					reinterpret_cast<int8_t *>(stratBands[i])[j] = isNan ?
+						static_cast<int8_t>(-1) :
+						static_cast<int8_t>(strat);
+				case GDT_Int16: 
+					reinterpret_cast<int16_t *>(stratBands[i])[j] = isNan ?
+						static_cast<int16_t>(-1) :
+						static_cast<int16_t>(strat);
+				case GDT_Int32: 
+					reinterpret_cast<int32_t *>(stratBands[i])[j] = isNan ?
+						static_cast<int32_t>(-1) :
+						static_cast<int32_t>(strat);
+			}
 
+			//adjust mappedStrat as required
 			if (map) {
 				mappedStrat += strat * bandStratMultipliers[i];
 			}
 		}
 		
+		//assign mapped value
 		if (map) {
-			((float *)stratRasterBands[bandCount])[j] = nan ? noDataFloat : mappedStrat;
+			switch(stratBandTypes.back()) {
+				case GDT_Int8:
+					reinterpret_cast<int8_t *>(stratBands.back())[j] = mapNan ?
+						static_cast<int8_t>(-1) : 
+						static_cast<int8_t>(mappedStrat);
+				case GDT_Int16:
+					reinterpret_cast<int16_t *>(stratBands.back())[j] = mapNan ?
+						static_cast<int16_t>(-1) :
+						static_cast<int16_t>(mappedStrat);
+				case GDT_Int32:
+					reinterpret_cast<int32_t *>(stratBands.back())[j] = mapNan ?
+						static_cast<int32_t>(-1) :
+						static_cast<int32_t>(mappedStrat);
+			}
 		}
 	}
 
@@ -179,23 +263,19 @@ GDALRasterWrapper *breaks(
 		free(rasterBands[i]);
 	}
 
-	//step 5: create GDALRasterWrapper object from bands
-	//this dynamically-allocated object will be cleaned up by python
+	//step 4: create GDALRasterWrapper object from bands
+	//this dynamically-allocated object will be cleaned up by python (TODO I hope...)
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
-		stratRasterBands, 
+		stratBands, 
 		newBandNames,
+		stratBandTypes,
 		p_raster->getWidth(),
 		p_raster->getHeight(),
-		GDT_Float32,
 		p_raster->getGeotransform(),
 		std::string(p_raster->getDataset()->GetProjectionRef())
 	);
-	GDALDataset *p_dataset = stratRaster->getDataset();
-	for (size_t i = 1; i <= stratRasterBands.size(); i++) {
-		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataFloat);
-	}
 		
-	//step 6: write raster if desired
+	//step 5: write raster if desired
 	if (filename != "") {
 		stratRaster->write(filename);
 	}
