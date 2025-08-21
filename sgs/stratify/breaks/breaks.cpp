@@ -217,20 +217,22 @@ GDALRasterWrapper *breaks(
 				strat = (it == curBandBreaks.end()) ? curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
 			}
 
-			//assign pixel value
 			switch(stratBandTypes[i]) {
 				case GDT_Int8:
 					reinterpret_cast<int8_t *>(stratBands[i])[j] = isNan ?
 						static_cast<int8_t>(-1) :
 						static_cast<int8_t>(strat);
+					break;
 				case GDT_Int16: 
 					reinterpret_cast<int16_t *>(stratBands[i])[j] = isNan ?
 						static_cast<int16_t>(-1) :
 						static_cast<int16_t>(strat);
+					break;
 				case GDT_Int32: 
 					reinterpret_cast<int32_t *>(stratBands[i])[j] = isNan ?
 						static_cast<int32_t>(-1) :
 						static_cast<int32_t>(strat);
+					break;
 			}
 
 			//adjust mappedStrat as required
@@ -246,14 +248,17 @@ GDALRasterWrapper *breaks(
 					reinterpret_cast<int8_t *>(stratBands.back())[j] = mapNan ?
 						static_cast<int8_t>(-1) : 
 						static_cast<int8_t>(mappedStrat);
+					break;
 				case GDT_Int16:
 					reinterpret_cast<int16_t *>(stratBands.back())[j] = mapNan ?
 						static_cast<int16_t>(-1) :
 						static_cast<int16_t>(mappedStrat);
+					break;
 				case GDT_Int32:
 					reinterpret_cast<int32_t *>(stratBands.back())[j] = mapNan ?
 						static_cast<int32_t>(-1) :
 						static_cast<int32_t>(mappedStrat);
+					break;
 			}
 		}
 	}
