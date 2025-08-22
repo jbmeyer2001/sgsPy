@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "raster.h"
+#include "helper.h"
 
 /**
  * This function stratifies a given raster using user-defined breaks.
@@ -112,21 +113,10 @@ GDALRasterWrapper *breaks(
 		std::sort(valCopy.begin(), valCopy.end());
 		bandBreaks.push_back(valCopy);
 
-		//determine pixel type and allocate strata bands
-		size_t pixelTypeSize = 0;
-		size_t maxStrata = val.size() + 1;
-		if (maxStrata <= static_cast<size_t>(maxInt8)) {
-			stratBandTypes.push_back(GDT_Int8);
-			pixelTypeSize = sizeof(int8_t);
-		}
-		else if (maxStrata <= maxInt16) {
-			stratBandTypes.push_back(GDT_Int16);
-			pixelTypeSize = sizeof(int16_t);
-		}
-		else { //Python side of the application does checking for overflow errors with int32
-			stratBandTypes.push_back(GDT_Int32);
-			pixelTypeSize = sizeof(int32_t);
-		}
+		//add type to vector and get size depending on the maximum strata value (given by val.size() + 1)
+		size_t pixelTypeSize = setStratBandType(val.size() + 1, stratBandTypes);
+
+		//allocate new strat raster using type size
 		void *p_strata = VSIMalloc3(
 			p_raster->getWidth(),
 			p_raster->getHeight(),
@@ -145,21 +135,9 @@ GDALRasterWrapper *breaks(
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (bandBreaks[i].size() + 1);
 		}
 
-		//determine pixel type and allocate map strata
+		//add type to vector and get max size for mapped strat
 		size_t maxStrata = bandStratMultipliers.back() * (bandBreaks.back().size() + 1);
-		size_t pixelTypeSize;
-		if (maxStrata <= maxInt8) {
-			stratBandTypes.push_back(GDT_Int8);
-			pixelTypeSize = sizeof(int8_t);
-		}
-		else if (maxStrata <= maxInt16) {
-			stratBandTypes.push_back(GDT_Int16);
-			pixelTypeSize = sizeof(int16_t);
-		}
-		else { //Python side of the application does checking for overflow errors with int32
-			stratBandTypes.push_back(GDT_Int32);
-			pixelTypeSize = sizeof(int32_t);
-		}
+		size_t pixelTypeSize = setStratBandType(maxStrata, stratBandTypes);
 		void *p_strata = VSIMalloc3(
 			p_raster->getWidth(),
 			p_raster->getHeight(),
@@ -177,35 +155,12 @@ GDALRasterWrapper *breaks(
 		size_t mappedStrat = 0;
 		bool mapNan = false;
 		for (int i = 0; i < bandCount; i++) {
-			void *p_data = rasterBands[i];
-			double val;
-			switch (rasterBandTypes[i]) {
-				case GDT_Int8:
-					val = static_cast<double>(((int8_t *)p_data)[j]);
-					break;
-				case GDT_UInt16:
-					val = static_cast<double>(((uint16_t *)p_data)[j]);
-					break;
-				case GDT_Int16:
-					val = static_cast<double>(((int16_t *)p_data)[j]);
-					break;
-				case GDT_UInt32:
-					val = static_cast<double>(((uint32_t *)p_data)[j]);
-					break;
-				case GDT_Int32:
-					val = static_cast<double>(((int32_t *)p_data)[j]);
-					break;
-				case GDT_Float32:
-					val = static_cast<double>(((float *)p_data)[j]);
-					break;
-				case GDT_Float64:
-					val = ((double *)p_data)[j];
-					break;
-				default:
-					throw std::runtime_error("raster pixel data type not supported.");
-			}
-
-			//determine if pixel is nan
+			double val = getPixelValueDependingOnType(
+				rasterBandTypes[i],
+				rasterBands[i],
+				j
+			);
+			//std::cout << "val: " << val << std::endl;			
 			bool isNan = std::isnan(val) || (double)val == noDataValues[i];
 			mapNan |= isNan;
 
@@ -217,23 +172,14 @@ GDALRasterWrapper *breaks(
 				strat = (it == curBandBreaks.end()) ? curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
 			}
 
-			switch(stratBandTypes[i]) {
-				case GDT_Int8:
-					reinterpret_cast<int8_t *>(stratBands[i])[j] = isNan ?
-						static_cast<int8_t>(-1) :
-						static_cast<int8_t>(strat);
-					break;
-				case GDT_Int16: 
-					reinterpret_cast<int16_t *>(stratBands[i])[j] = isNan ?
-						static_cast<int16_t>(-1) :
-						static_cast<int16_t>(strat);
-					break;
-				case GDT_Int32: 
-					reinterpret_cast<int32_t *>(stratBands[i])[j] = isNan ?
-						static_cast<int32_t>(-1) :
-						static_cast<int32_t>(strat);
-					break;
-			}
+			//std::cout << "strat: " << strat << std::endl;
+			setStrataPixelDependingOnType(
+				stratBandTypes[i],
+				stratBands[i],
+				j,
+				isNan,
+				strat
+			);
 
 			//adjust mappedStrat as required
 			if (map) {
@@ -243,23 +189,13 @@ GDALRasterWrapper *breaks(
 		
 		//assign mapped value
 		if (map) {
-			switch(stratBandTypes.back()) {
-				case GDT_Int8:
-					reinterpret_cast<int8_t *>(stratBands.back())[j] = mapNan ?
-						static_cast<int8_t>(-1) : 
-						static_cast<int8_t>(mappedStrat);
-					break;
-				case GDT_Int16:
-					reinterpret_cast<int16_t *>(stratBands.back())[j] = mapNan ?
-						static_cast<int16_t>(-1) :
-						static_cast<int16_t>(mappedStrat);
-					break;
-				case GDT_Int32:
-					reinterpret_cast<int32_t *>(stratBands.back())[j] = mapNan ?
-						static_cast<int32_t>(-1) :
-						static_cast<int32_t>(mappedStrat);
-					break;
-			}
+			setStrataPixelDependingOnType(
+				stratBandTypes.back(),
+				stratBands.back(),
+				j,
+				mapNan,
+				mappedStrat
+			);
 		}
 	}
 
