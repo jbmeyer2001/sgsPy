@@ -47,13 +47,9 @@ class GDALRasterWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
 
-	void *p_raster = nullptr;
-	bool rasterAllocated = false;
 	std::vector<void *> rasterBandPointers;
 	std::vector<bool> rasterBandRead;
 
-	void *p_displayRaster = nullptr;
-	bool displayRasterAllocated = false;
 	std::vector<void *> displayRasterBandPointers;
 	std::vector<bool> displayRasterBandRead;
 	int displayRasterWidth = -1;
@@ -61,38 +57,26 @@ class GDALRasterWrapper {
 
 	double geotransform[6];
 	/**
-	 * Internal function used to allocate the full or display rasters.
-	 * If this function is being called, it's assumed that the raster
-	 * has not already been allocated.
-	 *
-	 * CPLRealloc is used for the display raster, and CPLMalloc is used
-	 * for the full raster.
-	 *
-	 * either rasterAllocated or displayRasterAllocated will be set to true.
-	 * either displayRasterBandPointers or rasterBandPointers will be updated.
-	 * either displayRasterBandRead or rasterBandRead will have all elements set to false.
-	 *
-	 * @param bool display indication of whether to allocate full or displayr aster
-	 */
-	void allocateRaster(bool display);
-
-	/**
 	 * Internal function used to read raster band data.
 	 * 
 	 * the band int is used to select the band from the dataset.
 	 *
-	 * width, height, and p_band parameters are passed into
+	 * width and height are used to allocate memory and are passed into
 	 * the GDALRasterBand::RasterIO function. The band
 	 * may be downsampled depending on the values of width and height.
+	 *
+	 * If this function completes successfully, the void * in either
+	 * rasterBandPointers, or displayRasterBandPointers (in the case
+	 * where height/width are not the same as the full image) which
+	 * corresponds to the band index given will be the allocated
+	 * data buffer to the raster band.
 	 *
 	 * @param int width
 	 * @param int height
 	 * @param int band zero-indexed
-	 * @param GDALDataType the data type to read as
-	 * @returns void * allocated raster buffer
 	 * @throws std::runtime_error if unable to read raster band
 	 */
-	void readRasterBand(void *p_band, int width, int height, int band, GDALDataType type);
+	void readRasterBand(int width, int height, int band);
 
 	/**
 	 * Internal function which returns a pybuffer of the raster band, using
@@ -277,24 +261,8 @@ class GDALRasterWrapper {
 	double *getGeotransform();
 
 	/**
-	 * Getter method for the minimum pixel value.
-	 *
-	 * @param int band 0-indexed band to find minimum pixel value for.
-	 * @returns double minimum pixel value in raster excluding nodata
-	 */
-	double getMinPixelVal(int band);
-
-	/**
-	 * Getter method for the maximum pixel value.
-	 *
-	 * @param int band 0-indexed band to find minimum pixel value for.
-	 * @returns double maximum pixel value in raster excluding nodata
-	 */
-	double getMaxPixelVal(int band);
-
-	/**
 	 * Getter method for the raster image, used by the Python side 
-	 * of the application. This function allocates and reads aa raster if necessary, 
+	 * of the application. This function allocates and reads a raster band if necessary, 
 	 * and uses py::memoryview::from_buffer() to create the buffer of the 
 	 * correct size/dimensions without copying data unecessarily.
 	 *
@@ -309,10 +277,11 @@ class GDALRasterWrapper {
 	 *
 	 * @param int width
 	 * @param int height
+	 * @param int band
 	 * @throws std::runtime_error if unable to read raster band during allocation
 	 * @returns py::buffer python memoryview of the raster
 	 */
-	py::buffer getRasterAsMemView(int width, int height);
+	py::buffer getRasterBandAsMemView(int width, int height, int band);
 
 	/**
 	 * Getter method for a GDALRasterBand in the raster, used by the C++ side of the application.
@@ -338,26 +307,6 @@ class GDALRasterWrapper {
 	 * @returns size_t the data type size in bytes
 	 */
 	size_t getRasterBandTypeSize(int band);
-
-	/**
-	 * Gets an unsigned int type as a string. This will be
-	 * used by to call a specific template function.
-	 *
-	 * In some situations it is helpful to have an array or matrix
-	 * of values representing the index of another array. Memory 
-	 * could be saved by using the smallest (in bytes) data type given 
-	 * the number of indexes it is required to represent. this function
-	 * returns that data type.
-	 *
-	 * The maximum index required may be different for a single band
-	 * compared to if allBand *p_band = this->p_dataset->GetRasterBand(band + 1); bands must be indexed, as such the min required data type
-	 * might be different. the singleBand parameter selects whether
-	 * a single band max index or the full multi-band max index will be used.
-	 *
-	 * @param bool singeBand single/multi band selection
-	 * @returns std::string of C++ data type.
-	 */
-	std::string getMinIndexIntType(bool singleBand);
 
 	/**
 	 * Writes the raster to a specific file given by filename, by creating

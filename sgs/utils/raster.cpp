@@ -32,8 +32,6 @@ GDALRasterWrapper::GDALRasterWrapper(GDALDataset *p_dataset, std::vector<void *>
 	this->createFromDataset(p_dataset);
 	this->rasterBandPointers = bands;
 	this->rasterBandRead = std::vector<bool>(bands.size(), true);
-	this->p_raster = bands[0];
-	this->rasterAllocated = true;
 }
 
 /******************************************************************************
@@ -118,8 +116,6 @@ GDALRasterWrapper::GDALRasterWrapper(
 	}
 	
 	//initialize raster band properties
-	this->p_raster = rasterBands[0];
-	this->rasterAllocated = true;
 	this->rasterBandPointers = rasterBands;
 	this->rasterBandRead = std::vector<bool>(this->getBandCount(), true);
 	
@@ -132,13 +128,15 @@ GDALRasterWrapper::GDALRasterWrapper(
 			      ~GDALRasterWrapper()
 ******************************************************************************/
 GDALRasterWrapper::~GDALRasterWrapper() {
-	if (this->rasterAllocated) {
-		CPLFree(p_raster);
-	}
+	for (int i = 0; i < this->getBandCount(); i++) {
+		if (this->rasterBandRead[i]) {
+			CPLFree(this->rasterBandPointers[i]);
+		}
 
-	if (this->displayRasterAllocated) {
-		CPLFree(p_displayRaster);
-	}
+		if (this->displayRasterBandRead[i]) {
+			CPLFree(this->displayRasterBandPointers[i]);
+		}
+	}	
 }
 
 /******************************************************************************
@@ -274,81 +272,26 @@ double *GDALRasterWrapper::getGeotransform() {
 	return this->geotransform;
 }
 
-
-
-/******************************************************************************
-				allocateRaster()
-******************************************************************************/
-void GDALRasterWrapper::allocateRaster(bool display) {
-	//This is not an ideal usage of CPLMalloc because it may be very large
-	//In the future, this will likely be swapped out.
-	
-	size_t max = std::numeric_limits<size_t>::max();
-	if (display) {
-		if (this->displayRasterWidth < 0 || this->displayRasterHeight < 0) {
-		throw std::runtime_error("display raster width and height should never be less than 0");
-	}
-		size_t height = static_cast<size_t>(this->displayRasterHeight);
-		size_t width = static_cast<size_t>(this->displayRasterWidth);
-		size_t bandCount = this->getBandCount();
-		size_t size = this->getRasterBandTypeSize(0); //use the size of the first (zero indexed) raster band
-
-		if (max / size < width ||
-		    max / (size * width) < height ||
-		    max / (size * width * height) < bandCount) {
-			throw std::runtime_error("display raster too large to fit in memory.");
-		}	
-
-		size_t bandSize = height * width * size;
-		size_t rasterSize = height * width * size * bandCount;
-		if (rasterSize > GIGABYTE) {
-			throw std::runtime_error("sgs does not allow allocation of a raster into memory for display purposes if it would be larger than 1 gigabyte.");
-		}
-
-		this->p_displayRaster = CPLRealloc(this->p_displayRaster, rasterSize);
-		this->displayRasterAllocated = true;
-		for (size_t i = 0; i < bandCount; i++) {
-			this->displayRasterBandPointers[i] = (void *)((size_t)this->p_displayRaster + (i * bandSize));
-			this->displayRasterBandRead[i] = false;
-		}
-	}
-	else {
-		if (this->getWidth() < 0 || this->getHeight() < 0) {
-			throw std::runtime_error("display raster width and height should never be less than 0");
-		}
-		size_t height = static_cast<size_t>(this->getHeight());
-		size_t width = static_cast<size_t>(this->getWidth());
-		size_t bandCount = this->getBandCount();
-		size_t size = this->getRasterBandTypeSize(0); //use the type of the first (zero indexed) raster band
-
-		if (max / size < width ||
-		    max / (size * width) < height ||
-		    max / (size * width * height) < bandCount) {
-			throw std::runtime_error("raster too large to fit in memory.");
-		}	
-
-		size_t bandSize = height * width * size;
-		size_t rasterSize = height * width * size * bandCount;
-		if (rasterSize > GIGABYTE) {
-			throw std::runtime_error("sgs does not allow allocation of a raster into memory for direct pixel access purposes if it would be larger than 1 gigabyte.");
-		}
-
-		this->p_raster = CPLMalloc(rasterSize);
-		this->rasterAllocated = true;
-		for (size_t i = 0; i < bandCount; i++) {
-			this->rasterBandPointers[i] = (void *)((size_t)this->p_raster + (i * bandSize));
-		}
-	}
-}
-
 /******************************************************************************
 			    readRasterBand()
 ******************************************************************************/
-void GDALRasterWrapper::readRasterBand(void *p_band, int width, int height, int band, GDALDataType type) {	
-	/**
-	 * see https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
-	 * and https://gdal.org/en/stable/tutorials/raster_api_tut.html#reading-raster-data
-	 */
+void GDALRasterWrapper::readRasterBand(int width, int height, int band) {	
+	GDALDataType type = this->getRasterBandType(band);
+	size_t size = this->getRasterBandTypeSize(band);
+	size_t max = std::numeric_limits<size_t>::max();
+
+	//perform size checks
+	if (max / size < static_cast<size_t>(width) ||
+	    max / (size * static_cast<size_t>(width)) < static_cast<size_t>(height)) {
+			throw std::runtime_error("raster too large to fit in memory.");
+	}
+
+	if (static_cast<size_t>(height) * static_cast<size_t>(width) * size > GIGABYTE) {
+			throw std::runtime_error("sgs does not allow allocation of a raster into memory for direct pixel access purposes if it would be larger than 1 gigabyte.");
+	}
+
+	//allocate data
+	void *p_data = VSIMalloc3(height, width, size);
 
 	//perform raster read on current band
 	CPLErr err = this->p_dataset->GetRasterBand(band + 1)->RasterIO(
@@ -357,7 +300,7 @@ void GDALRasterWrapper::readRasterBand(void *p_band, int width, int height, int 
 		0,				//int nYOff
 		this->getWidth(),		//int nXSize
 		this->getHeight(),		//int nYSize
-		p_band,				//void *pData
+		p_data,				//void *pData
 		width,				//int nBufXSize
 		height,				//int nBufYSize
 		type,				//GDALDataType eBufType 
@@ -366,6 +309,16 @@ void GDALRasterWrapper::readRasterBand(void *p_band, int width, int height, int 
 	);
 	if (err) {
 		throw std::runtime_error("error reading raster band from dataset.");
+	}
+
+	//update dislpay information as required
+	if (width != this->getWidth() || height != this->getHeight()) {
+		this->displayRasterBandRead[band] = true;
+		this->displayRasterBandPointers[band] = p_data;
+	}
+	else {
+		this->rasterBandRead[band] = true;
+		this->rasterBandPointers[band] = p_data;
 	}
 }
 
@@ -376,62 +329,41 @@ template <typename T>
 py::buffer GDALRasterWrapper::getBuffer(size_t size, void *p_buffer, int width, int height) {
 	//see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
 	return py::memoryview::from_buffer(
-		(T*)p_buffer, 					//buffer
-		{this->getBandCount(), height, width}, 		//shape
-		{size * height * width, size * width, size} 	//stride
+		(T*)p_buffer, 		//buffer
+		{height, width}, 	//shape
+		{size * width, size} 	//stride
 	);
 }	
 
 /******************************************************************************
-			      getRasterAsMemView()
+			    getRasterBandAsMemView()
 ******************************************************************************/
-py::buffer GDALRasterWrapper::getRasterAsMemView(int width, int height) {
+py::buffer GDALRasterWrapper::getRasterBandAsMemView(int width, int height, int band) {
 	bool display = (width != this->getWidth() || height != this->getHeight());
 	void *p_buffer;
-	GDALDataType type = this->getRasterBandType(0); //use the type of the first band, since when converting
-							//to numpy, all bands must be of the same type
+	GDALDataType type = this->getRasterBandType(band);
 
 	//allocate raster if required
-	if (!display && !this->rasterAllocated) {
-		this->allocateRaster(display); //allocate whole raster
+	if (!display && !this->rasterBandRead[band]) {
+		this->readRasterBand(width, height, band);
 	}
 
-	//reallocate display raster if required
-	if (display && 
-		(!this->displayRasterAllocated || 
-		 width != this->displayRasterWidth || 
-		 height != this->displayRasterHeight)) 
-	{
-		this->displayRasterWidth = width;
-		this->displayRasterHeight = height;
-		this->allocateRaster(display); //reallocate (potentially downsampled) display raster
+	//(re)allocate display raster if required
+	if (display) {
+		if (width != this->displayRasterWidth || height != this->displayRasterHeight) {
+			free(this->displayRasterBandPointers[band]);
+			this->displayRasterBandRead[band] = false;
+		}
+
+		if (this->displayRasterBandRead[band] == false) {
+			this->readRasterBand(width, height, band);
+		}
 	}
 
-	//read raster bands if required
-	if (!display) {
-		for (int i = 0; i < this->getBandCount(); i++) {
-			if (!this->rasterBandRead[i]) {
-				this->readRasterBand(this->rasterBandPointers[i], width, height, i, type);
-				this->rasterBandRead[i] = true;
-			}
-		}
-		p_buffer = this->p_raster;
-	}
-	else {
-		for (int i = 0; i < this->getBandCount(); i++) {
-			if (!this->displayRasterBandRead[i]) {
-				this->readRasterBand(this->displayRasterBandPointers[i], width, height, i, type);
-				this->displayRasterBandRead[i] = true;
-			}
-		}
-		p_buffer = this->p_displayRaster;
-	}
-
-	for (int i = 1; i < this->getBandCount(); i++) {
-		if (this->getRasterBandType(i) != type) {
-			std::cout << "**warning** raster band " << (i + 1) << " will be converted to the type of raster band 1 for its use in python." << std::endl;
-		}
-	}
+	//get the (allocated) data buffer
+	p_buffer = (!display) ?
+		this->rasterBandPointers[band] :
+		this->displayRasterBandPointers[band];
 
 	switch(type) {
 		case GDT_Int8:
@@ -487,26 +419,6 @@ size_t GDALRasterWrapper::getRasterBandTypeSize(int band) {
 		default:
 			std::string errorMsg = "GDALDataType of band " + std::to_string(band) + " not supported.";
 			throw std::runtime_error(errorMsg);
-	}
-}
-
-/******************************************************************************
-			      getMinIndexIntType()		     
-******************************************************************************/
-std::string GDALRasterWrapper::getMinIndexIntType(bool singleBand) {
-	size_t maxIndex = this->getWidth() * this->getHeight();
-	maxIndex = singleBand ? maxIndex : maxIndex * this->getBandCount();
-	if (std::numeric_limits<unsigned short>::max() >= maxIndex) {
-		return "unsigned_short";
-	}
-	else if (std::numeric_limits<unsigned>::max() >= maxIndex) {
-		return "unsigned";
-	}
-	else if (std::numeric_limits<unsigned long>::max() >= maxIndex) {
-		return "unsigned_long";
-	}
-	else {
-		return "unsigned_long_long";
 	}
 }
 

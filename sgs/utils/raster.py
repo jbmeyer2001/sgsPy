@@ -191,8 +191,8 @@ class SpatialRaster:
         self.ymax = self.cpp_raster.get_ymax()
         self.pixel_width = self.cpp_raster.get_pixel_width()
         self.pixel_height = self.cpp_raster.get_pixel_height()
-        self.arr = None
         self.band_name_dict = {}
+        self.band_data_dict = {}
         self.bands = self.cpp_raster.get_bands()
         for i in range(0, len(self.bands)):
             self.band_name_dict[self.bands[i]] = i
@@ -206,23 +206,8 @@ class SpatialRaster:
         print("size: {} x {} x {}".format(self.band_count, self.width, self.height))
         print("pixel size: (x, y): ({}, {})".format(self.pixel_height, self.pixel_width))
         print("bounds (xmin, xmax, ymin, ymax): ({}, {}, {}, {})".format(self.xmin, self.xmax, self.ymin, self.ymax))
-
-    def load_arr(self):
-        """
-        Loads the rasters gdal dataset into a numpy array.
-
-        Raises
-        --------------------
-        RuntimeError (from C++):
-            if unable to read raster band
-        """
-        self.arr = np.asarray(
-            self.cpp_raster.get_raster_as_memoryview(self.width, self.height).toreadonly(), 
-            copy=False
-        )
-
-    def get_band_index(self, 
-                       band: str | int):
+ 
+    def get_band_index(self, band: str | int):
         """
         Utilizes the band_name_dict to convert a band name to an index if requried.
 
@@ -234,34 +219,44 @@ class SpatialRaster:
             band = self.band_name_dict[band]
 
         return band
-
-    def __getitem__(self, 
-                    index: int | str | tuple | slice):
+ 
+    def load_arr(self, band_index: int):
         """
-        Implements numpy array accesses on self.arr attribute, allowing bands
-        to be specified by their name as opposed to index if desired.
-
-        Parameters
-        --------------------
-        index : int, str, tuple, or slice
-            the index of the image desired, allowing bands to be specified as strings
+        Loads the rasters gdal dataset into a numpy array.
 
         Raises
-        ---------------------
+        --------------------
         RuntimeError (from C++):
             if unable to read raster band
+        RuntimeError (from C++):
+            if the band is larger than a gigabyte sgs will not load it into memory
         """
-        if self.arr is None:
-            self.load_arr()
 
-        if type(index) == tuple:
-            index = (self.get_band_index(index[0]),) + index[1:]
-        elif type(index) == slice:
-            index = slice(self.get_band_index(index.start), self.get_band_index(index.stop))
-        else:
-            index = self.get_band_index(index)
+        self.band_data_dict[band_index] = np.asarray(
+            self.cpp_raster.get_raster_as_memoryview(self.width, self.height, band_index).toreadonly(), 
+            copy=False
+        )
 
-        return self.arr[index]
+    def band(self, band: str | int):
+        """
+        gets a numpy array with the specified bands data.
+
+        May call load_arr if this data has not been directly
+        accessed by Python before.
+
+        Raises
+        --------------------
+        RuntimeError (from C++):
+            if unable to read raster band
+        RuntimeError (from C++):
+            if the band is larger than a gigabyte sgs will not load it into memory
+        """
+        index = self.get_band_index(band)
+
+        if index not in self.band_data_dict:
+            self.load_arr(index)
+        
+        return self.band_data_dict[index]
 
     def plot(self, 
              ax: Optional[matplotlib.axes.Axes] = None,
