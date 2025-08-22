@@ -63,18 +63,21 @@ def plot_raster(raster,
     else:
         downsamlped_width = int(raster.width / 8)
         downsampled_heigth = int(raster.height / 8)
+
+    #get the raster data from the cpp object as a numpy array, and ensure no data is nan
+    no_data_val = raster.cpp_raster.get_band_nodata_value(band)
     arr = np.asarray(
-        raster.cpp_raster.get_raster_as_memoryview(downsampled_width, downsampled_height),
+        raster.cpp_raster.get_raster_as_memoryview(downsampled_width, downsampled_height, band),
         copy=False
-    )
+    ).astype(np.float64, copy=True)
+    arr[arr == no_data_val] = np.nan
 
     #get raster origin and raster extent
     extent = (raster.xmin, raster.xmax, raster.ymin, raster.ymax) #(left, right, top, bottom)
 
     #add image to matplotlib
-    display_arr = np.moveaxis(arr[[band], :, :], 0, 2)
     plt.title(label=title)
-    ax.imshow(display_arr, origin='upper', extent=extent, **kwargs)
+    ax.imshow(arr, origin='upper', extent=extent, **kwargs)
 
 def plot_vector(vector, 
                 ax: matplotlib.axes.Axes, 

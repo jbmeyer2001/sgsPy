@@ -273,6 +273,14 @@ double *GDALRasterWrapper::getGeotransform() {
 }
 
 /******************************************************************************
+			       getBandNoDataValue()
+******************************************************************************/
+double GDALRasterWrapper::getBandNoDataValue(int band) {
+	GDALRasterBand *p_band = this->getRasterBand(band);
+	return p_band->GetNoDataValue();
+}
+
+/******************************************************************************
 			    readRasterBand()
 ******************************************************************************/
 void GDALRasterWrapper::readRasterBand(int width, int height, int band) {	

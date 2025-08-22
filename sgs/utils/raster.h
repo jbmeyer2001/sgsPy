@@ -261,6 +261,13 @@ class GDALRasterWrapper {
 	double *getGeotransform();
 
 	/**
+	 * Getter method for a specific bands nodata value.
+	 *
+	 * @returs double nodata value
+	 */
+	double getBandNoDataValue(int band);
+
+	/**
 	 * Getter method for the raster image, used by the Python side 
 	 * of the application. This function allocates and reads a raster band if necessary, 
 	 * and uses py::memoryview::from_buffer() to create the buffer of the 
