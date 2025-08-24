@@ -62,7 +62,8 @@ setStratBandType(
  * @param size_t index
  * @returns double pixel val
  */
-inline double
+template <typename T>
+inline T
 getPixelValueDependingOnType(
 	GDALDataType type,
 	void *p_data,
@@ -70,19 +71,19 @@ getPixelValueDependingOnType(
 ) {
 	switch (type) {
 		case GDT_Int8:
-			return static_cast<double>(((int8_t *)p_data)[index]);
+			return static_cast<T>(((int8_t *)p_data)[index]);
 		case GDT_UInt16:
-			return static_cast<double>(((uint16_t *)p_data)[index]);
+			return static_cast<T>(((uint16_t *)p_data)[index]);
 		case GDT_Int16:
-			return static_cast<double>(((int16_t *)p_data)[index]);
+			return static_cast<T>(((int16_t *)p_data)[index]);
 		case GDT_UInt32:
-			return static_cast<double>(((uint32_t *)p_data)[index]);
+			return static_cast<T>(((uint32_t *)p_data)[index]);
 		case GDT_Int32:
-			return static_cast<double>(((int32_t *)p_data)[index]);
+			return static_cast<T>(((int32_t *)p_data)[index]);
 		case GDT_Float32:
-			return static_cast<double>(((float *)p_data)[index]);
+			return static_cast<T>(((float *)p_data)[index]);
 		case GDT_Float64:
-			return ((double *)p_data)[index];
+			return static_cast<T>(((double *)p_data)[index]);
 		default:
 			throw std::runtime_error("raster pixel data type not supported.");
 	}

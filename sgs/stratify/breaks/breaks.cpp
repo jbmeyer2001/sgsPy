@@ -155,7 +155,7 @@ GDALRasterWrapper *breaks(
 		size_t mappedStrat = 0;
 		bool mapNan = false;
 		for (int i = 0; i < bandCount; i++) {
-			double val = getPixelValueDependingOnType(
+			double val = getPixelValueDependingOnType<double>(
 				rasterBandTypes[i],
 				rasterBands[i],
 				j

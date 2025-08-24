@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 #include "raster.h"
+#include "helper.h"
 
 /**
  * This function maps multiple stratifications.
@@ -38,12 +39,25 @@ GDALRasterWrapper *mapStratifications(
 	std::string filename)
 {
 	//define useful variables
-	size_t numPixels = rasters[0]->getWidth() * rasters[0]->getHeight();
-	size_t bandSize = numPixels * sizeof(float);
+	size_t height = static_cast<size_t>(rasters[0]->getHeight());
+	size_t width = static_cast<size_t>(rasters[0]->getWidth());
+	for (size_t i = 1; i < rasters.size(); i++) {
+		if (static_cast<size_t>(rasters[i]->getHeight()) != height) {
+			std::string err = "raster with index " + std::to_string(i) + " has a different height from the raster at index 0.";
+			throw std::runtime_error(err);
+		}
+
+		if (static_cast<size_t>(rasters[i]->getWidth()) != width) {
+			std::string err = "raster with index " + std::to_string(i) + " has a different width from the raster at index 0.";
+			throw std::runtime_error(err);
+		}
+	}
+	
 
 	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
 	std::vector<size_t> bandStratMultipliers(1, 1);	
-	std::vector<float *>rasterBands;
+	std::vector<void *> rasterBands;
+	std::vector<GDALDataType> rasterBandTypes;
 	std::vector<double> noDataValues;
 	for (size_t i = 0; i < rasters.size(); i++) {
 		GDALRasterWrapper *p_raster = rasters[i];
@@ -53,6 +67,24 @@ GDALRasterWrapper *mapStratifications(
 			int band = bands[i][j];
 			float stratum = stratums[i][j];
 			GDALRasterBand *p_band = p_raster->getRasterBand(band);
+			GDALDataType type = p_raster->getRasterBandType(band);
+			size_t size = p_raster->getRasterBandTypeSize(band);
+
+			switch(type) {
+				case GDT_UInt32:
+					std::cout << "**warning** the pixel type of one of the bands given is an unsigned 32 bit integer. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
+					break;
+				case GDT_Float32:
+					std::cout << "**warning** the pixel type of one of the bands given is a 32 bit floating point value. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
+					break;
+				case GDT_Float64:
+					std::cout << "**warning** the pixel type of one of the bands given is a 64 bit floating point value. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
+				default:
+					//don't care if converting the type to int32 won't result in overflow problems
+					break;
+			}
+			rasterBandTypes.push_back(type);
+	
 
 			//we initialized with 1 element and append one for every band.
 			//so, we need to remove 1 element (which wouldn't have been used anyway)
@@ -60,53 +92,71 @@ GDALRasterWrapper *mapStratifications(
 			bandStratMultipliers.push_back(bandStratMultipliers.back() * stratum);
 
 			void *p_data = VSIMalloc3(
-				p_raster->getHeight(), 
-				p_raster->getWidth(), 
-				sizeof(float)
+				height, 
+				width, 
+				size
 			);
 			CPLErr err = p_band->RasterIO(
 				GF_Read,		//GDALRWFlag eRWFlag
 				0,			//int nXOff
 				0,			//int nYOff
-				p_raster->getWidth(),	//int nXSize
-				p_raster->getHeight(),	//int nYSize
+				width,			//int nXSize
+				height,			//int nYSize
 				p_data,			//void *pData
-				p_raster->getWidth(),	//int nBufXSize
-				p_raster->getHeight(),	//int nBufYSize
-				GDT_Float32,//TODO 	//GDALDataType eBufTypew
+				width,			//int nBufXSize
+				height,			//int nBufYSize
+				type, 			//GDALDataType eBufType
 				0,			//int nPixelSpace
 				0			//int nLineSpace
 			);
 			if (err) {
 				throw std::runtime_error("error reading raster band from dataset.");
 			}
-			rasterBands.push_back((float *)p_data);
+			rasterBands.push_back(p_data);
 			noDataValues.push_back(p_band->GetNoDataValue());
-
-			if (p_raster->getRasterBandType(band) != GDT_Float32) {
-				std::cout << "**warning** band " << band << " of raster " << i << " will be converted to float type to be consistent with the packages standard." << std::endl;
-			}
 		}
 	}
+	size_t maxStrata = bandStratMultipliers.back();
 	bandStratMultipliers.pop_back();
 
+	std::vector<GDALDataType> stratBandTypes;
+	size_t size = setStratBandType(maxStrata, stratBandTypes);
+	GDALDataType type = stratBandTypes.back();
+
 	//step 3 allocate mapped raster
-	void * p_mappedRaster = CPLMalloc(bandSize);
-	float noDataFloat = std::nan("-1");
+	void *p_mappedRaster = VSIMalloc3(
+		height,
+		width,
+		size
+	);
+
 	//step 4 iterate through pixels populating mapped raster with stratum values
-	for (size_t j = 0; j < numPixels; j++) {
-		float mappedStrat = 0;
+	for (size_t j = 0; j < height * width; j++) {
+		size_t mappedStrat = 0;
+		bool isNan = false;
 		for (size_t i = 0; i < rasterBands.size(); i++) {
-			float strat = rasterBands[i][j];
-			if (std::isnan(strat) || (double)strat == noDataValues[i]) {
-				mappedStrat = noDataFloat;
+			int strat = getPixelValueDependingOnType<int>(
+				rasterBandTypes[i],
+				rasterBands[i],
+				j
+			);
+
+			isNan = std::isnan(strat) || (double)strat == noDataValues[i];
+			if (isNan) {
 				break;
 			}
-
-			mappedStrat += strat * bandStratMultipliers[i];
+			else {
+				mappedStrat += strat * bandStratMultipliers[i];
+			}
 		}
 			
-		((float *)p_mappedRaster)[j] = mappedStrat;
+		setStrataPixelDependingOnType(
+			type,
+			p_mappedRaster,
+			j,
+			isNan,
+			mappedStrat
+		);
 	}
 
 	//free allocated band data
@@ -119,13 +169,12 @@ GDALRasterWrapper *mapStratifications(
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
 		{p_mappedRaster},
 		{"strat_map"},
-		rasters[0]->getWidth(),
-		rasters[0]->getHeight(),
-		GDT_Float32,
+		stratBandTypes,
+		width,
+		height,
 		rasters[0]->getGeotransform(),
 		std::string(rasters[0]->getDataset()->GetProjectionRef())
 	);
-	stratRaster->getDataset()->GetRasterBand(1)->SetNoDataValue(std::nan("-1"));
 
 	//step 6 write raster if desired
 	if (filename != "") {

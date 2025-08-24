@@ -34,7 +34,7 @@ from .stratify import (
     kmeans,
 #    poly,
 #    quantiles,
-#    map,
+    map,
 )
 
 __all__ = list(
