@@ -70,19 +70,7 @@ GDALRasterWrapper *mapStratifications(
 			GDALDataType type = p_raster->getRasterBandType(band);
 			size_t size = p_raster->getRasterBandTypeSize(band);
 
-			switch(type) {
-				case GDT_UInt32:
-					std::cout << "**warning** the pixel type of one of the bands given is an unsigned 32 bit integer. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
-					break;
-				case GDT_Float32:
-					std::cout << "**warning** the pixel type of one of the bands given is a 32 bit floating point value. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
-					break;
-				case GDT_Float64:
-					std::cout << "**warning** the pixel type of one of the bands given is a 64 bit floating point value. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
-				default:
-					//don't care if converting the type to int32 won't result in overflow problems
-					break;
-			}
+			printTypeWarningsForInt32Conversion(type);
 			rasterBandTypes.push_back(type);
 	
 

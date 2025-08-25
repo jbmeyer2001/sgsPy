@@ -11,6 +11,7 @@
 #include <random>
 
 #include "access.h"
+#include "helper.h"
 #include "raster.h"
 #include "vector.h"
 
@@ -131,15 +132,14 @@ strat_random(
 	std::string filename)
 {
 	//step 1: get raster band
-	GDALRasterBand *p_band = p_raster->getRasterBand(0);
-	GDALDataType type = p_raster->getRasterBandType(0);
-	if (type != GDT_Float32) {
-		throw std::runtime_error("raster band must be of type float32.");
-	}
+	GDALDataType type = p_raster->getRasterBandType(0); //TODO specific band
+	printTypeWarningsForInt32Conversion(type);
+
+	GDALRasterBand *p_band = p_raster->getRasterBand(0); //TODO specific band
 	void *p_data = VSIMalloc3(
 		p_raster->getHeight(),
 		p_raster->getWidth(),
-		p_raster->getRasterBandTypeSize(0)		
+		p_raster->getRasterBandTypeSize(0) //TODO specific band
 	);
 	CPLErr err = p_band->RasterIO(
 		GF_Read,
@@ -157,8 +157,7 @@ strat_random(
 	if (err) {
 		throw std::runtime_error("error reading raster band from dataset.");
 	}
-	float *p_strat = reinterpret_cast<float *>(p_data);
-
+	
 	//step 2: create stratum index storing vectors
 	std::vector<std::vector<size_t>> stratumIndexes;
 	stratumIndexes.resize(numStrata);
@@ -184,7 +183,7 @@ strat_random(
 			}
 		}
 
-		float val = p_strat[i];
+		int val = getPixelValueDependingOnType<int>(type, p_data, i);
 		if (std::isnan(val) || (double)val == noDataValue) {
 			//step 4.2: increment noDataPixelCount if encountered noData
 			noDataPixelCount++;
@@ -408,15 +407,14 @@ strat_queinnec(
 	std::string filename)
 {
 	//step 1: get raster band
-	GDALRasterBand *p_band = p_raster->getRasterBand(0);
-	GDALDataType type = p_raster->getRasterBandType(0);
-	if (type != GDT_Float32) {
-		throw std::runtime_error("raster band must be of type float32.");
-	}
+	GDALDataType type = p_raster->getRasterBandType(0); //TODO specific band
+	printTypeWarningsForInt32Conversion(type);	
+
+	GDALRasterBand *p_band = p_raster->getRasterBand(0); //TODO specific band
 	void *p_data = VSIMalloc3(
 		p_raster->getHeight(),
 		p_raster->getWidth(),
-		p_raster->getRasterBandTypeSize(0)		
+		p_raster->getRasterBandTypeSize(0) //TODO specific band	
 	);
 	CPLErr err = p_band->RasterIO(
 		GF_Read,
@@ -434,8 +432,7 @@ strat_queinnec(
 	if (err) {
 		throw std::runtime_error("error reading raster band from dataset.");
 	}
-	float *p_strata = reinterpret_cast<float *>(p_data);
-
+	
 	//step 2: create stratum index storing vectors
 	std::vector<std::vector<size_t>> queinnecStratumIndexes;
 	std::vector<std::vector<size_t>> randomStratumIndexes;
@@ -502,14 +499,16 @@ strat_queinnec(
 			int64_t fwxMidEnd = fwxEnd - 1 + static_cast<int64_t>(y > static_cast<size_t>(height - wrow + 1));
 
 			size_t index = y * width + x;
-			float val = p_strata[index];
+			int val = getPixelValueDependingOnType<int>(type, p_data, index);
 			bool isNan = std::isnan(val) || static_cast<double>(val) == noDataValue;
 			bool accessable = !p_access || (p_mask[index] != 0); //check access mask
 			noDataPixelCount += (size_t)(isNan || !accessable);
 			
 			//allow inaccessible pixels to count towards focal window
-			nextVertSame = !isNan && ((y == height - 1) || val == p_strata[index + width]);
-		       	nextHoriSame = !isNan && ((x == width - 1) || val == p_strata[index + 1]);	
+			nextVertSame = !isNan && ((y == height - 1) || 
+					val == getPixelValueDependingOnType<int>(type, p_data, index + width));
+		       	nextHoriSame = !isNan && ((x == width - 1) || 
+					val == getPixelValueDependingOnType<int>(type, p_data, index + 1));	
 
 			//add the current pixel if it is not within the focal window matrix (too close to raster edges)
 			if (addSelf && !isNan && accessable) {
@@ -520,7 +519,7 @@ strat_queinnec(
 			if (addfw) {
 				int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;
 				index = (fwy + verticalPad) * width + fwx + horizontalPad;	
-				val = p_strata[index];
+				val = getPixelValueDependingOnType<int>(type, p_data, index);
 				isNan = std::isnan(val) || static_cast<double>(val) == noDataValue;
 				accessable = (!p_access) || (p_mask[index] != 0); //check access mask
 

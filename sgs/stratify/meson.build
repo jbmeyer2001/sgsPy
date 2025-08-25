@@ -1,4 +1,4 @@
 subdir('breaks')
 subdir('map')
-#subdir('poly')
-#subdir('quantiles')
+subdir('poly')
+subdir('quantiles')

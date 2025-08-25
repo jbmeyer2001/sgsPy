@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 #include "raster.h"
+#include "helper.h"
 
 /*
  *
@@ -89,21 +90,15 @@ GDALRasterWrapper *quantiles(
 	size_t pixelCount = p_raster->getHeight() * p_raster->getWidth();
 
 	//step 1 allocate new rasters
-	std::vector<void *>stratRasterBands;
-	size_t stratRasterBandSize = p_raster->getWidth() * p_raster->getHeight() * sizeof(float);
-	void *p_stratRaster = CPLMalloc(stratRasterBandSize * (bandCount + (size_t)map));
-	for (size_t i = 0; i < bandCount + (size_t)map; i++) {
-		stratRasterBands.push_back((void *)((size_t)p_stratRaster + (stratRasterBandSize * i)));
-	}
-
-	//step 2 get raster bands from GDALRasterWrapper
+	std::vector<void *>stratBands;
+	std::vector<GDALDataType> stratBandTypes;
 	std::vector<void *>rasterBands;
 	std::vector<GDALDataType> rasterBandTypes;
-	std::vector<std::vector<double>> probabilities;
+	std::vector<std::vector<double>> probabilities;	
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
 	std::vector<double> noDataValues;
-	for (auto const& [key, value] : userProbabilites) {
+	for (auto const& [key, val] : userProbabilites) {
 		GDALRasterBand *p_band = p_raster->getRasterBand(key);
 
 		//add band type
@@ -135,7 +130,17 @@ GDALRasterWrapper *quantiles(
 
 		rasterBands.push_back(p_data);
 		noDataValues.push_back(p_band->GetNoDataValue());
-		probabilities.push_back(value);	
+		probabilities.push_back(val);	
+
+		size_t pixelTypeSize = setStratBandType(val.size(), stratBandTypes);
+
+		void *p_strata = VSIMalloc3(
+			p_raster->getWidth(),
+			p_raster->getHeight(),
+			pixelTypeSize
+		);
+		stratBands.push_back(p_strata);
+
 		newBandNames.push_back("strat_" + bandNames[key]);
 	}
 
@@ -146,6 +151,15 @@ GDALRasterWrapper *quantiles(
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (probabilities[i].size() + 1);
 		}
 
+		size_t maxStrata = bandStratMultipliers.back() * probabilities.back().size();
+		size_t pixelTypeSize = setStratBandType(maxStrata, stratBandTypes);
+		void *p_strata = VSIMalloc3(
+			p_raster->getWidth(),
+			p_raster->getHeight(),
+			pixelTypeSize	
+		);
+		stratBands.push_back(p_strata);
+
 		newBandNames.push_back("strat_map");
 	}
 	
@@ -153,7 +167,6 @@ GDALRasterWrapper *quantiles(
 	//step 4 iterate through rasters
 	std::vector<std::vector<double>> quantileVals;
 	for (int i = 0; i < bandCount; i++) {
-		//CALL calculateQuantiles
 		std::vector<double> quantiles;
 		switch (rasterBandTypes[i]) {
 			case GDT_Int8:
@@ -180,7 +193,6 @@ GDALRasterWrapper *quantiles(
 					noDataValues[i]
 				);
 				break;
-
 			case GDT_UInt32:
 				quantiles = calculateQuantiles<uint32_t>(
 					rasterBands[i],
@@ -189,7 +201,6 @@ GDALRasterWrapper *quantiles(
 					noDataValues[i]
 				);
 				break;
-
 			case GDT_Int32:
 				quantiles = calculateQuantiles<int32_t>(
 					rasterBands[i],
@@ -198,7 +209,6 @@ GDALRasterWrapper *quantiles(
 					noDataValues[i]
 				);
 				break;
-
 			case GDT_Float32:
 				quantiles = calculateQuantiles<float>(
 					rasterBands[i],
@@ -223,62 +233,52 @@ GDALRasterWrapper *quantiles(
 
 	//TODO this may be parallelizable
 	//step 8 iterate through vectors and assign stratum value
-	float noDataFloat = std::nan("-1");
 	for (size_t j = 0; j < pixelCount; j++) {
-		float mappedStrat = 0;
-		float strat = 0;
+		size_t mappedStrat = 0;
+		size_t strat = 0;
+		bool mapNan = false;
 
 		for (int i = 0; i < bandCount; i++) {
 			std::vector<double> quantiles = quantileVals[i];
 
-			double val;
-			switch(rasterBandTypes[i]) {
-				case GDT_Int8:
-					val = static_cast<double>(reinterpret_cast<int8_t *>(rasterBands[i])[j]);
-					break;
-				case GDT_UInt16:
-					val = static_cast<double>(reinterpret_cast<uint16_t *>(rasterBands[i])[j]);
-					break;
-				case GDT_Int16:
-					val = static_cast<double>(reinterpret_cast<int16_t *>(rasterBands[i])[j]);
-					break;
-				case GDT_UInt32:
-					val = static_cast<double>(reinterpret_cast<uint32_t *>(rasterBands[i])[j]);
-					break;
-				case GDT_Int32:
-					val = static_cast<double>(reinterpret_cast<int32_t *>(rasterBands[i])[j]);
-					break;
-				case GDT_Float32:
-					val = static_cast<double>(reinterpret_cast<float *>(rasterBands[i])[j]);
-					break;
-				case GDT_Float64:
-					val = static_cast<double>(reinterpret_cast<double *>(rasterBands[i])[j]);
-					break;
-				default:
-					throw std::runtime_error("GDALDataType not supported.");
-			}
+			double val = getPixelValueDependingOnType<double>(
+				rasterBandTypes[i],
+				rasterBands[i],
+				j		
+			);
+			
+			bool isNan = std::isnan(val) || val == noDataValues[i];
+			mapNan |= isNan;
 
-			if (std::isnan(val) || val == noDataValues[i]) {
-				strat = noDataFloat;
-				mappedStrat = noDataFloat;
-			}
-			else {	
-				strat = static_cast<float>(std::distance(
+			if (!isNan) {
+				strat = std::distance(
 					quantiles.begin(), 
 					std::lower_bound(quantiles.begin(), quantiles.end(), val)
-				));
+				);
 			}
 
-			((float *)stratRasterBands[i])[j] = strat;
+			setStrataPixelDependingOnType(
+				stratBandTypes[i],
+				stratBands[i],
+				j,
+				isNan,
+				strat
+			);	
 			
-			if (map) {
-				//mappedStrat will remain nodata if it is supposed to be nodata
-				mappedStrat += strat * bandStratMultipliers[i] * (mappedStrat != noDataFloat);
+			if (map && !mapNan) {
+				mappedStrat += strat * bandStratMultipliers[i];
 			}
 		}
 
+		//assign mapped value
 		if (map) {
-			((float *)stratRasterBands[bandCount])[j] = mappedStrat;
+			setStrataPixelDependingOnType(
+				stratBandTypes.back(),
+				stratBands.back(),
+				j,
+				mapNan,
+				mappedStrat			
+			);
 		}
 	}
 
@@ -290,18 +290,14 @@ GDALRasterWrapper *quantiles(
 	//step 9 create new GDALRasterWrapper in-memory
 	//this dynamically-allocated object will be cleaned up by python
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
-		stratRasterBands,
+		stratBands,
 		newBandNames,
+		stratBandTypes,
 		p_raster->getWidth(),
 		p_raster->getHeight(),
-		GDT_Float32,
 		p_raster->getGeotransform(),
 		std::string(p_raster->getDataset()->GetProjectionRef())
 	);
-	GDALDataset *p_dataset = stratRaster->getDataset();
-	for (size_t i = 1; i <= stratRasterBands.size(); i++) {
-		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataFloat);
-	}
 
 	//Step 10 write raster if desired
 	if (filename != "") {

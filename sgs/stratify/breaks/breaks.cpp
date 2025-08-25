@@ -51,10 +51,6 @@ GDALRasterWrapper *breaks(
 	//find band count and the maximum number of breaks
 	int bandCount = breaks.size();
 
-	//determine max strata for different data types
-	int maxInt8 = std::numeric_limits<int8_t>::max();
-	int maxInt16 = std::numeric_limits<int16_t>::max();
-
 	//band break locations
 	std::vector<std::vector<double>> bandBreaks;
 	
@@ -182,7 +178,7 @@ GDALRasterWrapper *breaks(
 			);
 
 			//adjust mappedStrat as required
-			if (map) {
+			if (map && !mapNan) {
 				mappedStrat += strat * bandStratMultipliers[i];
 			}
 		}

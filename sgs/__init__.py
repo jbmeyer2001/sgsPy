@@ -32,8 +32,8 @@ from .sample import (
 from .stratify import (
     breaks,
     kmeans,
-#    poly,
-#    quantiles,
+    poly,
+    quantiles,
     map,
 )
 

@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <iostream>
 #include <gdal_priv.h>
 
 #define MAXINT8		127
@@ -128,5 +129,30 @@ setStrataPixelDependingOnType(
 			break;
 		default:
 			throw std::runtime_error("strata pixel data type not supported.");
+	}
+}
+
+/**
+ * Helper function which prints a warning to the user if conversion
+ * from the raster data type they're using for a strat raster
+ * may result in errors in conversion to a 32 bit signed integer
+ * type.
+ *
+ * @param GDALDataType type
+ */
+inline void
+printTypeWarningsForInt32Conversion(GDALDataType type) {
+	switch(type) {
+		case GDT_UInt32:
+			std::cout << "**warning** the pixel type of one of the bands given is an unsigned 32 bit integer. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
+			break;
+		case GDT_Float32:
+			std::cout << "**warning** the pixel type of one of the bands given is a 32 bit floating point value. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
+			break;
+		case GDT_Float64:
+			std::cout << "**warning** the pixel type of one of the bands given is a 64 bit floating point value. This may result in undefined behavior if the value is not castable to a 32-bit signed integer type." << std::endl;
+		default:
+			//don't care if converting the type to int32 won't result in overflow problems
+			break;
 	}
 }
