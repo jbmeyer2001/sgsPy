@@ -42,7 +42,7 @@
  * @returns std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
  * 	coordinate and dataset representation of samples
  */
-std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *> 
+std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t> 
 srs(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
@@ -51,6 +51,7 @@ srs(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
+	bool plot,
 	std::string filename)
 {
 	//Step 1: get dataset and geotransform
@@ -192,8 +193,7 @@ srs(
 	OGRLayer *p_layer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
 
 	//Step 9: generate coordinate points for each sample index, and only add if they're outside of mindist
-	std::vector<double> xCoords;
-	std::vector<double> yCoords;
+	std::vector<double> xCoords, yCoords;
 	size_t pointsAdded = 0;
 
 	if (dontSamplePixels.size() == 0) {
@@ -225,8 +225,11 @@ srs(
 			OGRFeature::DestroyFeature(p_feature);
 
 			pointsAdded++;
-			xCoords.push_back(xCoord);
-			yCoords.push_back(yCoord);
+			
+			if (plot) {
+				xCoords.push_back(xCoord);
+				yCoords.push_back(yCoord);
+			}
 	
 			if (pointsAdded == numSamples) {
 				break;
@@ -266,9 +269,12 @@ srs(
 			OGRFeature::DestroyFeature(p_feature);
 			
 			pointsAdded++;
-			xCoords.push_back(xCoord);
-			yCoords.push_back(yCoord);
-		
+
+			if (plot) {
+				xCoords.push_back(xCoord);
+				yCoords.push_back(yCoord);
+			}
+
 			if (pointsAdded == numSamples) {
 				break;
 			}		
@@ -288,18 +294,19 @@ srs(
 		}
 	}
 
-	return {{xCoords, yCoords}, p_sampleVectorWrapper};
+	return {{xCoords, yCoords}, p_sampleVectorWrapper, pointsAdded};
 }
 
 /*
  * srs function for when access has not been specified. 
  * Calls srsTypeSpecifier() which calls srs().
  */
-std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *> 
+std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t> 
 srs_cpp(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
 	double mindist,
+	bool plot,
 	std::string filename) 
 {
 	return srs(
@@ -309,7 +316,8 @@ srs_cpp(
 		nullptr, 
 		"",
 		0, 
-		0, 
+		0,
+	       	plot,	
 		filename
 	);
 }
