@@ -66,7 +66,7 @@ calculateAllocation(
 			remainder -= count;
 		}
 	}
-	else { //allocaiton == "optim"
+	else { //allocation == "optim"
 		//TODO implement
 		throw std::runtime_error("'optim' has not been implemented!");
 	}
@@ -117,9 +117,10 @@ calculateAllocation(
  * desired number are selected, as having a large mindist may mean some samples
  * can't be included due to their proximity to other already-selected pixels. 
  */
-std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
 strat_random(
 	GDALRasterWrapper *p_raster,
+	int band,
 	size_t numSamples,
 	size_t numStrata,
 	std::string allocation,
@@ -129,17 +130,18 @@ strat_random(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
+	bool plot,
 	std::string filename)
 {
 	//step 1: get raster band
-	GDALDataType type = p_raster->getRasterBandType(0); //TODO specific band
+	GDALDataType type = p_raster->getRasterBandType(band);
 	printTypeWarningsForInt32Conversion(type);
 
-	GDALRasterBand *p_band = p_raster->getRasterBand(0); //TODO specific band
+	GDALRasterBand *p_band = p_raster->getRasterBand(band);
 	void *p_data = VSIMalloc3(
 		p_raster->getHeight(),
 		p_raster->getWidth(),
-		p_raster->getRasterBandTypeSize(0) //TODO specific band
+		p_raster->getRasterBandTypeSize(band)
 	);
 	CPLErr err = p_band->RasterIO(
 		GF_Read,
@@ -223,6 +225,7 @@ strat_random(
 	std::vector<typename std::unordered_set<size_t>::iterator> sampleIterators;
 	std::vector<size_t> samplesAdded;
 	std::vector<size_t> strataNum;
+	size_t totalSamplesAdded = 0;
 
 	std::mt19937::result_type seed = time(nullptr);
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
@@ -260,8 +263,7 @@ strat_random(
 	}
 
 	//step 8: generate coordinate points for each sample index.
-	std::vector<double> xCoords;
-	std::vector<double> yCoords;
+	std::vector<double> xCoords, yCoords;
 
 	size_t sIndex = 0;
 	size_t completedStratum = 0;
@@ -308,9 +310,13 @@ strat_random(
 			OGRFeature::DestroyFeature(p_feature);
 
 			samplesAdded[strata]++;
-			xCoords.push_back(xCoord);
-			yCoords.push_back(yCoord);
+			totalSamplesAdded++;
 			sIndex++;
+
+			if (plot) {
+				xCoords.push_back(xCoord);
+				yCoords.push_back(yCoord);
+			}
 		}
 	}
 
@@ -327,7 +333,7 @@ strat_random(
 		}
 	}
 
-	return {{xCoords, yCoords}, p_sampleVectorWrapper};
+	return {{xCoords, yCoords}, p_sampleVectorWrapper, totalSamplesAdded};
 }
 	
 /**
@@ -390,9 +396,10 @@ strat_random(
  * samples using the same random selection technique. 
  */
 
-std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
 strat_queinnec(
 	GDALRasterWrapper *p_raster,
+	int band,
 	size_t numSamples,
 	size_t numStrata,
 	int wrow,
@@ -404,17 +411,18 @@ strat_queinnec(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
+	bool plot,
 	std::string filename)
 {
 	//step 1: get raster band
-	GDALDataType type = p_raster->getRasterBandType(0); //TODO specific band
+	GDALDataType type = p_raster->getRasterBandType(band);
 	printTypeWarningsForInt32Conversion(type);	
 
-	GDALRasterBand *p_band = p_raster->getRasterBand(0); //TODO specific band
+	GDALRasterBand *p_band = p_raster->getRasterBand(band);
 	void *p_data = VSIMalloc3(
 		p_raster->getHeight(),
 		p_raster->getWidth(),
-		p_raster->getRasterBandTypeSize(0) //TODO specific band	
+		p_raster->getRasterBandTypeSize(band)
 	);
 	CPLErr err = p_band->RasterIO(
 		GF_Read,
@@ -685,6 +693,7 @@ strat_queinnec(
 	std::vector<typename std::unordered_set<size_t>::iterator> sampleIterators;
 	std::vector<size_t> samplesAdded;
 	std::vector<size_t> strataNum;
+	size_t totalSamplesAdded = 0;
 
 	std::mt19937::result_type seed = time(nullptr);
 	for (size_t i = 0; i < stratumCounts.size(); i++) {	
@@ -720,8 +729,7 @@ strat_queinnec(
 	}
 
 	//step 10: generate coordinate points for each queinnec sample, and only add if they're outside of mindist
-	std::vector<double> xCoords;
-	std::vector<double> yCoords;
+	std::vector<double> xCoords, yCoords;
 
 	size_t sIndex = 0;
 	size_t completedStratum = 0;
@@ -767,9 +775,13 @@ strat_queinnec(
 			OGRFeature::DestroyFeature(p_feature);
 
 			samplesAdded[strata]++;
-			xCoords.push_back(xCoord);
-			yCoords.push_back(yCoord);
+			totalSamplesAdded++;
 			sIndex++;
+
+			if (plot) {
+				xCoords.push_back(xCoord);
+				yCoords.push_back(yCoord);
+			}
 		}
 	}
 
@@ -853,9 +865,13 @@ strat_queinnec(
 			OGRFeature::DestroyFeature(p_feature);
 
 			samplesAdded[strata]++;
-			xCoords.push_back(xCoord);
-			yCoords.push_back(yCoord);
+			totalSamplesAdded++;
 			sIndex++;
+
+			if (plot) {
+				xCoords.push_back(xCoord);
+				yCoords.push_back(yCoord);
+			}
 		}
 	}
 
@@ -872,7 +888,7 @@ strat_queinnec(
 		}
 	}
 
-	return {{xCoords, yCoords}, p_sampleVectorWrapper};
+	return {{xCoords, yCoords}, p_sampleVectorWrapper, totalSamplesAdded};
 }
 
 /**
@@ -883,9 +899,10 @@ strat_queinnec(
  * strat_random(), with provided arguments and required template
  * parameters.
  */
-std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
 strat_cpp_access(
 	GDALRasterWrapper *p_raster,
+	int band,
 	size_t numSamples,
 	size_t numStrata,
 	int wrow,
@@ -898,11 +915,13 @@ strat_cpp_access(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
+	bool plot,
 	std::string filename)
 {
 	if (method == "random") {
 		return strat_random(
 			p_raster,
+			band,
 			numSamples,
 			numStrata,
 			allocation,
@@ -912,12 +931,14 @@ strat_cpp_access(
 			layerName,
 			buffInner,
 			buffOuter,
+			plot,
 			filename
 		);
 	}
 	else { //method == "Queinnec"
 		return strat_queinnec(
 			p_raster,
+			band,
 			numSamples,
 			numStrata,
 			wrow,
@@ -929,6 +950,7 @@ strat_cpp_access(
 			layerName,
 			buffInner,
 			buffOuter,
+			plot,
 			filename
 		);
 	}
@@ -942,9 +964,10 @@ strat_cpp_access(
  * strat_random(), with provided arguments and required template
  * parameters.
  */
-std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
+std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
 strat_cpp(
 	GDALRasterWrapper *p_raster,
+	int band,
 	size_t numSamples,
 	size_t numStrata,
 	int wrow,
@@ -953,11 +976,13 @@ strat_cpp(
 	std::string method,
 	std::vector<double> weights,
 	double mindist,
+	bool plot,
 	std::string filename)
 {
 	if (method == "random") {
 		return strat_random(
 			p_raster, 
+			band,
 			numSamples,
 			numStrata, 
 			allocation, 
@@ -966,13 +991,15 @@ strat_cpp(
 			nullptr, 
 			"", 
 			0, 
-			0, 
+			0,
+		       	plot,	
 			filename
 		);
 	}
 	else { //method == "Queinnec"
 		return strat_queinnec(
 			p_raster,
+			band,
 			numSamples,
 			numStrata,
 			wrow,
@@ -984,6 +1011,7 @@ strat_cpp(
 			"",
 			0,
 			0,
+			plot,
 			filename
 		);
 	}

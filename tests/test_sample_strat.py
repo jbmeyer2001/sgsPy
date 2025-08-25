@@ -78,6 +78,7 @@ class TestStrat:
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast, 
+            'strat_zq90',
             num_samples=500,
             num_strata=5,
             allocation="equal",
@@ -93,6 +94,7 @@ class TestStrat:
         #with mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=5,
             allocation="equal",
@@ -110,6 +112,7 @@ class TestStrat:
         #with access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=5,
             allocation="equal",
@@ -130,6 +133,7 @@ class TestStrat:
         #with access and mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=100,
             num_strata=5,
             allocation="equal",
@@ -155,6 +159,7 @@ class TestStrat:
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast, 
+            'strat_zq90',
             num_samples=500,
             num_strata=8,
             allocation="prop",
@@ -170,6 +175,7 @@ class TestStrat:
         #with mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=8,
             allocation="prop",
@@ -187,6 +193,7 @@ class TestStrat:
         #with access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=8,
             allocation="prop",
@@ -207,6 +214,7 @@ class TestStrat:
         #with access and mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=128,
             num_strata=8,
             allocation="prop",
@@ -230,6 +238,7 @@ class TestStrat:
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=4,
             allocation="manual",
@@ -248,6 +257,7 @@ class TestStrat:
         #with mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=100,
             num_strata=4,
             allocation="manual",
@@ -268,6 +278,7 @@ class TestStrat:
         #with access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=100,
             num_strata=4,
             allocation="manual",
@@ -291,6 +302,7 @@ class TestStrat:
         #with mindist and access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=100,
             num_strata=4,
             allocation="manual",
@@ -318,6 +330,7 @@ class TestStrat:
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast, 
+            'strat_zq90',
             num_samples=500,
             num_strata=5,
             allocation="equal",
@@ -333,6 +346,7 @@ class TestStrat:
         #with mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=5,
             allocation="equal",
@@ -350,6 +364,7 @@ class TestStrat:
         #with access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=5,
             allocation="equal",
@@ -370,6 +385,7 @@ class TestStrat:
         #with access and mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=100,
             num_strata=5,
             allocation="equal",
@@ -394,6 +410,7 @@ class TestStrat:
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast, 
+            'strat_zq90',
             num_samples=500,
             num_strata=8,
             allocation="prop",
@@ -409,6 +426,7 @@ class TestStrat:
         #with mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=8,
             allocation="prop",
@@ -426,6 +444,7 @@ class TestStrat:
         #with access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=8,
             allocation="prop",
@@ -446,6 +465,7 @@ class TestStrat:
         #with access and mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=128,
             num_strata=8,
             allocation="prop",
@@ -469,6 +489,7 @@ class TestStrat:
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=500,
             num_strata=4,
             allocation="manual",
@@ -487,6 +508,7 @@ class TestStrat:
         #with mindist
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=100,
             num_strata=4,
             allocation="manual",
@@ -507,6 +529,7 @@ class TestStrat:
         #with access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=100,
             num_strata=4,
             allocation="manual",
@@ -530,6 +553,7 @@ class TestStrat:
         #with mindist and access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
+            'strat_zq90',
             num_samples=100,
             num_strata=4,
             allocation="manual",
@@ -564,6 +588,7 @@ class TestStrat:
         for _ in range(20):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
+                'strat_zq90',
                 num_samples=50,
                 num_strata=5,
                 wrow=3,
@@ -577,6 +602,7 @@ class TestStrat:
         for _ in range(100):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
+                'strat_zq90',
                 num_samples=5,
                 num_strata=5,
                 wrow=5,
@@ -590,6 +616,7 @@ class TestStrat:
         for _ in range(100):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
+                'strat_zq90',
                 num_samples=5,
                 num_strata=5,
                 wrow=3,
@@ -603,6 +630,7 @@ class TestStrat:
         for _ in range(100):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
+                'strat_zq90',
                 num_samples=5,
                 num_strata=5,
                 wrow=5,
@@ -616,6 +644,7 @@ class TestStrat:
         for _ in range(20):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
+                'strat_zq90',
                 num_samples=50,
                 num_strata=5,
                 wrow=1,
@@ -629,6 +658,7 @@ class TestStrat:
         for _ in range(20):
             samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
                 srast,
+                'strat_zq90',
                 num_samples=50,
                 num_strata=5,
                 wrow=3,
@@ -647,6 +677,7 @@ class TestStrat:
             with pytest.raises(ValueError):
                 sgs.sample.strat(
                     srast,
+                    'strat_zq90',
                     num_strata=5,
                     num_samples=5,
                     wrow=wrow,
@@ -660,6 +691,7 @@ class TestStrat:
             with pytest.raises(ValueError):
                 sgs.sample.strat(
                     srast,
+                    'strat_zq90',
                     num_strata=5,
                     num_samples=5,
                     wrow=3,
@@ -674,6 +706,7 @@ class TestStrat:
             with pytest.raises(ValueError):
                 sgs.sample.strat(
                     srast,
+                    'strat_zq90',
                     num_strata=5,
                     num_samples=5,
                     allocation="equal",
@@ -685,6 +718,7 @@ class TestStrat:
             with pytest.raises(ValueError):
                 sgs.sample.strat(
                     srast,
+                    'strat_zq90',
                     num_strata=5,
                     num_samples=5,
                     allocation=allocation,
@@ -696,6 +730,7 @@ class TestStrat:
             with pytest.raises(ValueError):
                 sgs.sample.strat(
                     srast,
+                    'strat_zq90',
                     num_strata=5,
                     num_samples=5,
                     allocation="manual",
@@ -707,6 +742,7 @@ class TestStrat:
         with pytest.raises(ValueError):
             sgs.sample.strat(
                 srast,
+                'strat_zq90',
                 num_strata=5,
                 num_samples=5,
                 allocation="equal",

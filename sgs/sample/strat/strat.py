@@ -25,6 +25,7 @@ from strat import (
 
 def strat(
     strat_rast: SpatialRaster, #TODO add band name for strat rast
+    band: int | str,
     num_samples: int,
     num_strata: int,
     wrow: int = 3,
@@ -57,7 +58,9 @@ def strat(
     Parameters
     --------------------
     strat_rast : SpatialRaster
-        the raster to sample, MUST have pixels of type 'float32' and be zero indexed
+        the raster to sample
+    band : int | str
+        the band within the strat_rast to use, either a 0-indexed int value or the name of the band
     num_samples : int
         the desired number of samples
     num_strata : Int
@@ -91,6 +94,8 @@ def strat(
     Raises
     --------------------
     ValueError
+        if bands parameter is not a valid band in the raster given
+    ValueError
         if num_samples is less than 1
     ValueError
         if method is not either 'random' or 'Queinnec'
@@ -116,6 +121,17 @@ def strat(
     RuntimeError (C++)
         if strat_raster pixel type is not Float32
     """
+    if type(band) is str:
+        if band not in strat_rast.bands:
+            msg = "band " + str(band) + " not in given raster."
+            raise ValueError(msg);
+
+        band = strat_rast.get_band_index(band) #get band as 0-indexed integer
+    else: #type(band) is int
+        if band >= len(strat_rast.bands):
+            msg = "0-indexed band of " + str(band) + " given but raster only has " + str(len(raster.bands)) + " bands."
+            raise ValueError(msg)
+
     if num_samples < 1:
         raise ValueError("num_samples must be greater than 0")
 
@@ -175,8 +191,9 @@ def strat(
         raise ValueError("strat_raster must have a single band.")
 
     if access:
-        [sample_coordinates, samples] = strat_cpp_access(
+        [sample_coordinates, samples, num_points] = strat_cpp_access(
             strat_rast.cpp_raster,
+            band,
             num_samples,
             num_strata,
             wrow,
@@ -189,12 +206,14 @@ def strat(
             layer_name,
             buff_inner,
             buff_outer,
+            plot,
             filename,
         )
 
     else:
-        [sample_coordinates, samples] = strat_cpp(
+        [sample_coordinates, samples, num_points] = strat_cpp(
             strat_rast.cpp_raster,
+            band,
             num_samples,
             num_strata,
             wrow,
@@ -203,9 +222,13 @@ def strat(
             method,
             weights,
             mindist,
+            plot,
             filename,
         )
 
+    if num_points < num_samples:
+        print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, num_points))
+    
     #plot new vector if requested
     if plot:
         try:
