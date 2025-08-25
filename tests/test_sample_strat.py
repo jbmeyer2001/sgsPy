@@ -24,7 +24,7 @@ class TestStrat:
             x = (point.x - self.rast.xmin) / self.rast.pixel_width
             y = self.rast.height - ((point.y - self.rast.ymin) / self.rast.pixel_height)
 
-            pixel_val = srast[0, int(y), int(x)]
+            pixel_val = srast.band(0)[int(y), int(x)]
 
             if np.isnan(pixel_val):
                 assert False
@@ -53,14 +53,14 @@ class TestStrat:
                 for col in range(wcol):
                     y_check = y + row - wrow // 2
                     x_check = x + col - wcol // 2
-                    assert(srast[0, int(y), int(x)] == srast[0, int(y_check), int(x_check)])
+                    assert(srast.band(0)[int(y), int(x)] == srast.band(0)[int(y_check), int(x_check)])
 
     def get_allocation_percentages(self, srast, samples):
         allocation = {}
         for point in samples:
             x = (point.x - self.rast.xmin) / self.rast.pixel_width
             y = self.rast.height - ((point.y - self.rast.ymin) / self.rast.pixel_height)
-            strata = srast[0, int(y), int(x)]
+            strata = srast.band(0)[int(y), int(x)]
            
             if strata in allocation:
                 allocation[strata] += 1
@@ -99,7 +99,6 @@ class TestStrat:
             method="random",
             mindist=150,
         ).samples_as_wkt())
-
         
         assert len(samples) > 490 #mindist means we might not get the full 500
         self.check_points_in_bounds(srast, samples)
