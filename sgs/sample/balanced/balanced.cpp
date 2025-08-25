@@ -69,6 +69,7 @@ balanced(
 	double buffOuter,
 	std::string method,
  	py::buffer prob,
+	bool plot,
 	std::string filename) 
 {
 	//step 1: set default paramters according to
@@ -394,8 +395,7 @@ balanced(
 	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
 	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
 
-	std::vector<double> xCoords;
-	std::vector<double> yCoords;
+	std::vector<double> xCoords, yCoords;
 	double *GT = p_raster->getGeotransform();
 
 	//step 14: turn the BalancedSampling return samples into their original indexes and calculate points to add
@@ -414,8 +414,10 @@ balanced(
 		OGRFeature::DestroyFeature(p_feature);
 
 		//add to xCoords and yCoords for plotting
-		xCoords.push_back(xCoord);
-		yCoords.push_back(yCoord);
+		if (plot) {
+			xCoords.push_back(xCoord);
+			yCoords.push_back(yCoord);
+		}
 	}
 	
 	//step 15: free up allocated BalancedSampling class
@@ -454,6 +456,7 @@ balanced_cpp(
 	std::vector<size_t> bandIndexes,
 	std::string method,
 	py::buffer prob,
+	bool plot,
 	std::string filename)
 {
 	return balanced(
@@ -468,6 +471,7 @@ balanced_cpp(
 		0,
 		method,
 		prob,
+		plot,
 		filename
 	);
 }
@@ -490,6 +494,7 @@ balanced_access_cpp(
 	double buffOuter,
 	std::string method,
 	py::buffer prob,
+	bool plot,
 	std::string filename)
 {
 	return balanced(
@@ -504,6 +509,7 @@ balanced_access_cpp(
 		buffOuter,
 		method,
 		prob,
+		plot,
 		filename
 	);
 }
@@ -523,6 +529,7 @@ balanced_strata_cpp(
 	size_t stratBand,
 	std::string method,
 	py::buffer prob,
+	bool plot,
 	std::string filename)
 {
 	return balanced(
@@ -537,6 +544,7 @@ balanced_strata_cpp(
 		0,
 		method,
 		prob,
+		plot,
 		filename
 	);
 }
