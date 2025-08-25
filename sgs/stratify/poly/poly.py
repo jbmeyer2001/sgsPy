@@ -66,8 +66,9 @@ def poly(
 
     cases = ""
     where_entries = []
+    num_strata = len(features)
 
-    if len(features) > MAX_STRATA_VAL:
+    if num_strata >= MAX_STRATA_VAL:
         raise ValueError("the number of features (and resulting max strata) will cause an overflow error because the max strata number is too large.")
 
     #generate query cases and where clause using features and attribute
@@ -88,6 +89,7 @@ def poly(
     strat_rast = poly_cpp(
         vector.cpp_vector,
         raster.cpp_raster,
+        num_strata,
         sql_query,
         filename
     )
