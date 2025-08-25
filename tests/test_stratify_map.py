@@ -14,9 +14,9 @@ class TestMap:
 
         breaks = sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2': [20, 40, 60, 80]})
         quantiles = sgs.quantiles(self.rast, num_strata={'zsd': 25})
-        zq90_rast = breaks['strat_zq90']
-        pz2_rast = breaks['strat_pzabove2']
-        zsd_rast = quantiles['strat_zsd']
+        zq90_rast = breaks.band('strat_zq90')
+        pz2_rast = breaks.band('strat_pzabove2')
+        zsd_rast = quantiles.band('strat_zsd')
 
         mapped = sgs.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
         
@@ -27,7 +27,7 @@ class TestMap:
                 zq90_strat = zq90_rast[i, j]
                 pz2_strat = pz2_rast[i, j]
                 zsd_strat = zsd_rast[i, j]
-                map_strat = mapped['strat_map', i, j]
+                map_strat = mapped.band('strat_map')[i, j]
 
                 if map_strat in zq90_mapping:
                     assert zq90_mapping[map_strat] == zq90_strat
@@ -71,9 +71,9 @@ class TestMap:
 
         breaks = sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2': [20, 40, 60, 80]})
         quantiles = sgs.quantiles(self.rast, num_strata={'zsd': 25})
-        zq90_rast = breaks['strat_zq90']
-        pz2_rast = breaks['strat_pzabove2']
-        zsd_rast = quantiles['strat_zsd']
+        zq90_rast = breaks.band('strat_zq90')
+        pz2_rast = breaks.band('strat_pzabove2')
+        zsd_rast = quantiles.band('strat_zsd')
 
         temp_dir = tmp_path / "test_out"
         temp_dir.mkdir()
@@ -89,7 +89,7 @@ class TestMap:
                 zq90_strat = zq90_rast[i, j]
                 pz2_strat = pz2_rast[i, j]
                 zsd_strat = zsd_rast[i, j]
-                map_strat = mapped['strat_map', i, j]
+                map_strat = mapped.band('strat_map')[i, j]
 
                 if map_strat in zq90_mapping:
                     assert zq90_mapping[map_strat] == zq90_strat
