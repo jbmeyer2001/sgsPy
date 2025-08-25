@@ -73,7 +73,7 @@ class TestSrs:
         for point in gs:
             x_index = (point.x - self.rast.xmin) / self.rast.pixel_width
             y_index = self.rast.height - ((point.y - self.rast.ymin) / self.rast.pixel_height) #origin at top left instead of bottom left
-            pixel_value = self.rast[0, int(y_index), int(x_index)]
+            pixel_value = self.rast.band(0)[int(y_index), int(x_index)]
             if np.isnan(pixel_value):
                 print(point.x)
                 print(point.y)

@@ -78,6 +78,7 @@ systematic(
 	);
 
 	//determine random origin location within extent polygon
+	//TODO these aren't used??? Should they be???
 	double yCoord = rng() / xDiff; //divide by xDiff because the result will then be between 0 and yDiff
 	double xCoord = rng() / yDiff; //divide by yDiff becausethe result will then be between 0 and xDiff
 

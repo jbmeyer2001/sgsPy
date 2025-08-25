@@ -19,7 +19,7 @@ vector_lib = static_library(
 #Windows additionally requires linker arguments to search for .lib files
 #from the Windows SDK.
 if WIN
-  #create access module
+  #create access lib
   access_lib = static_library(
     'access_lib', 'access.cpp', 'access.h',
     link_with: [raster_lib, vector_lib],
@@ -49,6 +49,7 @@ if WIN
     include_directories: inc_dir,
     install: true,
   )
+
 else #linux
   #first, extract objects to be linked. These will be used elsewhere in the project as well
   raster_obj = raster_lib.extract_objects('raster.cpp')

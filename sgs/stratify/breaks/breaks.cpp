@@ -1,5 +1,6 @@
 /******************************************************************************
  *
+ *
  * Project: sgs
  * Purpose: C++ implementation of raster stratification using breaks
  * Author: Joseph Meyer
@@ -7,7 +8,10 @@
  *
  ******************************************************************************/
 
+#include <iostream>
+
 #include "raster.h"
+#include "helper.h"
 
 /**
  * This function stratifies a given raster using user-defined breaks.
@@ -38,7 +42,6 @@
  * @param bool map whether to add a mapped stratification
  * @param std::string filename the filename to write to (if desired)
  */
-template <typename T>
 GDALRasterWrapper *breaks(
 	GDALRasterWrapper *p_raster,
 	std::map<int, std::vector<double>> breaks,
@@ -46,105 +49,170 @@ GDALRasterWrapper *breaks(
 	std::string filename)
 {
 	//find band count and the maximum number of breaks
-	size_t maxBreaks = std::numeric_limits<float>::max();
 	int bandCount = breaks.size();
 
-	//step 1: allocate new stratification raster
-	std::vector<size_t> bandStratMultipliers(breaks.size(), 1);
+	//band break locations
 	std::vector<std::vector<double>> bandBreaks;
-	std::vector<void *> stratRasterBands;
-	size_t stratRasterBandSize = p_raster->getWidth() * p_raster->getHeight() * sizeof(float);
-	void *p_stratRaster = CPLMalloc(stratRasterBandSize * (bandCount + (size_t)map));
-	for (size_t i = 0; i < bandCount + (size_t)map; i++) {
-		stratRasterBands.push_back((void *)((size_t)p_stratRaster + (stratRasterBandSize * i)));
-	}
 	
-	//step 2: get the raster bands needed from the datset
-	std::vector<T *> rasterBands;
+	//raster bands and each raster band type
+	std::vector<void *> rasterBands;
+	std::vector<GDALDataType> rasterBandTypes;
+	
+	//output strat raster bands and type
+	std::vector<void *> stratBands;
+	std::vector<GDALDataType> stratBandTypes;
+
+	//band output names
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<std::string> newBandNames;
-	std::vector<double> noDataValues;
-	for (auto const& [key, val] : breaks) {
-		//add requested band to rasterBands
-		rasterBands.push_back((T *)p_raster->getRasterBand(key));		
-		
-		//add nodata value to vector
-		noDataValues.push_back(p_raster->getDataset()->GetRasterBand(key + 1)->GetNoDataValue());
 
-		//and band breaks vectori
+	//per-band nodata values
+	std::vector<double> noDataValues;
+
+	//step 1: allocate, read, and initialize raster data and breaks information
+	for (auto const& [key, val] : breaks) {
+		GDALRasterBand *p_band = p_raster->getRasterBand(key);
+
+		//add band type
+		GDALDataType type = p_raster->getRasterBandType(key);
+		rasterBandTypes.push_back(type);
+		
+		//allocate and read raster band buffer
+		void *p_data = VSIMalloc3(
+			p_raster->getHeight(), 
+			p_raster->getWidth(), 
+			p_raster->getRasterBandTypeSize(key)
+		);	
+		CPLErr err = p_band->RasterIO(
+			GF_Read,		//GDALRWFlag eRWFlag
+			0,			//int nXOff
+			0,			//int nYOff
+			p_raster->getWidth(),	//int nXSize
+			p_raster->getHeight(),	//int nYSize
+			p_data,			//void *pData
+			p_raster->getWidth(),	//int nBufXSize
+			p_raster->getHeight(),	//int nBufYSize
+			type,			//GDALDataType eBufType
+			0,			//int nPixelSpace
+			0			//int nLineSpace
+		);
+		if (err) {
+			throw std::runtime_error("error reading raster band from dataset.");
+		}
+		rasterBands.push_back(p_data);
+			
+		//add nodata value to vector
+		noDataValues.push_back(p_band->GetNoDataValue());
+
+		//and band breaks vector
 		std::vector<double> valCopy = val; //have to create copy to alter the band breaks in iteration loop
 		std::sort(valCopy.begin(), valCopy.end());
 		bandBreaks.push_back(valCopy);
 
-		//error checking on band count
-		if (maxBreaks < val.size() + 1) {
-			throw std::runtime_error("number of break indexes exceeds maximum");
-		}
+		//add type to vector and get size depending on the maximum strata value (given by val.size() + 1)
+		size_t pixelTypeSize = setStratBandType(val.size() + 1, stratBandTypes);
+
+		//allocate new strat raster using type size
+		void *p_strata = VSIMalloc3(
+			p_raster->getWidth(),
+			p_raster->getHeight(),
+			pixelTypeSize
+		);
+		stratBands.push_back(p_strata);
 
 		newBandNames.push_back("strat_" + bandNames[key]);
 	}
 
-	//step 3: set bandStratMultipliers and check max size if mapped stratification	
+	//step 2: set bandStratMultipliers and check max size if mapped stratification	
+	std::vector<size_t> bandStratMultipliers(breaks.size(), 1);
 	if (map) {
 		//determine the stratification band index multipliers of the mapped band and error check maxes
 		for (int i = 0; i < bandCount - 1; i++) {
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (bandBreaks[i].size() + 1);
 		}
 
-		if (maxBreaks < bandStratMultipliers.back() * bandBreaks.back().size()) {
-			throw std::runtime_error("number of break indexes in mapped stratification exceeds maximum.");
-		}
+		//add type to vector and get max size for mapped strat
+		size_t maxStrata = bandStratMultipliers.back() * (bandBreaks.back().size() + 1);
+		size_t pixelTypeSize = setStratBandType(maxStrata, stratBandTypes);
+		void *p_strata = VSIMalloc3(
+			p_raster->getWidth(),
+			p_raster->getHeight(),
+			pixelTypeSize
+		);
+		stratBands.push_back(p_strata);
 
 		newBandNames.push_back("strat_map");
 	}	
 
 	//TODO: multithread and consider cache thrashing
-	//step 4: iterate through indices and update the stratified raster bands
+	//step 3: iterate through indices and update the stratified raster bands
 	float noDataFloat = std::nan("-1");
 	for (size_t j = 0; j < p_raster->getWidth() * p_raster->getHeight(); j++) {
-		float mappedStrat = 0;
-		bool nan = false;
+		size_t mappedStrat = 0;
+		bool mapNan = false;
 		for (int i = 0; i < bandCount; i++) {
-			T val = rasterBands[i][j];
+			double val = getPixelValueDependingOnType<double>(
+				rasterBandTypes[i],
+				rasterBands[i],
+				j
+			);
+			//std::cout << "val: " << val << std::endl;			
+			bool isNan = std::isnan(val) || (double)val == noDataValues[i];
+			mapNan |= isNan;
 
-			if (std::isnan(val) || (double)val == noDataValues[i]) {
-				((float *)stratRasterBands[i])[j] = noDataFloat;
-				nan = true;
-				continue;
+			//calculate strata value if not nan
+			size_t strat = 0;
+			if (!isNan) {
+				std::vector<double> curBandBreaks = bandBreaks[i];
+				auto it = std::lower_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
+				strat = (it == curBandBreaks.end()) ? curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
 			}
 
-			std::vector<double> curBandBreaks = bandBreaks[i];	
-			auto it = std::lower_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
-			float strat = (it == curBandBreaks.end()) ? (float)curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
-			((float *)(stratRasterBands[i]))[j] = strat;
+			//std::cout << "strat: " << strat << std::endl;
+			setStrataPixelDependingOnType(
+				stratBandTypes[i],
+				stratBands[i],
+				j,
+				isNan,
+				strat
+			);
 
-			if (map) {
+			//adjust mappedStrat as required
+			if (map && !mapNan) {
 				mappedStrat += strat * bandStratMultipliers[i];
 			}
 		}
 		
+		//assign mapped value
 		if (map) {
-			((float *)stratRasterBands[bandCount])[j] = nan ? noDataFloat : mappedStrat;
+			setStrataPixelDependingOnType(
+				stratBandTypes.back(),
+				stratBands.back(),
+				j,
+				mapNan,
+				mappedStrat
+			);
 		}
 	}
 
-	//step 5: create GDALRasterWrapper object from bands
-	//this dynamically-allocated object will be cleaned up by python
+	//free allocated band data
+	for (size_t i = 0; i < rasterBands.size(); i++) {
+		free(rasterBands[i]);
+	}
+
+	//step 4: create GDALRasterWrapper object from bands
+	//this dynamically-allocated object will be cleaned up by python (TODO I hope...)
 	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
-		stratRasterBands, 
+		stratBands, 
 		newBandNames,
+		stratBandTypes,
 		p_raster->getWidth(),
 		p_raster->getHeight(),
-		GDT_Float32,
 		p_raster->getGeotransform(),
 		std::string(p_raster->getDataset()->GetProjectionRef())
 	);
-	GDALDataset *p_dataset = stratRaster->getDataset();
-	for (size_t i = 1; i <= stratRasterBands.size(); i++) {
-		p_dataset->GetRasterBand(i)->SetNoDataValue(noDataFloat);
-	}
-	
-	//step 6: write raster if desired
+		
+	//step 5: write raster if desired
 	if (filename != "") {
 		stratRaster->write(filename);
 	}
@@ -152,46 +220,6 @@ GDALRasterWrapper *breaks(
 	return stratRaster;
 }
 
-/**
- * Having template types which rely on dynamic information (such as pixel
- * type of the raster) require an unfortunate amount of boilerplate code.
- *
- * This is an attempt to condense as much of the annoying boilerplate into
- * a single place.
- *
- * This function uses type information of the raster pixel type.
- *
- * A call ismade to breaks() with the necessary data type template
- * argument.
- *
- * @returns GDALRasterWrapper *stratified raster
- */
-GDALRasterWrapper *breaksTypeSpecifier(
-	GDALRasterWrapper *p_raster,
-	std::map<int, std::vector<double>> userDefinedBreaks,
-	bool map,
-	std::string filename)
-{
-	switch(p_raster->getRasterType()) {
-		case GDT_Int8:
-		return breaks<int8_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_UInt16:
-		return breaks<uint16_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_Int16:
-		return breaks<int16_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_UInt32:
-		return breaks<uint32_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_Int32:
-		return breaks<int32_t>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_Float32:
-		return breaks<float>(p_raster, userDefinedBreaks, map, filename);
-		case GDT_Float64:
-		return breaks<double>(p_raster, userDefinedBreaks, map, filename);
-		default:
-		throw std::runtime_error("GDATDataType not one of the accepted types.");
-	}
-}
-
 PYBIND11_MODULE(breaks, m) {
-	m.def("breaks_cpp", &breaksTypeSpecifier);
+	m.def("breaks_cpp", &breaks);
 }

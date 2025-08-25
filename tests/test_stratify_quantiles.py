@@ -21,13 +21,13 @@ class TestQuantiles:
     
     def test_correct_stratifications_against_R_version(self):
         test_rast = sgs.quantiles(self.rast, num_strata={"zq90": 4})
-        test = test_rast[:]
-        correct = np.subtract(self.zq90_output_rast[:], 1)
+        test = test_rast.band('strat_zq90')
+        correct = np.nan_to_num(np.subtract(self.zq90_output_rast.band(0), 1), nan=-1)
         assert np.array_equal(test, correct, equal_nan=True)
 
         test_rast = sgs.quantiles(self.rast, num_strata={"pzabove2": [0.2, 0.4, 0.8]})
-        test = test_rast[:]
-        correct = np.subtract(self.pz2_output_rast[:], 1)
+        test = test_rast.band('strat_pzabove2')
+        correct = np.nan_to_num(np.subtract(self.pz2_output_rast.band(0), 1), nan=-1)
         assert np.array_equal(test, correct, equal_nan=True)
 
     def test_mapping_outputs(self):
@@ -43,10 +43,10 @@ class TestQuantiles:
 
         for i in range(test_rast.height):
             for j in range(test_rast.width):
-                zq90_strat = test_rast['strat_zq90', i, j]
-                pz2_strat = test_rast['strat_pzabove2', i, j]
-                zsd_strat = test_rast['strat_zsd', i, j]
-                map_strat = test_rast['strat_map', i, j]
+                zq90_strat = test_rast.band('strat_zq90')[i, j]
+                pz2_strat = test_rast.band('strat_pzabove2')[i, j]
+                zsd_strat = test_rast.band('strat_zsd')[i, j]
+                map_strat = test_rast.band('strat_map')[i, j]
 
                 if map_strat in zq90_mapping:
                     assert zq90_mapping[map_strat] == zq90_strat
@@ -83,6 +83,6 @@ class TestQuantiles:
         temp_file = temp_dir / "rast.tif"
         sgs.quantiles(self.rast, num_strata={'zq90': 4}, filename=str(temp_file))
         test_rast = sgs.SpatialRaster(str(temp_file))
-        test = test_rast[:]
-        correct = np.subtract(self.zq90_output_rast[:], 1)
+        test = test_rast.band('strat_zq90')
+        correct = np.nan_to_num(np.subtract(self.zq90_output_rast.band(0), 1), nan=-1)
         assert np.array_equal(test, correct, equal_nan=True)

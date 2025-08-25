@@ -7,6 +7,7 @@
  *
  ******************************************************************************/
 
+#include "helper.h"
 #include "raster.h"
 #include "vector.h"
 #include "gdal_utils.h"
@@ -14,12 +15,19 @@
 GDALRasterWrapper *poly(
 	GDALVectorWrapper *p_vector,
 	GDALRasterWrapper *p_raster,
+	size_t numStrata,
 	std::string query,
 	std::string filename)
 {
 	//step 1: get required info from vector and raster objects
 	GDALDataset *p_vectorDS = p_vector->getDataset();
 	GDALDataset *p_rasterDS = p_raster->getDataset();
+
+	//get required pixel type and size
+	std::vector<GDALDataType> stratBandTypes;
+	size_t size = setStratBandType(numStrata, stratBandTypes);
+	GDALDataType type = stratBandTypes.back();
+
 	//step 2: create in-memory dataset
 	GDALAllRegister();
 	GDALDataset *p_dataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
@@ -27,25 +35,29 @@ GDALRasterWrapper *poly(
 		p_raster->getWidth(),
 		p_raster->getHeight(),
 		0,
-		GDT_Float32,
+		type,
 		nullptr
 	);
 
 	//allocate new raster layer
-	void *datapointer = CPLMalloc(p_raster->getWidth() * p_raster->getHeight() * sizeof(float));
+	void *datapointer = VSIMalloc3(
+		p_raster->getWidth(),
+		p_raster->getHeight(),
+		size
+	);
 	
 	//add band to new in-memory raster dataset
 	char **papszOptions = nullptr;
 	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", std::to_string((size_t)datapointer).c_str());
-	
+
 	//step 3: set and fill parameters of new in-memory dataset
-	p_dataset->AddBand(GDT_Float32, papszOptions);
+	p_dataset->AddBand(type, papszOptions);
 	p_dataset->SetGeoTransform(p_raster->getGeotransform());
 	p_dataset->SetProjection(p_rasterDS->GetProjectionRef());
 	GDALRasterBand *p_band = p_dataset->GetRasterBand(1);
 	p_band->SetDescription("strata");
-	p_band->SetNoDataValue(std::nan("-1"));
-	p_band->Fill(std::nan("-1"));
+	p_band->SetNoDataValue(-1);
+	p_band->Fill(-1);
 
 	//step 4: generate options list for GDALRasterize()
 	char ** argv = nullptr;

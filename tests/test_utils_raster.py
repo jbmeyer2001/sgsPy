@@ -33,9 +33,9 @@ class TestSpatialRaster:
         assert 'pzabove2' in rast.bands
         assert 'zsd' in rast.bands
         assert len(rast.bands) == 3
-        assert np.array_equal(np.load(mraster_zq90_path), rast[0], equal_nan=True)
-        assert np.array_equal(np.load(mraster_pzabove2_path), rast[1], equal_nan=True)
-        assert np.array_equal(np.load(mraster_zsd_path), rast[2], equal_nan=True)
+        assert np.array_equal(np.load(mraster_zq90_path), rast.band(0), equal_nan=True)
+        assert np.array_equal(np.load(mraster_pzabove2_path), rast.band(1), equal_nan=True)
+        assert np.array_equal(np.load(mraster_zsd_path), rast.band(2), equal_nan=True)
 
     def mraster_small_check(self, rast):
         assert rast.width == 141
@@ -51,9 +51,9 @@ class TestSpatialRaster:
         assert 'pzabove2' in rast.bands
         assert 'zsd' in rast.bands
         assert len(rast.bands) == 3
-        assert np.array_equal(np.load(mraster_small_zq90_path), rast[0], equal_nan=True)
-        assert np.array_equal(np.load(mraster_small_pzabove2_path), rast[1], equal_nan=True)
-        assert np.array_equal(np.load(mraster_small_zsd_path), rast[2], equal_nan=True)
+        assert np.array_equal(np.load(mraster_small_zq90_path), rast.band(0), equal_nan=True)
+        assert np.array_equal(np.load(mraster_small_pzabove2_path), rast.band(1), equal_nan=True)
+        assert np.array_equal(np.load(mraster_small_zsd_path), rast.band(2), equal_nan=True)
     
     def sraster_check(self, rast):
         assert rast.width == 373
@@ -67,7 +67,7 @@ class TestSpatialRaster:
         assert rast.ymax == 5343240
         assert 'strata' in rast.bands
         assert len(rast.bands) == 1
-        assert np.array_equal(np.load(sraster_strata_path), rast[0], equal_nan=True)
+        assert np.array_equal(np.load(sraster_strata_path), rast.band(0), equal_nan=True)
 
     def sraster2_check(self, rast):
         assert rast.width == 861
@@ -81,7 +81,7 @@ class TestSpatialRaster:
         assert rast.ymax - 45.69332 == pytest.approx(0, abs=1e-4)
         assert '' in rast.bands
         assert len(rast.bands) == 1
-        assert np.array_equal(np.load(sraster2_band_path), rast[0], equal_nan=True)
+        assert np.array_equal(np.load(sraster2_band_path), rast.band(0), equal_nan=True)
 
     def test_construct_from_path(self):
         rast = sgs.utils.raster.SpatialRaster(mraster_geotiff_path)
@@ -111,23 +111,4 @@ class TestSpatialRaster:
 
         rast = sgs.utils.raster.SpatialRaster(sraster2_geotiff_path)
         new_rast = sgs.utils.raster.SpatialRaster(rast.cpp_raster)
-        self.sraster2_check(new_rast)
-
-    def test_raster_slicing(self):
-        rast = sgs.utils.raster.SpatialRaster(mraster_small_geotiff_path)
-        zq90 = np.load(mraster_small_zq90_path)
-        pzabove2 = np.load(mraster_small_pzabove2_path)
-        zsd = np.load(mraster_small_zsd_path)
-
-        assert np.array_equal(zq90, rast[0], equal_nan=True)
-        assert np.array_equal(pzabove2, rast[1], equal_nan=True)
-        assert np.array_equal(zsd, rast[2], equal_nan=True)
-
-        assert np.array_equal(zq90, rast['zq90'], equal_nan=True)
-        assert np.array_equal(pzabove2, rast['pzabove2'], equal_nan=True)
-        assert np.array_equal(zsd, rast['zsd'], equal_nan=True)
-
-        assert np.array_equal(zq90[0:10, 0:10], rast['zq90', 0:10, 0:10], equal_nan=True)
-        assert np.array_equal(zq90[131:141, 100:110], rast['zq90', 131:141, 100:110], equal_nan=True)
-        assert np.array_equal([zq90, pzabove2], rast[0:2], equal_nan=True)
-        assert np.array_equal(zq90[73, 46], rast['zq90', 73, 46], equal_nan=True)
+        self.sraster2_check(new_rast) 

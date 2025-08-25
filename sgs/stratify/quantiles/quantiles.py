@@ -13,6 +13,8 @@ from sgs.utils import SpatialRaster
 
 from quantiles import quantiles_cpp
 
+MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
+
 def quantiles(
     rast: SpatialRaster,
     num_strata: int | list[float] | list[int|list[float]] | dict[str,int|list[float]],
@@ -53,6 +55,8 @@ def quantiles(
         if quantiles specified by a list of floats (list[float]) have a maximum over 1
     ValueError
         if quantiles specified by a list of floats (list[float]) have a minimum under 0
+    ValueError
+        if maximum strata value would result in an integer overflow error
     RuntimeError (C++)
         if the data type of the raster is not accepted
     RuntimeError (C++)
@@ -135,6 +139,18 @@ def quantiles(
                     if 1.0 in probabilities_dict[band_num]:
                         probabilities_dict[band_num].remove(1.0)
 
+    #error check max value for potential overflow error
+    max_mapped_strata = int(map)
+    for _, val in probabilities_dict.items():
+        strata_count = len(val) + 1
+        if strata_count > MAX_STRATA_VAL:
+            raise ValueError("one of the quantiles given will cause an integer overflow error because the max strata number is too large.")
+
+        max_mapped_strata = max_mapped_strata * strata_count
+
+    if max_mapped_strata > MAX_STRATA_VAL:
+        raise ValueError("the mapped strata will cause an overflow error because the max strata number is too large.")
+    
     #call stratify quantiles function
     strat_raster = quantiles_cpp(rast.cpp_raster, probabilities_dict, map, filename)
 

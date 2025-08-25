@@ -26,7 +26,7 @@ class TestBalanced:
             y = self.rast.height - ((point.y - self.rast.ymin) / self.rast.pixel_height)
 
             for band in self.rast.bands:
-                assert not np.isnan(self.rast[band, int(y), int(x)])
+                assert not np.isnan(self.rast.band(band)[int(y), int(x)])
 
     def check_samples_access(self, samples, buff_inner, buff_outer):
         gs_access = gpd.read_file(access_shapefile_path)

@@ -27,8 +27,9 @@ class TestPoly:
             layer_name='inventory_polygons',
             features=['poor', 'rich', 'medium'],
         )
-        test = test_rast[:]
-        correct = self.test1_output_rast[:].astype(np.float32)
+        test = test_rast.band(0).astype(np.float32)
+        test[test == -1] = np.nan
+        correct = self.test1_output_rast.band(0).astype(np.float32)
         correct[correct == 4294967295] = np.nan
         correct = np.subtract(correct, 1)
         assert np.array_equal(test, correct, equal_nan=True)
@@ -40,8 +41,9 @@ class TestPoly:
             layer_name='inventory_polygons',
             features=['poor', ['rich', 'medium']],
         )
-        test = test_rast[:]
-        correct = self.test2_output_rast[:].astype(np.float32)
+        test = test_rast.band(0).astype(np.float32)
+        test[test == -1] = np.nan
+        correct = self.test2_output_rast.band(0).astype(np.float32)
         correct[correct == 4294967295] = np.nan
         correct = np.subtract(correct, 1)
         assert np.array_equal(test, correct, equal_nan=True)
@@ -60,8 +62,9 @@ class TestPoly:
             filename=str(temp_file),
         )
         test_rast = sgs.SpatialRaster(str(temp_file))
-        test = test_rast[:]
-        correct = self.test1_output_rast[:].astype(np.float32)
+        test = test_rast.band(0).astype(np.float32)
+        test[test == -1] = np.nan
+        correct = self.test1_output_rast.band(0).astype(np.float32)
         correct[correct == 4294967295] = np.nan
         correct = np.subtract(correct, 1)
         assert np.array_equal(test, correct, equal_nan=True)
