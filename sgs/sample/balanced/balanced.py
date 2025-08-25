@@ -194,6 +194,7 @@ def balanced(rast: SpatialRaster,
                 buff_outer,
                 algorithm,
                 prob,
+                plot,
                 filename
             )
         else:
@@ -205,6 +206,7 @@ def balanced(rast: SpatialRaster,
                 srast_band,
                 algorithm,
                 prob,
+                plot,
                 filename
             )
     else:
@@ -219,6 +221,7 @@ def balanced(rast: SpatialRaster,
                 buff_outer,
                 algorithm,
                 prob,
+                plot,
                 filename
             )
         else:
@@ -228,6 +231,7 @@ def balanced(rast: SpatialRaster,
                 band_ints,
                 algorithm,
                 prob,
+                plot,
                 filename,
             )
 
