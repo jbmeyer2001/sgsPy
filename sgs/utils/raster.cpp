@@ -293,7 +293,7 @@ void GDALRasterWrapper::readRasterBand(int width, int height, int band) {
 	GDALDataType type = this->getRasterBandType(band);
 	size_t size = this->getRasterBandTypeSize(band);
 	size_t max = std::numeric_limits<size_t>::max();
-
+	
 	//perform size checks
 	if (max / size < static_cast<size_t>(width) ||
 	    max / (size * static_cast<size_t>(width)) < static_cast<size_t>(height)) {
@@ -306,7 +306,7 @@ void GDALRasterWrapper::readRasterBand(int width, int height, int band) {
 
 	//allocate data
 	void *p_data = VSIMalloc3(height, width, size);
-
+	
 	//perform raster read on current band
 	CPLErr err = this->p_dataset->GetRasterBand(band + 1)->RasterIO(
 		GF_Read, 			//GDALRWFlag eRWFlag
@@ -410,16 +410,15 @@ GDALRasterBand *GDALRasterWrapper::getRasterBand(int band) {
 			     getRasterBandBuffer()				     
 ******************************************************************************/
 void *GDALRasterWrapper::getRasterBandBuffer(int band) {
-	if (!displayRasterBandRead[band]) {
+	if (!this->rasterBandRead[band]) {
 		this->readRasterBand(
 			this->getWidth(), 
 			this->getHeight(),
 			band
 		);
-		return displayRasterBandPointers[band];
 	}
 
-	return displayRasterBandPointers[band];
+	return this->rasterBandPointers[band];
 }
 
 /******************************************************************************

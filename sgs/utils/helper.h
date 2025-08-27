@@ -161,9 +161,10 @@ printTypeWarningsForInt32Conversion(GDALDataType type) {
  *
  */
 inline GDALDataset *
-createEmptyDataset(bool largeRaster, int width, int height) {
-	std::string driverName = largeRaster ? "VRT" : "MEM";
+createEmptyDataset(bool largeRaster, int width, int height, double *geotransform, std::string projection) {
+	GDALAllRegister();
 	
+	std::string driverName = largeRaster ? "VRT" : "MEM";
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
 	if (!p_driver) {
 		throw std::runtime_error("unable to find dataset driver.");
@@ -179,6 +180,16 @@ createEmptyDataset(bool largeRaster, int width, int height) {
 	);
 	if (!p_dataset) {
 		throw std::runtime_error("unable to create dataset with driver.");
+	}
+
+	CPLErr err = p_dataset->SetGeoTransform(geotransform);
+	if (err) {
+		throw std::runtime_error("error setting geotransform.");
+	}
+
+	err = p_dataset->SetProjection(projection.c_str());
+	if (err) {
+		throw std::runtime_error("error setting projection.");
 	}
 	
 	return p_dataset;

@@ -102,10 +102,10 @@ def breaks(
         raise ValueError("the mapped strata will cause an overflow error because the max strata number is too large.")    
 
     raster_size_bytes = 0
-    height = raster.height
-    width = raster.width
+    height = rast.height
+    width = rast.width
     for key, _ in breaks_dict.items():
-        pixel_size = raster.cpp_raster.get_raster_band_type_size(key)
+        pixel_size = rast.cpp_raster.get_raster_band_type_size(key)
         band_size = height * width * pixel_size
         raster_size_bytes += band_size
         if band_size >= GIGABYTE:

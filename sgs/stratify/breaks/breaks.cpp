@@ -89,6 +89,7 @@ inline void processPixel(
 	);
 	bool isNan = std::isnan(val) || (double)val == noDataValue;
 		
+
 	//calculate strata value if not nan
 	size_t strat = 0;
 	if (!isNan) {
@@ -156,11 +157,13 @@ GDALRasterWrapper *breaks(
 
 	std::vector<std::string> bandNames = p_raster->getBands();
 	std::vector<double> noDataValues;
-	
+
 	GDALDataset *p_dataset = createEmptyDataset(
 		largeRaster,
 		p_raster->getWidth(),
-		p_raster->getHeight()
+		p_raster->getHeight(),
+		p_raster->getGeotransform(),
+		std::string(p_raster->getDataset()->GetProjectionRef())
 	);
 
 	//step 1: allocate, read, and initialize raster data and breaks information
@@ -427,10 +430,6 @@ GDALRasterWrapper *breaks(
 	}
 
 	//free allocated band data
-	for (size_t i = 0; i < rasterBandBuffers.size(); i++) {
-		VSIFree(rasterBandBuffers[i]);
-	}
-
 	if (map && largeRaster) {
 		for (size_t i = 0; i < stratBandBuffers.size(); i++) {
 			VSIFree(stratBandBuffers[i]);
