@@ -29,5 +29,6 @@ PYBIND11_MODULE(raster, m) {
 		.def("get_pixel_width", &GDALRasterWrapper::getPixelWidth)
 		.def("get_bands", &GDALRasterWrapper::getBands)
 		.def("get_band_nodata_value", &GDALRasterWrapper::getBandNoDataValue)
-		.def("get_raster_as_memoryview", &GDALRasterWrapper::getRasterBandAsMemView);
+		.def("get_raster_as_memoryview", &GDALRasterWrapper::getRasterBandAsMemView)
+		.def("get_raster_band_type_size", &GDALRasterWrapper::getRasterBandTypeSize);
 }

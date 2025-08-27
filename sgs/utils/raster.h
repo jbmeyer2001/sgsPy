@@ -93,9 +93,6 @@ class GDALRasterWrapper {
 	py::buffer getBuffer(size_t size, void *p_raster, int width, int height);
 	
 	public:
-	int blockXSize;
-	int blockYSize;
-
 	/**
 	 * Constructor for GDALRasterWrapper class.
 	 * Creates GDALDataset using drivers and given file, then calls
@@ -114,11 +111,19 @@ class GDALRasterWrapper {
 	 * Calls createFromDataset() passing p_dataset parameter, and
 	 * sets internal raster band parameters accordingly.
 	 *
-	 * @param GDALDataset *GDAL raster dataset
+	 * @param GDALDataset *p_dataset GDAL raster dataset
 	 * @param std::vector<void *> raster bands
 	 * @throws std::runtime_error if unable to get geotransform
 	 */
 	GDALRasterWrapper(GDALDataset *p_dataset, std::vector<void *> bands);
+
+	/**
+	 * Constructor for GDALRasterWrapper class using just a GDAL 
+	 * dataset pointer, by calling createFromDataset().
+	 *
+	 * @param GDALDataset *p_dataset GDAL raster dataset
+	 */
+	GDALRasterWrapper(GDALDataset *p_dataset);
 
 	/**
 	 * Constructor for GDALRasterWrapper class. This method creates
@@ -322,37 +327,4 @@ class GDALRasterWrapper {
 	 * @param std::string filename
 	 */
 	void write(std::string filename);
-
-	/**
-	 * Gets the actual block size of the given band. The
-	 * GetActualBlockSize function from GDAL, which this
-	 * member function calls, takes into account partial blocks.
-	 *
-	 * @param int band 0-indexed raster band
-	 * @param int * holds valid x size
-	 * @param int * holds valid y size
-	 */
-	void getActualBlockSizeFromBand(int band, int *validXSize, int *validYSize);
-
-	/**
-	 * Read blocked data from specified band, using 
-	 * GDALRasterBand::ReadBlock().
-	 *
-	 * @param int band 0-indexed raster band
-	 * @param int x block offset
-	 * @param int y block offset
-	 * @param void * data buffer
-	 */
-	void readBlockFromBand(int band, int xBlockOff, int yBlockOff, void *p_data);
-
-	/**
-	 * Write blocked data to specified band, using
-	 * GDALRasterBand::WriteBlock().
-	 *
-	 * @param int band 0-indexed rasterband
-	 * @param int x block offset
-	 * @param int y block offset
-	 * @param void * data buffer
-	 */
-	void writeBlockToBand(int band, int xBlockOff, int yBlockOff, void *p_data);
 };

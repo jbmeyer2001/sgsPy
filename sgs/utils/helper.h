@@ -156,3 +156,89 @@ printTypeWarningsForInt32Conversion(GDALDataType type) {
 			break;
 	}
 }
+
+/**
+ *
+ */
+inline GDALDataset *
+createEmptyDataset(bool largeRaster, int width, int height) {
+	std::string driverName = largeRaster ? "VRT" : "MEM";
+	
+	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
+	if (!p_driver) {
+		throw std::runtime_error("unable to find dataset driver.");
+	}
+
+	GDALDataset *p_dataset = p_driver->Create(
+		"",
+		width,
+		height,
+		0,
+		GDT_Unknown,
+		nullptr
+	);
+	if (!p_dataset) {
+		throw std::runtime_error("unable to create dataset with driver.");
+	}
+	
+	return p_dataset;
+}
+
+/**
+ *
+ */
+inline GDALRasterBand *
+addBandToDataset(
+	GDALDataset * p_dataset,
+	GDALDataType type,
+	bool largeRaster,
+	int width,
+	int height,
+	size_t size,
+	std::vector<void *>& stratBands,
+	std::string bandName,
+	int xBlockSize,
+	int yBlockSize)
+{
+	CPLErr err;
+	char **papszOptions = nullptr;
+	if (largeRaster) {
+		papszOptions = CSLSetNameValue(
+			papszOptions,
+			"BLOCKXSIZE",
+			std::to_string(xBlockSize).c_str()
+		);
+		papszOptions = CSLSetNameValue(
+			papszOptions,
+			"BLOCKYSIZE",
+			std::to_string(yBlockSize).c_str()
+		);
+
+		err = p_dataset->AddBand(type);
+	}
+	else {
+		void *p_strata = VSIMalloc3(
+			width,
+			height,
+			size
+		);
+		stratBands.push_back(p_strata);
+
+		papszOptions = CSLSetNameValue(
+			papszOptions,
+			"DATAPOINTER",
+			std::to_string((size_t)p_strata).c_str()
+		);
+
+		err = p_dataset->AddBand(type, papszOptions);
+	}
+	if (err) {
+		throw std::runtime_error("unable to add band to dataset.");
+	}
+
+	GDALRasterBand *p_band = p_DATASET->GetRasterBand(p_dataset->GetRasterBandCount());
+	p_band->setDescription(bandName.c_str());
+	p_band->setNoDataValue(-1);
+
+	return p_band;
+}

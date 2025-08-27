@@ -8,11 +8,10 @@
 # ******************************************************************************
 
 import numpy as np
-
 from sgs.utils import SpatialRaster
-
 from breaks import breaks_cpp
 
+GIGABYTE = 1073741824
 MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
 def breaks(
@@ -63,6 +62,7 @@ def breaks(
     """
 
     breaks_dict = {}
+    large_raster = False
 
     if type(breaks) is list and len(breaks) < 1:
         raise ValueError("breaks list must contain at least one element.")
@@ -101,8 +101,28 @@ def breaks(
     if max_mapped_strata > MAX_STRATA_VAL:
         raise ValueError("the mapped strata will cause an overflow error because the max strata number is too large.")    
 
+    raster_size_bytes = 0
+    height = raster.height
+    width = raster.width
+    for key, _ in breaks_dict.items():
+        pixel_size = raster.cpp_raster.get_raster_band_type_size(key)
+        band_size = height * width * pixel_size
+        raster_size_bytes += band_size
+        if band_size >= GIGABYTE:
+            large_raster = True
+            break
+
+    #if the raster is big enough, create a temp file to hold it
+    large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
+
     #call stratify breaks function
-    strat_raster = breaks_cpp(rast.cpp_raster, breaks_dict, map, filename)
+    strat_raster = breaks_cpp(
+        rast.cpp_raster, 
+        breaks_dict, 
+        map, 
+        filename,
+        large_raster
+    )
 
     return SpatialRaster(strat_raster)
 
