@@ -299,10 +299,18 @@ class GDALRasterWrapper {
 	 * Getter method for a GDALRasterBand in the raster, used by the C++ side of the application.
 	 *
 	 * @param int band zero-indexed
-	 * @returns void *pointer to band
+	 * @returns GDALRasterBand *pointer to band
 	 * @throws std::runtime_error if unable to read raster band during allocation
 	 */
 	GDALRasterBand *getRasterBand(int band);
+
+	/**
+	 * Getter method for the whole GDALRasterBand data buffer.
+	 *
+	 * @param int band zero-indexed
+	 * @returns void *data pointer to band
+	 */
+	void *getRasterBandBuffer(int);
 
 	/**
 	 * Getter method for the pixel / raster data type.

@@ -236,9 +236,9 @@ addBandToDataset(
 		throw std::runtime_error("unable to add band to dataset.");
 	}
 
-	GDALRasterBand *p_band = p_DATASET->GetRasterBand(p_dataset->GetRasterBandCount());
-	p_band->setDescription(bandName.c_str());
-	p_band->setNoDataValue(-1);
+	GDALRasterBand *p_band = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
+	p_band->SetDescription(bandName.c_str());
+	p_band->SetNoDataValue(-1);
 
 	return p_band;
 }

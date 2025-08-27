@@ -29,7 +29,7 @@ inline void processMapPixel(
 {
 	size_t mappedStrat = 0;
 	bool mapNan = false;
-	for (int i = 0; i < bandCount; i++) {
+	for (size_t i = 0; i < bandCount; i++) {
 		double val = getPixelValueDependingOnType<double>(
 			rasterBandTypes[i],
 			rasterBandBuffers[i],
@@ -64,7 +64,7 @@ inline void processMapPixel(
 	setStrataPixelDependingOnType(
 		stratBandTypes.back(),
 		stratBandBuffers.back(),
-		j,
+		index,
 		mapNan,
 		mappedStrat
 	);
@@ -164,6 +164,8 @@ GDALRasterWrapper *breaks(
 	);
 
 	//step 1: allocate, read, and initialize raster data and breaks information
+	int firstXBlockSize = -1;
+	int firstYBlockSize = -1;
 	for (auto const& [key, val] : breaks) {
 		//update info of raster to stratify
 		GDALRasterBand *p_band = p_raster->getRasterBand(key);
@@ -173,6 +175,18 @@ GDALRasterWrapper *breaks(
 		noDataValues.push_back(p_band->GetNoDataValue());
 		if (!largeRaster) {
 			rasterBandBuffers.push_back(p_raster->getRasterBandBuffer(key));
+		}
+	
+		//determine block size to set the new strat raster as	
+		int curXBlockSize, curYBlockSize;
+		if (largeRaster) {
+			rasterBands.back()->GetBlockSize(&curXBlockSize, &curYBlockSize);
+			if (firstXBlockSize == -1) {
+				firstXBlockSize = curXBlockSize;
+			}
+			if (firstYBlockSize == -1) {
+				firstYBlockSize = curYBlockSize;
+			}
 		}
 
 		//sort and add band breaks vector
@@ -192,8 +206,8 @@ GDALRasterWrapper *breaks(
 			pixelTypeSize,
 			stratBandBuffers,
 			"strat_" + bandNames[key],
-			map ? xBlockSizes[0] : xBlockSize,
-			map ? yBlockSizes[0] : yBlockSize
+			map ? firstXBlockSize : curXBlockSize,
+			map ? firstXBlockSize : curYBlockSize
 		));
 	}
 
@@ -201,7 +215,7 @@ GDALRasterWrapper *breaks(
 	std::vector<size_t> bandStratMultipliers(breaks.size(), 1);
 	if (map) {
 		//determine the stratification band index multipliers of the mapped band and error check maxes
-		for (int i = 0; i < bandCount - 1; i++) {
+		for (size_t i = 0; i < bandCount - 1; i++) {
 			bandStratMultipliers[i + 1] = bandStratMultipliers[i] * (bandBreaks[i].size() + 1);
 		}
 
@@ -212,11 +226,13 @@ GDALRasterWrapper *breaks(
 			p_dataset,
 			stratBandTypes.back(),
 			largeRaster,
-			p_raster->getWidth()
+			p_raster->getWidth(),
 			p_raster->getHeight(),
 			pixelTypeSize,
 			stratBandBuffers,
-			"strat_map"
+			"strat_map",
+			firstXBlockSize,
+			firstXBlockSize
 		));
 	}	
 
@@ -233,18 +249,18 @@ GDALRasterWrapper *breaks(
 
 			for (size_t band = 0; band < bandCount; band++) {
 				rasterBands[band]->GetBlockSize(&checkXBlockSize, &checkYBlockSize);
-				useBlockRaster.push_back(checkXBlockSize == xBlockSize && checkYBlockSize == yBlockSize);
+				useBlocksRaster.push_back(checkXBlockSize == xBlockSize && checkYBlockSize == yBlockSize);
 				rasterBandBuffers.push_back(VSIMalloc3(xBlockSize, yBlockSize, rasterBandTypeSizes[band]));
 				
 				stratBands[band]->GetBlockSize(&checkXBlockSize, &checkYBlockSize);
-				useBlockStrat.push_back(checkXBlockSize == xBlockSize && checkYBlockSize == yBlockSize);
+				useBlocksStrat.push_back(checkXBlockSize == xBlockSize && checkYBlockSize == yBlockSize);
 				stratBandBuffers.push_back(VSIMalloc3(xBlockSize, yBlockSize, stratBandTypeSizes[band]));
 			}	
 
 			//mapped strat raster
-			stratBands[bandCount]->GetBlockSize(&checkBlockSize, &checkYBlockSize);
-			useBlockStrat.push_back(checkXBlockSize == xBlockSize && checkYBlockSize == yBlockSize);
-			stratBandBuffers.push_back(VSIMalloc3(xBlockSize, yBlockSize, stratBandTypeSizes.back());
+			stratBands[bandCount]->GetBlockSize(&checkXBlockSize, &checkYBlockSize);
+			useBlocksStrat.push_back(checkXBlockSize == xBlockSize && checkYBlockSize == yBlockSize);
+			stratBandBuffers.push_back(VSIMalloc3(xBlockSize, yBlockSize, stratBandTypeSizes.back()));
 
 			int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 			int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
@@ -308,19 +324,20 @@ GDALRasterWrapper *breaks(
 							);
 						}
 						else {
-							stratBands[band]->RasterIO(
-								GF_Write,
-								xBlock * xBlockSize,
-								yBlock * yBlockSize,
-								xValid,
-								yValid,
-								stratBandBuffers[band],
-								xBlockSize,
-								yBlockSize,
-								stratBandTypes[band],
-								0,
-								(xBlockSize - xValid) * stratBandTypeSizes[band]
-							);
+							throw std::runtime_error("should not be here!!!");
+							//stratBands[band]->RasterIO(
+							//	GF_Write,
+							//	xBlock * xBlockSize,
+							//	yBlock * yBlockSize,
+							//	xValid,
+							//	yValid,
+							//	stratBandBuffers[band],
+							//	xBlockSize,
+							//	yBlockSize,
+							//	stratBandTypes[band],
+							//	0,
+							//	(xBlockSize - xValid) * stratBandTypeSizes[band]
+							//);
 						}
 					}
 				}
@@ -332,7 +349,7 @@ GDALRasterWrapper *breaks(
 			for (size_t band = 0; band < bandCount; band++) {
 				int xBlockSize, yBlockSize, stratXBlockSize, stratYBlockSize;
 				rasterBands[band]->GetBlockSize(&xBlockSize, &yBlockSize);
-				stratBands[band]->GetBlockSize(&stratXBlockSzie, &stratYBlockSize);
+				stratBands[band]->GetBlockSize(&stratXBlockSize, &stratYBlockSize);
 				
 				if (xBlockSize != stratXBlockSize || yBlockSize != stratYBlockSize) {
 					throw std::runtime_error("block size error -- should not be here!!!");
@@ -342,7 +359,7 @@ GDALRasterWrapper *breaks(
 				p_strat = VSIRealloc(p_strat, xBlockSize * yBlockSize * stratBandTypeSizes[band]);
 
 				int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
-				int yBlocks = (p_raster->getHeight() + YBlockSize - 1) / yBlockSize;
+				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
 
 				for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 					for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
@@ -376,10 +393,11 @@ GDALRasterWrapper *breaks(
 		}
 	}
 	else {
+		size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());
 		if (map) {
-			for (size_t i = 0; i < p_raster->getWidth() * p_raster->getHeight(); i++) {
+			for (size_t i = 0; i < pixelCount; i++) {
 				processMapPixel(
-					j,
+					i,
 					bandCount,
 					rasterBandTypes,
 					rasterBandBuffers,
@@ -393,7 +411,7 @@ GDALRasterWrapper *breaks(
 		}
 		else {
 			for (size_t band = 0; band < bandCount; band++) {
-				for (size_t i = 0; i < p_raster->getWidth() * p_raster->getHeigth(); i++) {
+				for (size_t i = 0; i < pixelCount; i++) {
 					processPixel(
 						i, 
 						rasterBandTypes[band],
@@ -410,12 +428,12 @@ GDALRasterWrapper *breaks(
 
 	//free allocated band data
 	for (size_t i = 0; i < rasterBandBuffers.size(); i++) {
-		VSIfree(rasterBandBuffers[i]);
+		VSIFree(rasterBandBuffers[i]);
 	}
 
 	if (map && largeRaster) {
 		for (size_t i = 0; i < stratBandBuffers.size(); i++) {
-			VSIfree(stratBandBuffers[i]);
+			VSIFree(stratBandBuffers[i]);
 		}
 	}
 
