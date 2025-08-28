@@ -161,21 +161,28 @@ printTypeWarningsForInt32Conversion(GDALDataType type) {
  *
  */
 inline GDALDataset *
-createEmptyDataset(bool largeRaster, int width, int height, double *geotransform, std::string projection) {
+createDataset(
+	std::string filename,
+	std::string driverName, 
+	int width, 
+	int height, 
+	int bands,
+	GDALDataType type,
+	double *geotransform, 
+	std::string projection) 
+{
 	GDALAllRegister();
-	
-	std::string driverName = largeRaster ? "VRT" : "MEM";
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
 	if (!p_driver) {
 		throw std::runtime_error("unable to find dataset driver.");
 	}
 
 	GDALDataset *p_dataset = p_driver->Create(
-		"",
+		filename,
 		width,
 		height,
-		0,
-		GDT_Unknown,
+		bands,
+		type,
 		nullptr
 	);
 	if (!p_dataset) {
@@ -198,58 +205,104 @@ createEmptyDataset(bool largeRaster, int width, int height, double *geotransform
 /**
  *
  */
-inline GDALRasterBand *
-addBandToDataset(
-	GDALDataset * p_dataset,
+inline void
+addBandToMEMDataset(
+	std::vector<GDALRasterBand *>& bands,
+	std::vector<void *>& stratBandBuffers,
+	GDALDataset *p_dataset,
 	GDALDataType type,
-	bool largeRaster,
-	int width,
-	int height,
 	size_t size,
-	std::vector<void *>& stratBands,
-	std::string bandName,
-	int xBlockSize,
-	int yBlockSize)
+	std::string bandName)
 {
-	CPLErr err;
-	char **papszOptions = nullptr;
-	if (largeRaster) {
-		papszOptions = CSLSetNameValue(
-			papszOptions,
-			"BLOCKXSIZE",
-			std::to_string(xBlockSize).c_str()
-		);
-		papszOptions = CSLSetNameValue(
-			papszOptions,
-			"BLOCKYSIZE",
-			std::to_string(yBlockSize).c_str()
-		);
+	void *p_strata = VSIMalloc3(
+		p_dataset->getWidth,
+		p_dataset->getHeight,
+		size
+	);
+	stratBandBuffers.push_back(p_strata);
 
-		err = p_dataset->AddBand(type);
-	}
-	else {
-		void *p_strata = VSIMalloc3(
-			width,
-			height,
-			size
-		);
-		stratBands.push_back(p_strata);
+	papszOptions = CSLSetNameValue(
+		papszOptions,
+		"DATAPOINTER",
+		std::to_string((size_t)p_strata).c_str()
+	);
 
-		papszOptions = CSLSetNameValue(
-			papszOptions,
-			"DATAPOINTER",
-			std::to_string((size_t)p_strata).c_str()
-		);
-
-		err = p_dataset->AddBand(type, papszOptions);
-	}
+	err = p_dataset->AddBand(type, papszOptions);
 	if (err) {
 		throw std::runtime_error("unable to add band to dataset.");
 	}
 
-	GDALRasterBand *p_band = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
+	bands.push_back(p_dataset->GetRasterBand(p_dataset->GetRasterCount));
+}
+
+/**
+ *
+ */
+inline void
+addBandToVRTDataset(
+	std::vector<GDALRasterBand *>& bands,
+	std::vector<GDALDataset *>& VRTSubDatasets,
+	GDALDataset * p_dataset,
+	GDALDataType type,
+	std::string bandName,
+	int xBlockSize,
+	int yBlockSize,
+	std::string newFilename,
+	double *geotransform,
+	std::string projection)
+{
+	//set block size of new band
+	CPLErr err;
+	char **papszOptions = nullptr;
+	papszOptions = CSLSetNameValue(
+		papszOptions,
+		"BLOCKXSIZE",
+		std::to_string(xBlockSize).c_str()
+	);
+	papszOptions = CSLSetNameValue(
+		papszOptions,
+		"BLOCKYSIZE",
+		std::to_string(yBlockSize).c_str()
+	);
+
+	//create the VRT band sub-dataset as a Geotiff
+	GDALDataset *p_VRTSubDataset = createDataset(
+		newFilename,
+		"GTiff",
+		p_dataset->getWidth(),
+		p_dataset->getHeight(),
+		1,
+		type,
+		geotransform,
+		projection
+	);
+	VRTSubDatasets.push_back(p_VRTSubDataset);
+
+	//add the sub-datasets band to the bands vector
+	GDALRasterBand *p_band = p_VRTSubDataset->GetRasterBand(1);
 	p_band->SetDescription(bandName.c_str());
 	p_band->SetNoDataValue(-1);
+	bands.push_back(p_band);
 
-	return p_band;
+	//adjust the options for the VRT band
+	papszOptions = CSLSetNameValue(
+		papszOptions,
+		"subclass",
+		"VRTRawRasterBand"
+	);
+	papszOptions = CSLSetNameValue(
+		papszOptions,
+		"SourceFilename",
+		sourceFile.c_str()
+	);
+		
+	//create the VRT band specifying the sub-dataset
+	err = p_dataset->AddBand(type, papszOptions);
+	if (err) {
+		throw std::runtime_error("unable to add band to dataset.");
+	}
+
+	GDALRasterBand *p_VRTBand = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
+	p_VRTBand->SetDescription(bandName.c_str());
+	p_VRTBand->SetNoDataValue(-1);
 }
