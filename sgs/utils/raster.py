@@ -8,6 +8,8 @@
 # ******************************************************************************
 
 import json
+import shutil
+import tempfile
 from typing import Optional
 
 import numpy as np
@@ -157,6 +159,7 @@ class SpatialRaster:
         self.arr
         self.bands
         self.band_name_dict
+        self.temp_dir
         
         arr is initally set to None, as the array is loaded into a NumPy 
         array only if it is required.
@@ -191,11 +194,15 @@ class SpatialRaster:
         self.ymax = self.cpp_raster.get_ymax()
         self.pixel_width = self.cpp_raster.get_pixel_width()
         self.pixel_height = self.cpp_raster.get_pixel_height()
+        self.temp_dir = tempfile.mkdtemp()
         self.band_name_dict = {}
         self.band_data_dict = {}
         self.bands = self.cpp_raster.get_bands()
         for i in range(0, len(self.bands)):
             self.band_name_dict[self.bands[i]] = i
+
+    def __del__(self):
+        shutil.rmtree(self.temp_dir)
 
     def info(self):
         """

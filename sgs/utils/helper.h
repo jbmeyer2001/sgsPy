@@ -9,8 +9,7 @@
 
 #pragma once
 
-#include <iostream>
-#include <gdal_priv.h>
+#include "raster.h"
 
 #define MAXINT8		127
 #define MAXINT16	32767
@@ -50,6 +49,29 @@ setStratBandType(
 	}
 
 	return pixelTypeSize;
+}
+
+/**
+ *
+ */
+inline void
+setStratBandTypeAndSize(
+	size_t maxStrata,
+	GDALDataType *p_type,
+	size_t *p_size
+) {
+	if (maxStrata <= MAXINT8) {
+		&p_type = GDT_Int8;
+		&p_size = sizeof(int8_t);
+	}
+	else if (maxStrata <= MAXINT16) {
+		&p_type = GDT_Int16;
+		&p_size = sizeof(int16_t);
+	}
+	else {
+		&p_type = GDT_Int32;
+		&p_size = sizeof(int32_t);
+	}
 }
 
 /**
@@ -170,7 +192,8 @@ createDataset(
 	std::vector<std::string> bandNames,
 	GDALDataType type,
 	double *geotransform, 
-	std::string projection) 
+	std::string projection,
+	char **papszOptions) 
 {
 	GDALAllRegister();
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
@@ -184,7 +207,7 @@ createDataset(
 		height,
 		bands,
 		type,
-		nullptr
+		papszOptions
 	);
 	if (!p_dataset) {
 		throw std::runtime_error("unable to create dataset with driver.");
@@ -214,54 +237,42 @@ createDataset(
  */
 inline void
 addBandToMEMDataset(
-	std::vector<GDALRasterBand *>& bands,
-	std::vector<void *>& stratBandBuffers,
 	GDALDataset *p_dataset,
-	GDALDataType type,
-	size_t size,
-	std::string bandName)
+	rasterBandMetaData band)
 {
-	void *p_strata = VSIMalloc3(
+	band.p_buffer = VSIMalloc3(
 		p_dataset->GetRasterXSize(),
 		p_dataset->GetRasterYSize(),
-		size
+		band.size
 	);
-	stratBandBuffers.push_back(p_strata);
 
 	CPLErr err;
 	char **papszOptions = nullptr;
 	papszOptions = CSLSetNameValue(
 		papszOptions,
 		"DATAPOINTER",
-		std::to_string((size_t)p_strata).c_str()
+		std::to_string((size_t)band.p_buffer).c_str()
 	);
 
-	err = p_dataset->AddBand(type, papszOptions);
+	err = p_dataset->AddBand(band.type, papszOptions);
 	if (err) {
 		throw std::runtime_error("unable to add band to dataset.");
 	}
 
 	GDALRasterBand *p_band = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
-	p_band->SetNoDataValue(-1);
-	p_band->SetDescription(bandName.c_str());
-	bands.push_back(p_band);
+	p_band->SetNoDataValue(band.nan);
+	p_band->SetDescription(band.name.c_str());
+	band.p_band = p_band;
 }
 
 /**
  *
  */
 inline void
-addBandToVRTDataset(
-	std::vector<GDALRasterBand *>& bands,
-	std::vector<GDALDataset *>& VRTSubDatasets,
-	GDALDataset * p_dataset,
-	GDALDataType type,
-	std::string bandName,
-	int xBlockSize,
-	int yBlockSize,
-	std::string newFilename,
-	double *geotransform,
-	std::string projection)
+createVRTSubDataset(
+	GDALDataset *p_dataset,
+	rasterBandMetaData& band,
+	VRTBandDatasetInfo& info)
 {
 	//set block size of new band
 	CPLErr err;
@@ -269,35 +280,54 @@ addBandToVRTDataset(
 	papszOptions = CSLSetNameValue(
 		papszOptions,
 		"BLOCKXSIZE",
-		std::to_string(xBlockSize).c_str()
+		std::to_string(band.xBlockSize).c_str()
 	);
 	papszOptions = CSLSetNameValue(
 		papszOptions,
 		"BLOCKYSIZE",
-		std::to_string(yBlockSize).c_str()
+		std::to_string(band.yBlockSize).c_str()
 	);
 
 	//create the VRT band sub-dataset as a Geotiff
-	GDALDataset *p_VRTSubDataset = createDataset(
-		newFilename,
+	info.p_dataset = createDataset(
+		info.filename,
 		"GTiff",
 		p_dataset->GetRasterXSize(),
 		p_dataset->GetRasterYSize(),
 		1,
-		{bandName},
-		type,
-		geotransform,
-		projection
+		{band.name},
+		band.type,
+		p_dataset->GetGeoTransform(),
+		std::string(p_dataset->GetProjectionRef()),
+		papszOptions
 	);
-	VRTSubDatasets.push_back(p_VRTSubDataset);
 
 	//add the sub-datasets band to the bands vector
-	GDALRasterBand *p_band = p_VRTSubDataset->GetRasterBand(1);
-	p_band->SetDescription(bandName.c_str());
-	p_band->SetNoDataValue(-1);
-	bands.push_back(p_band);
+	GDALRasterBand *p_band = info.p_dataset->GetRasterBand(1);
+	p_band->SetDescription(band.name.c_str());
+	p_band->SetNoDataValue(band.nan);
+	band.p_band = p_band;
+}
 
+/**
+ *
+ */
+addBandToVRTDataset(
+	rasterBandMetaData& band
+	VRTBandDatasetInfo& info
+) {
 	//adjust the options for the VRT band
+	char ** papszOptions = nullptr;
+	papszOptions = CSLSetNameValue(
+		papszOptions,
+		"BLOCKXSIZE",
+		std::string(band.xBlockSize).c_str()
+	);
+	papszOptions = CSLSetNameValue(
+		papszOptions,
+		"BLOCKYSIZE",
+		std::string(band.yBlockSzie).c_str()
+	);
 	papszOptions = CSLSetNameValue(
 		papszOptions,
 		"subclass",
@@ -306,16 +336,16 @@ addBandToVRTDataset(
 	papszOptions = CSLSetNameValue(
 		papszOptions,
 		"SourceFilename",
-		newFilename.c_str()
+		info.filename.c_str()
 	);
-		
+
 	//create the VRT band specifying the sub-dataset
-	err = p_dataset->AddBand(type, papszOptions);
+	err = p_dataset->AddBand(band.type, papszOptions);
 	if (err) {
 		throw std::runtime_error("unable to add band to dataset.");
 	}
 
 	GDALRasterBand *p_VRTBand = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
-	p_VRTBand->SetDescription(bandName.c_str());
-	p_VRTBand->SetNoDataValue(-1);
+	p_VRTBand->SetDescription(band.name.c_str());
+	p_VRTBand->SetNoDataValue(band.nan);
 }

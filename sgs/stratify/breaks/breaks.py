@@ -7,7 +7,6 @@
 #
 # ******************************************************************************
 
-import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
 from breaks import breaks_cpp
@@ -117,10 +116,6 @@ def breaks(
     #if the raster is big enough, create a temp file to hold it
     large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
 
-    if large_raster:
-        print("LARGE RASTER")
-        temp_folder = tempfile.TemporaryDirectory().name
-
     #call stratify breaks function
     strat_raster = breaks_cpp(
         rast.cpp_raster, 
@@ -128,7 +123,7 @@ def breaks(
         map, 
         filename,
         large_raster,
-        temp_folder
+        rast.temp_dir
     )
 
     return SpatialRaster(strat_raster)
