@@ -178,7 +178,7 @@ createDataset(
 	}
 
 	GDALDataset *p_dataset = p_driver->Create(
-		filename,
+		filename.c_str(),
 		width,
 		height,
 		bands,
@@ -215,12 +215,14 @@ addBandToMEMDataset(
 	std::string bandName)
 {
 	void *p_strata = VSIMalloc3(
-		p_dataset->getWidth,
-		p_dataset->getHeight,
+		p_dataset->GetRasterXSize(),
+		p_dataset->GetRasterYSize(),
 		size
 	);
 	stratBandBuffers.push_back(p_strata);
 
+	CPLErr err;
+	char **papszOptions = nullptr;
 	papszOptions = CSLSetNameValue(
 		papszOptions,
 		"DATAPOINTER",
@@ -232,7 +234,7 @@ addBandToMEMDataset(
 		throw std::runtime_error("unable to add band to dataset.");
 	}
 
-	bands.push_back(p_dataset->GetRasterBand(p_dataset->GetRasterCount));
+	bands.push_back(p_dataset->GetRasterBand(p_dataset->GetRasterCount()));
 }
 
 /**
@@ -269,8 +271,8 @@ addBandToVRTDataset(
 	GDALDataset *p_VRTSubDataset = createDataset(
 		newFilename,
 		"GTiff",
-		p_dataset->getWidth(),
-		p_dataset->getHeight(),
+		p_dataset->GetRasterXSize(),
+		p_dataset->GetRasterYSize(),
 		1,
 		type,
 		geotransform,
@@ -293,7 +295,7 @@ addBandToVRTDataset(
 	papszOptions = CSLSetNameValue(
 		papszOptions,
 		"SourceFilename",
-		sourceFile.c_str()
+		newFilename.c_str()
 	);
 		
 	//create the VRT band specifying the sub-dataset
