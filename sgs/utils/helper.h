@@ -167,6 +167,7 @@ createDataset(
 	int width, 
 	int height, 
 	int bands,
+	std::vector<std::string> bandNames,
 	GDALDataType type,
 	double *geotransform, 
 	std::string projection) 
@@ -198,7 +199,13 @@ createDataset(
 	if (err) {
 		throw std::runtime_error("error setting projection.");
 	}
-	
+
+	for (int i = 0; i < bands; i++) {
+		GDALRasterBand *p_band = p_dataset->GetRasterBand(i + 1);
+		p_band->SetNoDataValue(-1);
+		p_band->SetDescription(bandNames[i].c_str());
+	}
+
 	return p_dataset;
 }
 
@@ -234,7 +241,10 @@ addBandToMEMDataset(
 		throw std::runtime_error("unable to add band to dataset.");
 	}
 
-	bands.push_back(p_dataset->GetRasterBand(p_dataset->GetRasterCount()));
+	GDALRasterBand *p_band = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
+	p_band->SetNoDataValue(-1);
+	p_band->SetDescription(bandName.c_str());
+	bands.push_back(p_band);
 }
 
 /**
@@ -274,6 +284,7 @@ addBandToVRTDataset(
 		p_dataset->GetRasterXSize(),
 		p_dataset->GetRasterYSize(),
 		1,
+		{bandName},
 		type,
 		geotransform,
 		projection

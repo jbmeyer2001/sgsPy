@@ -167,15 +167,16 @@ GDALRasterWrapper *breaks(
 	std::vector<size_t> stratBandTypeSizes;
 
 	std::vector<std::string> bandNames = p_raster->getBands();
+	std::vector<std::string> newBandNames;
 	std::vector<double> noDataValues;
 
-	bool isMEMDataset = !largeRaster && filename != "";
-	bool isVRTDataset = largeRaster && filename != "";
+	bool isMEMDataset = !largeRaster && filename == "";
+	bool isVRTDataset = largeRaster && filename == "";
 
 	std::string driver;
 	if (isMEMDataset || isVRTDataset) {
 		std::string driver = isMEMDataset ? "MEM" : "VRT";
-		p_dataset = createDataset(filename, driver, width, height, 0, GDT_Unknown, geotransform, projection);
+		p_dataset = createDataset(filename, driver, width, height, 0, {}, GDT_Unknown, geotransform, projection);
 	}
 	else {
 		std::filesystem::path filepath = filename;
@@ -260,7 +261,8 @@ GDALRasterWrapper *breaks(
 			if (largestStratTypeSize < pixelTypeSize) {
 				largestStratTypeSize = pixelTypeSize;
 				largestStratType = stratBandTypes.back();
-			}	
+			}
+			newBandNames.push_back("strat_" + bandNames[key]);
 		}
 	}
 
@@ -309,7 +311,8 @@ GDALRasterWrapper *breaks(
 			if (largestStratTypeSize < pixelTypeSize) {
 				largestStratTypeSize = pixelTypeSize;
 				largestStratType = stratBandTypes.back();
-			}	
+			}
+			newBandNames.push_back("strat_map");
 		}
 	}	
 
@@ -321,6 +324,7 @@ GDALRasterWrapper *breaks(
 			width,
 			height,
 			bandCount + static_cast<size_t>(map),
+			newBandNames,
 			largestStratType,
 			geotransform,
 			projection

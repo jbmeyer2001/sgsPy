@@ -7,6 +7,7 @@
 #
 # ******************************************************************************
 
+import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
 from breaks import breaks_cpp
@@ -63,6 +64,7 @@ def breaks(
 
     breaks_dict = {}
     large_raster = False
+    temp_folder = ""
 
     if type(breaks) is list and len(breaks) < 1:
         raise ValueError("breaks list must contain at least one element.")
@@ -112,12 +114,12 @@ def breaks(
             large_raster = True
             break
 
-    print(band_size)
-    print(GIGABYTE)
-    return
-
     #if the raster is big enough, create a temp file to hold it
     large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
+
+    if large_raster:
+        print("LARGE RASTER")
+        temp_folder = tempfile.TemporaryDirectory().name
 
     #call stratify breaks function
     strat_raster = breaks_cpp(
@@ -125,7 +127,8 @@ def breaks(
         breaks_dict, 
         map, 
         filename,
-        large_raster
+        large_raster,
+        temp_folder
     )
 
     return SpatialRaster(strat_raster)
