@@ -23,30 +23,6 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 /**
- *
- */
-struct {
-	GDALRasterBand *p_band = nullptr;
-	void *p_buffer = nullptr;
-	GDALDataType type = GDT_Unknown;
-	size_t size = 0;
-	std::string name = "";
-	double nan = -1;
-	int xBlockSize = -1;
-	int yBlockSize = -1;
-} rasterBandMetaData;
-
-/**
- *
- */
-struct {
-	GDALDataset *p_dataset = nullptr;
-	std::string filename = "";
-
-} VRTBandDatasetInfo;
-
-
-/**
  * Wrapper class for a GDAL dataset containing a raster image.
  *
  * This class provides getter methods for important raster data and metadata, 
