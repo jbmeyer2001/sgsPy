@@ -219,6 +219,7 @@ createDataset(
 	std::string projection,
 	char **papszOptions) 
 {
+	std::cout << "papszOptions ptr: " << papszOptions << std::endl;
 	GDALAllRegister();
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
 	if (!p_driver) {
@@ -301,18 +302,13 @@ createVRTSubDataset(
 	//set block size of new band
 	CPLErr err;
 	char **papszOptions = nullptr;
-	papszOptions = CSLSetNameValue(
-		papszOptions,
-		"BLOCKXSIZE",
-		std::to_string(band.xBlockSize).c_str()
-	);
-	papszOptions = CSLSetNameValue(
-		papszOptions,
-		"BLOCKYSIZE",
-		std::to_string(band.yBlockSize).c_str()
-	);
+	const char *xBlockSize = std::to_string(band.xBlockSize).c_str();
+	const char *yBlockSize = std::to_string(band.yBlockSize).c_str();
+	papszOptions = CSLSetNameValue(papszOptions, "TILED", "YES");
+	papszOptions = CSLSetNameValue(papszOptions, "BLOCKXSIZE", xBlockSize);
+	papszOptions = CSLSetNameValue(papszOptions, "BLOCKYSIZE", yBlockSize);
 
-	double *geotransform;
+	double geotransform[6];
 	err = p_dataset->GetGeoTransform(geotransform);
 	if (err) {
 		throw std::runtime_error("unable to get geotransform from dataset.");

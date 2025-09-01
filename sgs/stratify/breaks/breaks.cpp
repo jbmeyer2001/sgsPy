@@ -158,7 +158,6 @@ GDALRasterWrapper *breaks(
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
 
-	std::cout << "HERE 1" << std::endl;
 	std::string driver;
 	if (isMEMDataset || isVRTDataset) {
 		std::string driver = isMEMDataset ? "MEM" : "VRT";
@@ -175,7 +174,6 @@ GDALRasterWrapper *breaks(
 		driver = "Gtiff";
 	}
 
-	std::cout << "HERE 2" << std::endl;
 	//step 1: allocate, read, and initialize raster data and breaks information
 
 	GDALDataType stratPixelType = GDT_Int8;
@@ -230,7 +228,6 @@ GDALRasterWrapper *breaks(
 		stratBands.push_back(stratBand);
 	}
 
-	std::cout << "HERE 3" << std::endl;
 	//step 2: set bandStratMultipliers and check max size if mapped stratification	
 	std::vector<size_t> bandStratMultipliers(breaks.size(), 1);
 	if (map) {
@@ -271,7 +268,6 @@ GDALRasterWrapper *breaks(
 		stratBands.push_back(stratBand);
 	}	
 
-	std::cout << "HERE 4" << std::endl;
 	//now we can create the dataset if the type is not MEM or VRT because we know the types of each band
 	if (!isMEMDataset && !isVRTDataset) {
 		char **papszOptions = nullptr;
@@ -312,12 +308,10 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	std::cout << "HERE 5" << std::endl;
 	//TODO: multithread and consider cache thrashing
 	//step 3: iterate through indices and update the stratified raster bands
 	if (largeRaster) {
 		if (map) {
-			std::cout << "HERE 6" << std::endl;
 			std::vector<bool> useBlocksRaster;
 			std::vector<bool> useBlocksStrat;
 
@@ -425,8 +419,6 @@ GDALRasterWrapper *breaks(
 			}	
 		}
 		else {
-			std::cout << "HERE 5.2" << std::endl;
-			std::cout << "HERE!" << std::endl;
 			void *p_data = nullptr;
 			void *p_strat = nullptr;
 			for (size_t band = 0; band < bandCount; band++) {
@@ -460,8 +452,8 @@ GDALRasterWrapper *breaks(
 				std::cout << "total blocks: " << (xBlocks * yBlocks) << std::endl;
 
 				for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
-					if (yBlock == 10) {
-						throw std::runtime_error("debugging stop -- remove later");
+					if (yBlock % 10 == 0) {
+						std::cout << "yBlock: " << yBlock << std::endl;
 					}
 					CPLErr err;
 					for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
@@ -495,21 +487,16 @@ GDALRasterWrapper *breaks(
 	else {
 		size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());
 		if (map) {
-			std::cout << "HERE 5.3" << std::endl;
 			for (size_t i = 0; i < pixelCount; i++) {
 				processMapPixel(i, dataBands, stratBands, bandStratMultipliers, bandBreaks);		
 			}
 		}
 		else {
-			std::cout << "HERE 5.4" << std::endl;
 			for (size_t band = 0; band < bandCount; band++) {
-				std::cout << "data band buffer: " << dataBands[band].p_buffer << std::endl;
-				std::cout << "strat band buffer: " << stratBands[band].p_buffer << std::endl;
 				for (size_t i = 0; i < pixelCount; i++) {
 					processPixel(i, dataBands[band], stratBands[band], bandBreaks[band]);
 				}
 			}
-			std::cout << "HERE NOW" << std::endl;
 		}
 
 		if (!isVRTDataset && !isMEMDataset) {
@@ -531,7 +518,6 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	std::cout << "HERE 6" << std::endl;
 	//free allocated band data
 	if (map && largeRaster) {
 		for (size_t band = 0; band < stratBands.size(); band++) {
@@ -539,7 +525,6 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	std::cout << "HERE 7" << std::endl;
 	//step 4: close all of the VRT sub datasets
 	if (isVRTDataset) {
 		for (size_t band = 0; band < VRTBandInfo.size(); band++) {
@@ -548,7 +533,6 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	std::cout << "HERE 8" << std::endl;
 	//step 5: if the bands are in memory, populate a vector of just bands to use in GDALRasterWrapper creation
 	std::vector<void *> buffers(stratBands.size());
 	if (!largeRaster) {
@@ -557,14 +541,12 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	std::cout << "HERE 9" << std::endl;
 	//step 5: create GDALRasterWrapper object from bands
 	//this dynamically-allocated object will be cleaned up by python (TODO I hope...)
 	GDALRasterWrapper *p_stratRaster = largeRaster ?
 	       	new GDALRasterWrapper(p_dataset) :
 		new GDALRasterWrapper(p_dataset, buffers);
 		
-	std::cout << "HERE 10" << std::endl;
 	return p_stratRaster;
 }
 
