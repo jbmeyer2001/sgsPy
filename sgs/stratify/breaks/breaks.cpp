@@ -370,7 +370,7 @@ GDALRasterWrapper *breaks(
 								yBlockSize,
 								dataBands[band].type,
 								0,
-								(xBlockSize - xValid) * rasterBands[band].size
+								(xBlockSize - xValid) * dataBands[band].size
 							);
 						}
 						if (err) {
@@ -464,7 +464,7 @@ GDALRasterWrapper *breaks(
 						}
 
 						int xValid, yValid;
-						rasterBands[band].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+						dataBands[band].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 
 						for (int y = 0; y < yValid; y++) {
 							for (int x = 0; x < xValid; x++) {
@@ -495,13 +495,13 @@ GDALRasterWrapper *breaks(
 		else {
 			for (size_t band = 0; band < bandCount; band++) {
 				for (size_t i = 0; i < pixelCount; i++) {
-					processPixel(i, dataBands[band], stratBands[band], bandBreaks[band], noDataValues[band]);
+					processPixel(i, dataBands[band], stratBands[band], bandBreaks[band]);
 				}
 			}
 		}
 
 		if (!isVRTDataset && !isMEMDataset) {
-			for (size_t i = 0; i < stratBands.size(); i++) {
+			for (size_t band = 0; band < stratBands.size(); band++) {
 				stratBands[band].p_band->RasterIO(
 					GF_Write,
 					0,
@@ -528,9 +528,9 @@ GDALRasterWrapper *breaks(
 
 	//step 4: close all of the VRT sub datasets
 	if (isVRTDataset) {
-		for (size_t band = 0; band < VRTSubDatasets.size(); band++) {
-			GDALClose(VRTSubDatasets[band]);
-			addBandToVRTDataset(p_dataset, stratBands[band], VRTSubDatasets[band]);
+		for (size_t band = 0; band < VRTBandInfo.size(); band++) {
+			GDALClose(VRTBandInfo[band].p_dataset);
+			addBandToVRTDataset(p_dataset, stratBands[band], VRTBandInfo[band]);
 		}
 	}
 
@@ -546,7 +546,7 @@ GDALRasterWrapper *breaks(
 	//this dynamically-allocated object will be cleaned up by python (TODO I hope...)
 	GDALRasterWrapper *p_stratRaster = largeRaster ?
 	       	new GDALRasterWrapper(p_dataset) :
-		new GDALRasterWrapper(p_dataset, buffers)
+		new GDALRasterWrapper(p_dataset, buffers);
 		
 	return p_stratRaster;
 }
