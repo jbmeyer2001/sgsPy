@@ -38,8 +38,6 @@ struct VRTBandDatasetInfo {
 
 };
 
-
-
 /**
  * Helper function for setting the pixel type of a particular
  * strat raster band, by determining the maximum strata value
@@ -264,7 +262,7 @@ createDataset(
 inline void
 addBandToMEMDataset(
 	GDALDataset *p_dataset,
-	RasterBandMetaData band)
+	RasterBandMetaData& band)
 {
 	band.p_buffer = VSIMalloc3(
 		p_dataset->GetRasterXSize(),
