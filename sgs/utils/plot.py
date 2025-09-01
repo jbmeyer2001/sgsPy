@@ -61,8 +61,8 @@ def plot_raster(raster,
         downsampled_width = int(raster.width / 4)
         downsampled_height = int(raster.height / 4)
     else:
-        downsamlped_width = int(raster.width / 8)
-        downsampled_heigth = int(raster.height / 8)
+        downsampled_width = int(raster.width / 8)
+        downsampled_height = int(raster.height / 8)
 
     #get the raster data from the cpp object as a numpy array, and ensure no data is nan
     no_data_val = raster.cpp_raster.get_band_nodata_value(band)

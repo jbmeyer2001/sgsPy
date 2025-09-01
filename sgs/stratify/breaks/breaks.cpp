@@ -272,16 +272,11 @@ GDALRasterWrapper *breaks(
 	if (!isMEMDataset && !isVRTDataset) {
 		char **papszOptions = nullptr;
 		if (largeRaster) {
-			papszOptions = CSLSetNameValue(
-				papszOptions,
-				"BLOCKXSIZE",
-				std::to_string(stratBands[0].xBlockSize).c_str()
-			);
-			papszOptions = CSLSetNameValue(
-				papszOptions,
-				"BLOCKYSIZE",
-				std::to_string(stratBands[0].xBlockSize).c_str()
-			);
+			const char *xBlockSizeOption = std::to_string(stratBands[0].xBlockSize).c_str();
+			const char *yBlockSizeOption = std::to_string(stratBands[0].yBlockSize).c_str();
+			papszOptions = CSLSetNameValue(papszOptions, "TILED", "YES");
+			papszOptions = CSLSetNameValue(papszOptions, "BLOCKXSIZE", xBlockSizeOption);
+			papszOptions = CSLSetNameValue(papszOptions, "BLOCKYSIZE", yBlockSizeOption);
 		}
 		
 		p_dataset = createDataset(
@@ -424,8 +419,6 @@ GDALRasterWrapper *breaks(
 			for (size_t band = 0; band < bandCount; band++) {
 				int xBlockSize = dataBands[band].xBlockSize;
 				int yBlockSize = dataBands[band].yBlockSize;
-				std::cout << "xBlockSize: " << xBlockSize << std::endl;
-				std::cout << "yBlockSize: " << yBlockSize << std::endl;
 					
 				if (xBlockSize != stratBands[band].xBlockSize || 
 				    yBlockSize != stratBands[band].yBlockSize) {
@@ -443,19 +436,16 @@ GDALRasterWrapper *breaks(
 				dataBands[band].p_buffer = p_data;
 				stratBands[band].p_buffer = p_strat;
 
-
 				int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
 
-				std::cout << "xBlocks: " << xBlocks << std::endl;
-				std::cout << "yBlocks: " << yBlocks << std::endl;
-				std::cout << "total blocks: " << (xBlocks * yBlocks) << std::endl;
-
 				for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
-					if (yBlock % 10 == 0) {
+					CPLErr err;
+
+					if (yBlock % 10 == 1) {
 						std::cout << "yBlock: " << yBlock << std::endl;
 					}
-					CPLErr err;
+
 					for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 						err = dataBands[band].p_band->ReadBlock(xBlock, yBlock, dataBands[band].p_buffer);
 						if (err) {
