@@ -14,6 +14,7 @@
 
 #define MAXINT8		127
 #define MAXINT16	32767
+#define GIGABYTE 1073741824
 
 /**
  *
@@ -220,7 +221,6 @@ createDataset(
 	std::string projection,
 	char **papszOptions) 
 {
-	std::cout << "papszOptions ptr: " << papszOptions << std::endl;
 	GDALAllRegister();
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
 	if (!p_driver) {
@@ -300,11 +300,19 @@ createVRTSubDataset(
 	//set block size of new band
 	CPLErr err;
 	char **papszOptions = nullptr;
-	const char *xBlockSize = std::to_string(p_stratBand->xBlockSize).c_str();
-	const char *yBlockSize = std::to_string(p_stratBand->yBlockSize).c_str();
-	papszOptions = CSLSetNameValue(papszOptions, "TILED", "YES");
-	papszOptions = CSLSetNameValue(papszOptions, "BLOCKXSIZE", xBlockSize);
-	papszOptions = CSLSetNameValue(papszOptions, "BLOCKYSIZE", yBlockSize);
+
+	//there may be errors from GDAL if trying to tile a raster with scanline blocks
+	//ensure these errors don't happen by not tiling when block sizes are a scanline
+	bool useTiles = p_stratBand->xBlockSize != p_dataset->GetRasterXSize() && 
+			p_stratBand->yBlockSize != p_dataset->GetRasterYSize();
+	
+	if (useTiles) {
+		const char *xBlockSize = std::to_string(p_stratBand->xBlockSize).c_str();
+		const char *yBlockSize = std::to_string(p_stratBand->yBlockSize).c_str();
+		papszOptions = CSLSetNameValue(papszOptions, "TILED", "YES");
+		papszOptions = CSLSetNameValue(papszOptions, "BLOCKXSIZE", xBlockSize);
+		papszOptions = CSLSetNameValue(papszOptions, "BLOCKYSIZE", yBlockSize);
+	}
 
 	double geotransform[6];
 	err = p_dataset->GetGeoTransform(geotransform);
@@ -330,6 +338,7 @@ createVRTSubDataset(
 	GDALRasterBand *p_band = info.p_dataset->GetRasterBand(1);
 	p_band->SetDescription(p_stratBand->name.c_str());
 	p_band->SetNoDataValue(p_stratBand->nan);
+	p_band->GetBlockSize(&p_stratBand->xBlockSize, &p_stratBand->yBlockSize);
 	p_stratBand->p_band = p_band;
 }
 
@@ -344,11 +353,21 @@ addBandToVRTDataset(
 ) {
 	//adjust the options for the VRT band
 	char **papszOptions = nullptr;
-	const char *xBlockSize = std::to_string(band.xBlockSize).c_str();
-	const char *yBlockSize = std::to_string(band.yBlockSize).c_str();
+
+	//there may be errors from GDAL if trying to tile a raster with scanline blocks
+	//ensure these errors don't happen by not tiling when block sizes are a scanline
+	bool useTiles = band.xBlockSize != p_dataset->GetRasterXSize() && 
+			band.yBlockSize != p_dataset->GetRasterYSize();
+
+	if (useTiles) {
+		const char *xBlockSize = std::to_string(band.xBlockSize).c_str();
+		const char *yBlockSize = std::to_string(band.yBlockSize).c_str();
+		papszOptions = CSLSetNameValue(papszOptions, "TILED", "YES");
+		papszOptions = CSLSetNameValue(papszOptions, "BLOCKXSIZE", xBlockSize);
+		papszOptions = CSLSetNameValue(papszOptions, "BLOCKYSIZE", yBlockSize);
+	}
+
 	const char *filename = info.filename.c_str();
-	papszOptions = CSLSetNameValue(papszOptions, "BLOCKXSIZE", xBlockSize);
-	papszOptions = CSLSetNameValue(papszOptions, "BLOCKYSIZE", yBlockSize);
 	papszOptions = CSLSetNameValue(papszOptions, "subclass", "VRTRawRasterBand");
 	papszOptions = CSLSetNameValue(papszOptions, "SourceFilename", filename);
 
