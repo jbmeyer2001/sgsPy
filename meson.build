@@ -13,11 +13,13 @@ WIN = host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
 if WIN
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio:x64-windows-static', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11:x64-windows-static', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-windows-static', '--recurse', check:true)
 else #linux
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check: true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
 endif
