@@ -209,17 +209,12 @@ printTypeWarningsForInt32Conversion(GDALDataType type) {
  *
  */
 inline GDALDataset *
-createDataset(
-	std::string filename,
+createVirtualDataset(
 	std::string driverName, 
 	int width, 
 	int height, 
-	int bands,
-	std::vector<std::string> bandNames,
-	GDALDataType type,
 	double *geotransform, 
-	std::string projection,
-	char **papszOptions) 
+	std::string projection) 
 {
 	GDALAllRegister();
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
@@ -228,11 +223,66 @@ createDataset(
 	}
 
 	GDALDataset *p_dataset = p_driver->Create(
+		"",
+		width,
+		height,
+		0,
+		GDT_Unknown,
+		nullptr
+	);
+	if (!p_dataset) {
+		throw std::runtime_error("unable to create dataset with driver.");
+	}
+
+	CPLErr err = p_dataset->SetGeoTransform(geotransform);
+	if (err) {
+		throw std::runtime_error("error setting geotransform.");
+	}
+
+	err = p_dataset->SetProjection(projection.c_str());
+	if (err) {
+		throw std::runtime_error("error setting projection.");
+	}
+
+	return p_dataset;
+}
+
+/**
+ *
+ */
+inline GDALDataset *
+createDataset(
+	std::string filename,
+	std::string driverName, 
+	int width, 
+	int height, 
+	double *geotransform, 
+	std::string projection,
+	RasterBandMetaData *bands,
+	size_t bandCount,
+	bool useTiles) 
+{
+	GDALAllRegister();
+	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
+	if (!p_driver) {
+		throw std::runtime_error("unable to find dataset driver.");
+	}
+
+	char **papszOptions = nullptr;
+	if (useTiles) {
+		const char *xBlockSizeOption = std::to_string(bands[0].xBlockSize).c_str();
+		const char *yBlockSizeOption = std::to_string(bands[0].yBlockSize).c_str();
+		papszOptions = CSLSetNameValue(papszOptions, "TILED", "YES");
+		papszOptions = CSLSetNameValue(papszOptions, "BLOCKXSIZE", xBlockSizeOption);
+		papszOptions = CSLSetNameValue(papszOptions, "BLOCKYSIZE", yBlockSizeOption);
+	}
+
+	GDALDataset *p_dataset = p_driver->Create(
 		filename.c_str(),
 		width,
 		height,
-		bands,
-		type,
+		bandCount,
+		bands[0].type,
 		papszOptions
 	);
 	if (!p_dataset) {
@@ -249,14 +299,17 @@ createDataset(
 		throw std::runtime_error("error setting projection.");
 	}
 
-	for (int i = 0; i < bands; i++) {
-		GDALRasterBand *p_band = p_dataset->GetRasterBand(i + 1);
-		p_band->SetNoDataValue(-1);
-		p_band->SetDescription(bandNames[i].c_str());
+	for (size_t band = 0; band < bandCount; band++) {
+		GDALRasterBand *p_band = p_dataset->GetRasterBand(band + 1);
+		p_band->SetDescription(bands[band].name.c_str());
+		p_band->SetNoDataValue(bands[band].nan);
+		p_band->GetBlockSize(&bands[band].xBlockSize, &bands[band].yBlockSize);
+		bands[band].p_band = p_band;
 	}
 
 	return p_dataset;
 }
+
 
 /**
  *
@@ -297,25 +350,13 @@ createVRTSubDataset(
 	RasterBandMetaData* p_stratBand,
 	VRTBandDatasetInfo& info)
 {
-	//set block size of new band
-	CPLErr err;
-	char **papszOptions = nullptr;
-
 	//there may be errors from GDAL if trying to tile a raster with scanline blocks
 	//ensure these errors don't happen by not tiling when block sizes are a scanline
 	bool useTiles = p_stratBand->xBlockSize != p_dataset->GetRasterXSize() && 
 			p_stratBand->yBlockSize != p_dataset->GetRasterYSize();
 	
-	if (useTiles) {
-		const char *xBlockSize = std::to_string(p_stratBand->xBlockSize).c_str();
-		const char *yBlockSize = std::to_string(p_stratBand->yBlockSize).c_str();
-		papszOptions = CSLSetNameValue(papszOptions, "TILED", "YES");
-		papszOptions = CSLSetNameValue(papszOptions, "BLOCKXSIZE", xBlockSize);
-		papszOptions = CSLSetNameValue(papszOptions, "BLOCKYSIZE", yBlockSize);
-	}
-
 	double geotransform[6];
-	err = p_dataset->GetGeoTransform(geotransform);
+	CPLErr err = p_dataset->GetGeoTransform(geotransform);
 	if (err) {
 		throw std::runtime_error("unable to get geotransform from dataset.");
 	}
@@ -326,12 +367,11 @@ createVRTSubDataset(
 		"GTiff",
 		p_dataset->GetRasterXSize(),
 		p_dataset->GetRasterYSize(),
-		1,
-		{p_stratBand->name},
-		p_stratBand->type,
 		geotransform,
 		std::string(p_dataset->GetProjectionRef()),
-		papszOptions
+		p_stratBand,
+		1,
+		useTiles
 	);
 
 	//add the sub-datasets band to the bands vector
