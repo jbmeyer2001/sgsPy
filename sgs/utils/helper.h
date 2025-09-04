@@ -10,11 +10,11 @@
 #pragma once
 
 #include <iostream>
+#include <filesystem>
 #include <gdal_priv.h>
 
 #define MAXINT8		127
 #define MAXINT16	32767
-#define GIGABYTE 1073741824
 
 /**
  *
@@ -317,43 +317,52 @@ createDataset(
 inline void
 addBandToMEMDataset(
 	GDALDataset *p_dataset,
-	RasterBandMetaData* p_stratBand)
+	RasterBandMetaData& band)
 {
-	p_stratBand->p_buffer = VSIMalloc3(
+	band.p_buffer = VSIMalloc3(
 		p_dataset->GetRasterXSize(),
 		p_dataset->GetRasterYSize(),
-		p_stratBand->size
+		band.size
 	);
 
 	CPLErr err;
 	char **papszOptions = nullptr;
-	const char *datapointer = std::to_string((size_t)p_stratBand->p_buffer).c_str();
+	const char *datapointer = std::to_string((size_t)band.p_buffer).c_str();
 	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", datapointer);
-
-	err = p_dataset->AddBand(p_stratBand->type, papszOptions);
+	
+	err = p_dataset->AddBand(band.type, papszOptions);
 	if (err) {
 		throw std::runtime_error("unable to add band to dataset.");
 	}
-
+	
 	GDALRasterBand *p_band = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
-	p_band->SetNoDataValue(p_stratBand->nan);
-	p_band->SetDescription(p_stratBand->name.c_str());
-	p_stratBand->p_band = p_band;
+	p_band->SetNoDataValue(band.nan);
+	p_band->SetDescription(band.name.c_str());
+	band.p_band = p_band;
 }
 
 /**
  *
  */
 inline void
-createVRTSubDataset(
+addBandToVRTDataset(
 	GDALDataset *p_dataset,
-	RasterBandMetaData* p_stratBand,
-	VRTBandDatasetInfo& info)
+	RasterBandMetaData& band,
+	std::string tempFolder,
+	std::string key,
+	std::vector<VRTBandDatasetInfo>& VRTBandInfo)
 {
+	std::filesystem::path tmpPath = tempFolder;
+	std::filesystem::path tmpName = "strat_breaks_" + key + ".tif";
+	tmpPath = tmpPath / tmpName;
+
+	VRTBandDatasetInfo info;
+	info.filename = tmpPath.string();
+	
 	//there may be errors from GDAL if trying to tile a raster with scanline blocks
 	//ensure these errors don't happen by not tiling when block sizes are a scanline
-	bool useTiles = p_stratBand->xBlockSize != p_dataset->GetRasterXSize() && 
-			p_stratBand->yBlockSize != p_dataset->GetRasterYSize();
+	bool useTiles = band.xBlockSize != p_dataset->GetRasterXSize() && 
+					band.yBlockSize != p_dataset->GetRasterYSize();
 	
 	double geotransform[6];
 	CPLErr err = p_dataset->GetGeoTransform(geotransform);
@@ -369,18 +378,21 @@ createVRTSubDataset(
 		p_dataset->GetRasterYSize(),
 		geotransform,
 		std::string(p_dataset->GetProjectionRef()),
-		p_stratBand,
+		&band,
 		1,
 		useTiles
 	);
 
 	//add the sub-datasets band to the bands vector
 	GDALRasterBand *p_band = info.p_dataset->GetRasterBand(1);
-	p_band->SetDescription(p_stratBand->name.c_str());
-	p_band->SetNoDataValue(p_stratBand->nan);
-	p_band->GetBlockSize(&p_stratBand->xBlockSize, &p_stratBand->yBlockSize);
-	p_stratBand->p_band = p_band;
+	p_band->SetDescription(band.name.c_str());
+	p_band->SetNoDataValue(band.nan);
+	p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
+	band.p_band = p_band;
+		
+	VRTBandInfo.push_back(info);	
 }
+
 
 /**
  *
@@ -420,4 +432,93 @@ addBandToVRTDataset(
 	GDALRasterBand *p_VRTBand = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
 	p_VRTBand->SetDescription(band.name.c_str());
 	p_VRTBand->SetNoDataValue(band.nan);
+}
+
+/**
+ *
+ */
+inline GDALDataset *
+adjustBandsAndCreateDataset(
+	std::string filename,
+	std::string driver,
+	int width,
+	int height,
+	double *geotransform,
+	std::string projection,
+	std::vector<RasterBandMetaData>& bands,
+	size_t size,
+	GDALDataType type,
+	bool largeRaster)
+{		
+	//tiles must not be scanlines, as trying to set block size when they represent scanlines 
+	//may result in GDAL errors due to the tile array being too large.
+	bool useTiles = bands[0].xBlockSize != width &&
+			bands[0].yBlockSize != height;
+
+	for (size_t band = 0; band < bands.size(); band++) {
+		bands[band].size = size;
+		bands[band].type = type;
+		bands[band].p_buffer = !largeRaster ? VSIMalloc3(height, width, size) : nullptr;
+	}
+
+	return createDataset(
+		filename,
+		driver,
+		width,
+		height,
+		geotransform,
+		projection,
+		bands.data(),
+		bands.size(),
+		useTiles
+	);
+}
+
+/**
+ *
+ */
+inline void
+rasterBandIO(
+	RasterBandMetaData& band,
+	void *p_buffer,
+	int xBlockSize,
+	int yBlockSize,
+	int xBlock,
+	int yBlock,
+	int xValid,
+	int yValid,
+	bool read)
+{
+	CPLErr err;
+	bool useBlock = xBlockSize == band.xBlockSize &&
+						yBlockSize == band.yBlockSize;
+
+	band.mutex.lock();
+	if (useBlock && read) {
+		err = read ?
+			band.p_band->ReadBlock(xBlock, yBlock, p_buffer) :
+			band.p_band->WriteBlock(xBlock, yBlock, p_buffer);
+	}
+	else {
+		err = band.p_band->RasterIO(
+			read ? GF_Read : GF_Write,
+			xBlock * xBlockSize,
+			yBlock * yBlockSize,
+			xValid,
+			yValid,
+			p_buffer,
+			xBlockSize,
+			yBlockSize,
+			band.type,
+			0,
+			0
+		);
+	}
+	band.mutex.unlock();
+	
+	if (err) {
+		throw read ?
+			std::runtime_error("unable to read block from raster.") :
+			std::runtime_error("unable to write block to raster.");
+	}
 }

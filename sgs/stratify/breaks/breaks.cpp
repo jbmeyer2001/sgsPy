@@ -262,19 +262,12 @@ GDALRasterWrapper *breaks(
 		p_stratBand->yBlockSize = map ? dataBands[0].yBlockSize : p_dataBand->yBlockSize;
 		
 		if (isMEMDataset) {
-			addBandToMEMDataset(p_dataset, p_stratBand);
+			addBandToMEMDataset(p_dataset, *p_stratBand);			
 		}
 		else if (isVRTDataset) {
-			std::filesystem::path tmpPath = tempFolder;
-			std::filesystem::path tmpName = "strat_breaks_" + std::to_string(key) + ".tif";
-			tmpPath = tmpPath / tmpName;
-
-			VRTBandDatasetInfo info;		
-			info.filename = tmpPath.string();
-			createVRTSubDataset(p_dataset, p_stratBand, info);
-			VRTBandInfo.push_back(info);
+			addBandToVRTDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo); 
 		}
-		else { //dataset driver is the one which corresponds to the filename extension
+		else { //non-virtual dataset driver
 			if (stratPixelSize < p_stratBand->size) {
 				stratPixelSize = p_stratBand->size;
 				stratPixelType = p_stratBand->type;
@@ -301,51 +294,33 @@ GDALRasterWrapper *breaks(
 		p_stratBand->yBlockSize = dataBands[0].yBlockSize;
 
 		if (isMEMDataset) {
-			addBandToMEMDataset(p_dataset, p_stratBand);
+			addBandToMEMDataset(p_dataset, *p_stratBand);			
 		}
 		else if (isVRTDataset) {
-			std::filesystem::path tmpPath = tempFolder;
-			std::filesystem::path tmpName = "strat_breaks_map.tif";
-			tmpPath = tmpPath / tmpName;
-
-			VRTBandDatasetInfo info;
-			info.filename = tmpPath.string();
-			createVRTSubDataset(p_dataset, p_stratBand, info);
-			VRTBandInfo.push_back(info);
+			addBandToVRTDataset(p_dataset, *p_stratBand, tempFolder, "map", VRTBandInfo); 
 		}
-		else { //dataset driver is the one which corresponds to the filename extension
+		else { //non-virtual dataset driver
 			if (stratPixelSize < p_stratBand->size) {
-				stratPixelType = p_stratBand->type;
 				stratPixelSize = p_stratBand->size;
+				stratPixelType = p_stratBand->type;
 			}
 		}
 	}	
 
-	//now we can create the dataset if the type is not MEM or VRT because we know the types of each band
+	//create full non-virtual dataset now that we have all required band information
 	if (!isMEMDataset && !isVRTDataset) {
-		//tiles must not be scanlines, as trying to set block size when they represent scanlines 
-		//may result in GDAL errors due to the tile array being too large. 
-		bool useTiles = largeRaster && 
-				stratBands[0].xBlockSize != width && 
-				stratBands[0].yBlockSize != height;
-		
-		for (size_t band = 0; band < stratBands.size(); band++) {
-			stratBands[band].size = stratPixelSize;
-			stratBands[band].type = stratPixelType;
-			stratBands[band].p_buffer = !largeRaster ? VSIMalloc3(height, width, stratPixelSize) : nullptr;
-		}
-
-		p_dataset = createDataset(
+		p_dataset = adjustBandsAndCreateDataset(
 			filename,
 			driver,
 			width,
 			height,
 			geotransform,
 			projection,
-			stratBands.data(),
-			stratBands.size(),
-			useTiles
-		);
+			stratBands,
+			stratPixelSize,
+			stratPixelType,
+			largeRaster	
+		);		
 	}
 
 	//step 3: iterate through indices and update the stratified raster bands
@@ -394,38 +369,18 @@ GDALRasterWrapper *breaks(
 							dataBands[0].mutex.unlock();
 
 							//read raster band data into band buffers
-							CPLErr err;
 							for (size_t band = 0; band < bandCount; band++) {
-								bool useReadBlock = xBlockSize == dataBands[0].xBlockSize &&
-										    yBlockSize == dataBands[0].yBlockSize;
-								
-								dataBands[band].mutex.lock();
-								if (useReadBlock) {
-									err = dataBands[band].p_band->ReadBlock(
-										xBlock, 
-										yBlock, 
-										dataBuffers[band]
-									);
-								}
-								else {
-									err = dataBands[band].p_band->RasterIO(
-										GF_Read,
-										xBlock * xBlockSize,
-										yBlock * yBlockSize,
-										xValid,
-										yValid,
-										dataBuffers[band],
-										xBlockSize,
-										yBlockSize,
-										dataBands[band].type,
-										0,
-										0
-									);
-								}
-								dataBands[band].mutex.unlock();
-								if (err) {
-									throw std::runtime_error("unable to read block from raster");
-								}
+								rasterBandIO(
+									dataBands[band], 
+									dataBuffers[band], 
+									xBlockSize, 
+									yBlockSize, 
+									xBlock, 
+									yBlock, 
+									xValid, 
+									yValid, 
+									true //read = true
+								);		
 							}
 
 							//process blocked band data
@@ -438,36 +393,17 @@ GDALRasterWrapper *breaks(
 					
 							//write strat band data
 							for (size_t band = 0; band <= bandCount; band++) {
-								bool useWriteBlock = xBlockSize == stratBands[0].xBlockSize &&
-										     yBlockSize == stratBands[0].yBlockSize;
-								
-								stratBands[band].mutex.lock();
-								if (useWriteBlock) {
-									err = stratBands[band].p_band->WriteBlock(
-										xBlock, 
-										yBlock, 
-										stratBuffers[band]
-									);
-								}
-								else {
-									err = stratBands[band].p_band->RasterIO(
-										GF_Write,
-										xBlock * xBlockSize,
-										yBlock * yBlockSize,
-										xValid,
-										yValid,
-										stratBuffers[band],
-										xBlockSize,
-										yBlockSize,
-										stratBands[band].type,
-										0,
-										0
-									);
-								}
-								stratBands[band].mutex.unlock();
-								if (err) {
-									throw std::runtime_error("error writing block of data to band.");
-								}
+								rasterBandIO(
+									stratBands[band],
+									stratBuffers[band],
+									xBlockSize,
+									yBlockSize,
+									xBlock,
+									yBlock,
+									xValid,
+									yValid,
+									false //read = false
+								);
 							}
 						}
 					}
@@ -511,22 +447,26 @@ GDALRasterWrapper *breaks(
 						p_stratBand, 
 						&breakVals
 					] {
-						bool useWriteBlock = p_stratBand->xBlockSize == xBlockSize &&
-										p_stratBand->yBlockSize == yBlockSize;
-						
-						CPLErr err;
 						void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
 						void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
 						int xValid, yValid;
 						for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
 							for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 								p_dataBand->mutex.lock();
-								err = p_dataBand->p_band->ReadBlock(xBlock, yBlock, p_data);
 								p_dataBand->p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 								p_dataBand->mutex.unlock();
-								if (err) {
-									throw std::runtime_error("error reading block from band.");
-								}
+								
+								rasterBandIO(
+									*p_dataBand,
+									p_data,
+									xBlockSize,
+									yBlockSize,
+									xBlock,
+									yBlock,
+									xValid,
+									yValid,
+									true //read = true
+								);
 
 								for (int y = 0; y < yValid; y++) {
 									for (int x = 0; x < xValid; x++) {
@@ -535,29 +475,17 @@ GDALRasterWrapper *breaks(
 									}
 								}
 
-								p_stratBand->mutex.lock();
-								if (useWriteBlock) {
-									err = p_stratBand->p_band->WriteBlock(xBlock, yBlock, p_strat);
-								}
-								else {
-									err = p_stratBand->p_band->RasterIO(
-										GF_Write,
-										xBlock * xBlockSize,
-										yBlock * yBlockSize,
-										xValid,
-										yValid,
-										p_strat,
-										xBlockSize,
-										yBlockSize,
-										p_stratBand->type,
-										0,
-										0
-									);
-								}
-								p_stratBand->mutex.unlock();
-								if (err) {
-									throw std::runtime_error("error writing block to band.");
-								}
+								rasterBandIO(
+									*p_stratBand,
+									p_strat,
+									xBlockSize,
+									yBlockSize,
+									xBlock,
+									yBlock,
+									xValid,
+									yValid,
+									false //read = false
+								);
 							}
 						}
 						VSIFree(p_data);
