@@ -16,95 +16,53 @@
 #include "raster.h"
 #include "helper.h"
 
-#define GIGABYTE 1073741824
-
 /**
  *
  */
 inline void processMapPixel(
 	size_t index,
-	std::vector<RasterBandMetaData>& dataBands,
-	std::vector<void *>& dataBuffers,
-	std::vector<RasterBandMetaData>& stratBands,
-	std::vector<void *>& stratBuffers,
-	std::vector<size_t>& multipliers,
-	std::vector<std::vector<double>>& bandBreaks)
+	RasterBandMetaData& dataBand,
+	void * p_dataBuffer,
+	RasterBandMetaData& stratBand,
+	void * p_stratBuffer,
+	std::vector<double>& bandBreaks,
+	size_t multiplier,
+	bool& mapNan,
+	size_t& mapStrat)
 {
-	size_t mappedStrat = 0;
-	bool mapNan = false;
-	for (size_t band = 0; band < dataBands.size(); band++) {
-		double val = getPixelValueDependingOnType<double>(
-			dataBands[band].type,
-			dataBuffers[band],
-			index
-		);
-		bool isNan = std::isnan(val) || (double)val == dataBands[band].nan;
-		mapNan |= isNan;
+	double val = getPixelValueDependingOnType<double>(
+		dataBand.type,
+		p_dataBuffer,
+		index
+	);
+	bool isNan = std::isnan(val) || (double)val == dataBand.nan;
+	mapNan |= isNan;
 		
-		//calculate strata value if not nan
-		size_t strat = 0;
-		if (!isNan) {
-			auto it = std::lower_bound(bandBreaks[band].begin(), bandBreaks[band].end(), val);
-			strat = (it == bandBreaks[band].end()) ? bandBreaks[band].size() : std::distance(bandBreaks[band].begin(), it);
-		}
-
-		setStrataPixelDependingOnType(
-			stratBands[band].type,
-			stratBuffers[band],
-			index,
-			isNan,
-			strat
-		);
-
-		//adjust mappedStrat as required
-		if (!mapNan) {
-			mappedStrat += strat * multipliers[band];
-		}
+	//calculate strata value if not nan
+	size_t strat = 0;
+	if (!isNan) {
+		auto it = std::lower_bound(bandBreaks.begin(), bandBreaks.end(), val);
+		strat = (it == bandBreaks.end()) ? bandBreaks.size() : std::distance(bandBreaks.begin(), it);
 	}
-		
-	//assign mapped value
+
 	setStrataPixelDependingOnType(
-		stratBands.back().type,
-		stratBuffers.back(),
+		stratBand.type,
+		p_stratBuffer,
 		index,
-		mapNan,
-		mappedStrat
+		isNan,
+		strat
 	);
+
+	//adjust mappedStrat as required
+	if (!mapNan) {
+		mapStrat += strat * multiplier;
+	}
 }	
-
-inline void
-processMapPixel(
-	size_t index,
-	std::vector<RasterBandMetaData>& dataBands,
-	std::vector<RasterBandMetaData>& stratBands,
-	std::vector<size_t>& multipliers,
-	std::vector<std::vector<double>>& bandBreaks)
-{
-	std::vector<void *> dataBuffers;
-	std::vector<void *> stratBuffers;
-	for (const RasterBandMetaData& dataBand : dataBands) {
-		dataBuffers.push_back(dataBand.p_buffer);
-	}
-	for (const RasterBandMetaData& stratBand : stratBands) {
-		stratBuffers.push_back(stratBand.p_buffer);
-	}
-	
-	processMapPixel(
-		index, 
-		dataBands, 
-		dataBuffers, 
-		stratBands, 
-		stratBuffers, 
-		multipliers, 
-		bandBreaks
-	);
-}
-
 
 /**
  *
  */
-inline void 
+inline void
 processPixel(
 	size_t index,
 	void *p_data,
@@ -135,27 +93,6 @@ processPixel(
 		strat
 	);
 }
-
-/**
- *
- */
-inline void
-processPixel(
-	size_t index,
-	RasterBandMetaData *p_dataBand,
-	RasterBandMetaData *p_stratBand,
-	std::vector<double>& bandBreaks
-) {
-	processPixel(
-		index, 
-		p_dataBand->p_buffer, 
-		p_dataBand, 
-		p_stratBand->p_buffer, 
-		p_stratBand, 
-		bandBreaks
-	);
-}
-
 
 /**
  * This function stratifies a given raster using user-defined breaks.
@@ -338,7 +275,7 @@ GDALRasterWrapper *breaks(
 
 			for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 				int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);
-				
+			
 				boost::asio::post(pool, [
 					bandCount,
 					xBlockSize, 
@@ -380,12 +317,35 @@ GDALRasterWrapper *breaks(
 									true //read = true
 								);		
 							}
-
+						
 							//process blocked band data
 							for (int y = 0; y < yValid; y++) {
 								for (int x = 0; x < xValid; x++) {
 									size_t index = static_cast<size_t>(x + y * xBlockSize);
-									processMapPixel(index, dataBands, dataBuffers, stratBands, stratBuffers, multipliers, bandBreaks);
+									bool mapNan = false;
+									size_t mapStrat = 0;
+									
+									for (size_t band = 0; band < bandCount; band++) {
+										processMapPixel(
+											index, 
+											dataBands[band], 
+											dataBuffers[band], 
+											stratBands[band], 
+											stratBuffers[band], 
+											bandBreaks[band],
+											multipliers[band],
+											mapNan,
+											mapStrat
+										);
+									}
+
+									setStrataPixelDependingOnType(
+										stratBands.back().type,
+										stratBuffers.back(),
+										index,
+										mapNan,
+										mapStrat
+									);
 								}
 							}
 					
@@ -422,11 +382,6 @@ GDALRasterWrapper *breaks(
 				int xBlockSize = p_dataBand->xBlockSize;
 				int yBlockSize = p_dataBand->yBlockSize;
 					
-				if (xBlockSize != p_stratBand->xBlockSize || 
-				    yBlockSize != p_stratBand->yBlockSize) {
-					throw std::runtime_error("block size error -- should not be here!!!");
-				}
-
 				int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
 				int chunkSize = yBlocks / threads;
@@ -499,16 +454,41 @@ GDALRasterWrapper *breaks(
 	else {
 		size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());
 		if (map) {
-			for (size_t i = 0; i < pixelCount; i++) {
-				processMapPixel(i, dataBands, stratBands, multipliers, bandBreaks);		
+			for (size_t index = 0; index < pixelCount; index++) {
+				bool mapNan = false;
+				size_t mapStrat = 0;
+									
+				for (size_t band = 0; band < bandCount; band++) {
+					processMapPixel(
+						index, 
+						dataBands[band], 
+						dataBands[band].p_buffer, 
+						stratBands[band], 
+						stratBands[band].p_buffer, 
+						bandBreaks[band],
+						multipliers[band],
+						mapNan,
+						mapStrat
+					);
+				}
+
+				setStrataPixelDependingOnType(
+					stratBands.back().type,
+					stratBands.back().p_buffer,
+					index,
+					mapNan,
+					mapStrat
+				);
 			}
 		}
 		else {
 			for (size_t band = 0; band < bandCount; band++) {
 				for (size_t i = 0; i < pixelCount; i++) {
 					processPixel(
-						i, 
+						i,
+					       	dataBands[band].p_buffer,	
 						&dataBands[band], 
+						stratBands[band].p_buffer,
 						&stratBands[band],
 						bandBreaks[band]
 					);
