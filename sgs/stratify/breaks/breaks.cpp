@@ -44,9 +44,8 @@ inline void processMapPixel(
 		//calculate strata value if not nan
 		size_t strat = 0;
 		if (!isNan) {
-			std::vector<double> curBandBreaks = bandBreaks[band];
-			auto it = std::lower_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
-			strat = (it == curBandBreaks.end()) ? curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
+			auto it = std::lower_bound(bandBreaks[band].begin(), bandBreaks[band].end(), val);
+			strat = (it == bandBreaks[band].end()) ? bandBreaks[band].size() : std::distance(bandBreaks[band].begin(), it);
 		}
 
 		setStrataPixelDependingOnType(
@@ -124,9 +123,8 @@ processPixel(
 	//calculate strata value if not nan
 	size_t strat = 0;
 	if (!isNan) {
-		std::vector<double> curBandBreaks = bandBreaks;
-		auto it = std::lower_bound(curBandBreaks.begin(), curBandBreaks.end(), val);
-		strat = (it == curBandBreaks.end()) ? curBandBreaks.size() : std::distance(curBandBreaks.begin(), it);
+		auto it = std::lower_bound(bandBreaks.begin(), bandBreaks.end(), val);
+		strat = (it == bandBreaks.end()) ? bandBreaks.size() : std::distance(bandBreaks.begin(), it);
 	}
 
 	setStrataPixelDependingOnType(
@@ -253,7 +251,7 @@ GDALRasterWrapper *breaks(
 		std::vector<double> valCopy = val; //have to create copy to alter the band breaks in iteration loop
 		std::sort(valCopy.begin(), valCopy.end());
 		bandBreaks.push_back(valCopy);
-
+		
 		//update info of new strat raster
 		size_t maxStrata = val.size() + 1;
 		setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
@@ -435,7 +433,7 @@ GDALRasterWrapper *breaks(
 				
 				for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 					int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
-					std::vector<double> breakVals = bandBreaks[band];
+					std::vector<double> *p_breaks = &bandBreaks[band];
 					
 					boost::asio::post(pool, [
 						xBlockSize, 
@@ -445,17 +443,18 @@ GDALRasterWrapper *breaks(
 						xBlocks, 
 						p_dataBand, 
 						p_stratBand, 
-						&breakVals
+						p_breaks
 					] {
 						void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
 						void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
+
 						int xValid, yValid;
 						for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
 							for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 								p_dataBand->mutex.lock();
 								p_dataBand->p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 								p_dataBand->mutex.unlock();
-								
+		
 								rasterBandIO(
 									*p_dataBand,
 									p_data,
@@ -471,7 +470,7 @@ GDALRasterWrapper *breaks(
 								for (int y = 0; y < yValid; y++) {
 									for (int x = 0; x < xValid; x++) {
 										size_t index = static_cast<size_t>(x + y * xBlockSize);
-										processPixel(index, p_data, p_dataBand, p_strat, p_stratBand, breakVals);
+										processPixel(index, p_data, p_dataBand, p_strat, p_stratBand, *p_breaks);
 									}
 								}
 
