@@ -285,6 +285,8 @@ createDataset(
 		bands[0].type,
 		papszOptions
 	);
+	CSLDestroy(papszOptions);
+
 	if (!p_dataset) {
 		throw std::runtime_error("unable to create dataset with driver.");
 	}
@@ -331,6 +333,7 @@ addBandToMEMDataset(
 	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", datapointer);
 	
 	err = p_dataset->AddBand(band.type, papszOptions);
+	CSLDestroy(papszOptions);
 	if (err) {
 		throw std::runtime_error("unable to add band to dataset.");
 	}
@@ -425,6 +428,7 @@ addBandToVRTDataset(
 
 	//create the VRT band specifying the sub-dataset
 	CPLErr err = p_dataset->AddBand(band.type, papszOptions);
+	CSLDestroy(papszOptions);
 	if (err) {
 		throw std::runtime_error("unable to add band to dataset.");
 	}
