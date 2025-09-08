@@ -96,6 +96,121 @@ processPixel(
 }
 
 /**
+ *
+ */
+template <typename T, typename U>
+inline void 
+processBand(
+	GDALRasterWrapper *p_raster,
+	RasterBandMetaData& dataBand,
+	RasterBandMetaData& stratBand,
+	boost::asio::thread_pool& pool,
+	std::vector<double>& bandBreaks,
+	size_t threads)
+{
+	int xBlockSize = dataBand.xBlockSize;
+	int yBlockSize = dataBand.yBlockSize;
+
+	int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
+	int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
+	int chunkSize = yBlocks / threads;
+	
+	for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
+		int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
+		
+		boost::asio::post(pool, [
+			xBlockSize, 
+			yBlockSize, 
+			yBlockStart, 
+			yBlockEnd, 
+			xBlocks, 
+			&dataBand, 
+			&stratBand,
+			&bandBreaks 
+		] {
+			//these will be freed by the thread which uses them
+			T *p_data = reinterpret_cast<T *>(VSIMalloc3(xBlockSize, yBlockSize, sizeof(T)));
+			U *p_strat = reinterpret_cast<U *>(VSIMalloc3(xBlockSize, yBlockSize, sizeof(U)));
+
+			T dataNan = static_cast<T>(dataBand.nan);
+			U stratNan = static_cast<U>(stratBand.nan);
+			std::vector<T> breaks = std::vector<T>(bandBreaks.size());
+			for (size_t i = 0; i < bandBreaks.size(); i++) {
+				breaks[i] = static_cast<T>(bandBreaks[i]);
+			}
+
+			std::chrono::microseconds read = std::chrono::microseconds(0);
+			std::chrono::microseconds process = std::chrono::microseconds(0);
+			std::chrono::microseconds write = std::chrono::microseconds(0);
+
+			int xValid, yValid;
+			for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
+				for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+					dataBand.mutex.lock();
+					dataBand.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+					dataBand.mutex.unlock();
+
+					const auto read1 = std::chrono::high_resolution_clock::now();
+					rasterBandIO(
+						dataBand,
+						p_data,
+						xBlockSize,
+						yBlockSize,
+						xBlock,
+						yBlock,
+						xValid,
+						yValid,
+						true //read = true
+					);
+					const auto read2 = std::chrono::high_resolution_clock::now();
+					read += std::chrono::duration_cast<std::chrono::microseconds>(read2 - read1);
+
+					const auto process1 = std::chrono::high_resolution_clock::now();
+					for (int y = 0; y < yValid; y++) {
+						for (int x = 0; x < xValid; x++) {
+							int index = x + y * xBlockSize;
+							T val = p_data[index];
+							bool isNan = val == dataNan;
+							if (!isNan) {
+								auto it = std::lower_bound(breaks.begin(), breaks.end(), val);
+								size_t strat = (it == breaks.end()) ? breaks.size() : std::distance(breaks.begin(), it);
+								p_strat[index] = strat;
+							}
+							else {
+								p_strat[index] = stratNan;
+							}
+						}
+					}
+					const auto process2 = std::chrono::high_resolution_clock::now();
+					process += std::chrono::duration_cast<std::chrono::microseconds>(process2 - process1);
+
+					const auto write1 = std::chrono::high_resolution_clock::now();					
+					rasterBandIO(
+						stratBand,
+						p_strat,
+						xBlockSize,
+						yBlockSize,
+						xBlock,
+						yBlock,
+						xValid,
+						yValid,
+						false //read = false
+					);
+					const auto write2 = std::chrono::high_resolution_clock::now();
+					write += std::chrono::duration_cast<std::chrono::microseconds>(write2 - write1);
+				}
+			}
+			VSIFree(p_data);
+			VSIFree(p_strat);
+
+			std::cout << "total read time: " << std::chrono::duration_cast<std::chrono::seconds>(read).count() << std::endl;
+			std::cout << "total process time: " << std::chrono::duration_cast<std::chrono::seconds>(process).count() << std::endl;
+			std::cout << "total write time: " << std::chrono::duration_cast<std::chrono::seconds>(write).count() << std::endl;
+		});
+	}
+}
+
+/**
  * This function stratifies a given raster using user-defined breaks.
  * The breaks are provided as a vector of doubles mapped to a band index.
  *
@@ -384,92 +499,32 @@ GDALRasterWrapper *breaks(
 			}
 
 			for (size_t band = 0; band < bandCount; band++) {
-				RasterBandMetaData* p_dataBand = &dataBands[band];
-				RasterBandMetaData* p_stratBand = &stratBands[band];
-
-				int xBlockSize = p_dataBand->xBlockSize;
-				int yBlockSize = p_dataBand->yBlockSize;
-					
-				int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
-				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
-				int chunkSize = yBlocks / threads;
-				
-				for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
-					int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
-					std::vector<double> *p_breaks = &bandBreaks[band];
-					
-					boost::asio::post(pool, [
-						xBlockSize, 
-						yBlockSize, 
-						yBlockStart, 
-						yBlockEnd, 
-						xBlocks, 
-						p_dataBand, 
-						p_stratBand, 
-						p_breaks
-					] {
-						std::chrono::microseconds read = std::chrono::microseconds(0);
-						std::chrono::microseconds process = std::chrono::microseconds(0);
-						std::chrono::microseconds write = std::chrono::microseconds(0);
-
-						void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
-						void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
-
-						int xValid, yValid;
-						for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
-							for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
-								p_dataBand->mutex.lock();
-								p_dataBand->p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-								p_dataBand->mutex.unlock();
-		
-								const auto read1 = std::chrono::high_resolution_clock::now();
-								rasterBandIO(
-									*p_dataBand,
-									p_data,
-									xBlockSize,
-									yBlockSize,
-									xBlock,
-									yBlock,
-									xValid,
-									yValid,
-									true //read = true
-								);
-								const auto read2 = std::chrono::high_resolution_clock::now();
-								read += std::chrono::duration_cast<std::chrono::microseconds>(read2 - read1);
-
-								const auto process1 = std::chrono::high_resolution_clock::now();
-								for (int y = 0; y < yValid; y++) {
-									for (int x = 0; x < xValid; x++) {
-										size_t index = static_cast<size_t>(x + y * xBlockSize);
-										processPixel(index, p_data, p_dataBand, p_strat, p_stratBand, *p_breaks);
-									}
-								}
-								const auto process2 = std::chrono::high_resolution_clock::now();
-								process += std::chrono::duration_cast<std::chrono::microseconds>(process2 - process1);	
-								const auto write1 = std::chrono::high_resolution_clock::now();
-								rasterBandIO(
-									*p_stratBand,
-									p_strat,
-									xBlockSize,
-									yBlockSize,
-									xBlock,
-									yBlock,
-									xValid,
-									yValid,
-									false //read = false
-								);
-								const auto write2 = std::chrono::high_resolution_clock::now();
-								write += std::chrono::duration_cast<std::chrono::microseconds>(write2 - write1);
-							}
-						}
-						VSIFree(p_data);
-						VSIFree(p_strat);
-
-						std::cout << "total read time: " << std::chrono::duration_cast<std::chrono::seconds>(read).count() << std::endl;
-						std::cout << "total process time: " << std::chrono::duration_cast<std::chrono::seconds>(process).count() << std::endl;
-						std::cout << "total write time: " << std::chrono::duration_cast<std::chrono::seconds>(write).count() << std::endl;
-					});
-				}
+				int dataBandType = static_cast<int>(dataBands[band].type);
+				int stratBandType = static_cast<int>(stratBands[band].type);
+				switch((dataBandType << 4) + stratBandType) {
+					case (16 * 14 + 14): {processBand<int8_t, int8_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 14 + 3): {processBand<int8_t, int16_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 14 + 5): {processBand<int8_t, int32_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 2 + 14): {processBand<uint16_t, int8_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 2 + 3): {processBand<uint16_t, int16_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 2 + 5): {processBand<uint16_t, int32_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 3 + 14): {processBand<int16_t, int8_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 3 + 3): {processBand<int16_t, int16_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 3 + 5): {processBand<int16_t, int32_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 4 + 14): {processBand<uint32_t, int8_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 4 + 3): {processBand<uint32_t, int16_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 4 + 5): {processBand<uint32_t, int32_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 5 + 14): {processBand<int32_t, int8_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 5 + 3): {processBand<int32_t, int16_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 5 + 5): {processBand<int32_t, int32_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 6 + 14): {processBand<float, int8_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 6 + 3): {processBand<float, int16_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 6 + 5): {processBand<float, int32_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 7 + 14): {processBand<double, int8_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 7 + 3): {processBand<double, int16_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					case (16 * 7 + 5): {processBand<double, int32_t>(p_raster, dataBands[band], stratBands[band], pool, bandBreaks[band], threads); break;}
+					default: {throw std::runtime_error("raster band data type not supported!");}
+				}			
 			}
 		}
 		pool.join();
