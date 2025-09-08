@@ -132,7 +132,6 @@ GDALRasterWrapper *breaks(
 	bool largeRaster,
 	std::string tempFolder)
 {
-	const auto setupStart = std::chrono::high_resolution_clock::now();
 	GDALAllRegister();
 
 	int height = p_raster->getHeight();
@@ -259,13 +258,11 @@ GDALRasterWrapper *breaks(
 			largeRaster	
 		);		
 	}
-	std::cout << "setup takes: " << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - setupStart).count() << std::endl;
 
-	const auto iterateStart = std::chrono::high_resolution_clock::now();
 	//step 3: iterate through indices and update the stratified raster bands
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;
-		unsigned int threads = std::min(static_cast<unsigned int>(1), std::thread::hardware_concurrency());
+		unsigned int threads = std::min(static_cast<unsigned int>(12), std::thread::hardware_concurrency());
 		boost::asio::thread_pool pool(threads);
 
 		if (map) {
@@ -379,10 +376,6 @@ GDALRasterWrapper *breaks(
 			}	
 		}
 		else {	
-			if (threads > 1) {
-				throw std::runtime_error("chrono runtime tests won't work because of interleaving threads!!");
-			}
-
 			for (size_t band = 0; band < bandCount; band++) {
 				RasterBandMetaData* p_dataBand = &dataBands[band];
 				RasterBandMetaData* p_stratBand = &stratBands[band];
@@ -408,10 +401,6 @@ GDALRasterWrapper *breaks(
 						p_stratBand, 
 						p_breaks
 					] {
-						std::chrono::microseconds read = std::chrono::microseconds(0);
-						std::chrono::microseconds process = std::chrono::microseconds(0);
-						std::chrono::microseconds write = std::chrono::microseconds(0);
-
 						void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
 						void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
 
@@ -422,7 +411,6 @@ GDALRasterWrapper *breaks(
 								p_dataBand->p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 								p_dataBand->mutex.unlock();
 		
-								const auto read1 = std::chrono::high_resolution_clock::now();
 								rasterBandIO(
 									*p_dataBand,
 									p_data,
@@ -434,19 +422,14 @@ GDALRasterWrapper *breaks(
 									yValid,
 									true //read = true
 								);
-								const auto read2 = std::chrono::high_resolution_clock::now();
-								read += std::chrono::duration_cast<std::chrono::microseconds>(read2 - read1);
 
-								const auto process1 = std::chrono::high_resolution_clock::now();
 								for (int y = 0; y < yValid; y++) {
 									for (int x = 0; x < xValid; x++) {
 										size_t index = static_cast<size_t>(x + y * xBlockSize);
 										processPixel(index, p_data, p_dataBand, p_strat, p_stratBand, *p_breaks);
 									}
 								}
-								const auto process2 = std::chrono::high_resolution_clock::now();
-								process += std::chrono::duration_cast<std::chrono::microseconds>(process2 - process1);	
-								const auto write1 = std::chrono::high_resolution_clock::now();
+								
 								rasterBandIO(
 									*p_stratBand,
 									p_strat,
@@ -458,16 +441,10 @@ GDALRasterWrapper *breaks(
 									yValid,
 									false //read = false
 								);
-								const auto write2 = std::chrono::high_resolution_clock::now();
-								write += std::chrono::duration_cast<std::chrono::microseconds>(write2 - write1);
 							}
 						}
 						VSIFree(p_data);
 						VSIFree(p_strat);
-
-						std::cout << "total read time: " << std::chrono::duration_cast<std::chrono::seconds>(read).count() << std::endl;
-						std::cout << "total process time: " << std::chrono::duration_cast<std::chrono::seconds>(process).count() << std::endl;
-						std::cout << "total write time: " << std::chrono::duration_cast<std::chrono::seconds>(write).count() << std::endl;
 					});
 				}
 			}
@@ -542,9 +519,7 @@ GDALRasterWrapper *breaks(
 			}
 		}
 	}
-	std::cout << "iterate takes: " << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - iterateStart).count() << std::endl;
 
-	const auto closeStart = std::chrono::high_resolution_clock::now();	
 	//free allocated band data
 	if (map && largeRaster) {
 		for (size_t band = 0; band < stratBands.size(); band++) {
@@ -575,7 +550,6 @@ GDALRasterWrapper *breaks(
 		new GDALRasterWrapper(p_dataset, buffers);
 		
 
-	std::cout << "close takes: " << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - closeStart).count() << std::endl;
 	return p_stratRaster;
 }
 
