@@ -3,7 +3,7 @@
  * Project: sgs
  * Purpose: helper functions
  * Author: Joseph Meyer
- * Date: August, 2025
+ * Date: September, 2025
  *
  ******************************************************************************/
 
@@ -17,7 +17,31 @@
 #define MAXINT16	32767
 
 /**
+ * The RasterBandMetaData struct stores information
+ * on a particular raster band. It stores:
  *
+ * GDALRasterBand *p_band: 
+ * 	a pointer to the associated GDALRasterBand.
+ * void *p_buffer:
+ * 	a pointer to the whole raster band as a buffer,
+ * 	if the raster is a size where storing the whole band
+ * 	is possible.
+ * GDALDataType:
+ * 	the pixel type of the raster band.
+ * size_t size:
+ * 	the size of the pixel type of the raster band.
+ * std::string name:
+ * 	the band name.
+ * double nan:
+ *	the bands particular no data value.
+ * int xBlockSize:
+ * 	the x component of the raster bands block size.
+ * int yBlockSize:
+ * 	the y component of hte raster bands block size.
+ * std::mutex mutex:
+ * 	the mutex which controls locking of operations
+ * 	on the raster band pointer which are not thread-safe
+ * 	inherently.
  */
 struct RasterBandMetaData {
 	GDALRasterBand *p_band = nullptr;
@@ -32,7 +56,25 @@ struct RasterBandMetaData {
 };
 
 /**
+ * When adding a raster band to a VRT dataset, the dataset
+ * (which will be added as a band) must be fully formed.
+ * VRT datasets are used as a virtual type to retain processed
+ * raster data on disk for use by the package, if the
+ * whole band won't fit into memory. As a result, the
+ * dataset which is added to the VRT is not fully
+ * formed when it is created, because the data which
+ * will be written to it has not yet been processed.
  *
+ * This struct holds the information of a dataset (usually tif) which
+ * will be added as a band to a VRT dataset once it
+ * has been populated with processed data. The necessary
+ * information to retain on that dataset are:
+ *
+ * GDALDataset *p_dataset: 
+ * 	the pointer to the GDALDataset object representing the dataset.
+ * std::string filename:
+ * 	the file name of the dataset, typically within a temporary
+ * 	folder on disk.
  */
 struct VRTBandDatasetInfo {
 	GDALDataset *p_dataset = nullptr;
@@ -78,7 +120,14 @@ setStratBandType(
 }
 
 /**
+ * Helper function which determines the smallest 
+ * signed integer type and it's corresponding size
+ * which can fit the maxStrata without overflow
+ * errors.
  *
+ * @param size_t maxStrata
+ * @param GDALDataType *p_dtye
+ * @param size_t *p_size
  */
 inline void
 setStratBandTypeAndSize(
@@ -206,7 +255,28 @@ printTypeWarningsForInt32Conversion(GDALDataType type) {
 }
 
 /**
+ * This helper function is used by stratification functions to create
+ * a virtual dataset to add bands to. The virtual dataset will either
+ * be a MEM dataset or in-memory dataset, or a VRT dataset. The 
+ * VRT dataset will be chosen if the raster is large enough
+ * that putting the whole raster into memory should not be attempted.
  *
+ * The function begins by getting a GDALDriver from the driver name
+ * (which must be one of "MEM" or "VRT").
+ *
+ * Then, a new GDALDataset is created with the width and height
+ * required. Type, band number, filename, and other options are
+ * not used because the bands will be dynamically added with
+ * potentially different types per band, and this dataset
+ * will not be written directly to disk.
+ *
+ * The geotransform and projection are set.
+ *
+ * @param std::string driverName
+ * @param int width
+ * @param int height
+ * @param double *geotransform
+ * @Param std::string projection
  */
 inline GDALDataset *
 createVirtualDataset(
@@ -216,7 +286,6 @@ createVirtualDataset(
 	double *geotransform, 
 	std::string projection) 
 {
-	GDALAllRegister();
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
 	if (!p_driver) {
 		throw std::runtime_error("unable to find dataset driver.");
@@ -248,7 +317,44 @@ createVirtualDataset(
 }
 
 /**
+ * This helper function is used when the user provides a specific
+ * filename, and creates a dataset using the driver associated with
+ * the filename extension.
  *
+ * Note, the driverName must be determined from the filename before
+ * this function is called.
+ *
+ * First, a GDALDriver is created with the driver according to the
+ * driverName parameter. Then, if tiles should be used, those
+ * CSL options are added to a CSL options list which will be passed
+ * when creating the Dataset.
+ *
+ * A dataset is created using the filename, height, width, band count,
+ * and options specified. Note, the type of every raster in the dataset
+ * must be the same (this is true right now, as the only driver allowed
+ * is tiff, this may be changed in the future as more drivers are added.
+ *
+ * The geotransform and projection are set.
+ *
+ * Finally, since the band information (specifically type) must be known
+ * before a non-virtual dataset is created, the RasterBandMetaData
+ * structs associated with each band have not been fully populated. 
+ * Bands could not habve been allocated, created, etc. until after 
+ * all of them had been iterated through. Now that we are able to 
+ * create the dataset with its associated bands, we must now populate
+ * the RasterBandMetaData structs with the remaining meta data
+ * including block sizes and GDALRasterBand pointers. The name
+ * and nodata value of each band is also updated.
+ *
+ * @param std::string filename
+ * @param std::string driverName
+ * @param int width
+ * @param int height
+ * @param double *geotransform
+ * @param std::string projection,k
+ * @param RasterBandMetaData *bands
+ * @param size_t bandCount
+ * @param bool useTiles
  */
 inline GDALDataset *
 createDataset(
@@ -262,7 +368,6 @@ createDataset(
 	size_t bandCount,
 	bool useTiles) 
 {
-	GDALAllRegister();
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName(driverName.c_str());
 	if (!p_driver) {
 		throw std::runtime_error("unable to find dataset driver.");
@@ -314,7 +419,22 @@ createDataset(
 
 
 /**
+ * This helper function dynamically adds a raster band to an existing
+ * in-memory dataset (MEM).
  *
+ * First, the buffer is allocated according to the height,
+ * width, and pixel size of the entire band. This buffer
+ * is passed as the 'datapointer' option to the AddBand
+ * function so that the memory is now associated with
+ * the dataset.
+ *
+ * Once the band has been created, it's name and nodata values
+ * are set, and the RasterBandMetaData struct of the particular
+ * raster band which was added is updated with a pointer to the
+ * GDALRasterBand object.
+ *
+ * @param GDALDataset *p_dataset
+ * @param RasterBandMetaData& band
  */
 inline void
 addBandToMEMDataset(
@@ -345,10 +465,45 @@ addBandToMEMDataset(
 }
 
 /**
+ * This helper function is used to create a dataset which will
+ * be used as the band of a VRT dataset. In order to pass the
+ * checks for the addition of a dataset as a band to a VRT dataset
+ * the file must be populated (written to). This function is used
+ * before any data processing is undertaken to create an empty
+ * tif file, so that data has a place to be written to, and is
+ * added as a band to a VRT dataset once the processing has completed.
  *
+ * When this function has completed there will be a new entry in
+ * the VRTBandInfo vector containing a dataset pointer and filename.
+ * The RasterBandMetaData object will also be updated with the band
+ * information for the tif file created. It's worth noting that
+ * the tmpPath is a temporary folder created for the SpatialRaster
+ * which this function was called, that holds the .tif files which
+ * make up the VRT dataset.
+ *
+ * first, the full file path is determined using the temp path,
+ * as well as a unique key differentiating the different bands
+ * which may be in the dataset. The useTiles boolean determines
+ * whether the TILED, XBLOCKSIZE, and YBLOCKSIZE options
+ * will be used in dataset creation. The reason why they wouldn't
+ * be used is if the block size is a scanline -- this is because
+ * GDAL will throw an error if the tile array would be larger
+ * than 2GB, which would happen if tiles were scanlines on
+ * some large images. Then, the geotransform is determined, 
+ * and createDataset() is called.
+ *
+ * Finally, the new tif datasets only band is updated with
+ * a name, and nodata value, and the corresponding 
+ * RasterBandMetaData object is updated.
+ *
+ * @param GDALDataset *p_dataset
+ * @param RasterBandMetaData& data
+ * @param std::string tempFolder
+ * @param std::string key
+ * @param std::vector<VRTBandDatasetInfo>& VRTBandInfo
  */
 inline void
-addBandToVRTDataset(
+createVRTBandDataset(
 	GDALDataset *p_dataset,
 	RasterBandMetaData& band,
 	std::string tempFolder,
@@ -362,18 +517,15 @@ addBandToVRTDataset(
 	VRTBandDatasetInfo info;
 	info.filename = tmpPath.string();
 	
-	//there may be errors from GDAL if trying to tile a raster with scanline blocks
-	//ensure these errors don't happen by not tiling when block sizes are a scanline
 	bool useTiles = band.xBlockSize != p_dataset->GetRasterXSize() && 
-					band.yBlockSize != p_dataset->GetRasterYSize();
-	
+			band.yBlockSize != p_dataset->GetRasterYSize();
+
 	double geotransform[6];
 	CPLErr err = p_dataset->GetGeoTransform(geotransform);
 	if (err) {
 		throw std::runtime_error("unable to get geotransform from dataset.");
 	}
 
-	//create the VRT band sub-dataset as a Geotiff
 	info.p_dataset = createDataset(
 		info.filename,
 		"GTiff",
@@ -386,7 +538,6 @@ addBandToVRTDataset(
 		useTiles
 	);
 
-	//add the sub-datasets band to the bands vector
 	GDALRasterBand *p_band = info.p_dataset->GetRasterBand(1);
 	p_band->SetDescription(band.name.c_str());
 	p_band->SetNoDataValue(band.nan);
@@ -398,7 +549,23 @@ addBandToVRTDataset(
 
 
 /**
+ * This helper function adds an existing raster dataset as a band
+ * to an existing VRT dataset.
  *
+ * First, creation options are determined. The useTiles boolean determines
+ * whether the TILED, XBLOCKSIZE, and YBLOCKSIZE options
+ * will be used in dataset creation. The reason why they wouldn't
+ * be used is if the block size is a scanline -- this is because
+ * GDAL will throw an error if the tile array would be larger
+ * than 2GB, which would happen if tiles were scanlines on
+ * some large images. The filename, as well as the VRT band
+ * subclass are added as options as well.
+ *
+ * The band is added and updated with a name and nodata value.
+ *
+ * @param GDALDataset *p_dataset
+ * @param RasterBandMetaData& band
+ * @param VRTBandDatasetInfo& info
  */
 inline void
 addBandToVRTDataset(
@@ -406,11 +573,8 @@ addBandToVRTDataset(
 	RasterBandMetaData& band,
 	VRTBandDatasetInfo& info
 ) {
-	//adjust the options for the VRT band
 	char **papszOptions = nullptr;
 
-	//there may be errors from GDAL if trying to tile a raster with scanline blocks
-	//ensure these errors don't happen by not tiling when block sizes are a scanline
 	bool useTiles = band.xBlockSize != p_dataset->GetRasterXSize() && 
 			band.yBlockSize != p_dataset->GetRasterYSize();
 
@@ -426,7 +590,6 @@ addBandToVRTDataset(
 	papszOptions = CSLSetNameValue(papszOptions, "subclass", "VRTRawRasterBand");
 	papszOptions = CSLSetNameValue(papszOptions, "SourceFilename", filename);
 
-	//create the VRT band specifying the sub-dataset
 	CPLErr err = p_dataset->AddBand(band.type, papszOptions);
 	CSLDestroy(papszOptions);
 	if (err) {
@@ -439,7 +602,32 @@ addBandToVRTDataset(
 }
 
 /**
+ * This function is called on non virtual datasets after band information
+ * has been determined. Whether or not to use tiles are determined. 
+ * The useTiles boolean determines whether the TILED, XBLOCKSIZE, 
+ * and YBLOCKSIZE options will be used in dataset creation. 
+ * The reason why they wouldn't be used is if the block size 
+ * is a scanline -- this is because GDAL will throw an error if the 
+ * tile array would be larger than 2GB, which would happen 
+ * if tiles were scanlines on some large images.
  *
+ * Size and type are updated for every RasterBandMetaData within the 
+ * vector to ensure all bands have the same size and type. 
+ * The the full raster band is allocated for each band if it is not a large raster.
+ *
+ * Finally, the createDataset() function is called after the bands have
+ * been adjusted.
+ *
+ * @param std::string filename
+ * @param std::string driver
+ * @param int width
+ * @param int height
+ * @param double *geotransform
+ * @param std::string projection
+ * @param std::vector<RasterBandMetaData>& bands
+ * @param size_t size
+ * @param GDALDataType type
+ * @param bool largeRaster
  */
 inline GDALDataset *
 adjustBandsAndCreateDataset(
@@ -454,8 +642,6 @@ adjustBandsAndCreateDataset(
 	GDALDataType type,
 	bool largeRaster)
 {		
-	//tiles must not be scanlines, as trying to set block size when they represent scanlines 
-	//may result in GDAL errors due to the tile array being too large.
 	bool useTiles = bands[0].xBlockSize != width &&
 			bands[0].yBlockSize != height;
 
@@ -479,7 +665,24 @@ adjustBandsAndCreateDataset(
 }
 
 /**
+ * This helper function is used to either read or write a chunk
+ * of memory from or to a raster band. If the block size of
+ * the band corresponds to the block size of the memory,
+ * ReadBlock() or WriteBlock() may be used. Otherwise,
+ * RasterIO is used. The boolean parameter 'read' lets
+ * the function know whether the band should be read
+ * to the buffer, or the buffer should be written to the
+ * band.
  *
+ * @param RasterBandMetaData& band
+ * @param void *p_buffer
+ * @param int xBlockSize
+ * @param int yBlockSize
+ * @param int xBlock
+ * @param int yBlock
+ * @param int xValid
+ * @param int yValid
+ * @param bool read
  */
 inline void
 rasterBandIO(
@@ -495,7 +698,7 @@ rasterBandIO(
 {
 	CPLErr err;
 	bool useBlock = xBlockSize == band.xBlockSize &&
-						yBlockSize == band.yBlockSize;
+			yBlockSize == band.yBlockSize;
 
 	band.mutex.lock();
 	if (useBlock && read) {

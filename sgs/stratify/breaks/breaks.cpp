@@ -201,7 +201,7 @@ GDALRasterWrapper *breaks(
 			addBandToMEMDataset(p_dataset, *p_stratBand);			
 		}
 		else if (isVRTDataset) {
-			addBandToVRTDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo); 
+			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo); 
 		}
 		else { //non-virtual dataset driver
 			if (stratPixelSize < p_stratBand->size) {
@@ -233,7 +233,7 @@ GDALRasterWrapper *breaks(
 			addBandToMEMDataset(p_dataset, *p_stratBand);			
 		}
 		else if (isVRTDataset) {
-			addBandToVRTDataset(p_dataset, *p_stratBand, tempFolder, "map", VRTBandInfo); 
+			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, "map", VRTBandInfo); 
 		}
 		else { //non-virtual dataset driver
 			if (stratPixelSize < p_stratBand->size) {
