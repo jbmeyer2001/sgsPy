@@ -56,7 +56,7 @@ class GDALRasterWrapper {
 	int displayRasterHeight = -1;
 
 	double geotransform[6];
-	char *p_crs;
+	char *p_crs = nullptr;
 
 	/**
 	 * Internal function used to read raster band data.

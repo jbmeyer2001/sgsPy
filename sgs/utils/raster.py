@@ -9,7 +9,6 @@
 
 import json
 import shutil
-import tempfile
 from typing import Optional
 
 import numpy as np
@@ -183,6 +182,7 @@ class SpatialRaster:
         else:
             self.cpp_raster = image
 
+        self.have_temp_dir = False
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
         self.height = self.cpp_raster.get_height()
@@ -193,8 +193,7 @@ class SpatialRaster:
         self.ymin = self.cpp_raster.get_ymin()
         self.ymax = self.cpp_raster.get_ymax()
         self.pixel_width = self.cpp_raster.get_pixel_width()
-        self.pixel_height = self.cpp_raster.get_pixel_height()
-        self.temp_dir = tempfile.mkdtemp()
+        self.pixel_height = self.cpp_raster.get_pixel_height() 
         self.band_name_dict = {}
         self.band_data_dict = {}
         self.bands = self.cpp_raster.get_bands()
@@ -202,7 +201,8 @@ class SpatialRaster:
             self.band_name_dict[self.bands[i]] = i
 
     def __del__(self):
-        shutil.rmtree(self.temp_dir)
+        if self.have_temp_dir:
+            shutil.rmtree(self.temp_dir)
 
     def info(self):
         """

@@ -10,13 +10,14 @@ import sys
 
 rast = sgs.SpatialRaster('/home/jbmeyer/RMF_LiDAR_Metrics/RMF_DEM1m.tif')
 start = time.time()
-srast = sgs.stratify.breaks(rast, list(range(10, 490, 10)), filename="srast_DEM.tif")
+srast = sgs.stratify.breaks(rast, list(range(10, 490, 10)), filename="srast_DEM.tif", driver_options={"COMPRESS": "LZMA", "NUM_THREADS": 4})
 end = time.time()
 print(str(end - start))
 
 #rast = sgs.SpatialRaster('/home/jbmeyer/RMF_LiDAR_Metrics/CHM.tif')
 #start = time.time()
 #srast = sgs.stratify.breaks(rast, list(range(1, 49, 1)), filename="srast_CHM.tif")
+#srast = sgs.stratify.breaks(rast, list(range(1, 49, 1)))
 #end = time.time()
 #print(str(end - start))
 

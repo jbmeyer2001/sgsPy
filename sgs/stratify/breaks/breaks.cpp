@@ -130,7 +130,9 @@ GDALRasterWrapper *breaks(
 	bool map,
 	std::string filename,
 	bool largeRaster,
-	std::string tempFolder)
+	int threads,
+	std::string tempFolder,
+	std::map<std::string, std::string> driverOptions)
 {
 	GDALAllRegister();
 
@@ -151,6 +153,11 @@ GDALRasterWrapper *breaks(
 
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
+
+	std::mutex dataBandMutex;
+	std::mutex stratBandMutex;
+	//VRT bands are each their own dataset so they can each have their own mutex
+	std::vector<std::mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
 
 	std::string driver;
 	if (isMEMDataset || isVRTDataset) {
@@ -183,6 +190,7 @@ GDALRasterWrapper *breaks(
 		p_dataBand->size = p_raster->getRasterBandTypeSize(key);
 		p_dataBand->p_buffer = largeRaster ? nullptr : p_raster->getRasterBandBuffer(key);
 		p_dataBand->nan = p_band->GetNoDataValue();
+		p_dataBand->p_mutex = &dataBandMutex;
 		p_band->GetBlockSize(&p_dataBand->xBlockSize, &p_dataBand->yBlockSize);
 
 		//sort and add band breaks vector
@@ -196,12 +204,14 @@ GDALRasterWrapper *breaks(
 		p_stratBand->name = "strat_" + bandNames[key];
 		p_stratBand->xBlockSize = map ? dataBands[0].xBlockSize : p_dataBand->xBlockSize;
 		p_stratBand->yBlockSize = map ? dataBands[0].yBlockSize : p_dataBand->yBlockSize;
-		
+		p_stratBand->p_mutex = &stratBandMutex; //overwritten if VRT dataset
+
 		if (isMEMDataset) {
-			addBandToMEMDataset(p_dataset, *p_stratBand);			
+			addBandToMEMDataset(p_dataset, *p_stratBand);
 		}
 		else if (isVRTDataset) {
-			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo); 
+			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo, driverOptions); 
+			p_stratBand->p_mutex = &stratBandMutexes[band];
 		}
 		else { //non-virtual dataset driver
 			if (stratPixelSize < p_stratBand->size) {
@@ -228,12 +238,21 @@ GDALRasterWrapper *breaks(
 		p_stratBand->name = "strat_map";
 		p_stratBand->xBlockSize = dataBands[0].xBlockSize;
 		p_stratBand->yBlockSize = dataBands[0].yBlockSize;
+		p_stratBand->p_mutex = &stratBandMutex; //overwritten if VRT dataset
 
 		if (isMEMDataset) {
 			addBandToMEMDataset(p_dataset, *p_stratBand);			
 		}
 		else if (isVRTDataset) {
-			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, "map", VRTBandInfo); 
+			createVRTBandDataset(
+				p_dataset, 
+				*p_stratBand, 
+				tempFolder, 
+				"map", 
+				VRTBandInfo, 
+				driverOptions
+			); 
+			p_stratBand->p_mutex = &stratBandMutexes.back();
 		}
 		else { //non-virtual dataset driver
 			if (stratPixelSize < p_stratBand->size) {
@@ -245,24 +264,32 @@ GDALRasterWrapper *breaks(
 
 	//create full non-virtual dataset now that we have all required band information
 	if (!isMEMDataset && !isVRTDataset) {
-		p_dataset = adjustBandsAndCreateDataset(
+		bool useTiles = stratBands[0].xBlockSize != width &&
+				stratBands[0].yBlockSize != height;
+
+		for (size_t band = 0; band < stratBands.size(); band++) {
+			stratBands[band].size = stratPixelSize;
+			stratBands[band].type = stratPixelType;
+			stratBands[band].p_buffer = !largeRaster ? VSIMalloc3(height, width, stratPixelSize) : nullptr;
+		}
+
+		p_dataset = createDataset(
 			filename,
 			driver,
 			width,
 			height,
 			geotransform,
 			projection,
-			stratBands,
-			stratPixelSize,
-			stratPixelType,
-			largeRaster	
-		);		
+			stratBands.data(),
+			stratBands.size(),
+			useTiles,
+			driverOptions
+		);
 	}
 
 	//step 3: iterate through indices and update the stratified raster bands
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;
-		unsigned int threads = std::min(static_cast<unsigned int>(12), std::thread::hardware_concurrency());
 		boost::asio::thread_pool pool(threads);
 
 		if (map) {
@@ -300,9 +327,9 @@ GDALRasterWrapper *breaks(
 					for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
 						for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 							int xValid, yValid;
-							dataBands[0].mutex.lock();
+							dataBands[0].p_mutex->lock();
 							dataBands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-							dataBands[0].mutex.unlock();
+							dataBands[0].p_mutex->unlock();
 
 							//read raster band data into band buffers
 							for (size_t band = 0; band < bandCount; band++) {
@@ -407,9 +434,9 @@ GDALRasterWrapper *breaks(
 						int xValid, yValid;
 						for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
 							for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
-								p_dataBand->mutex.lock();
+								p_dataBand->p_mutex->lock();
 								p_dataBand->p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-								p_dataBand->mutex.unlock();
+								p_dataBand->p_mutex->unlock();
 		
 								rasterBandIO(
 									*p_dataBand,

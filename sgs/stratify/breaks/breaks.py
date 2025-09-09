@@ -7,6 +7,7 @@
 #
 # ******************************************************************************
 
+import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
 from breaks import breaks_cpp
@@ -18,7 +19,10 @@ def breaks(
     rast: SpatialRaster,
     breaks: list[float | list[float]] | dict[str, list[float]],
     map: bool = False,
-    filename: str = ''):
+    filename: str = '',
+    thread_count: int = 8,
+    driver_options: dict = None
+    ):
     """
     This function conducts stratification on the raster given
     according to use defined breaks.
@@ -102,6 +106,17 @@ def breaks(
     if max_mapped_strata > MAX_STRATA_VAL:
         raise ValueError("the mapped strata will cause an overflow error because the max strata number is too large.")    
 
+    if thread_count < 1:
+        raise ValueError("number of threads can't be less than 1.")
+
+    #ensure driver options keys are string, and convert driver options vals to string
+    driver_options_str = {}
+    if driver_options:
+        for (key, val) in driver_options.items():
+            if type(key) is not str:
+                raise ValueError("the key for all key/value pairs in the driver_options dict must be a string")
+            driver_options_str[key] = str(val)
+
     raster_size_bytes = 0
     height = rast.height
     width = rast.width
@@ -113,18 +128,27 @@ def breaks(
             large_raster = True
             break
 
-    #if the raster is big enough, create a temp file to hold it
+    #if large_raster is true, the C++ function will process the raster in blocks
     large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
 
+    #if a VRT dataset will be used, make a temp directory to hold it's files
+    temp_dir = tempfile.mkdtemp()
+
     #call stratify breaks function
-    strat_raster = breaks_cpp(
+    srast = SpatialRaster(breaks_cpp(
         rast.cpp_raster, 
         breaks_dict, 
         map, 
         filename,
         large_raster,
-        rast.temp_dir
-    )
+        thread_count,
+        temp_dir,
+        driver_options_str
+    ))
 
-    return SpatialRaster(strat_raster)
+    #give srast ownership of it's own temp directory
+    if temp_dir:
+        srast.have_temp_dir = True
+        srast.temp_dir = temp_dir
 
+    return srast
