@@ -17,7 +17,23 @@
 #include "helper.h"
 
 /**
+ * This is a helper function for processing a pixel of data
+ * when a mapped stratification is being created.
  *
+ * First, the value is read in as a double, and it is determined
+ * whether the pixel is a nan pixel or not. The mapNan boolean 
+ * is updated in addition to the isNan boolean, to ensure that
+ * if one band within the raster is nan at a certain pixel
+ * then the mapped raster (but not necessarily all output rasters)
+ * is also nan at that pixel.
+ *
+ * Then, if it isn't a nan pixel the lower bound of the value 
+ * within the vector of break values is found. For example,
+ * if the value was 3 and the breaks vector was [2, 4, 6], the
+ * lower bound would be 1, which is the index of 4, the first
+ * value larger than 3 in the breaks vector. This lower bound
+ * is the strata. This strata (or the nan value) is then written 
+ * with the appropriate type to the strat raster band.
  */
 inline void processMapPixel(
 	size_t index,
@@ -30,37 +46,36 @@ inline void processMapPixel(
 	bool& mapNan,
 	size_t& mapStrat)
 {
-	double val = getPixelValueDependingOnType<double>(
-		dataBand.type,
-		p_dataBuffer,
-		index
-	);
+	double val = getPixelValueDependingOnType<double>(dataBand.type, p_dataBuffer, index);
 	bool isNan = std::isnan(val) || (double)val == dataBand.nan;
 	mapNan |= isNan;
 		
-	//calculate strata value if not nan
 	size_t strat = 0;
 	if (!isNan) {
 		auto it = std::lower_bound(bandBreaks.begin(), bandBreaks.end(), val);
 		strat = (it == bandBreaks.end()) ? bandBreaks.size() : std::distance(bandBreaks.begin(), it);
 	}
 
-	setStrataPixelDependingOnType(
-		stratBand.type,
-		p_stratBuffer,
-		index,
-		isNan,
-		strat
-	);
+	setStrataPixelDependingOnType(stratBand.type, p_stratBuffer, index, isNan, strat);
 
-	//adjust mappedStrat as required
 	if (!mapNan) {
 		mapStrat += strat * multiplier;
 	}
 }	
 
 /**
+ * This is a helper function for processing a pixel of data.
  *
+ * First, the value is read in as a double, and it is determined
+ * whether the pixel is a nan pixel or not.
+ *
+ * Then, if it isn't a nan pixel the lower bound of the value 
+ * within the vector of break values is found. For example,
+ * if the value was 3 and the breaks vector was [2, 4, 6], the
+ * lower bound would be 1, which is the index of 4, the first
+ * value larger than 3 in the breaks vector. This lower bound
+ * is the strata. This strata (or the nan value) is then written 
+ * with the appropriate type to the strat raster band.
  */
 inline void
 processPixel(
@@ -71,58 +86,127 @@ processPixel(
 	RasterBandMetaData *p_stratBand,
 	std::vector<double>& bandBreaks)
 {
-	double val = getPixelValueDependingOnType<double>(
-		p_dataBand->type,
-		p_data,
-		index
-	);
-
+	double val = getPixelValueDependingOnType<double>(p_dataBand->type, p_data, index);
 	bool isNan = std::isnan(val) || val == p_dataBand->nan;
 
-	//calculate strata value if not nan
 	size_t strat = 0;
 	if (!isNan) {
 		auto it = std::lower_bound(bandBreaks.begin(), bandBreaks.end(), val);
 		strat = (it == bandBreaks.end()) ? bandBreaks.size() : std::distance(bandBreaks.begin(), it);
 	}
 
-	setStrataPixelDependingOnType(
-		p_stratBand->type,
-		p_strat,
-		index,
-		isNan,
-		strat
-	);
+	setStrataPixelDependingOnType(p_stratBand->type, p_strat, index, isNan, strat);
 }
 
 /**
  * This function stratifies a given raster using user-defined breaks.
- * The breaks are provided as a vector of doubles mapped to a band index.
+ * The breaks are provided as a vector of doubles for each band specified
+ * in the input dataset.
  *
  * The function can be run on a single raster band or multiple raster bands,
  * and the user may pass the map variable to combine the stratification of
- * the multiple raster bands.
+ * multiple raster bands.
  *
- * The required raster bands are first acquired from the datset, and
- * checked to ensure that the number of breaks fits without overflowing.
+ * The function can be thought of in three different sections: the setup,
+ * the processing, and the finish/return. During the setup, metadata is aquired
+ * for the input raster, and an output dataset is created which depends
+ * on user-given parameters and the input raster. During the processing
+ * the input raster is iterated through, either by blocks or with the
+ * entire raster in memory, the strata are determined for each pixel and
+ * then written to the output dataset. During the finish/return step, a
+ * GDALRasterWrapper object is created using the output dataset. 
  *
- * An additional band is added to the output raster if map is specified,
- * and multipliers are determined, so that every unique combination
- * of stratifications of the normal raster bands corresponds to a 
- * single stratification of the mapped raster band. For example,
- * if there were 3 normal raster bands each with 5 possible stratifications,
- * there would be 5^3 or 125 possible mapped stratificaitons.
  *
- * The raster bands are then iterated thorough and stratifications are determined.
- * a new dataset object is created using the stratifcation raster, and it is
- * written to disk if a filename is given.
+ * SETUP:
+ * the data structures holding metadata are initialized and it is determined
+ * whether the raster is a virtual raster or not, and if it is a virtual
+ * raster whether it is fully in-memory or whether it must be stored on disk.
+ * 
+ * If the user provides an output filename, the dataset will not be a virtual dataset
+ * instead it will be associated with the filename. If the user does not provide
+ * an output filename then a virtual dataset driver will be used. In the case
+ * of a large raster (whether or not the raster is large enough for this is calculated 
+ * and passed by Python side of application), the dataset will be VRT. If the
+ * package is comfortable fitting the entire raster in memory an in-memory
+ * dataset will be used.
+ * 
+ * The input raster bands are iterated through, metadata is stored on them, and
+ * bands are created for the output dataset. In the case of a VRT dataset, each
+ * band is a complete dataset itself which must be added after it has been written to. 
+ * In the case of a MEM dataset, the bands must be aquired from the input raster. Both MEM
+ * and VRT support the AddBand function, and support bands with different types,
+ * so the bands are dynamically added while iterating through the input raster
+ * bands. Non virtual formats require the data types to be known at dataset initialization
+ * and don't support the AddBand function, so the dataset must be created
+ * after iterating through the input bands.
  *
- * NOTE: stratifications have a data type of 'float' to accomodate nan values
  *
- * @param GDALRasterWrapper * a pointer to the raster image to stratify
- * @param std::map<int, std::vector<double>> band mapped to user-defiend breaks
- * @param bool map whether to add a mapped stratification
- * @param std::string filename the filename to write to (if desired)
+ * PROCESSING:
+ * the processing section iterates through every pixel in every input band, and 
+ * calculates/writes the strata to the corresponding output band.
+ *
+ * There are four different cases dealing with whether or not the entire raster
+ * band is allocated in memory (the largeRaster variable is false), and whether
+ * or not the values of each band should be mapped to an extra output raster
+ * band.
+ *
+ * If the raster is large, it is processed in blocks and splits the raster
+ * into groups of blocks to be processed by multiple threads. If the raster
+ * bands are in-memory, the entire raster is processed at once. The mapped
+ * rasters store information on an extra output raster band, the output
+ * values of which are determined as a function of all other output raster
+ * bands. The multipliers vector stores the information for this.
+ *
+ * For the large rasters, the processing starts out by splitting the raster
+ * into chunks depending on the number of threads. A thread is then created
+ * for each chunk. Within each thread, the blocks within it's designated
+ * chunk are iterated through and first read from the input bands, processed,
+ * then written to the output bands. In the case of a mapped raster all of the
+ * bands are iterated alongside eachother so that the intermediate mapping
+ * calculations don't have to be written then read again. In the case of a non
+ * mapped raster, each band is processed sequentially.
+ *
+ * CLEANUP:
+ * If the output dataset is a VRT dataset, the datasets which represent
+ * its bands (that have not yet been added as bands) must be added
+ * as bands now that they are populated with data and are thus allowed
+ * to be added. 
+ *
+ * If the dataset output bands are fully in memory, they are moved to 
+ * a vector from their metadata objects to be passed as a parameter
+ * to the GDALRasterWrapper constructor (or not if the bands aren't in
+ * memory). This GDALRasterWrapper is then returned.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param std::map<int, std::vector<double>>breaks
+ * @param bool map
+ * @param std::string
+ * @param bool largeRaster
+ * @param int threads
+ * @param std::string tempFolder
+ * @param std::map<std::string, std::string> driverOptions
+ *
+ * p_raster: 
+ * 	a pointer to the input raster.
+ * breaks: 
+ * 	a map of raster band indexes to breaks values.
+ * map: 
+ * 	a specification of whether to map all of the output
+ * 	bands to an additional output band.
+ * filename:
+ * 	the output filename, or "" if not to write to an 
+ * 	output file.
+ * largeRaster:
+ * 	whether or not the entire raster band should be
+ * 	allocated to memory at once.
+ * threads:
+ * 	the number of threads to process with, only
+ * 	used if largeRaster is true.
+ * tempFolder:
+ * 	the temporary folder to put VRT bands into.
+ * driverOptions:
+ * 	extra user-defined driver options such as
+ * 	compression.
  */
 GDALRasterWrapper *breaks(
 	GDALRasterWrapper *p_raster,
@@ -176,7 +260,7 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	//step 1: allocate, read, and initialize raster data and breaks information
+	//allocate, read, and initialize raster data and breaks information
 	GDALDataType stratPixelType = GDT_Int8;
 	size_t stratPixelSize = 1;
 	size_t band = 0;
@@ -184,6 +268,7 @@ GDALRasterWrapper *breaks(
 		RasterBandMetaData *p_dataBand = &dataBands[band];
 		RasterBandMetaData *p_stratBand = &stratBands[band];
 
+		//get and store metadata from input raster band
 		GDALRasterBand *p_band = p_raster->getRasterBand(key);
 		p_dataBand->p_band = p_band;
 		p_dataBand->type = p_raster->getRasterBandType(key);
@@ -198,7 +283,7 @@ GDALRasterWrapper *breaks(
 		std::sort(valCopy.begin(), valCopy.end());
 		bandBreaks.push_back(valCopy);
 		
-		//update info of new strat raster
+		//update metadata of new strat raster
 		size_t maxStrata = val.size() + 1;
 		setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
 		p_stratBand->name = "strat_" + bandNames[key];
@@ -206,6 +291,7 @@ GDALRasterWrapper *breaks(
 		p_stratBand->yBlockSize = map ? dataBands[0].yBlockSize : p_dataBand->yBlockSize;
 		p_stratBand->p_mutex = &stratBandMutex; //overwritten if VRT dataset
 
+		//update dataset with new band information
 		if (isMEMDataset) {
 			addBandToMEMDataset(p_dataset, *p_stratBand);
 		}
@@ -223,10 +309,10 @@ GDALRasterWrapper *breaks(
 		band++;
 	}
 
-	//step 2: set multipliers and check max size if mapped stratification	
+	//set multipliers if mapped stratification	
 	std::vector<size_t> multipliers(breaks.size(), 1);
 	if (map) {
-		//determine the stratification band index multipliers of the mapped band and error check maxes
+		//determine the stratification band index multipliers of the mapped band
 		for (size_t i = 0; i < bandCount - 1; i++) {
 			multipliers[i + 1] = multipliers[i] * (bandBreaks[i].size() + 1);
 		}
@@ -240,6 +326,7 @@ GDALRasterWrapper *breaks(
 		p_stratBand->yBlockSize = dataBands[0].yBlockSize;
 		p_stratBand->p_mutex = &stratBandMutex; //overwritten if VRT dataset
 
+		//update dataset with new band information
 		if (isMEMDataset) {
 			addBandToMEMDataset(p_dataset, *p_stratBand);			
 		}
@@ -287,7 +374,7 @@ GDALRasterWrapper *breaks(
 		);
 	}
 
-	//step 3: iterate through indices and update the stratified raster bands
+	//iterate through all pixels and update the stratified raster bands
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;
 		boost::asio::thread_pool pool(threads);
@@ -437,7 +524,8 @@ GDALRasterWrapper *breaks(
 								p_dataBand->p_mutex->lock();
 								p_dataBand->p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 								p_dataBand->p_mutex->unlock();
-		
+								
+								//read block into memory
 								rasterBandIO(
 									*p_dataBand,
 									p_data,
@@ -450,6 +538,7 @@ GDALRasterWrapper *breaks(
 									true //read = true
 								);
 
+								//process block
 								for (int y = 0; y < yValid; y++) {
 									for (int x = 0; x < xValid; x++) {
 										size_t index = static_cast<size_t>(x + y * xBlockSize);
@@ -457,6 +546,7 @@ GDALRasterWrapper *breaks(
 									}
 								}
 								
+								//write resulting stratifications to disk
 								rasterBandIO(
 									*p_stratBand,
 									p_strat,
@@ -524,6 +614,7 @@ GDALRasterWrapper *breaks(
 			}
 		}
 
+		//if non-virtual dataset then write in-memory output bands to disk
 		if (!isVRTDataset && !isMEMDataset) {
 			CPLErr err;
 			for (size_t band = 0; band < stratBands.size(); band++) {
@@ -547,14 +638,7 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	//free allocated band data
-	if (map && largeRaster) {
-		for (size_t band = 0; band < stratBands.size(); band++) {
-			VSIFree(stratBands[band].p_buffer);
-		}
-	}
-
-	//step 4: close all of the VRT sub datasets
+	//close and add all of the VRT sub datasets as bands
 	if (isVRTDataset) {
 		for (size_t band = 0; band < VRTBandInfo.size(); band++) {
 			GDALClose(VRTBandInfo[band].p_dataset);
@@ -562,7 +646,7 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	//step 5: if the bands are in memory, populate a vector of just bands to use in GDALRasterWrapper creation
+	//if the bands are in memory, populate a vector of just bands to use in GDALRasterWrapper creation
 	std::vector<void *> buffers(stratBands.size());
 	if (!largeRaster) {
 		for (size_t band = 0; band < stratBands.size(); band++) {
@@ -570,14 +654,10 @@ GDALRasterWrapper *breaks(
 		}
 	}
 
-	//step 5: create GDALRasterWrapper object from bands
-	//this dynamically-allocated object will be cleaned up by python (TODO I hope...)
-	GDALRasterWrapper *p_stratRaster = largeRaster ?
+	return largeRaster ?
 	       	new GDALRasterWrapper(p_dataset) :
 		new GDALRasterWrapper(p_dataset, buffers);
-		
 
-	return p_stratRaster;
 }
 
 PYBIND11_MODULE(breaks, m) {
