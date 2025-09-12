@@ -3,12 +3,18 @@
  * Project: sgs
  * Purpose: C++ implementation of raster stratification using quantiles
  * Author: Joseph Meyer
- * Date: June, 2025
+ * Date: September, 2025
  *
  ******************************************************************************/
 
 #include "raster.h"
 #include "helper.h"
+
+#ifdef WIN32 || _WIN32
+	#include <daal_win.h>
+#else
+	#include <daal.h>
+#endif
 
 /*
  *
