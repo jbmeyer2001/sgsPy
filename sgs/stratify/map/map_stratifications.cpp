@@ -3,9 +3,12 @@
  * Project: sgs
  * Purpose: C++ implementation of raster stratification mapping
  * Author: Joseph Meyer
- * Date: June, 2025
+ * Date: September, 2025
  *
  ******************************************************************************/
+
+#include <boost/asio/thread_pool.hpp>
+#include <boost/asio/post.hpp>
 
 #include "raster.h"
 #include "helper.h"
@@ -35,141 +38,295 @@
 GDALRasterWrapper *mapStratifications(
 	std::vector<GDALRasterWrapper *> rasters,
 	std::vector<std::vector<int>> bands,
-	std::vector<std::vector<float>> stratums,
-	std::string filename)
+	std::vector<std::vector<int>> strataCounts,
+	std::string filename,
+	bool largeRaster,
+	int threads,
+	std::string tempFolder,
+	std::map<std::string, std::string> driverOptions)
 {
+	GDALAllRegister();
+
 	//define useful variables
-	size_t height = static_cast<size_t>(rasters[0]->getHeight());
-	size_t width = static_cast<size_t>(rasters[0]->getWidth());
+	int height = rasters[0]->getHeight();
+	int width = rasters[0]->getWidth();
+	double *geotransform = rasters[0]->getGeotransform();
+	std::string projection = std::string(rasters[0]->getDataset()->GetProjectionRef());
+
 	for (size_t i = 1; i < rasters.size(); i++) {
-		if (static_cast<size_t>(rasters[i]->getHeight()) != height) {
+		if (rasters[i]->getHeight() != height) {
 			std::string err = "raster with index " + std::to_string(i) + " has a different height from the raster at index 0.";
 			throw std::runtime_error(err);
 		}
 
-		if (static_cast<size_t>(rasters[i]->getWidth()) != width) {
+		if (rasters[i]->getWidth() != width) {
 			std::string err = "raster with index " + std::to_string(i) + " has a different width from the raster at index 0.";
 			throw std::runtime_error(err);
 		}
+
+		double *checkGeotransform = rasters[i]->getGeotransform();
+		for (int j = 0; j < 6; j++) {
+			if (geotransform[i] != checkGeotransform[i]) {
+				std::string err = "raster with index " + std::to_string(i) + " has a different geotransform from the raster at index 0.";
+				throw std::runtime_error(err);
+			}
+		}
 	}
 	
+	std::vector<RasterBandMetaData> stratBands;
+	RasterBandMetaData mapBand;
+	std::vector<VRTBandDatasetInfo> VRTBandInfo(1);
+
+	bool isMEMDataset = !largeRaster && filename == "";
+	bool isVRTDataset = largeRaster && filename == "";
+
+	std::vector<std::mutex> stratDatasetMutexes(rasters.size());
+	std::mutex mapBandMutex;
+
+	std::string driver;
+	GDALDataset *p_dataset = nullptr;
+	if (isMEMDataset || isVRTDataset) {
+		std::string driver = isMEMDataset ? "MEM" : "VRT";
+		p_dataset = createVirtualDataset(driver, width, height, geotransform, projection);
+	}
+	else {
+		std::filesystem::path filepath = filename;
+		std::string extension = filepath.extension().string();
+
+		if (extension == ".tif") {
+			driver = "Gtiff";
+		}
+		else {
+			throw std::runtime_error("sgs only supports .tif files right now");
+		}
+	}
 
 	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
-	std::vector<size_t> bandStratMultipliers(1, 1);	
-	std::vector<void *> rasterBands;
-	std::vector<GDALDataType> rasterBandTypes;
-	std::vector<double> noDataValues;
+	std::vector<size_t> multipliers(1, 1);	
 	for (size_t i = 0; i < rasters.size(); i++) {
 		GDALRasterWrapper *p_raster = rasters[i];
-		std::vector<float> stratumVect = stratums[i];
 
 		for (size_t j = 0; j < bands[i].size(); j++) {
+			stratBands.resize(stratBands.size() + 1);
+			RasterBandMetaData *p_stratBand = &stratBands.back();
+			
 			int band = bands[i][j];
-			float stratum = stratums[i][j];
+			int strataCount = strataCounts[i][j];
+
 			GDALRasterBand *p_band = p_raster->getRasterBand(band);
-			GDALDataType type = p_raster->getRasterBandType(band);
-			size_t size = p_raster->getRasterBandTypeSize(band);
+			p_stratBand->p_band = p_band;
+			p_stratBand->type = p_raster->getRasterBandType(band);
+			p_stratBand->size = p_raster->getRasterBandTypeSize(band);
+			p_stratBand->p_buffer = largeRaster ? nullptr : p_raster->getRasterBandBuffer(band);
+			p_stratBand->nan = p_band->GetNoDataValue();
+			p_stratBand->p_mutex = &stratDatasetMutexes[i];
+			p_band->GetBlockSize(&p_stratBand->xBlockSize, &p_stratBand->yBlockSize);
 
-			printTypeWarningsForInt32Conversion(type);
-			rasterBandTypes.push_back(type);
-	
-
-			//we initialized with 1 element and append one for every band.
-			//so, we need to remove 1 element (which wouldn't have been used anyway)
-			//when we are done looping through bands.
-			bandStratMultipliers.push_back(bandStratMultipliers.back() * stratum);
-
-			void *p_data = VSIMalloc3(
-				height, 
-				width, 
-				size
-			);
-			CPLErr err = p_band->RasterIO(
-				GF_Read,		//GDALRWFlag eRWFlag
-				0,			//int nXOff
-				0,			//int nYOff
-				width,			//int nXSize
-				height,			//int nYSize
-				p_data,			//void *pData
-				width,			//int nBufXSize
-				height,			//int nBufYSize
-				type, 			//GDALDataType eBufType
-				0,			//int nPixelSpace
-				0			//int nLineSpace
-			);
-			if (err) {
-				throw std::runtime_error("error reading raster band from dataset.");
-			}
-			rasterBands.push_back(p_data);
-			noDataValues.push_back(p_band->GetNoDataValue());
+			printTypeWarningsForInt32Conversion(p_stratBand->type);
+			multipliers.push_back(multipliers.back() * strataCount);
 		}
 	}
-	size_t maxStrata = bandStratMultipliers.back();
-	bandStratMultipliers.pop_back();
 
-	std::vector<GDALDataType> stratBandTypes;
-	size_t size = setStratBandType(maxStrata, stratBandTypes);
-	GDALDataType type = stratBandTypes.back();
+	size_t bandCount = stratBands.size();
+	size_t maxStrata = multipliers.back();
+	multipliers.pop_back();
+	setStratBandTypeAndSize(maxStrata, &mapBand.type, &mapBand.size);
+	mapBand.name = "strat_map";
+	mapBand.xBlockSize = stratBands[0].xBlockSize;
+	mapBand.yBlockSize = stratBands[0].yBlockSize;
+	mapBand.p_mutex = &mapBandMutex;
 
-	//step 3 allocate mapped raster
-	void *p_mappedRaster = VSIMalloc3(
-		height,
-		width,
-		size
-	);
+	if (isMEMDataset) {
+		addBandToMEMDataset(p_dataset, mapBand);
+	}
+	else if (isVRTDataset) {
+		createVRTBandDataset(
+			p_dataset,
+			mapBand,
+			tempFolder,
+			"map",
+			VRTBandInfo,
+			driverOptions
+		);
+	}
+	else {
+		bool useTiles = mapBand.xBlockSize != width &&
+				mapBand.yBlockSize != height;
 
-	//step 4 iterate through pixels populating mapped raster with stratum values
-	for (size_t j = 0; j < height * width; j++) {
-		size_t mappedStrat = 0;
-		bool isNan = false;
-		for (size_t i = 0; i < rasterBands.size(); i++) {
-			int strat = getPixelValueDependingOnType<int>(
-				rasterBandTypes[i],
-				rasterBands[i],
-				j
-			);
+		mapBand.p_buffer = !largeRaster ?
+			VSIMalloc3(height, width, mapBand.size) :
+			nullptr;
 
-			isNan = std::isnan(strat) || (double)strat == noDataValues[i];
-			if (isNan) {
-				break;
-			}
-			else {
-				mappedStrat += strat * bandStratMultipliers[i];
-			}
-		}
-			
-		setStrataPixelDependingOnType(
-			type,
-			p_mappedRaster,
-			j,
-			isNan,
-			mappedStrat
+		p_dataset = createDataset(
+			filename,
+			driver,
+			width,
+			height,
+			geotransform,
+			projection,
+			&mapBand,
+			1,
+			useTiles,
+			driverOptions
 		);
 	}
 
-	//free allocated band data
-	for (size_t i = 0; i < rasterBands.size(); i++) {
-		free(rasterBands[i]);
+	if (largeRaster) {
+		pybind11::gil_scoped_acquire acquire;
+		boost::asio::thread_pool pool(1); //TODO switch back
+		//boost::asio::thread_pool pool(threads);
+
+		int xBlockSize = stratBands[0].xBlockSize;
+		int yBlockSize = stratBands[0].yBlockSize;
+
+		int xBlocks = (width + xBlockSize - 1) / xBlockSize;
+		int yBlocks = (height + yBlockSize - 1) / yBlockSize;
+		int chunkSize = yBlocks / threads;
+
+		for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
+			int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);
+
+			boost::asio::post(pool, [
+				bandCount,
+				xBlockSize,
+				yBlockSize,
+				yBlockStart,
+				yBlockEnd,
+				xBlocks,
+				&stratBands,
+				&mapBand,
+				&multipliers	
+			] {
+				std::vector<void *> stratBuffers(bandCount);
+				for (size_t band = 0; band < bandCount; band++) {
+					stratBuffers[band] = VSIMalloc3(xBlockSize, yBlockSize, stratBands[band].size);
+				}
+				void *p_mapBuffer = VSIMalloc3(xBlockSize, yBlockSize, mapBand.size);
+
+				//cast to int so there is less data type conversion while processign
+				std::vector<int> intNoDataValues(bandCount);
+				for (size_t band = 0; band < bandCount; band++) {
+					intNoDataValues[band] = static_cast<int>(stratBands[band].nan);
+				}
+
+				for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
+					for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+						int xValid, yValid;
+						stratBands[0].p_mutex->lock();
+						stratBands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+						stratBands[0].p_mutex->unlock();
+
+						for (size_t band = 0; band < bandCount; band++) {
+							rasterBandIO(
+								stratBands[band],
+								stratBuffers[band],
+								xBlockSize,
+								yBlockSize,
+								xBlock,
+								yBlock,
+								xValid,
+								yValid,
+								true //read = true
+							);
+						}
+
+						for (int y = 0; y < yValid;  y++) {
+							for (int x = 0; x < xValid; x++) {
+								size_t index = static_cast<size_t>(x + y * xBlockSize);
+								bool isNan = false;
+								int mappedStrat = 0;
+
+								for (size_t band = 0; band < bandCount; band++) {
+									int strat = getPixelValueDependingOnType<int>(stratBands[band].type, stratBuffers[band], index);
+									isNan = strat == intNoDataValues[band];
+
+									if (!isNan) {
+										mappedStrat += strat * multipliers[band];
+									}
+									else {
+										break;
+									}
+								}
+
+								setStrataPixelDependingOnType(mapBand.type, p_mapBuffer, index, isNan, mappedStrat);
+							}
+						}
+
+						rasterBandIO(
+							mapBand,
+							p_mapBuffer,
+							xBlockSize,
+							yBlockSize,
+							xBlock,
+							yBlock,
+							xValid,
+							yValid,
+							false //read = false
+						);
+					}
+				}
+
+				for (size_t band = 0; band < bandCount; band++) {
+					VSIFree(stratBuffers[band]);
+				}
+				VSIFree(p_mapBuffer);
+			});
+		}
+		
+		pool.join();
+		pybind11::gil_scoped_release release;
+	}
+	else {
+		std::vector<int> intNoDataValues(bandCount);
+		for (size_t band; band < bandCount; band++) {
+			intNoDataValues[band] = static_cast<int>(stratBands[band].nan);
+		}
+
+		size_t pixelCount = static_cast<size_t>(height) * static_cast<size_t>(width);
+		for (size_t index = 0; index < pixelCount;  index++) {
+			bool isNan = false;
+			int mappedStrat = 0;
+
+			for (size_t band = 0; (band < bandCount) && !isNan; band++) {
+				int strat = getPixelValueDependingOnType<int>(stratBands[band].type, stratBands[band].p_buffer, index);
+				isNan = strat == intNoDataValues[band];
+				if (!isNan) {
+					mappedStrat += strat * multipliers[band];
+				}
+			}
+
+			setStrataPixelDependingOnType(mapBand.type, mapBand.p_buffer, index, isNan, mappedStrat);
+		}
+
+		if (!isVRTDataset && !isMEMDataset) {
+			CPLErr err = mapBand.p_band->RasterIO(
+				GF_Write,
+				0,
+				0,
+				width,
+				height,
+				mapBand.p_buffer,
+				width,
+				height,
+				mapBand.type,
+				0,
+				0
+			);
+			if (err) {
+				throw std::runtime_error("error writing band to file.");
+			}
+		}
 	}
 
-	//step 5 create new GDALRasterWrapper in-memory
-	//this dynamically-allocated object will be cleaned up by python
-	GDALRasterWrapper *stratRaster = new GDALRasterWrapper(
-		{p_mappedRaster},
-		{"strat_map"},
-		stratBandTypes,
-		width,
-		height,
-		rasters[0]->getGeotransform(),
-		std::string(rasters[0]->getDataset()->GetProjectionRef())
-	);
-
-	//step 6 write raster if desired
-	if (filename != "") {
-		stratRaster->write(filename);
+	//close and add VRT sub dataset as band
+	if (isVRTDataset) {
+		GDALClose(VRTBandInfo[0].p_dataset);
+		addBandToVRTDataset(p_dataset, mapBand, VRTBandInfo[0]);
 	}
 
-	return stratRaster;
+	return largeRaster ?
+		new GDALRasterWrapper(p_dataset) :
+		new GDALRasterWrapper(p_dataset, {mapBand.p_buffer});
 }
 
 PYBIND11_MODULE(map_stratifications, m) {

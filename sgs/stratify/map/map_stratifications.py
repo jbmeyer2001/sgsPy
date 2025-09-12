@@ -3,18 +3,21 @@
 #  Project: sgs
 #  Purpose: map mulitiple stratification rasters
 #  Author: Joseph Meyer
-#  Date: June, 2025
+#  Date: September, 2025
 #
 # ******************************************************************************
 
+import tempfile
 from sgs.utils import SpatialRaster
-
 from map_stratifications import map_stratifications_cpp
 
+GIGABYTE = 1073741824
 MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
 def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
-        filename: str = ''):
+        filename: str = '',
+        thread_count: int = 8,
+        driver_options: dict = None):
     """
     this function conducts mapping on existing stratifications.
 
@@ -75,6 +78,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     height = args[0][0].height
     width = args[0][0].width
 
+    raster_size_bytes = 0
+    large_raster = False
     for (raster, bands, num_stratum) in args: 
         if raster.height != height:
             raise ValueError("height is not the same across all rasters.")
@@ -111,16 +116,37 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         stratum_list = []
         if type(bands) is list:
             for i in range(len(bands)):
-                band_list.append(get_band_int(bands[i]))
+                band_int = get_band_int(bands[i])
+                band_list.append(band_int)
                 stratum_list.append(num_stratum[i])
+                
+                #check for large raster
+                pixel_size = raster.cpp_raster.get_raster_band_type_size(band_int)
+                band_size = height * width * pixel_size
+                raster_size_bytes += band_size
+                if band_size > GIGABYTE:
+                    large_raster = True
         else:
-            band_list.append(get_band_int(bands))
+            band_int = get_band_int(bands)
+            band_list.append(band_int)
             stratum_list.append(num_stratum)
+            
+            #check for large raster
+            pixel_size = raster.cpp_raster.get_raster_band_type_size(band_int)
+            band_size = height * width * pixel_size
+            raster_size_bytes += band_size
+            if band_size > GIGABYTE:
+                large_raster == True
         
         #prepare cpp function arguments
         raster_list.append(raster.cpp_raster)
         band_lists.append(band_list)
         strata_lists.append(stratum_list)
+
+    #if any 1 band is larger than a gigabyte, or all bands together are larger than 4
+    #large_raster is defined to let the C++ function know to process in blocks rather
+    #than putting the entire raster into memory.
+    large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
 
     #error check max value for potential overflow error 
     max_mapped_strata = 1
@@ -130,7 +156,30 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     if max_mapped_strata > MAX_STRATA_VAL:
         raise ValueError("the mapped strata will cause an overflow error because the max strata number is too large.")
 
-    #call cpp map function
-    mapped_raster = map_stratifications_cpp(raster_list, band_lists, strata_lists, filename)
+    #emsire driver options keys are strings, and convert driver options vals to strings
+    driver_options_str = {}
+    if driver_options:
+        for (key, val) in driver_options.items():
+            if type(key) is not str:
+                raise ValueError("the key for all key/value pairs in teh driver_options dict must be a string")
+            driver_options_str[key] = str(val)
 
-    return SpatialRaster(mapped_raster)
+    temp_dir = tempfile.mkdtemp()
+
+    #call cpp map function
+    srast = SpatialRaster(map_stratifications_cpp(
+        raster_list, 
+        band_lists, 
+        strata_lists, 
+        filename, 
+        large_raster,
+        thread_count,
+        temp_dir,
+        driver_options_str
+    ))
+
+    #give srast ownership of its own temp directory
+    srast.have_temp_dir = True
+    srast.temp_dir = temp_dir
+
+    return srast
