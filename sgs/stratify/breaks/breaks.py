@@ -25,7 +25,7 @@ def breaks(
     ):
     """
     This function conducts stratification on the raster given
-    according to use defined breaks.
+    according to the user defined breaks.
 
     The breaks may be defined as a single list of ints or floats
     in the case of a raster with a single band. Or, they may be defined
@@ -33,8 +33,27 @@ def breaks(
     Or, they may be defined as a dict where the (str) key represents
     the raster band and the value is a list of ints or floats.
 
-    most of the calculation is done within the breaks_cpp function 
-    which can be found in sgs/stratify/breaks/breaks.cpp/
+    if the map parameter is given, an extra output band will be used which combines
+    all stratifications from the previous bands used. A single value in the mapped
+    output band corresponds to a single combination of values from the previous
+    bands.
+
+    the filename parameter specifies an output file name. Right now the only file format
+    excepted is GTiff (.tif).
+
+    the thread_count parameter specifies the number of threads which this function will 
+    utilize in the case where the raster is large and may not fit in memory. If the full
+    raster can fit in memory and does not need to be processed in blocks, this argument
+    will be ignored. The default is 8 threads, although the optimal number will depend significantly
+    on the hardware being used and my be less or more than 8.
+
+    The driver_options parameter is used to specify creation options for a the output raster.
+    See options for the Gtiff driver here: https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
+    The keys in the driver_options dict must be strings, the values are converted to string.
+    The options must be valid for the driver corresponding to the filename, and if filename is not given
+    they must be valid for the GTiff format, as that is the format used to store temporary raster files.
+    Note that if this parameter is given, but filename is not and the raster fits entirely in memory, the
+    driver_options parameter will be ignored.
 
     Parameters
     --------------------
@@ -46,24 +65,11 @@ def breaks(
         whether to map the stratification of multiple raster bands onto a single band
     filename : str
         filename to write to or '' if no file should be written
-
-    Raises
-    --------------------
-    ValueError
-        if number of bands required by the size of the parameter 'breaks' is inequal to the number of raster bands
-    ValueError
-        if a break contains a value less than the minimum in the corresponding raster band
-    ValueError
-        if a break contains a value greater than the maximum in the corresponding raster band
-    ValueError
-        if maximum strata value would result in an integer overflow error
-    RuntimeError (C++)
-        if the raster data type is not accepted
-    RuntimeError (C++)
-        if the number of output strata (break indexes) is large enough to cause integer overflow
-    RuntimeError (C++)
-        if the number of output strata in mapped raster would be large enough to cause integer overflow
-    """
+    thread_count : int
+        the number of threads to use when multithreading large images
+    driver_options : dict[]
+        the creation options as defined by GDAL which will be passed when creating output files
+        """
 
     breaks_dict = {}
     large_raster = False
@@ -147,8 +153,7 @@ def breaks(
     ))
 
     #give srast ownership of it's own temp directory
-    if temp_dir:
-        srast.have_temp_dir = True
-        srast.temp_dir = temp_dir
+    srast.have_temp_dir = True
+    srast.temp_dir = temp_dir
 
     return srast
