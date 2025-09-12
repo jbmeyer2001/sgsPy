@@ -53,7 +53,6 @@ GDALRasterWrapper *mapStratifications(
 	double *geotransform = rasters[0]->getGeotransform();
 	std::string projection = std::string(rasters[0]->getDataset()->GetProjectionRef());
 
-	std::cout << "HERE 1" << std::endl;
 	for (size_t i = 1; i < rasters.size(); i++) {
 		if (rasters[i]->getHeight() != height) {
 			std::string err = "raster with index " + std::to_string(i) + " has a different height from the raster at index 0.";
@@ -74,7 +73,6 @@ GDALRasterWrapper *mapStratifications(
 		}
 	}
 	
-	std::cout << "HERE 2" << std::endl;
 	std::vector<RasterBandMetaData> stratBands;
 	RasterBandMetaData mapBand;
 	std::vector<VRTBandDatasetInfo> VRTBandInfo(1);
@@ -103,7 +101,6 @@ GDALRasterWrapper *mapStratifications(
 		}
 	}
 
-	std::cout << "HERE 3" << std::endl;
 	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
 	std::vector<size_t> multipliers(1, 1);	
 	for (size_t i = 0; i < rasters.size(); i++) {
@@ -130,7 +127,6 @@ GDALRasterWrapper *mapStratifications(
 		}
 	}
 
-	std::cout << "HERE 4" << std::endl;
 	size_t bandCount = stratBands.size();
 	size_t maxStrata = multipliers.back();
 	multipliers.pop_back();
@@ -160,7 +156,7 @@ GDALRasterWrapper *mapStratifications(
 		mapBand.p_buffer = !largeRaster ?
 			VSIMalloc3(height, width, mapBand.size) :
 			nullptr;
-	
+
 		p_dataset = createDataset(
 			filename,
 			driver,
@@ -175,10 +171,10 @@ GDALRasterWrapper *mapStratifications(
 		);
 	}
 
-	std::cout << "HERE 6" << std::endl;
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;
-		boost::asio::thread_pool pool(threads);
+		boost::asio::thread_pool pool(1); //TODO switch back
+		//boost::asio::thread_pool pool(threads);
 
 		int xBlockSize = stratBands[0].xBlockSize;
 		int yBlockSize = stratBands[0].yBlockSize;
@@ -240,9 +236,10 @@ GDALRasterWrapper *mapStratifications(
 								bool isNan = false;
 								int mappedStrat = 0;
 
-								for (size_t band; band < bandCount; band++) {
+								for (size_t band = 0; band < bandCount; band++) {
 									int strat = getPixelValueDependingOnType<int>(stratBands[band].type, stratBuffers[band], index);
 									isNan = strat == intNoDataValues[band];
+
 									if (!isNan) {
 										mappedStrat += strat * multipliers[band];
 									}
@@ -280,7 +277,6 @@ GDALRasterWrapper *mapStratifications(
 		pybind11::gil_scoped_release release;
 	}
 	else {
-		std::cout << "HERE 8" << std::endl;
 		std::vector<int> intNoDataValues(bandCount);
 		for (size_t band; band < bandCount; band++) {
 			intNoDataValues[band] = static_cast<int>(stratBands[band].nan);
@@ -322,14 +318,12 @@ GDALRasterWrapper *mapStratifications(
 		}
 	}
 
-	std::cout << "HERE 9" << std::endl;
 	//close and add VRT sub dataset as band
 	if (isVRTDataset) {
 		GDALClose(VRTBandInfo[0].p_dataset);
 		addBandToVRTDataset(p_dataset, mapBand, VRTBandInfo[0]);
 	}
 
-	std::cout << "HERE 10" << std::endl;
 	return largeRaster ?
 		new GDALRasterWrapper(p_dataset) :
 		new GDALRasterWrapper(p_dataset, {mapBand.p_buffer});
