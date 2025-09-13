@@ -10,17 +10,85 @@
 #include "raster.h"
 #include "helper.h"
 
-#ifdef WIN32 || _WIN32
-	#include <daal_win.h>
-#else
-	#include <daal.h>
-#endif
+#include <mkl.h>
 
 /*
  *
  */
-template <typename T>
-std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vector<double> probabilities, double noDataValue) {
+template <typename T, typename U>
+std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vector<U> probabilities, T noDataValue) {
+	//filtering step
+	std::vector<U> filteredData(pixelCount);
+	T *p_tData = reinterpret_cast<T *>(p_data);
+	size_t fi = 0;
+
+	std::cout << p_tData << std::endl;
+	for (size_t i = 0; i < pixelCount; i++) {
+		T val = p_tData[i];
+		bool isNan = std::isnan(val) || val == noDataValue;
+		filteredData[fi] = static_cast<U>(val);
+		fi += isNan;
+	}
+	filteredData.resize(fi + 1);
+	std::vector<U> quantiles(probabilities.size());
+	std::cout << "quantiles size: " << quantiles.size() << std::endl;
+
+	//define variables to pass to MKL quantiles calculation function
+	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditstreamquantiles.html
+	VSLSSTaskPtr task;
+	int status;
+       	MKL_INT quant_order_n = probabilities.size();	
+	U *quant_order = probabilities.data();
+	U *quants = quantiles.data();
+	MKL_INT p = 1;
+	MKL_INT nparams = filteredData.size();
+	U *params = filteredData.data();
+	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
+
+	std::vector<double> retval(probabilities.size());
+	if (sizeof(U) == 4) { //float
+		std::cout << "p: " << p << std::endl;
+		std::cout << "nparams: " << nparams << std::endl;
+		status = vslsSSNewTask(&task, &p, &nparams, &xstorage, params, 0, 0);
+		std::cout << "status after new task: " << status << std::endl;
+		status = vslsSSEditQuantiles(task, &quant_order_n, quant_order, quants, nullptr, nullptr);
+		std::cout << "status after edit task: " << status << std::endl;
+		status = vslsSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
+		std::cout << "status after compute task: " << status << std::endl;
+		status = vslSSDeleteTask(&task);
+		std::cout << "status after delete task: " << status << std::endl;
+
+		std::cout << std::endl;
+		std::cout << "quants pointer: " << quants << std::endl;
+		for (int i = 0; i < quantiles.size(); i++) {
+			std::cout << "quants[" << i << "] = " << quants[i] << std::endl;
+		}
+
+		//for (size_t i = 0; i < quantiles.size(); i++) {
+		//	retval[i] = static_cast<double>(quantiles[i]);
+		//}
+	}
+	else { //double
+	       	/*
+		status = vsldSSNewTask(&task, &p, &nparams, &xstorage, params, nullptr, nullptr);
+		std::cout << "status after new task: " << status << std::endl;
+		status = vsldSSEditQuantiles(task, &quant_order_n, quant_order, retval.data(), &nparams, params);
+		std::cout << "status after edit task: " << status << std::endl;
+		status = vsldSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
+		std::cout << "status after compute task: " << status << std::endl;
+		status = vslSSDeleteTask(&task);
+		std::cout << "status after delete task: " << status << std::endl;
+		*/
+	}
+
+	std::cout << "calc HERE 4" << std::endl;
+	std::cout << std::endl;
+	std::cout << "quantiles: " << std::endl;
+	for (size_t i = 0; i < retval.size(); i++) {
+		std::cout << retval[i] << std::endl;
+	}
+	return retval;
+	/*
 	std::vector<T> values(pixelCount);
 
 	//write values which aren't nodata into values matrix
@@ -47,6 +115,7 @@ std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vec
 	}
 
 	return quantiles;
+	*/
 }
 
 /**
@@ -173,63 +242,80 @@ GDALRasterWrapper *quantiles(
 	//step 4 iterate through rasters
 	std::vector<std::vector<double>> quantileVals;
 	for (int i = 0; i < bandCount; i++) {
+		std::vector<float> floatProbabilities(probabilities[i].size());
+		switch (rasterBandTypes[i]) {
+			case GDT_Int8:
+			case GDT_UInt16:
+			case GDT_Int16:
+			case GDT_UInt32:
+			case GDT_Int32:
+			case GDT_Float32:
+				for (size_t j = 0; j < probabilities[i].size(); j++) {
+					floatProbabilities[i] = static_cast<float>(probabilities[i][j]);
+				}
+				break;
+			default:
+				break;
+		}
+
 		std::vector<double> quantiles;
 		switch (rasterBandTypes[i]) {
 			case GDT_Int8:
-				quantiles = calculateQuantiles<int8_t>(
+				quantiles = calculateQuantiles<int8_t, float>(
 					rasterBands[i],
 					pixelCount,
-					probabilities[i],
-					noDataValues[i]
+					floatProbabilities,
+					static_cast<int8_t>(noDataValues[i])
 				);
 				break;
 			case GDT_UInt16:
-				quantiles = calculateQuantiles<uint16_t>(
+				quantiles = calculateQuantiles<uint16_t, float>(
 					rasterBands[i],
 					pixelCount,
-					probabilities[i],
-					noDataValues[i]
+					floatProbabilities,
+					static_cast<uint16_t>(noDataValues[i])
 				);
 				break;
 			case GDT_Int16:
-				quantiles = calculateQuantiles<int32_t>(
+				quantiles = calculateQuantiles<int16_t, float>(
 					rasterBands[i],
 					pixelCount,
-					probabilities[i],
-					noDataValues[i]
+					floatProbabilities,
+					static_cast<int16_t>(noDataValues[i])
 				);
 				break;
 			case GDT_UInt32:
-				quantiles = calculateQuantiles<uint32_t>(
+				quantiles = calculateQuantiles<uint32_t, float>(
 					rasterBands[i],
 					pixelCount,
-					probabilities[i],
-					noDataValues[i]
+					floatProbabilities,
+					static_cast<uint32_t>(noDataValues[i])
 				);
 				break;
 			case GDT_Int32:
-				quantiles = calculateQuantiles<int32_t>(
+				quantiles = calculateQuantiles<int32_t, float>(
 					rasterBands[i],
 					pixelCount,
-					probabilities[i],
-					noDataValues[i]
+					floatProbabilities,
+					static_cast<int32_t>(noDataValues[i])
 				);
 				break;
 			case GDT_Float32:
-				quantiles = calculateQuantiles<float>(
+				quantiles = calculateQuantiles<float, float>(
 					rasterBands[i],
 					pixelCount,
-					probabilities[i],
-					noDataValues[i]
+					floatProbabilities,
+					static_cast<float>(noDataValues[i])
 				);
 				break;
 			case GDT_Float64:
-				quantiles = calculateQuantiles<double>(
-					rasterBands[i],
-					pixelCount,
-					probabilities[i],
-					noDataValues[i]
-				);
+				//quantiles = calculateQuantiles<double, double>(
+				//	rasterBands[i],
+				//	pixelCount,
+				//	probabilities[i],
+				//	noDataValues[i]
+				//);
+				throw std::runtime_error("COMMENTED OUT!");
 				break;
 			default:
 				throw std::runtime_error("GDALDataType not supported.");

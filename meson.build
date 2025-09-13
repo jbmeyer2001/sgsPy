@@ -35,9 +35,11 @@ endif
 if WIN
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
+  intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib/intel64'
 else #linux
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
+  intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib/intel64'
 endif
 oneDAL_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
 utils_inc_dir = include_directories('sgs/utils')
@@ -82,9 +84,34 @@ if WIN
    
     endif
   endforeach
+
+
+  #the 'tree' command *should* work with both PowerShell and CMD
+  #libs = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows-static/lib/intel64', '/f', '/a', check: true).stdout().strip().split('|')
+  #foreach lib : libs
+  #  lib = lib.strip()
+
+    #ensure the file is actually a library, since the tree command also searches subdirectories
+    #and there are often files of other types which we don't want
+  #  if lib.endswith('.lib')
+
+      #remove 'lib' at beginning of library if it exists
+  #    if lib.startswith('lib')
+  #      lib = lib.replace('lib', '')
+  #    endif
+
+      #get just the lib name and add it to the dependencies
+  #    lib = lib.split('.').get(0)
+  #    lib_deps += cxx.find_library(lib, dirs: lib_dir, static: true)
+   
+  #  endif
+  #endforeach
+
 else #linux
   python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
-  
+  #intel_libs = run_command('find', lib_dir, '-regex', '.*lib.*a', check:true).stdout().split('/n')
+  #message(intel_libs)
+
   #in linux list all of the libs rather than programatically finding them
   #because of multiple definition errors. 
   libs = [
@@ -148,11 +175,21 @@ else #linux
     'xml2',
     'z',
     'zstd',
-    'mod_spatialite'
+    'mod_spatialite',
+    'mkl_blacs_intelmpi_lp64',
+    'mkl_blas95_lp64',
+    'mkl_cdft_core',
+    'mkl_core',
+    'mkl_intel_lp64',
+    'mkl_lapack95_lp64',
+    'mkl_scalapack_lp64',
+    'mkl_tbb_thread',
+    'tbb',
+    'tbbmalloc'
   ]
   
   foreach lib : libs
-    lib_deps += cxx.find_library(lib, dirs : [lib_dir], static:true)
+    lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
   endforeach
 endif
 

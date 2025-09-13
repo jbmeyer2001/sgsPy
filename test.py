@@ -1,8 +1,9 @@
 import time
 import sgs
 import sys
-#rast = sgs.SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
-#srast = sgs.stratify.breaks(rast, breaks={"zq90": [3, 5, 7, 9, 11, 13, 15], "pzabove2": [40, 60, 90]})
+rast = sgs.SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
+srast = sgs.stratify.quantiles(rast, num_strata={"zq90": 5, "pzabove2": 5})
+srast.plot()
 #srast = sgs.stratify.map((srast, ["strat_zq90", "strat_pzabove2"], [8, 4]), filename="test_map.tif")
 #srast.plot()
 #srast.plot(band=0)
@@ -33,9 +34,9 @@ import sys
 #srast.plot(band=2)
 
 
-srast_chm = sgs.SpatialRaster("srast_CHM.tif")
-srast_dem = sgs.SpatialRaster("srast_DEM.tif")
-start = time.time()
-srast = sgs.stratify.map((srast_chm, 0, 49), (srast_dem, 0, 49), filename="test_large_mapped.tif")
-end = time.time()
-print(str(end - start))
+#srast_chm = sgs.SpatialRaster("srast_CHM.tif")
+#srast_dem = sgs.SpatialRaster("srast_DEM.tif")
+#start = time.time()
+#srast = sgs.stratify.map((srast_chm, 0, 49), (srast_dem, 0, 49), filename="test_large_mapped.tif")
+#end = time.time()
+#print(str(end - start))
