@@ -245,7 +245,7 @@ GDALRasterWrapper *breaks(
 
 	std::string driver;
 	if (isMEMDataset || isVRTDataset) {
-		std::string driver = isMEMDataset ? "MEM" : "VRT";
+		driver = isMEMDataset ? "MEM" : "VRT";
 		p_dataset = createVirtualDataset(driver, width, height, geotransform, projection);
 	}
 	else {
