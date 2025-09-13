@@ -12,110 +12,158 @@
 
 #include <mkl.h>
 
+#define EPS .001 //TODO make this user-defined
+
 /*
  *
  */
-template <typename T, typename U>
-std::vector<double> calculateQuantiles(void *p_data, size_t pixelCount, std::vector<U> probabilities, T noDataValue) {
+template <typename T>
+inline void *
+calcSPQuantiles(
+	RasterBandMetaData& band,
+       	size_t pixelCount, 
+	std::vector<float> probabilities) 
+{
 	//filtering step
-	std::vector<U> filteredData(pixelCount);
-	T *p_tData = reinterpret_cast<T *>(p_data);
+	std::vector<float> filteredData(pixelCount);
 	size_t fi = 0;
-
-	std::cout << p_tData << std::endl;
+	T nan = static_Cast<T> band.nan;
 	for (size_t i = 0; i < pixelCount; i++) {
-		T val = p_tData[i];
-		bool isNan = std::isnan(val) || val == noDataValue;
-		filteredData[fi] = static_cast<U>(val);
-		fi += isNan;
+		T val = getPixelValueDependingOnType<T>(band.type, band.p_buffer, i);
+		bool isNan = std::isnan(val) || val == nan;
+		filteredData[fi] = static_cast<float>(val);
+		fi += !isNan;
 	}
 	filteredData.resize(fi + 1);
-	std::vector<U> quantiles(probabilities.size());
-	std::cout << "quantiles size: " << quantiles.size() << std::endl;
+	std::vector<float> quantiles(probabilities.size());
+
+	//define variables to pass to MKL quantiles calculation function
+	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditquantiles.html
+	VSLSSTaskPtr task;
+	int status;
+       	MKL_INT quant_order_n = probabilities.size();	
+	float *quant_order = probabilities.data();
+	float *quants = quantiles.data();
+	MKL_INT p = 1;
+	MKL_INT nparams = filteredData.size();
+	float *params = filteredData.data();
+	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
+
+	//calculate quantiles using mkl
+	status = vsldSSNewTask(&task, &p, &nparams, &xstorage, params, nullptr, nullptr);
+	status = vsldSSEditQuantiles(task, &quant_order_n, quant_order, quants, nullptr, nullptr);
+	status = vsldSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
+	status = vslSSDeleteTask(&task);
+
+	return quantiles;
+}
+
+/*
+ *
+ */
+template <typename T>
+inline void *
+calcDPQuantiles(
+	RasterBandMetaData& band,
+       	size_t pixelCount, 
+	std::vector<double> probabilities) 
+{
+	//filtering step
+	std::vector<double> filteredData(pixelCount);
+	size_t fi = 0;
+	T nan = static_Cast<T> band.nan;
+	for (size_t i = 0; i < pixelCount; i++) {
+		T val = getPixelValueDependingOnType<T>(band.type, band.p_buffer, i);
+		bool isNan = std::isnan(val) || val == nan;
+		filteredData[fi] = static_cast<double>(val);
+		fi += !isNan;
+	}
+	filteredData.resize(fi + 1);
+	std::vector<double> quantiles(probabilities.size());
+
+	//define variables to pass to MKL quantiles calculation function
+	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditquantiles.html
+	VSLSSTaskPtr task;
+	int status;
+       	MKL_INT quant_order_n = probabilities.size();	
+	double *quant_order = probabilities.data();
+	double *quants = quantiles.data();
+	MKL_INT p = 1;
+	MKL_INT nparams = filteredData.size();
+	double *params = filteredData.data();
+	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
+
+	//calculate quantiles using mkl
+	status = vsldSSNewTask(&task, &p, &nparams, &xstorage, params, nullptr, nullptr);
+	status = vsldSSEditQuantiles(task, &quant_order_n, quant_order, quants, nullptr, nullptr);
+	status = vsldSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
+	status = vslSSDeleteTask(&task);
+
+	return quantiles;
+}
+
+/**
+ *
+ */
+template <typename T>
+inline void *
+batchCalcSPQuantiles(
+	GDALDataset *p_dataset, 
+	RasterBandMetaData& band, 
+	std::vector<float> probabilities) 
+{
+	int xBlocks = (p_raster->getWidth() + band.xBlockSize - 1) / band.xBlockSize;
+	int yBlocks = (p_raster->getHeight() + band.yBlockSize - 1) / band.yBlockSize;
+	
+	T nan = static_cast<T>(band.nan);
+	T *p_buffer = reinterpret_cast<T *>(VSIMalloc3(band.xBlockSize, band.yBlockSize, sizeof(T)));
+	float *p_filtered = reinterpret_cast<float *>(VSIMalloc3(band.xBlockSize, band.yBlockSize, sizeof(float)));
+
+	std::vector<float> quantiles(probabilities.size());
 
 	//define variables to pass to MKL quantiles calculation function
 	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditstreamquantiles.html
 	VSLSSTaskPtr task;
 	int status;
        	MKL_INT quant_order_n = probabilities.size();	
-	U *quant_order = probabilities.data();
-	U *quants = quantiles.data();
+	float *quant_order = probabilities.data();
+	float *quants = quantiles.data();
 	MKL_INT p = 1;
-	MKL_INT nparams = filteredData.size();
-	U *params = filteredData.data();
+	MKL_INT nparams = VSL_SS_SQUANTS_ZW_PARAMS_N;
+	float params = EPS;
 	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
 
-	std::vector<double> retval(probabilities.size());
-	if (sizeof(U) == 4) { //float
-		std::cout << "p: " << p << std::endl;
-		std::cout << "nparams: " << nparams << std::endl;
-		status = vslsSSNewTask(&task, &p, &nparams, &xstorage, params, 0, 0);
-		std::cout << "status after new task: " << status << std::endl;
-		status = vslsSSEditQuantiles(task, &quant_order_n, quant_order, quants, nullptr, nullptr);
-		std::cout << "status after edit task: " << status << std::endl;
-		status = vslsSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
-		std::cout << "status after compute task: " << status << std::endl;
-		status = vslSSDeleteTask(&task);
-		std::cout << "status after delete task: " << status << std::endl;
+	status = vslsSSNewTask(&task, &p, &nparams, &xstorage, &params, nullptr, nullptr);
+	status = vslsSSEditStreamQuantiles(task, &quant_order_n, quant_order, quants, nullptr, nullptr);
+	
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+			int xValid, yValid;
+			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+			CPLErr err = band.p_band->ReadBlock(xBlock, yBlock, p_buffer);
+			if (err) {
+				throw std::runtime_error("error reading block from band.");
+			}
 
-		std::cout << std::endl;
-		std::cout << "quants pointer: " << quants << std::endl;
-		for (int i = 0; i < quantiles.size(); i++) {
-			std::cout << "quants[" << i << "] = " << quants[i] << std::endl;
+			int fi = 0;
+			for (int y = 0; y < yValid; y++) {
+				int index = y * blockSize;
+				for (int x = 0; x < xValid; x++) {
+					T val = getPixelValueDependingOnType<T>(band.type, p_buffer, index);
+					bool isNan = std::isnan(val) || val == nan;
+					p_filtered[fi] = static_cast<double>(val);
+					fi += !isNan;
+					index++;
+				}
+			}
+
+			vslSSEditTask(task, VSL_SS_ED_OBSERV_N, &fi);
+			vslsSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZQ_FAST);
 		}
-
-		//for (size_t i = 0; i < quantiles.size(); i++) {
-		//	retval[i] = static_cast<double>(quantiles[i]);
-		//}
 	}
-	else { //double
-	       	/*
-		status = vsldSSNewTask(&task, &p, &nparams, &xstorage, params, nullptr, nullptr);
-		std::cout << "status after new task: " << status << std::endl;
-		status = vsldSSEditQuantiles(task, &quant_order_n, quant_order, retval.data(), &nparams, params);
-		std::cout << "status after edit task: " << status << std::endl;
-		status = vsldSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
-		std::cout << "status after compute task: " << status << std::endl;
-		status = vslSSDeleteTask(&task);
-		std::cout << "status after delete task: " << status << std::endl;
-		*/
-	}
-
-	std::cout << "calc HERE 4" << std::endl;
-	std::cout << std::endl;
-	std::cout << "quantiles: " << std::endl;
-	for (size_t i = 0; i < retval.size(); i++) {
-		std::cout << retval[i] << std::endl;
-	}
-	return retval;
-	/*
-	std::vector<T> values(pixelCount);
-
-	//write values which aren't nodata into values matrix
-	bool isNan;
-	size_t dataPixelIndex = 0;
-	for (size_t i = 0; i < pixelCount; i++) {
-		T val = reinterpret_cast<T *>(p_data)[i];
-		isNan = std::isnan(val) && (double)val != noDataValue;
-		values[dataPixelIndex] = val;
-		dataPixelIndex += !isNan;
-	}
-	size_t numDataPixels = dataPixelIndex + 1;
-	values.resize(numDataPixels);
-
-	//sort values matrix in ascending order
-	std::sort(values.begin(), values.end());
-
-	//add values which occur at quantile probabilities to return vector
-	std::vector<double> quantiles(probabilities.size());
-	for (size_t i = 0; i < probabilities.size(); i++) {
-		double prob = probabilities[i];
-		size_t quantileIndex = (size_t)((double)numDataPixels * prob);
-		quantiles[i] = (double)values[quantileIndex];
-	}
-
+	
+	status = vslSSDeleteTask(&task);
 	return quantiles;
-	*/
 }
 
 /**
@@ -251,7 +299,7 @@ GDALRasterWrapper *quantiles(
 			case GDT_Int32:
 			case GDT_Float32:
 				for (size_t j = 0; j < probabilities[i].size(); j++) {
-					floatProbabilities[i] = static_cast<float>(probabilities[i][j]);
+					floatProbabilities[j] = static_cast<float>(probabilities[i][j]);
 				}
 				break;
 			default:

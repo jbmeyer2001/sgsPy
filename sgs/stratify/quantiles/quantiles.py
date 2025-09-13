@@ -142,6 +142,8 @@ def quantiles(
     #error check max value for potential overflow error
     max_mapped_strata = int(map)
     for _, val in probabilities_dict.items():
+        print("PYTHON probabilities list:")
+        print(val)
         strata_count = len(val) + 1
         if strata_count > MAX_STRATA_VAL:
             raise ValueError("one of the quantiles given will cause an integer overflow error because the max strata number is too large.")

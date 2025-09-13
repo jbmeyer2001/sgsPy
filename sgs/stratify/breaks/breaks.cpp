@@ -435,8 +435,8 @@ GDALRasterWrapper *breaks(
 
 							//process blocked band data
 							for (int y = 0; y < yValid; y++) {
+								size_t index = static_cast<size_t>(y * blockSize);
 								for (int x = 0; x < xValid; x++) {
-									size_t index = static_cast<size_t>(x + y * xBlockSize);
 									bool mapNan = false;
 									size_t mapStrat = 0;
 									
@@ -461,6 +461,8 @@ GDALRasterWrapper *breaks(
 										mapNan,
 										mapStrat
 									);
+
+									index++;
 								}
 							}
 					
@@ -540,9 +542,10 @@ GDALRasterWrapper *breaks(
 
 								//process block
 								for (int y = 0; y < yValid; y++) {
+									index = static_cast<size_t>(y * xblockSize);
 									for (int x = 0; x < xValid; x++) {
-										size_t index = static_cast<size_t>(x + y * xBlockSize);
 										processPixel(index, p_data, p_dataBand, p_strat, p_stratBand, *p_breaks);
+										index++;
 									}
 								}
 								
