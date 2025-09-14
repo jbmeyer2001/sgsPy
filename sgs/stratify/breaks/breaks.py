@@ -120,7 +120,7 @@ def breaks(
     if driver_options:
         for (key, val) in driver_options.items():
             if type(key) is not str:
-                raise ValueError("the key for all key/value pairs in the driver_options dict must be a string")
+                raise ValueError("the key for all key/value pairs in the driver_options dict must be a string.")
             driver_options_str[key] = str(val)
 
     raster_size_bytes = 0

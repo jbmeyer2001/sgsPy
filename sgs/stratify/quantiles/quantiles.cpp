@@ -84,6 +84,7 @@ calcQuantiles(
 	if (fType == GDT_Float32) {
 		for(size_t i = 0; i < sQuantiles.size(); i++) {
 			dQuantiles[i] = static_cast<double>(sQuantiles[i]);
+			std::cout << "dQuantiles[i] = " << dQuantiles[i] << std::endl;
 		}
 	}
 
