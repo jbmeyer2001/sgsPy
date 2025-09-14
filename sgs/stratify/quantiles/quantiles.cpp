@@ -10,9 +10,10 @@
 #include "raster.h"
 #include "helper.h"
 
+#include <boost/asio/thread_pool.hpp>
+#include <boost/asio/post.hpp>
 #include <mkl.h>
 
-#define EPS .001 //TODO make this user-defined
 
 /*
  *
@@ -25,16 +26,16 @@ calcQuantiles(
 	std::vector<U>& probabilities,
 	GDALDataType fType) 
 {
-	if (fType != GDT_Float32 && fType !_ GDT_Float64) {
+	if (fType != GDT_Float32 && fType != GDT_Float64) {
 		throw std::runtime_error("fType must be either GDT_Float32 or GDT_Float64");
 	}
 
 	//filtering step
-	std::vector<U> filteredData(pixelCount);
 	size_t fi = 0;
-	T nan = static_Cast<T> band.nan;
+	T nan = static_cast<T>(band.nan);
 	size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) *
 			    static_cast<size_t>(p_raster->getHeight());
+	std::vector<U> filteredData(pixelCount);
 	for (size_t i = 0; i < pixelCount; i++) {
 		T val = getPixelValueDependingOnType<T>(band.type, band.p_buffer, i);
 		bool isNan = std::isnan(val) || val == nan;
@@ -45,7 +46,7 @@ calcQuantiles(
 	}
 	filteredData.resize(fi + 1);
 
-	std::vector<double> dQuantiles(probabilties.size());
+	std::vector<double> dQuantiles(probabilities.size());
 	std::vector<float> sQuantiles(probabilities.size());
 
 	//define variables to pass to MKL quantiles calculation function
@@ -65,17 +66,18 @@ calcQuantiles(
 
 		status = vslsSSNewTask(&task, &p, &nparams, &xstorage, s_params, nullptr, nullptr);
 		status = vslsSSEditQuantiles(task, &quant_order_n, s_quant_order, (float *)sQuantiles.data(), nullptr, nullptr);
+		status = vslsSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
 	}
 	else {
 		//use double precision floating point
 		double *d_quant_order = reinterpret_cast<double *>(probabilities.data());
-		double *d_quants = reinterpret_cast<double *>(filteredData.data());
+		double *d_params = reinterpret_cast<double *>(filteredData.data());
 
 		status = vsldSSNewTask(&task, &p, &nparams, &xstorage, d_params, nullptr, nullptr);
 		status = vsldSSEditQuantiles(task, &quant_order_n, d_quant_order, (double *)dQuantiles.data(), nullptr, nullptr);
+		status = vsldSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
 	}
 
-	status = vsldSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
 	status = vslSSDeleteTask(&task);
 
 	//convert quantiles type to double if necessary
@@ -100,7 +102,7 @@ batchCalcQuantiles(
 	GDALDataType fType,
 	U eps) 
 {
-	if (fType != GDT_Float32 && fType !_ GDT_Float64) {
+	if (fType != GDT_Float32 && fType != GDT_Float64) {
 		throw std::runtime_error("fType must be either GDT_Float32 or GDT_Float64");
 	}
 
@@ -120,21 +122,29 @@ batchCalcQuantiles(
 	int status;
        	MKL_INT quant_order_n = probabilities.size();	
 	MKL_INT p = 1;
+	MKL_INT n = band.xBlockSize * band.yBlockSize;
 	MKL_INT nparams = VSL_SS_SQUANTS_ZW_PARAMS_N;
 	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
 
 	if (fType == GDT_Float32) {
+		//call single-precision vsl functions
 		float *s_quant_order = reinterpret_cast<float *>(probabilities.data());
 		float *s_quants = reinterpret_cast<float *>(p_filtered);
+		float *s_data = reinterpret_cast<float *>(sQuantiles.data());
+		float s_eps = eps; //for c++ compiler type checker
 		
-		status = vslsSSNewTask(&task, &p, &nparams, &xstorage, &eps, nullptr, nullptr);
-		status = vslsSSEditStreamQuantiles(task, &quant_order_n, s_quant_order,(float *)sQuantiles.data(), nullptr, nullptr);
+		status = vslsSSNewTask(&task, &p, &n, &xstorage, s_data, nullptr, nullptr);
+		status = vslsSSEditStreamQuantiles(task, &quant_order_n, s_quant_order, s_quants, &nparams, &s_eps);
+	}
 	else {
+		//call double-precision vsl functions
 		double *d_quant_order = reinterpret_cast<double *>(probabilities.data());
 		double *d_quants = reinterpret_cast<double *>(p_filtered);
+		double *d_data = reinterpret_cast<double *>(dQuantiles.data());
+		double d_eps = eps; //for c++ compiler type checker
 
-		status = vslsSSNewTask(&task, &p, &nparams, &xstorage, &eps, nullptr, nullptr);
-		status = vslsSSEditStreamQuantiles(task, &quant_order_n, d_quant_order, (double *)dQuantiles.data(), nullptr, nullptr);
+		status = vsldSSNewTask(&task, &p, &n, &xstorage, d_data, nullptr, nullptr);
+		status = vsldSSEditStreamQuantiles(task, &quant_order_n, d_quant_order, d_quants, &nparams, &d_eps);
 	}
 
 	//single thread for now!
@@ -149,7 +159,7 @@ batchCalcQuantiles(
 
 			int fi = 0;
 			for (int y = 0; y < yValid; y++) {
-				int index = y * blockSize;
+				int index = y * band.xBlockSize;
 				for (int x = 0; x < xValid; x++) {
 					T val = getPixelValueDependingOnType<T>(band.type, p_buffer, index);
 					bool isNan = std::isnan(val) || val == nan;
@@ -161,8 +171,16 @@ batchCalcQuantiles(
 				}
 			}
 
-			vslSSEditTask(task, VSL_SS_ED_OBSERV_N, &fi);
-			vslsSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZQ_FAST);
+			if (fType == GDT_Float32) {
+				float sfi = static_cast<float>(fi);
+				vslsSSEditTask(task, VSL_SS_ED_OBSERV_N, &sfi);
+				vslsSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW_FAST);
+			}
+			else {
+				double dfi = static_cast<double>(fi);
+				vsldSSEditTask(task, VSL_SS_ED_OBSERV_N, &dfi);
+				vsldSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW_FAST);
+			}
 		}
 	}
 	
@@ -304,6 +322,7 @@ GDALRasterWrapper *quantiles(
 	bool map,
 	std::string filename,
 	std::string tempFolder,
+	bool largeRaster,
 	int threadCount,
 	std::map<std::string, std::string> driverOptions,
 	float eps) 
@@ -330,7 +349,7 @@ GDALRasterWrapper *quantiles(
 
 	std::mutex dataBandMutex;
 	std::mutex stratBandMutex;
-	std::vector<mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
+	std::vector<std::mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
 
 	std::string driver;
 	if (isMEMDataset || isVRTDataset) {
@@ -380,7 +399,7 @@ GDALRasterWrapper *quantiles(
 			addBandToMEMDataset(p_dataset, *p_stratBand);
 		}
 		else if (isVRTDataset) {
-			addBandToVRTDataset(p_dataset, *p_stratBand, tempFoler, std::to_string(key), VRTBandInfo, driverOptions);
+			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo, driverOptions);
 		}
 		else {
 			if (stratPixelSize < p_stratBand->size) {
@@ -406,14 +425,14 @@ GDALRasterWrapper *quantiles(
 		p_stratBand->name = "strat_map";
 		p_stratBand->xBlockSize = dataBands[0].xBlockSize;
 		p_stratBand->yBlockSize = dataBands[0].yBlockSize;
-		p_stratBand->p_mutex = isVRTDataset ? &stratBandMutexes.band() : &stratBandMutex;
+		p_stratBand->p_mutex = isVRTDataset ? &stratBandMutexes.back() : &stratBandMutex;
 
 		//update dataset with band information
 		if (isMEMDataset) {
 			addBandToMEMDataset(p_dataset, *p_stratBand);
 		}
 		else if (isVRTDataset) {
-			addBandToVRTDataset(p_dataset, *p_stratBand, tempFolder, "map", VRTBandInfo, driverOptions);
+			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, "map", VRTBandInfo, driverOptions);
 		}
 		else {
 			if (stratPixelSize < p_stratBand->size) {
@@ -425,7 +444,7 @@ GDALRasterWrapper *quantiles(
 	
 	if (!isMEMDataset && !isVRTDataset) {
 		bool useTiles = stratBands[0].xBlockSize != width &&
-				stratBands[0].yBlockSize !- height;
+				stratBands[0].yBlockSize != height;
 
 		for (size_t band = 0; band < stratBands.size(); band++) {
 			stratBands[band].size = stratPixelSize;
@@ -454,58 +473,58 @@ GDALRasterWrapper *quantiles(
 		std::vector<float> sProbabilities(probabilities[i].size());
 		if (band.type != GDT_Float64) {
 			for (size_t j = 0; j < probabilities[i].size(); j++) {
-				floatProbabilities[j] = static_cast<float>(probabilities[i][j]);
+				sProbabilities[j] = static_cast<float>(probabilities[i][j]);
 			}
 		}
 
-		switch (rasterBandTypes[i]) {
+		switch (band.type) {
 			case GDT_Int8:
 				quantiles.push_back(
 					!largeRaster ? 
-						calcQuantiles<int8_t, float>(p_raster, band, probabilities[i], GDT_Float32) :
-					        batchCalcQuantiles<int8_t, float>(p_raster, band, probabilities[i], GDT_Float32, eps);	
+						calcQuantiles<int8_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
+					        batchCalcQuantiles<int8_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
 				);
 				break;
 			case GDT_UInt16:
 				quantiles.push_back(
 					!largeRaster ? 
-						calcQuantiles<uint16_t, float>(p_raster, band, probabilities[i], GDT_Float32) :
-					        batchCalcQuantiles<uint16_t, float>(p_raster, band, probabilities[i], GDT_Float32, eps);	
+						calcQuantiles<uint16_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
+					        batchCalcQuantiles<uint16_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
 				);
 				break;
 			case GDT_Int16:
 				quantiles.push_back(
 					!largeRaster ? 
-						calcQuantiles<int16_t, float>(p_raster, band, probabilities[i], GDT_Float32) :
-					        batchCalcQuantiles<int16_t, float>(p_raster, band, probabilities[i], GDT_Float32, eps);	
+						calcQuantiles<int16_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
+					        batchCalcQuantiles<int16_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
 				);
 				break;
 			case GDT_UInt32:
 				quantiles.push_back(
 					!largeRaster ? 
-						calcQuantiles<uint32_t, float>(p_raster, band, probabilities[i], GDT_Float32) :
-					        batchCalcQuantiles<uint32_t, float>(p_raster, band, probabilities[i], GDT_Float32, eps);	
+						calcQuantiles<uint32_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
+					        batchCalcQuantiles<uint32_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
 				);
 				break;
 			case GDT_Int32:
 				quantiles.push_back(
 					!largeRaster ? 
-						calcQuantiles<int32_t, float>(p_raster, band, probabilities[i], GDT_Float32) :
-					        batchCalcQuantiles<int32_t, float>(p_raster, band, probabilities[i], GDT_Float32, eps);	
+						calcQuantiles<int32_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
+					        batchCalcQuantiles<int32_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
 				);
 				break;
 			case GDT_Float32:
 				quantiles.push_back(
 					!largeRaster ? 
-						calcQuantiles<float, float>(p_raster, band, probabilities[i], GDT_Float32) :
-					        batchCalcQuantiles<float, float>(p_raster, band, probabilities[i], GDT_Float32, eps);	
+						calcQuantiles<float, float>(p_raster, band, sProbabilities, GDT_Float32) :
+					        batchCalcQuantiles<float, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
 				);
 				break;
 			case GDT_Float64:
 				quantiles.push_back(
 					!largeRaster ? 
 						calcQuantiles<double, double>(p_raster, band, probabilities[i], GDT_Float64) :
-					        batchCalcQuantiles<double, double>(p_raster, band, probabilities[i], GDT_Float64, eps);	
+					        batchCalcQuantiles<double, double>(p_raster, band, probabilities[i], GDT_Float64, eps)	
 				);
 				break;
 			default:
@@ -516,7 +535,7 @@ GDALRasterWrapper *quantiles(
 	//iterate through all pixels and update the stratified raster bands
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;
-		boost::asio::thread_pool pool(threads);
+		boost::asio::thread_pool pool(threadCount);
 
 		if (map) {
 			//use the first raster band to determine block size
@@ -525,7 +544,7 @@ GDALRasterWrapper *quantiles(
 
 			int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 			int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
-			int chunkSize = yBlocks / threads;
+			int chunkSize = yBlocks / threadCount;
 
 			for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 				int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);
@@ -558,7 +577,7 @@ GDALRasterWrapper *quantiles(
 							dataBands[0].p_mutex->unlock();
 
 							//read raster band data into band buffers
-							for (size_t band = 0; band < bandCount; band++) {
+							for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
 								rasterBandIO(
 									dataBands[band], 
 									dataBuffers[band], 
@@ -574,12 +593,12 @@ GDALRasterWrapper *quantiles(
 
 							//process blocked band data
 							for (int y = 0; y < yValid; y++) {
-								size_t index = static_cast<size_t>(y * blockSize);
+								size_t index = static_cast<size_t>(y * xBlockSize);
 								for (int x = 0; x < xValid; x++) {
 									bool mapNan = false;
 									size_t mapStrat = 0;
 									
-									for (size_t band = 0; band < bandCount; band++) {
+									for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
 										processMapPixel(
 											index, 
 											dataBands[band], 
@@ -606,7 +625,7 @@ GDALRasterWrapper *quantiles(
 							}
 					
 							//write strat band data
-							for (size_t band = 0; band <= bandCount; band++) {
+							for (size_t band = 0; band <= static_cast<size_t>(bandCount); band++) {
 								rasterBandIO(
 									stratBands[band],
 									stratBuffers[band],
@@ -631,7 +650,7 @@ GDALRasterWrapper *quantiles(
 			}	
 		}
 		else {	
-			for (size_t band = 0; band < bandCount; band++) {
+			for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
 				RasterBandMetaData* p_dataBand = &dataBands[band];
 				RasterBandMetaData* p_stratBand = &stratBands[band];
 
@@ -640,7 +659,7 @@ GDALRasterWrapper *quantiles(
 					
 				int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
-				int chunkSize = yBlocks / threads;
+				int chunkSize = yBlocks / threadCount;
 				
 				for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 					int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
@@ -681,7 +700,7 @@ GDALRasterWrapper *quantiles(
 
 								//process block
 								for (int y = 0; y < yValid; y++) {
-									index = static_cast<size_t>(y * xblockSize);
+									size_t index = static_cast<size_t>(y * xBlockSize);
 									for (int x = 0; x < xValid; x++) {
 										processPixel(index, p_data, p_dataBand, p_strat, p_stratBand, *p_quantiles);
 										index++;
@@ -718,7 +737,7 @@ GDALRasterWrapper *quantiles(
 				bool mapNan = false;
 				size_t mapStrat = 0;
 									
-				for (size_t band = 0; band < bandCount; band++) {
+				for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
 					processMapPixel(
 						index, 
 						dataBands[band], 
@@ -742,7 +761,7 @@ GDALRasterWrapper *quantiles(
 			}
 		}
 		else {
-			for (size_t band = 0; band < bandCount; band++) {
+			for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
 				for (size_t i = 0; i < pixelCount; i++) {
 					processPixel(
 						i,
@@ -782,7 +801,7 @@ GDALRasterWrapper *quantiles(
 
 	//close and add all of the VRT sub datasets as bands
 	if (isVRTDataset) {
-		for (size_t band = 0: band < VRTBandInfo.size(); band++) {
+		for (size_t band = 0; band < VRTBandInfo.size(); band++) {
 			GDALClose(VRTBandInfo[band].p_dataset);
 			addBandToVRTDataset(p_dataset, stratBands[band], VRTBandInfo[band]);
 		}
@@ -797,7 +816,7 @@ GDALRasterWrapper *quantiles(
 	}
 
 	return largeRaster ? 
-		new GDALRasterWrapper(p_datset) :
+		new GDALRasterWrapper(p_dataset) :
 		new GDALRasterWrapper(p_dataset, buffers);
 }
 
