@@ -224,8 +224,8 @@ void batchCalcSPQuantiles(
 	calculated = true;
 	std::cout << "unlocking mutex" << std::endl;
 	mutex.unlock();
-	std::cout << "notifying one on the cv" << std::endl;
-	cv.notify_one();
+	std::cout << "notifying all on the cv" << std::endl;
+	cv.notify_all();
 }
 
 
@@ -318,7 +318,7 @@ void batchCalcDPQuantiles(
 	mutex.lock();
 	calculated = true;
 	mutex.unlock();
-	cv.notify_one();
+	cv.notify_all();
 
 	VSIFree(p_buffer);
 	VSIFree(p_filtered);

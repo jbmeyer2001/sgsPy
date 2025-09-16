@@ -24,7 +24,7 @@ import sys
 
 rast = sgs.SpatialRaster('/home/jbmeyer/RMF_LiDAR_Metrics/Merged_Aspect_DEM5m.tif')
 start = time.time()
-srast = sgs.stratify.quantiles(rast, {rast.bands[1]: 10}, filename="5m_band1.tif", thread_count = 1)
+srast = sgs.stratify.quantiles(rast, [10, 50], filename="sraster_merged.tif", thread_count = 8)
 #srast = sgs.stratify.breaks(rast, [list(range(10, 490, 10)), list(range(1, 49, 1))], map=True)
 end = time.time()
 print(str(end - start))
