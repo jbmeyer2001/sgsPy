@@ -10,112 +10,233 @@
 #include "raster.h"
 #include "helper.h"
 
+#include <condition_variable>
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
 #include <mkl.h>
 
-
 /*
  *
  */
-template <typename T, typename U>
-inline std::vector<double>
-calcQuantiles(
+void calcSPQuantiles(
 	GDALRasterWrapper *p_raster,
 	RasterBandMetaData& band,
-	std::vector<U>& probabilities,
-	GDALDataType fType) 
+	std::vector<double>& probabilities,
+	std::vector<double>& quantiles) 
 {
-	if (fType != GDT_Float32 && fType != GDT_Float64) {
-		throw std::runtime_error("fType must be either GDT_Float32 or GDT_Float64");
+	std::vector<float> spProbabilities(probabilities.size());
+	std::vector<float> spQuantiles(quantiles.size());
+
+	//get float vector of probabilities
+	for (size_t i = 0; i < probabilities.size(); i++) {
+		spProbabilities[i] = static_cast<float>(probabilities[i]);
 	}
 
-	//filtering step
+	//filter out nan values
 	size_t fi = 0;
-	T nan = static_cast<T>(band.nan);
-	size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) *
-			    static_cast<size_t>(p_raster->getHeight());
-	std::vector<U> filteredData(pixelCount);
+	float nan = static_cast<float>(band.nan);
+	size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());
+	std::vector<float> filteredData(pixelCount);
 	for (size_t i = 0; i < pixelCount; i++) {
-		T val = getPixelValueDependingOnType<T>(band.type, band.p_buffer, i);
+		float val = getPixelValueDependingOnType<float>(band.type, band.p_buffer, i);
 		bool isNan = std::isnan(val) || val == nan;
 		if (!isNan) {
-			filteredData[fi] = static_cast<U>(val);
+			filteredData[fi] = val;
 			fi ++;
 		}
 	}
 	filteredData.resize(fi + 1);
 
-	std::vector<double> dQuantiles(probabilities.size());
-	std::vector<float> sQuantiles(probabilities.size());
+	//define variables to pass to MKL quantiles calculation function
+	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditquantiles.html
+	VSLSSTaskPtr task;
+	int status;
+       	MKL_INT quant_order_n = spQuantiles.size();	
+	MKL_INT p = 1;
+	MKL_INT nparams = filteredData.size();
+	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
+	float *quant_order = spProbabilities.data();
+	float *params = filteredData.data();
+	float *quants = spQuantiles.data();
+
+	//calculate quantiles using MKL
+	status = vslsSSNewTask(&task, &p, &nparams, &xstorage, params, nullptr, nullptr);
+	status = vslsSSEditQuantiles(task, &quant_order_n, quant_order, quants, nullptr, nullptr);
+	status = vslsSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
+	status = vslSSDeleteTask(&task);
+
+	//assign double quantile values
+	for(size_t i = 0; i < spQuantiles.size(); i++) {
+		quantiles[i] = static_cast<double>(spQuantiles[i]);
+	}
+}
+
+/*
+ *
+ */
+void calcDPQuantiles(
+	GDALRasterWrapper *p_raster,
+	RasterBandMetaData& band,
+	std::vector<double>& probabilities,
+	std::vector<double>& quantiles) 
+{
+	//filter out nan values
+	size_t fi = 0;
+	size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());
+	std::vector<double> filteredData(pixelCount);
+	for (size_t i = 0; i < pixelCount; i++) {
+		double val = getPixelValueDependingOnType<double>(band.type, band.p_buffer, i);
+		bool isNan = std::isnan(val) || val == band.nan;
+		if (!isNan) {
+			filteredData[fi] = val;
+			fi ++;
+		}
+	}
+	filteredData.resize(fi + 1);
 
 	//define variables to pass to MKL quantiles calculation function
 	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditquantiles.html
 	VSLSSTaskPtr task;
 	int status;
-       	MKL_INT quant_order_n = probabilities.size();	
+       	MKL_INT quant_order_n = quantiles.size();	
 	MKL_INT p = 1;
 	MKL_INT nparams = filteredData.size();
 	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
+	double *quant_order = probabilities.data();
+	double *params = filteredData.data();
+	double *quants = quantiles.data();
 
-	//calculate quantiles using mkl
-	if (fType == GDT_Float32) {
-		//use single precision floating point
-		float *s_quant_order = reinterpret_cast<float *>(probabilities.data());
-		float *s_params = reinterpret_cast<float *>(filteredData.data());
-
-		status = vslsSSNewTask(&task, &p, &nparams, &xstorage, s_params, nullptr, nullptr);
-		status = vslsSSEditQuantiles(task, &quant_order_n, s_quant_order, (float *)sQuantiles.data(), nullptr, nullptr);
-		status = vslsSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
-	}
-	else {
-		//use double precision floating point
-		double *d_quant_order = reinterpret_cast<double *>(probabilities.data());
-		double *d_params = reinterpret_cast<double *>(filteredData.data());
-
-		status = vsldSSNewTask(&task, &p, &nparams, &xstorage, d_params, nullptr, nullptr);
-		status = vsldSSEditQuantiles(task, &quant_order_n, d_quant_order, (double *)dQuantiles.data(), nullptr, nullptr);
-		status = vsldSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
-	}
-
+	//calculate quantiles using MKL
+	status = vsldSSNewTask(&task, &p, &nparams, &xstorage, params, nullptr, nullptr);
+	status = vsldSSEditQuantiles(task, &quant_order_n, quant_order, quants, nullptr, nullptr);
+	status = vsldSSCompute(task, VSL_SS_QUANTS, VSL_SS_METHOD_FAST);
 	status = vslSSDeleteTask(&task);
-
-	//convert quantiles type to double if necessary
-	if (fType == GDT_Float32) {
-		for(size_t i = 0; i < sQuantiles.size(); i++) {
-			dQuantiles[i] = static_cast<double>(sQuantiles[i]);
-			std::cout << "dQuantiles[i] = " << dQuantiles[i] << std::endl;
-		}
-	}
-
-	return dQuantiles;
 }
 
 /**
  *
  */
-template <typename T, typename U>
-inline std::vector<double>
-batchCalcQuantiles(
+void batchCalcSPQuantiles(
 	GDALRasterWrapper *p_raster, 
 	RasterBandMetaData& band, 
-	std::vector<U>& probabilities,
-	GDALDataType fType,
-	U eps) 
+	std::vector<double>& probabilities,
+	std::vector<double>& quantiles,
+	std::mutex& mutex,
+	std::condition_variable& cv,
+	uint8_t& calculated,
+	double eps) 
 {
-	if (fType != GDT_Float32 && fType != GDT_Float64) {
-		throw std::runtime_error("fType must be either GDT_Float32 or GDT_Float64");
+	std::vector<float> spProbabilities(probabilities.size());
+	std::vector<float> spQuantiles(quantiles.size());
+
+	//get float vector of probabilities
+	for (size_t i = 0; i < probabilities.size(); i++) {
+		spProbabilities[i] = static_cast<float>(probabilities[i]);
 	}
 
 	int xBlocks = (p_raster->getWidth() + band.xBlockSize - 1) / band.xBlockSize;
 	int yBlocks = (p_raster->getHeight() + band.yBlockSize - 1) / band.yBlockSize;
 	
-	T nan = static_cast<T>(band.nan);
-	T *p_buffer = reinterpret_cast<T *>(VSIMalloc3(band.xBlockSize, band.yBlockSize, sizeof(T)));
-	U *p_filtered = reinterpret_cast<U *>(VSIMalloc3(band.xBlockSize, band.yBlockSize, sizeof(U)));
+	float nan = static_cast<float>(band.nan);
+	float spEps = static_cast<float>(eps);
+	void *p_buffer = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
+	float *p_filtered = reinterpret_cast<float *>(VSIMalloc3(band.xBlockSize, band.yBlockSize, sizeof(float)));
 
-	std::vector<float> sQuantiles(probabilities.size());
-	std::vector<double> dQuantiles(probabilities.size());
+	//define variables to pass to MKL quantiles calculation function
+	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditstreamquantiles.html
+	VSLSSTaskPtr task;
+	int status;
+       	MKL_INT quant_order_n = spProbabilities.size();	
+	MKL_INT p = 1;
+	MKL_INT n = band.xBlockSize * band.yBlockSize;
+	MKL_INT nparams = VSL_SS_SQUANTS_ZW_PARAMS_N;
+	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
+
+	float *quant_order = reinterpret_cast<float *>(spProbabilities.data());
+	float *quants = reinterpret_cast<float *>(spQuantiles.data());
+
+	vslsSSNewTask(&task, &p, &n, &xstorage, p_filtered, 0, 0);
+
+	//read and compute raster by blocks
+	bool calledEditStreamQuantiles = false;
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+			int xValid, yValid;
+			band.p_mutex->lock();
+			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+			CPLErr err = band.p_band->ReadBlock(xBlock, yBlock, p_buffer);
+			band.p_mutex->unlock();
+			if (err) {
+				throw std::runtime_error("error reading block from band.");
+			}
+
+			int fi = 0;
+			for (int y = 0; y < yValid; y++) {
+				int index = y * band.xBlockSize;
+				for (int x = 0; x < xValid; x++) {
+					float val = getPixelValueDependingOnType<float>(band.type, p_buffer, index);
+					bool isNan = std::isnan(val) || val == nan;
+					if (!isNan) {
+						p_filtered[fi] = val;
+						fi++;
+					}
+					index++;
+				}
+			}
+
+			if (fi == 0) {
+				continue;
+			}
+
+			n = fi;
+			if (!calledEditStreamQuantiles) {
+				//for some reason this has issues if called before the first band of data is loaded,
+				//although it only has to be called once.
+				status = vslsSSEditStreamQuantiles(task, &quant_order_n, quant_order, quants, &nparams, &spEps);
+				calledEditStreamQuantiles = true;
+			}
+			status = vslsSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW_FAST);
+		}
+	}
+
+	//use VSL_SS_METHOD_SQUANTS_ZW (not VSL_SS_METHOD_SQUANTS_ZW_FAST) to get final estimates
+	n = 0;
+	vslsSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW);	
+	status = vslSSDeleteTask(&task);
+
+	//assign double quantile values
+	for(size_t i = 0; i < spQuantiles.size(); i++) {
+		quantiles[i] = static_cast<double>(spQuantiles[i]);
+	}
+
+	mutex.lock();
+	calculated = true;
+	mutex.unlock();
+	cv.notify_one();
+
+	VSIFree(p_buffer);
+	VSIFree(p_filtered);
+}
+
+
+/**
+ *
+ */
+void batchCalcDPQuantiles(
+	GDALRasterWrapper *p_raster, 
+	RasterBandMetaData& band, 
+	std::vector<double>& probabilities,
+	std::vector<double>& quantiles,
+	std::mutex& mutex,
+	std::condition_variable& cv,
+	uint8_t& calculated,
+	double eps) 
+{
+	int xBlocks = (p_raster->getWidth() + band.xBlockSize - 1) / band.xBlockSize;
+	int yBlocks = (p_raster->getHeight() + band.yBlockSize - 1) / band.yBlockSize;
+	
+	void *p_buffer = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
+	double *p_filtered = reinterpret_cast<double *>(VSIMalloc3(band.xBlockSize, band.yBlockSize, sizeof(double)));
 
 	//define variables to pass to MKL quantiles calculation function
 	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditstreamquantiles.html
@@ -127,33 +248,20 @@ batchCalcQuantiles(
 	MKL_INT nparams = VSL_SS_SQUANTS_ZW_PARAMS_N;
 	MKL_INT xstorage = VSL_SS_MATRIX_STORAGE_ROWS;
 
-	if (fType == GDT_Float32) {
-		//call single-precision vsl functions
-		float *s_quant_order = reinterpret_cast<float *>(probabilities.data());
-		float *s_quants = reinterpret_cast<float *>(p_filtered);
-		float *s_data = reinterpret_cast<float *>(sQuantiles.data());
-		float s_eps = eps; //for c++ compiler type checker
-		
-		status = vslsSSNewTask(&task, &p, &n, &xstorage, s_data, nullptr, nullptr);
-		status = vslsSSEditStreamQuantiles(task, &quant_order_n, s_quant_order, s_quants, &nparams, &s_eps);
-	}
-	else {
-		//call double-precision vsl functions
-		double *d_quant_order = reinterpret_cast<double *>(probabilities.data());
-		double *d_quants = reinterpret_cast<double *>(p_filtered);
-		double *d_data = reinterpret_cast<double *>(dQuantiles.data());
-		double d_eps = eps; //for c++ compiler type checker
+	double *quant_order = reinterpret_cast<double *>(probabilities.data());
+	double *quants = reinterpret_cast<double *>(quantiles.data());
 
-		status = vsldSSNewTask(&task, &p, &n, &xstorage, d_data, nullptr, nullptr);
-		status = vsldSSEditStreamQuantiles(task, &quant_order_n, d_quant_order, d_quants, &nparams, &d_eps);
-	}
+	vsldSSNewTask(&task, &p, &n, &xstorage, p_filtered, 0, 0);
 
-	//single thread for now!
+	//read and compute raster by blocks
+	bool calledEditStreamQuantiles = false;
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
+			band.p_mutex->lock();
 			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 			CPLErr err = band.p_band->ReadBlock(xBlock, yBlock, p_buffer);
+			band.p_mutex->unlock();
 			if (err) {
 				throw std::runtime_error("error reading block from band.");
 			}
@@ -162,39 +270,43 @@ batchCalcQuantiles(
 			for (int y = 0; y < yValid; y++) {
 				int index = y * band.xBlockSize;
 				for (int x = 0; x < xValid; x++) {
-					T val = getPixelValueDependingOnType<T>(band.type, p_buffer, index);
-					bool isNan = std::isnan(val) || val == nan;
+					double val = getPixelValueDependingOnType<double>(band.type, p_buffer, index);
+					bool isNan = std::isnan(val) || val == band.nan;
 					if (!isNan) {
-						p_filtered[fi] = static_cast<double>(val);
+						p_filtered[fi] = val;
 						fi++;
 					}
 					index++;
 				}
 			}
 
-			if (fType == GDT_Float32) {
-				float sfi = static_cast<float>(fi);
-				vslsSSEditTask(task, VSL_SS_ED_OBSERV_N, &sfi);
-				vslsSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW_FAST);
+			if (fi == 0) {
+				continue;
 			}
-			else {
-				double dfi = static_cast<double>(fi);
-				vsldSSEditTask(task, VSL_SS_ED_OBSERV_N, &dfi);
-				vsldSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW_FAST);
+
+			n = fi;
+			if (!calledEditStreamQuantiles) {
+				//for some reason this has issues if called before the first band of data is loaded,
+				//although it only has to be called once.
+				status = vsldSSEditStreamQuantiles(task, &quant_order_n, quant_order, quants, &nparams, &eps);
+				calledEditStreamQuantiles = true;
 			}
-		}
-	}
-	
-	status = vslSSDeleteTask(&task);
-	
-	//convert quantiles type to double if necessary
-	if (fType == GDT_Float32) {
-		for(size_t i = 0; i < sQuantiles.size(); i++) {
-			dQuantiles[i] = static_cast<double>(sQuantiles[i]);
+			status = vsldSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW_FAST);
 		}
 	}
 
-	return dQuantiles;
+	//use VSL_SS_METHOD_SQUANTS_ZW (not VSL_SS_METHOD_SQUANTS_ZW_FAST) to get final estimates
+	n = 0;
+	vsldSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW);	
+	status = vslSSDeleteTask(&task);
+
+	mutex.lock();
+	calculated = true;
+	mutex.unlock();
+	cv.notify_one();
+
+	VSIFree(p_buffer);
+	VSIFree(p_filtered);
 }
 
 /**
@@ -326,7 +438,7 @@ GDALRasterWrapper *quantiles(
 	bool largeRaster,
 	int threadCount,
 	std::map<std::string, std::string> driverOptions,
-	float eps) 
+	double eps) 
 {
 	GDALAllRegister();
 
@@ -346,7 +458,7 @@ GDALRasterWrapper *quantiles(
 	std::vector<VRTBandDatasetInfo> VRTBandInfo;
 
 	bool isMEMDataset = !largeRaster && filename == "";
-	bool isVRTDataset = !largeRaster && filename == "";
+	bool isVRTDataset = largeRaster && filename == "";
 
 	std::mutex dataBandMutex;
 	std::mutex stratBandMutex;
@@ -442,7 +554,8 @@ GDALRasterWrapper *quantiles(
 			}
 		}
 	}
-	
+
+		
 	if (!isMEMDataset && !isVRTDataset) {
 		bool useTiles = stratBands[0].xBlockSize != width &&
 				stratBands[0].yBlockSize != height;
@@ -468,77 +581,49 @@ GDALRasterWrapper *quantiles(
 	}
 
 	//step 4 calculate the quantiles for each raster band
-	std::vector<std::vector<double>> quantiles;
-	for (int i = 0; i < bandCount; i++) {
-		RasterBandMetaData band = dataBands[i];
-		std::vector<float> sProbabilities(probabilities[i].size());
-		if (band.type != GDT_Float64) {
-			for (size_t j = 0; j < probabilities[i].size(); j++) {
-				sProbabilities[j] = static_cast<float>(probabilities[i][j]);
+	std::vector<std::vector<double>> quantiles(probabilities.size());
+	if (largeRaster) {
+		pybind11::gil_scoped_acquire acquire;
+		boost::asio::thread_pool pool(threadCount); 
+		
+		//use uint8_t instead of bool because vectors of bool are weird
+		std::vector<uint8_t> quantilesCalculated(bandCount, false);
+		std::vector<std::condition_variable> cvs(bandCount);
+		std::vector<std::mutex> mutexes(bandCount);
+
+		for (int i = 0; i < bandCount; i++) {
+			RasterBandMetaData band = dataBands[i];
+			quantiles[i].resize(probabilities[i].size());
+			if (band.type != GDT_Float64) {
+				boost::asio::post(pool, std::bind(batchCalcSPQuantiles,
+					p_raster,
+					band,
+					probabilities[i],
+					quantiles[i],
+					std::ref(mutexes[i]),
+					std::ref(cvs[i]),
+					quantilesCalculated[i],
+					static_cast<double>(eps)
+				));
+			}
+			else {
+				boost::asio::post(pool, std::bind(batchCalcDPQuantiles,
+					p_raster,
+					band,
+					probabilities[i],
+					quantiles[i],
+					std::ref(mutexes[i]),
+					std::ref(cvs[i]),
+					quantilesCalculated[i],
+					static_cast<double>(eps)
+				));
 			}
 		}
 
-		switch (band.type) {
-			case GDT_Int8:
-				quantiles.push_back(
-					!largeRaster ? 
-						calcQuantiles<int8_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
-					        batchCalcQuantiles<int8_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
-				);
-				break;
-			case GDT_UInt16:
-				quantiles.push_back(
-					!largeRaster ? 
-						calcQuantiles<uint16_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
-					        batchCalcQuantiles<uint16_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
-				);
-				break;
-			case GDT_Int16:
-				quantiles.push_back(
-					!largeRaster ? 
-						calcQuantiles<int16_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
-					        batchCalcQuantiles<int16_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
-				);
-				break;
-			case GDT_UInt32:
-				quantiles.push_back(
-					!largeRaster ? 
-						calcQuantiles<uint32_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
-					        batchCalcQuantiles<uint32_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
-				);
-				break;
-			case GDT_Int32:
-				quantiles.push_back(
-					!largeRaster ? 
-						calcQuantiles<int32_t, float>(p_raster, band, sProbabilities, GDT_Float32) :
-					        batchCalcQuantiles<int32_t, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
-				);
-				break;
-			case GDT_Float32:
-				quantiles.push_back(
-					!largeRaster ? 
-						calcQuantiles<float, float>(p_raster, band, sProbabilities, GDT_Float32) :
-					        batchCalcQuantiles<float, float>(p_raster, band, sProbabilities, GDT_Float32, eps)	
-				);
-				break;
-			case GDT_Float64:
-				quantiles.push_back(
-					!largeRaster ? 
-						calcQuantiles<double, double>(p_raster, band, probabilities[i], GDT_Float64) :
-					        batchCalcQuantiles<double, double>(p_raster, band, probabilities[i], GDT_Float64, eps)	
-				);
-				break;
-			default:
-				throw std::runtime_error("GDALDataType not supported.");
-		}
-	}
-
-	//iterate through all pixels and update the stratified raster bands
-	if (largeRaster) {
-		pybind11::gil_scoped_acquire acquire;
-		boost::asio::thread_pool pool(threadCount);
-
 		if (map) {
+			//wait for all quantiles to finish calculating
+			pool.join();
+
 			//use the first raster band to determine block size
 			int xBlockSize = dataBands[0].xBlockSize;
 			int yBlockSize = dataBands[0].yBlockSize;
@@ -662,6 +747,12 @@ GDALRasterWrapper *quantiles(
 				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
 				int chunkSize = yBlocks / threadCount;
 				
+				//ensure the thread calculating quantiles for this band has finished
+				std::unique_lock lock(mutexes[band]);
+				if (!quantilesCalculated[band]) {
+					cvs[band].wait(lock);
+				}
+
 				for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 					int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
 					std::vector<double> *p_quantiles = &quantiles[band];
@@ -732,6 +823,14 @@ GDALRasterWrapper *quantiles(
 		pybind11::gil_scoped_release release;
 	}
 	else {
+		for (int i = 0; i < bandCount; i++) {
+			RasterBandMetaData band = dataBands[i];
+			quantiles[i].resize(probabilities[i].size());
+			(band.type != GDT_Float64) ?
+				calcSPQuantiles(p_raster, band, probabilities[i], quantiles[i]) :
+				calcDPQuantiles(p_raster, band, probabilities[i], quantiles[i]);
+		}
+
 		size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());
 		if (map) {
 			for (size_t index = 0; index < pixelCount; index++) {
@@ -798,8 +897,9 @@ GDALRasterWrapper *quantiles(
 				}
 			}
 		}
-	}
 
+	}
+		
 	//close and add all of the VRT sub datasets as bands
 	if (isVRTDataset) {
 		for (size_t band = 0; band < VRTBandInfo.size(); band++) {
