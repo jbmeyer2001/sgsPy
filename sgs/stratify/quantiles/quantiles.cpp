@@ -123,7 +123,7 @@ void batchCalcSPQuantiles(
 	std::vector<double>& quantiles,
 	std::mutex& mutex,
 	std::condition_variable& cv,
-	uint8_t& calculated,
+	bool& calculated,
 	double eps) 
 {
 	std::vector<float> spProbabilities(probabilities.size());
@@ -209,13 +209,23 @@ void batchCalcSPQuantiles(
 		quantiles[i] = static_cast<double>(spQuantiles[i]);
 	}
 
-	mutex.lock();
-	calculated = true;
-	mutex.unlock();
-	cv.notify_one();
+	std::cout << "quantiles are:" << std::endl;
+	for (size_t i = 0; i < quantiles.size(); i++) {
+		std::cout << quantiles[i] << std::endl;
+	}
 
 	VSIFree(p_buffer);
 	VSIFree(p_filtered);
+
+	std::cout << "in quantiles thread" << std::endl;
+	std::cout << "locking mutex" << std::endl;
+	mutex.lock();
+	std::cout << "setting calculated to true, calculated at memory location: " << &calculated << std::endl;
+	calculated = true;
+	std::cout << "unlocking mutex" << std::endl;
+	mutex.unlock();
+	std::cout << "notifying one on the cv" << std::endl;
+	cv.notify_one();
 }
 
 
@@ -229,7 +239,7 @@ void batchCalcDPQuantiles(
 	std::vector<double>& quantiles,
 	std::mutex& mutex,
 	std::condition_variable& cv,
-	uint8_t& calculated,
+	bool& calculated,
 	double eps) 
 {
 	int xBlocks = (p_raster->getWidth() + band.xBlockSize - 1) / band.xBlockSize;
@@ -299,6 +309,11 @@ void batchCalcDPQuantiles(
 	n = 0;
 	vsldSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW);	
 	status = vslSSDeleteTask(&task);
+
+	std::cout << "quantiles are:" << std::endl;
+	for (size_t i = 0; i < quantiles.size(); i++) {
+		std::cout << quantiles[i] << std::endl;
+	}
 
 	mutex.lock();
 	calculated = true;
@@ -585,45 +600,45 @@ GDALRasterWrapper *quantiles(
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;
 		boost::asio::thread_pool pool(threadCount); 
-		
-		//use uint8_t instead of bool because vectors of bool are weird
-		std::vector<uint8_t> quantilesCalculated(bandCount, false);
-		std::vector<std::condition_variable> cvs(bandCount);
+	
 		std::vector<std::mutex> mutexes(bandCount);
+		std::vector<std::condition_variable> cvs(bandCount);
+		//use bool * rather than vector of bool because bitmask means we can't have
+		//a reference to a single bool value
+		bool *quantilesCalculated = reinterpret_cast<bool *>(VSIMalloc2(bandCount, sizeof(bool)));
+		std::cout << "calculated starting location: " << quantilesCalculated << std::endl;
 
 		for (int i = 0; i < bandCount; i++) {
 			RasterBandMetaData band = dataBands[i];
 			quantiles[i].resize(probabilities[i].size());
+			quantilesCalculated[i] = false;
 			if (band.type != GDT_Float64) {
 				boost::asio::post(pool, std::bind(batchCalcSPQuantiles,
 					p_raster,
-					band,
-					probabilities[i],
-					quantiles[i],
+					std::ref(band),
+					std::ref(probabilities[i]),
+					std::ref(quantiles[i]),
 					std::ref(mutexes[i]),
 					std::ref(cvs[i]),
-					quantilesCalculated[i],
+					std::ref(quantilesCalculated[i]),
 					static_cast<double>(eps)
 				));
 			}
 			else {
 				boost::asio::post(pool, std::bind(batchCalcDPQuantiles,
 					p_raster,
-					band,
-					probabilities[i],
-					quantiles[i],
+					std::ref(band),
+					std::ref(probabilities[i]),
+					std::ref(quantiles[i]),
 					std::ref(mutexes[i]),
 					std::ref(cvs[i]),
-					quantilesCalculated[i],
+					std::ref(quantilesCalculated[i]),
 					static_cast<double>(eps)
 				));
 			}
 		}
 
 		if (map) {
-			//wait for all quantiles to finish calculating
-			pool.join();
-
 			//use the first raster band to determine block size
 			int xBlockSize = dataBands[0].xBlockSize;
 			int yBlockSize = dataBands[0].yBlockSize;
@@ -736,7 +751,9 @@ GDALRasterWrapper *quantiles(
 			}	
 		}
 		else {	
+			std::cout << "in large raster writing else rn" << std::endl;
 			for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
+				std::cout << "band: " << band << std::endl;
 				RasterBandMetaData* p_dataBand = &dataBands[band];
 				RasterBandMetaData* p_stratBand = &stratBands[band];
 
@@ -747,15 +764,12 @@ GDALRasterWrapper *quantiles(
 				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
 				int chunkSize = yBlocks / threadCount;
 				
-				//ensure the thread calculating quantiles for this band has finished
-				std::unique_lock lock(mutexes[band]);
-				if (!quantilesCalculated[band]) {
-					cvs[band].wait(lock);
-				}
-
 				for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 					int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
 					std::vector<double> *p_quantiles = &quantiles[band];
+					std::mutex *p_mutex = &mutexes[band];
+					std::condition_variable *p_cv = &cvs[band];
+					bool *p_calculated = &quantilesCalculated[band];
 					
 					boost::asio::post(pool, [
 						xBlockSize, 
@@ -765,8 +779,20 @@ GDALRasterWrapper *quantiles(
 						xBlocks, 
 						p_dataBand, 
 						p_stratBand, 
-						p_quantiles
+						p_quantiles,
+						p_mutex,
+						p_cv,
+						p_calculated
 					] {
+						std::unique_lock lock(*p_mutex);
+
+						std::cout << "checking calculated at memory location: " << p_calculated << std::endl;
+						if (!(*p_calculated)) {
+							std::cout << "calling cv wait at a cv located at " << p_cv << std::endl;
+							p_cv->wait(lock);
+						}
+						std::cout << "out of wait in processing thread" << std::endl;
+
 						void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
 						void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
 
