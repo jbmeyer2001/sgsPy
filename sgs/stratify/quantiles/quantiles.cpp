@@ -601,8 +601,10 @@ GDALRasterWrapper *quantiles(
 		pybind11::gil_scoped_acquire acquire;
 		boost::asio::thread_pool pool(threadCount); 
 	
-		std::vector<std::mutex> mutexes(bandCount);
-		std::vector<std::condition_variable> cvs(bandCount);
+		//if mapping only use one mutex/cv because every quantiles calculation thread needs to be able to
+		//wake up every processing/writing thread
+		std::vector<std::mutex> mutexes(map ? 1 : bandCount);
+		std::vector<std::condition_variable> cvs(map ? 1 : bandCount);
 		//use bool * rather than vector of bool because bitmask means we can't have
 		//a reference to a single bool value
 		bool *quantilesCalculated = reinterpret_cast<bool *>(VSIMalloc2(bandCount, sizeof(bool)));
@@ -618,8 +620,8 @@ GDALRasterWrapper *quantiles(
 					std::ref(band),
 					std::ref(probabilities[i]),
 					std::ref(quantiles[i]),
-					std::ref(mutexes[i]),
-					std::ref(cvs[i]),
+					std::ref(mutexes[map ? 0 : i]),
+					std::ref(cvs[map ? 0 : i]),
 					std::ref(quantilesCalculated[i]),
 					static_cast<double>(eps)
 				));
@@ -639,6 +641,23 @@ GDALRasterWrapper *quantiles(
 		}
 
 		if (map) {
+			std::unique_lock lock(mutexes[0]);
+			bool allBandsQuantilesCalculated = true;
+			for (int i = 0; i < bandCount; i++) {
+				allBandsQuantilesCalculated &= quantilesCalculated[i];
+			}
+
+			while (!allBandsQuantilesCalculated) {
+				std::cout << "calling cv wait at a cv located at " << &cvs[0] << std::endl;
+				cvs[0].wait(lock);
+
+				allBandsQuantilesCalculated = true;
+				for (int i = 0; i < bandCount; i++) {
+					allBandsQuantilesCalculated &= quantilesCalculated[i];
+				}
+			}
+			std::cout << "OUT OF WAIT!!" << std::endl;
+
 			//use the first raster band to determine block size
 			int xBlockSize = dataBands[0].xBlockSize;
 			int yBlockSize = dataBands[0].yBlockSize;
@@ -661,7 +680,8 @@ GDALRasterWrapper *quantiles(
 					&stratBands, 
 					&quantiles,
 					&multipliers
-				] {
+				] {			
+					std::cout << "HERE IN A WRIITNG THREAD" << std::endl;		
 					std::vector<void *> dataBuffers(dataBands.size());
 					std::vector<void *> stratBuffers(stratBands.size());
 					for (size_t band = 0; band < dataBuffers.size(); band++) {
@@ -845,7 +865,9 @@ GDALRasterWrapper *quantiles(
 				}
 			}
 		}
+
 		pool.join();
+		VSIFree(quantilesCalculated);
 		pybind11::gil_scoped_release release;
 	}
 	else {
