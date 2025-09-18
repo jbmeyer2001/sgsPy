@@ -8,28 +8,36 @@ from rasterio.windows import Window
 image_width = 106000
 image_height = 118000
 
-with rasterio.open(sys.argv[1]) as srast1:
-    with rasterio.open(sys.argv[2]) as srast2:
-        with rasterio.open(sys.argv[3]) as mapped:
-            for y in range(image_height):
-                srast1_scanline = srast1.read(1, window=Window(0, y, image_width, 1))
-                srast2_scanline = srast2.read(1, window=Window(0, y, image_width, 1))
-                mapped_scanline = mapped.read(1, window=Window(0, y, image_width, 1))
+large_DEM_quantiles = [0, 0, 0, 0, 289, 310, 334, 354, 372]
+large_CHM_quantiles = [0.384, 1.838, 3.736, 5.925, 8.07, 10.087, 12.128, 14.355, 17.22]
+with rasterio.open(sys.argv[1]) as rast:
+    with rasterio.open(sys.argv[2]) as srast:
+        for y in range(image_height):
+            rast_scanline = rast.read(1, window=Window(0, y, image_width, 1))
+            srast_scanline = srast.read(1, window=Window(0, y, image_width, 1))
 
-                for x in range(image_width):
-                    val1 = int(srast1_scanline[0, x])
-                    val2 = int(srast2_scanline[0, x])
-                    map_val = int(mapped_scanline[0, x])
-                    if (val1 < 0 or val2 < 0):
-                        expected_map = -1
-                    else:
-                        expected_map = val1 * 49 + val2
+            for x in range(image_width):
+                val = rast_scanline[0, x]
+                strat = srast_scanline[0, x]
 
-                    if (expected_map != map_val):
-                        raise ValueError("expected value: " + str(expected_map) + " real value: " + str(map_val) + " at index[" + str(x) + "][" + str(y) + "]")
+                if (val < 0):
+                    if strat >= 0:
+                        print("nan error at [" + str(x) + "][" + str(y))
+                    continue;
 
-                if (y % 100 == 0):
-                    print(y)
+                correct_strat = 0
+                while (correct_strat < len(large_CHM_quantiles) and large_CHM_quantiles[correct_strat] < val):
+                    correct_strat += 1
+
+                if (strat != correct_strat):
+                    print("val = " + str(val))
+                    print("strat = " + str(strat))
+                    print()
+                    #msg = "strat of " + str(strat) + "incorrect! expecting " + str(correct_strat)
+                    #raise ValueError(msg)
+
+            if (y % 100 == 0):
+                print('y: ' + str(y))
                            
 """
             for x in range(image_width):
