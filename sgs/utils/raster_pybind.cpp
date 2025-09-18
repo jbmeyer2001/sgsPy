@@ -18,6 +18,7 @@ PYBIND11_MODULE(raster, m) {
 		.def(py::init<std::string>())
 		.def("get_driver", &GDALRasterWrapper::getDriver)
 		.def("get_crs", &GDALRasterWrapper::getCRS)
+		.def("get_projection", &GDALRasterWrapper::getFullProjectionInfo)
 		.def("get_height", &GDALRasterWrapper::getHeight)
 		.def("get_width", &GDALRasterWrapper::getWidth)
 		.def("get_band_count", &GDALRasterWrapper::getBandCount)

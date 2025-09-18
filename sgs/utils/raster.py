@@ -187,7 +187,8 @@ class SpatialRaster:
         self.width = self.cpp_raster.get_width()
         self.height = self.cpp_raster.get_height()
         self.band_count = self.cpp_raster.get_band_count()
-        self.crs = json.loads(self.cpp_raster.get_crs())
+        self.crs = self.cpp_raster.get_crs()
+        self.projection = self.cpp_raster.get_projection().encode('ascii', 'ignore').decode('unicode_escape')
         self.xmin = self.cpp_raster.get_xmin()
         self.xmax = self.cpp_raster.get_xmax()
         self.ymin = self.cpp_raster.get_ymin()
@@ -213,7 +214,8 @@ class SpatialRaster:
         print("size: {} x {} x {}".format(self.band_count, self.width, self.height))
         print("pixel size: (x, y): ({}, {})".format(self.pixel_height, self.pixel_width))
         print("bounds (xmin, xmax, ymin, ymax): ({}, {}, {}, {})".format(self.xmin, self.xmax, self.ymin, self.ymax))
- 
+        print("crs: {}".format(self.crs))
+
     def get_band_index(self, band: str | int):
         """
         Utilizes the band_name_dict to convert a band name to an index if requried.

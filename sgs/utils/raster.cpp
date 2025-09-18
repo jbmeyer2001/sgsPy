@@ -53,7 +53,10 @@ void GDALRasterWrapper::createFromDataset(GDALDataset *p_dataset) {
 	if (cplerr) {
 		throw std::runtime_error("error getting geotransform from dataset.");
 	}
-		
+
+	//crs
+	this->crs = std::string(OGRSpatialReference(this->p_dataset->GetProjectionRef()).GetName());
+
 	//initialize (but don't read) raster band pointers
 	this->rasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
 	this->rasterBandRead = std::vector<bool>(this->getBandCount(), false);
@@ -144,8 +147,8 @@ GDALRasterWrapper::~GDALRasterWrapper() {
 		}
 	}
 
-	if (this->p_crs) {
-		free(this->p_crs);
+	if (this->p_proj) {
+		free(this->p_proj);
 	}	
 }
 
@@ -166,17 +169,24 @@ std::string GDALRasterWrapper::getDriver() {
 }
 
 /******************************************************************************
-				    getCRS()
+			    getFullProjectionInfo()
 ******************************************************************************/
-std::string GDALRasterWrapper::getCRS() {
-	if (!this->p_crs) {
-		OGRErr ogrerr = OGRSpatialReference(this->p_dataset->GetProjectionRef()).exportToPROJJSON(&this->p_crs, nullptr);
+std::string GDALRasterWrapper::getFullProjectionInfo() {
+	if (!this->p_proj) {
+		OGRErr ogrerr = OGRSpatialReference(this->p_dataset->GetProjectionRef()).exportToPrettyWkt(&this->p_proj);
 		if (ogrerr) {
-			throw std::runtime_error("error getting crs from dataset.");
+			throw std::runtime_error("error getting projection as WKT from dataset.");
 		}
 	}
 	
-	return std::string(this->p_crs);
+	return std::string(this->p_proj);
+}
+
+/******************************************************************************
+				    getCRS()
+******************************************************************************/
+std::string GDALRasterWrapper::getCRS() {
+	return this->crs;
 }
 
 /******************************************************************************

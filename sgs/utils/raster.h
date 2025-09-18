@@ -56,7 +56,8 @@ class GDALRasterWrapper {
 	int displayRasterHeight = -1;
 
 	double geotransform[6];
-	char *p_crs = nullptr;
+	std::string crs = "";
+	char *p_proj = nullptr;
 
 	/**
 	 * Internal function used to read raster band data.
@@ -175,11 +176,17 @@ class GDALRasterWrapper {
 	 */
 	std::string getDriver();
 
-	/**
-	 * Getter method for the coordinate reference system.
+	/* Getter method for the full projection information as json 
+	 * string.
 	 *
-	 * @returns std::string json string of the CRS.
-	 * @throws std::runtime_error if unable to acquire CRS
+	 * @std::string JSON representation of projection information
+	 */
+	std::string getFullProjectionInfo();
+	
+	/**
+	 * Get the CRS name from the OGRSpatialReference object
+	 *
+	 * @returns CRS name
 	 */
 	std::string getCRS();
 
