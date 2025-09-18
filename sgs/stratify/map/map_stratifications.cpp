@@ -128,11 +128,16 @@ GDALRasterWrapper *mapStratifications(
 {
 	GDALAllRegister();
 
-	//define useful variables
 	int height = rasters[0]->getHeight();
 	int width = rasters[0]->getWidth();
 	double *geotransform = rasters[0]->getGeotransform();
-	std::string projection = std::string(rasters[0]->getDataset()->GetProjectionRef());
+	std::string projection = (rasters[0]->getDataset()->GetProjectionRef());
+	if (projection == "") {
+		throw std::runtime_error("could not get projection from the first raster argument.");
+	}
+
+	OGRSpatialReference srs;
+	srs.importFromWkt(projection.c_str());
 
 	for (size_t i = 1; i < rasters.size(); i++) {
 		if (rasters[i]->getHeight() != height) {
@@ -151,6 +156,13 @@ GDALRasterWrapper *mapStratifications(
 				std::string err = "raster with index " + std::to_string(i) + " has a different geotransform from the raster at index 0.";
 				throw std::runtime_error(err);
 			}
+		}
+
+		OGRSpatialReference checkSrs;
+		checkSrs.importFromWkt(rasters[i]->getDataset()->GetProjectionRef());
+		if (!srs.IsSame(&checkSrs)) {
+			std::string err = "raster with index " + std::to_string(i) + " has a different projection from the raster at index 0.";
+			throw std::runtime_error(err);
 		}
 	}
 	

@@ -16,12 +16,25 @@ GDALRasterWrapper *poly(
 	GDALVectorWrapper *p_vector,
 	GDALRasterWrapper *p_raster,
 	size_t numStrata,
+	std::string layerName,
 	std::string query,
 	std::string filename)
 {
 	//step 1: get required info from vector and raster objects
 	GDALDataset *p_vectorDS = p_vector->getDataset();
 	GDALDataset *p_rasterDS = p_raster->getDataset();
+
+	const OGRSpatialReference *p_layerSrs = p_vector->getLayer(layerName)->GetSpatialRef();
+	std::string projection = std::string(p_rasterDS->GetProjectionRef());
+	if (!p_layerSrs) {
+		throw std::runtime_error("vector layer does not have a projection.");
+	}
+	if (projection == "") {
+		throw std::runtime_error("raster does not have a projection.");
+	}
+	if (!OGRSpatialReference(projection.c_str()).IsSame(p_layerSrs)) {
+		throw std::runtime_error("raster and vector projections don't match.");
+	}
 
 	//get required pixel type and size
 	std::vector<GDALDataType> stratBandTypes;
@@ -53,7 +66,7 @@ GDALRasterWrapper *poly(
 	//step 3: set and fill parameters of new in-memory dataset
 	p_dataset->AddBand(type, papszOptions);
 	p_dataset->SetGeoTransform(p_raster->getGeotransform());
-	p_dataset->SetProjection(p_rasterDS->GetProjectionRef());
+	p_dataset->SetProjection(projection.c_str());
 	GDALRasterBand *p_band = p_dataset->GetRasterBand(1);
 	p_band->SetDescription("strata");
 	p_band->SetNoDataValue(-1);

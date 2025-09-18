@@ -89,7 +89,7 @@ class SpatialVector:
             layer_info['ymin'],
             layer_info['ymax']
         ))
-        print("crs: {}".format(layer_info['crs']))
+        if layer_info['crs']: print("crs: {}".format(layer_info['crs']))
         print()
 
     def info(self, 

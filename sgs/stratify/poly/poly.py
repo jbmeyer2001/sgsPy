@@ -90,6 +90,7 @@ def poly(
         vector.cpp_vector,
         raster.cpp_raster,
         num_strata,
+        layer_name,
         sql_query,
         filename
     )
