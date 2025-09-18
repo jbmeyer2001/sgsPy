@@ -88,6 +88,10 @@ def quantiles(
         the creation options as defined by GDAL which will be passed when creating output files
     eps : float
         the epsilon value, controlling the error of stream-processed quantiles
+    
+    Returns
+    --------------------
+    a SpatialRaster object containing stratified raster bands.
     """
 
     if type(num_strata) is list and len(num_strata) < 1:

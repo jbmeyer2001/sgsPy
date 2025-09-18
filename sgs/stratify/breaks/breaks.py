@@ -69,7 +69,12 @@ def breaks(
         the number of threads to use when multithreading large images
     driver_options : dict[]
         the creation options as defined by GDAL which will be passed when creating output files
-        """
+    
+    Returns
+    --------------------
+    a SpatialRaster object containing stratified raster bands.
+
+    """
 
     breaks_dict = {}
     large_raster = False

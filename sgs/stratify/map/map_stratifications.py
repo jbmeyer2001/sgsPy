@@ -43,32 +43,39 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
      - a list of ints of the same length of bands, specifying the exact number of stratum in 
             each of the indexes specified by the bands list.
 
+    the filename parameter specifies an output file name. Right now the only file format
+    accepted is GTiff (.tiff).
+
+    The thread_count parameter specifies the number of threads which this function will
+    utilize in the case where the raster is large an may not fit in memory. If the full
+    raster can fit in memory and does not need to be processed in blocks, this argument
+    will be ignored. The default is 8 threads, although the optimal number will depend
+    significantly on the hardware being used and may be more or less than 8.
+
+    the driver_options parameter is used to specifiy creation options for the output 
+    raster, such as compression. See options fro GTiff driver here:
+    https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
+    The keys in the driver_options dict must be strings, the values are converted to
+    string. THe options must be valid for the driver corresponding to the filename,
+    and if filename is not given they must be valid for the GTiff format, as that
+    is the format used to store temporary raster files. Note that if this parameter
+    is given, but filename is not and the raster fits entirely in memory, the 
+    driver_options parameter will be ignored.
+
     Parameters
     --------------------
     *args : tuple[SpatialRaster, int|list[int]|list[str], int|list[int]]
         tuples specifying raster bands and their number of stratifications
     filename : str
         filename to write to or '' if not file should be written
-    Raises
+    thread_count : int
+        the number of threads to use when multithreading large images
+    driver_options :
+        the creation options as defined by GDAL which will be passed when creating output files
+
+    Returns
     --------------------
-    TypeError
-        if one of bands or num_stratum is a list but the other is not
-    ValueError
-        if bands and num_stratum are both lists, but have different lengths
-    ValueError
-        if bands/num_stratum lists have more elements than the raster
-    ValueError
-        if a string within the bands argument does not exist in the raster
-    ValueError
-        if an int within the bands argument does not exist in the raster
-    ValueError
-        if the height or width of all rasters doesn't match
-    ValueError
-        if the maximum strata value would result in an integer overflow error
-    RuntimeError (C++)
-        if raster pixel type is not GDT_Float32
-    RuntimeError (C++)
-        if the number of mappings is large enought that it would cause integer overflow
+    a SpatialRaster object containing a band of mapped stratifications from the input raster(s).
     """
 
     raster_list = []
