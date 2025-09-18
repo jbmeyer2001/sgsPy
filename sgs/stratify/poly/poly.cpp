@@ -12,20 +12,32 @@
 #include "vector.h"
 #include "gdal_utils.h"
 
+/**
+ *
+ */
 GDALRasterWrapper *poly(
 	GDALVectorWrapper *p_vector,
 	GDALRasterWrapper *p_raster,
 	size_t numStrata,
 	std::string layerName,
 	std::string query,
-	std::string filename)
+	std::string filename,
+	bool largeRaster,
+	std::string tempFolder,
+	std::map<std::string, std::string> driverOptions)
 {
+	GDALAllRegister();
+
 	//step 1: get required info from vector and raster objects
 	GDALDataset *p_vectorDS = p_vector->getDataset();
 	GDALDataset *p_rasterDS = p_raster->getDataset();
+	
+	int width = p_raster->getWidth();
+	int height = p_raster->getHeight();
+	double *geotransform = p_raster->getGeotransform();
+	std::string projection = std::string(p_rasterDS->GetProjectionRef());
 
 	const OGRSpatialReference *p_layerSrs = p_vector->getLayer(layerName)->GetSpatialRef();
-	std::string projection = std::string(p_rasterDS->GetProjectionRef());
 	if (!p_layerSrs) {
 		throw std::runtime_error("vector layer does not have a projection.");
 	}
@@ -36,42 +48,39 @@ GDALRasterWrapper *poly(
 		throw std::runtime_error("raster and vector projections don't match.");
 	}
 
-	//get required pixel type and size
-	std::vector<GDALDataType> stratBandTypes;
-	size_t size = setStratBandType(numStrata, stratBandTypes);
-	GDALDataType type = stratBandTypes.back();
-
-	//step 2: create in-memory dataset
-	GDALAllRegister();
-	GDALDataset *p_dataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
-		"",
-		p_raster->getWidth(),
-		p_raster->getHeight(),
-		0,
-		type,
-		nullptr
-	);
-
-	//allocate new raster layer
-	void *datapointer = VSIMalloc3(
-		p_raster->getWidth(),
-		p_raster->getHeight(),
-		size
-	);
+	bool isMEMDataset = !largeRaster && filename == "";
+	bool isVRTDataset = largeRaster && filename == "";
 	
-	//add band to new in-memory raster dataset
-	char **papszOptions = nullptr;
-	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", std::to_string((size_t)datapointer).c_str());
+	RasterBandMetaData band;
+	setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
+	band.name = "strata";
+	std::vector<VRTBandDatasetInfo> VRTBandInfo(isVRTDataset);
 
-	//step 3: set and fill parameters of new in-memory dataset
-	p_dataset->AddBand(type, papszOptions);
-	p_dataset->SetGeoTransform(p_raster->getGeotransform());
-	p_dataset->SetProjection(projection.c_str());
-	GDALRasterBand *p_band = p_dataset->GetRasterBand(1);
-	p_band->SetDescription("strata");
-	p_band->SetNoDataValue(-1);
-	p_band->Fill(-1);
+	//step 2: create dataset
+	GDALDataset *p_dataset = nullptr;
+	if (isMEMDataset) {
+		p_dataset = createVirtualDataset("MEM", height, width, geotransform, projection);
+	       	addBandToMEMDataset(p_dataset, band);
+	}
+	else if (isVRTDataset) {
+		p_dataset = createVirtualDataset("VRT", height, width, geotransform, projection);
+		createVRTBandDataset(p_dataset, band, tempFolder, band.name, VRTBandInfo, driverOptions); 
+	}
+	else {
+		std::string driver;
+		std::filesystem::path filepath = filename;
+		std::string extension = filepath.extension().string();
 
+		if (extension == ".tif") {
+			driver = "Gtiff";
+		}
+		else {
+			throw std::runtime_error("sgs only supports .tif files right now");
+		}
+
+		p_dataset = createDataset(filename, driver, width, height, geotransform, projection, &band, 1, false, driverOptions);
+	}
+	
 	//step 4: generate options list for GDALRasterize()
 	char ** argv = nullptr;
 
@@ -92,7 +101,7 @@ GDALRasterWrapper *poly(
 	//step 5: rasterize vector to in-memory dataset
 	GDALRasterize(
 		nullptr,
-		p_dataset,
+		!isVRTDataset ? p_dataset : VRTBandInfo[0].p_dataset,
 		p_vectorDS,
 		options,
 		nullptr
@@ -101,16 +110,16 @@ GDALRasterWrapper *poly(
 	//step 6: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
 	
-	//step 7: create new GDALRasterWrapper using dataset pointer
-	//this dynamically allocated object will be cleaned up by python
-	GDALRasterWrapper* stratRaster = new GDALRasterWrapper(p_dataset, {datapointer});
-
-	//step 8: write raster if desired
-	if (filename != "") {
-		stratRaster->write(filename);
+	if (isVRTDataset) {
+		GDALClose(VRTBandInfo[0].p_dataset);
+		addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	
 	}
 
-	return stratRaster;
+	//step 7: create new GDALRasterWrapper using dataset pointer
+	//this dynamically allocated object will be cleaned up by python
+	return isMEMDataset ?
+		new GDALRasterWrapper(p_dataset, {datapointer}) :
+		new GDALRasterWrapper(p_dataset);
 }
 
 PYBIND11_MODULE(poly, m) {
