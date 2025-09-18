@@ -185,6 +185,7 @@ processPixel(
  * @param int threads
  * @param std::string tempFolder
  * @param std::map<std::string, std::string> driverOptions
+ * @rturns GDALRasterWrapper *pointer to newly created stratified raster
  *
  * p_raster: 
  * 	a pointer to the input raster.

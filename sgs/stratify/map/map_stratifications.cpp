@@ -14,26 +14,107 @@
 #include "helper.h"
 
 /**
- * This function maps multiple stratifications.
+ * This function maps multiple already stratified rasters into a single 
+ * stratificication. Every unique combination of input band stratifications
+ * corresponds to a single value in the mapped stratification.
  *
  * Based on the number of bands passed, and the number of stratifications
- * per band, multipliers are determined such that every unique combination
- * of stratifications within the passed stratification rasters
- * corrosponds to a single stratification in the output mapping.
+ * per band, multipliers are determined that will be multiplied by
+ * each input band value to get the output band value.
  *
  * For example, if there were 3 stratification rasters passed, each with 5
  * possible stratum, there would be 5^3 or 125 possible mapped stratifications.
  *
- * A new GDALRasterWrappper object is created and initialized using the
- * mapped raster, and the mapped raster is written to disk if a filename is given.
+ * This function can be thought of in three different sections: the setup,
+ * the processing, and the finish/return. During the setup, metadata is
+ * acquired for the input raster, and an output datastet is created. During
+ * the procssing the input raster is iterated though, either by blocks
+ * or with the entire raster in memory, the strata are determined for each
+ * pixel and then written to the output dataset. During the finish/return step,
+ * a GDALRasterWrapper object is created using the output dataset.
  *
- * NOTE: stratifications have the data type 'float' in order to accomodate nan values
  *
- * @param std::vector<GDALRasterWrapper *> rasters list
- * @param std::vector<std::vector<int>> bands list
- * @param std::vector<std::vector<float>> number of stratums list
- * @param std::string filename the filename to write to or "" if file shouldn't be written
+ * SETUP:
+ * the data structures holding metadata are initialized and it is determined
+ * whether the raster is a virtual raster or not, and if it is a virtual
+ * raster whether it is fully in-memory or whether it must be stored on disk.
+ * 
+ * If the user provides an output filename, the dataset will not be a virtual dataset
+ * instead it will be associated with the filename. If the user does not provide
+ * an output filename then a virtual dataset driver will be used. In the case
+ * of a large raster (whether or not the raster is large enough for this is calculated 
+ * and passed by Python side of application), the dataset will be VRT. If the
+ * package is comfortable fitting the entire raster in memory an in-memory
+ * dataset will be used.
+ * 
+ * The input raster bands are iterated through, metadata is stored on them, and
+ * bands are created for the output dataset. In the case of a VRT dataset, each
+ * band is a complete dataset itself which must be added after it has been written to. 
+ * In the case of a MEM dataset, the bands must be aquired from the input raster. Both MEM
+ * and VRT support the AddBand function, and support bands with different types,
+ * so the bands are dynamically added while iterating through the input raster
+ * bands. Non virtual formats require the data types to be known at dataset initialization
+ * and don't support the AddBand function, so the dataset must be created
+ * after iterating through the input bands.
+ *
+ *
+ * PROCESSING:
+ * the processing section iterates through every pixel in every input band, and 
+ * calculates/writes the strata to the mapped output band.
+ *
+ * There are two different cases -- whether the entire raster is stored in memory,
+ * or whether it must be iterated though by blocks.
+ *
+ * If the raster is large, it is processed in blocks and splits the raster
+ * into groups of blocks to be processed by multiple threads. If the raster
+ * bands are in-memory, the entire raster is processed at once.For the large rasters, 
+ * the processing starts out by splitting the raster into chunks depending on 
+ * the number of threads. A thread is then created for each chunk. 
+ * Within each thread, the blocks within it's designated chunk are iterated 
+ * through and first read from the input bands, multiplied by their corresponding,
+ * multipliers, then the product is written to the output band.
+ *
+ *
+ * CLEANUP:
+ * If the output dataset is a VRT dataset, the datasets which represent
+ * its band (which has not yet been added as a band) must be added
+ * as bands now that they are populated with data and are thus allowed
+ * to be added. 
+ *
+ * If the dataset output band is fully in memory, it is moved to 
+ * a vector from its metadata objects to be passed as a parameter
+ * to the GDALRasterWrapper constructor (or not if the bands aren't in
+ * memory). This GDALRasterWrapper is then returned.
+ *
+ *
+ * @param std::vector<GDALRasterWrapper *> rasters
+ * @param std::vector<std::vector<int>> bands
+ * @param std::vector<std::vector<float>> strataCounts
+ * @param std::string filename
+ * @param bool largeRaster
+ * @param in threadCount
+ * @param std::string tempFolder
+ * @param std::map<std::string, std::string> driverOptions,
  * @returns GDALRasterWrapper *pointer to newly created raster mapping
+ *
+ * rasters:
+ * 	a vector of pointers to input rasters.
+ * bands:
+ * 	a vector of band indexes to the input rasters.
+ * strataCounts:
+ *	a vector of vectrors, containing the number of strata in each band.
+ * filename:
+ *	the output filename, or "" if not to write to an output file.
+ * largeRaster:
+ *	whether or not the entire raster band should be allocated
+ *	into memory at once.
+ * threadCount:
+ *	the number of threads to process with, only used if largeRaster
+ *	is true.
+ * tempFolder:
+ *	the temporary folder to put VRT bands into.
+ * driverOptions:
+ * 	extra user-defined driver options such as compression.
  */
 GDALRasterWrapper *mapStratifications(
 	std::vector<GDALRasterWrapper *> rasters,
@@ -41,7 +122,7 @@ GDALRasterWrapper *mapStratifications(
 	std::vector<std::vector<int>> strataCounts,
 	std::string filename,
 	bool largeRaster,
-	int threads,
+	int threadCount,
 	std::string tempFolder,
 	std::map<std::string, std::string> driverOptions)
 {
@@ -173,15 +254,14 @@ GDALRasterWrapper *mapStratifications(
 
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;
-		boost::asio::thread_pool pool(1); //TODO switch back
-		//boost::asio::thread_pool pool(threads);
+		boost::asio::thread_pool pool(threadCount);
 
 		int xBlockSize = stratBands[0].xBlockSize;
 		int yBlockSize = stratBands[0].yBlockSize;
 
 		int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 		int yBlocks = (height + yBlockSize - 1) / yBlockSize;
-		int chunkSize = yBlocks / threads;
+		int chunkSize = yBlocks / threadCount;
 
 		for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 			int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);

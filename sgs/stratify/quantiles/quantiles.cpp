@@ -668,6 +668,35 @@ processPixel(
  * @param int threadCount
  * @param std::map<std::string, std::string> driverOptions,
  * @param double eps
+ * @returns GDALRasterWrapper *pointer to newly created stratified raster
+ *
+ * p_raster:
+ * 	a pointer to the input raster.
+ * userProbababilities:
+ * 	a map from int to std::vector<double> which maps
+ * 	the input raster bands to a vector of quantile
+ * 	probabilities.
+ * map:
+ * 	a specification of whether to map all of teh output
+ * 	bands to an additional output band.
+ * filename:
+ * 	the output filename, or "" if not to write to an
+ * 	output file.
+ * tempFolder:
+ * 	the temporary folder to put VRT bands into.
+ * largeRaster:
+ * 	whether or not the entire raster band should be
+ * 	allocated to memory at once.
+ * threadCount:
+ * 	the number of threads to process with, only used
+ * 	if largeRaster is true.
+ * driverOptions:
+ * 	extra user-defined driver options such as compresison.
+ * eps:
+ * 	a specification of the epsilon value for the quantile
+ * 	streaming algorithm.
+ * 	https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
+ * 	https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
  */
 GDALRasterWrapper *quantiles(
 	GDALRasterWrapper *p_raster,
