@@ -64,7 +64,7 @@ class SpatialVector:
         else:
             self.cpp_vector = image
 
-        self.layers = self.cpp_vector.get_layer_names() 
+        self.layers = self.cpp_vector.get_layer_names()
 
     def print_info(self, 
                    layer_name: str, 
@@ -89,6 +89,7 @@ class SpatialVector:
             layer_info['ymin'],
             layer_info['ymax']
         ))
+        print("crs: {}".format(layer_info['crs']))
         print()
 
     def info(self, 

@@ -1,5 +1,6 @@
 /******************************************************************************
  *
+ *
  * Project: sgs
  * Purpose: GDALDataset wrapper for vector operations
  * Author: Joseph Meyer
@@ -31,7 +32,7 @@ GDALVectorWrapper::GDALVectorWrapper(GDALDataset *p_dataset) {
 }
 
 /******************************************************************************
-			      GDALVectorWrapper()
+				  getDataset()
 ******************************************************************************/
 GDALDataset *GDALVectorWrapper::getDataset() {
 	return this->p_dataset.get();
@@ -68,6 +69,7 @@ GDALVectorWrapper::getLayerInfo(std::string layerName) {
 	retval.emplace("xmax", std::to_string(extent->MaxX));
 	retval.emplace("ymin", std::to_string(extent->MinY));
 	retval.emplace("ymax", std::to_string(extent->MaxY));
+	retval.emplace("crs", std::string(p_layer->GetSpatialRef()->GetName()));
 	
 	return retval;
 }
