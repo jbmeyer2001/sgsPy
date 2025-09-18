@@ -176,10 +176,9 @@ class GDALRasterWrapper {
 	 */
 	std::string getDriver();
 
-	/* Getter method for the full projection information as json 
-	 * string.
+	/* Getter method for the full projection information as wkt.
 	 *
-	 * @std::string JSON representation of projection information
+	 * @param std::string projection as wkt
 	 */
 	std::string getFullProjectionInfo();
 	
