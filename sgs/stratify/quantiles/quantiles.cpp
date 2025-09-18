@@ -15,8 +15,33 @@
 #include <boost/asio/post.hpp>
 #include <mkl.h>
 
-/*
+/* This helper function is used to calculate the quantiles of a
+ * raster which is entirely in memory. This is the single
+ * precision version of this function, which is used for all 
+ * raster data types except double precision floating point 
+ * values.
  *
+ * Both the quantile probabilities, and the quantiles themselves
+ * are double precision, however, so they must be converted
+ * before and after execution to and from single precision
+ * floating point.
+ *
+ * Intel's MKL (Math Kernel Library) package is used to calculate the quantiles.
+ * The MKL package does not account for nan values, 
+ * so the data must be filtered first, leaving only the data 
+ * pixel values left.
+ *
+ * the following MKL VSL (Vector Statistics Library) functions
+ * are used to calculate the quantiles:
+ * vslsSSCreateTask()
+ * vslsSSEditQuantiles()
+ * vslsSSCompute()
+ * vslSSDeleteTask()
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param RasterBandMetaData& band
+ * @param std::vector<double>& probabilities
+ * @param std::vector<double>& quantiles
  */
 void calcSPQuantiles(
 	GDALRasterWrapper *p_raster,
@@ -71,8 +96,26 @@ void calcSPQuantiles(
 	}
 }
 
-/*
+/* This helper function is used to calculate the quantiles of a
+ * raster which is entirely in memory. This is the double
+ * precision version of this function.
  *
+ * Intel's MKL (Math Kernel Library) package is used to calculate the quantiles.
+ * The MKL package does not account for nan values, 
+ * so the data must be filtered first, leaving only the data 
+ * pixel values left.
+ *
+ * the following MKL VSL (Vector Statistics Library) functions
+ * are used to calculate the quantiles:
+ * vsldSSCreateTask()
+ * vsldSSEditQuantiles()
+ * vsldSSCompute()
+ * vslSSDeleteTask()
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param RasterBandMetaData& band
+ * @param std::vector<double>& probabilities
+ * @param std::vector<double>& quantiles
  */
 void calcDPQuantiles(
 	GDALRasterWrapper *p_raster,
@@ -113,8 +156,68 @@ void calcDPQuantiles(
 	status = vslSSDeleteTask(&task);
 }
 
-/**
+/* This helper function is used to calculate the quantiles of a
+ * large raster which is more efficient to calculate in batches
+ * rather than trying to allocate into memory. This is the single
+ * precision version of this function, which is used for all 
+ * raster data types except double precision floating point 
+ * values.
  *
+ * Both the quantile probabilities, and the quantiles themselves
+ * are double precision, however, so they must be converted
+ * before and after execution to and from single precision
+ * floating point.
+ *
+ * Intel's MKL (Math Kernel Library) package is used to calculate the quantiles.
+ * The MKL package does not account for nan values, 
+ * so the data must be filtered first, leaving only the data 
+ * pixel values left.
+ *
+ * the following MKL VSL (Vector Statistics Library) functions
+ * are used to calculate the quantiles:
+ * vslsSSCreateTask()
+ * vslsSSEditStreamQuantiles()
+ * vslsSSCompute()
+ * vslSSDeleteTask()
+ *
+ * CreateTask is called at the start of execution, and
+ * VSLsSSEditStreamQuantiles() is called after the first
+ * set of values has been written into the buffer. It was 
+ * found that calling this function before resulted in 
+ * incorrect values, although the funciton still only
+ * has to be called once. The Compute function is called many
+ * times, to continuously update the quantiles across batches.
+ * The fast calculation method is used, which means afterwards
+ * the Compute funciton must be called again with the normal
+ * method and an observable count of 0 to get the final quantile
+ * values. Quantile streaming algorithms are not exact, since the 
+ * entire raster must be in memory to get the most precise
+ * possible values. However, the amount of error can be controlled
+ * to a specific epsilon (eps) value.
+ *
+ * The Quantile streaming method is the method introduced by 
+ * Zhang et al. and utilized by MKL:
+ * https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
+ * https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
+ *
+ * Due to the fact that large raster processing in batches is
+ * multi-threaded in SGS, a condition variable (cv) is used to 
+ * ensure a thread which would be using the calculated quantiles
+ * doesn't begin processing or writing any data before the quantiles
+ * are finalized. The shared resource is a boolean representing the
+ * band which is set to true by this thread once the quantiles are
+ * calculated. Any number of processing threads may be waiting on 
+ * the quantiles of this band to be calculated, so notify_all is 
+ * called on the cv to wake those threads up.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param RasterBandMetaData& band
+ * @param std::vector<double>& probabilities
+ * @param std::vector<double>& quantiles
+ * @param std::mutex& mutex
+ * @param std::condition_variable& cdv
+ * @param bool& calculated
+ * @param double eps
  */
 void batchCalcSPQuantiles(
 	GDALRasterWrapper *p_raster, 
@@ -209,28 +312,71 @@ void batchCalcSPQuantiles(
 		quantiles[i] = static_cast<double>(spQuantiles[i]);
 	}
 
-	std::cout << "quantiles are:" << std::endl;
-	for (size_t i = 0; i < quantiles.size(); i++) {
-		std::cout << quantiles[i] << std::endl;
-	}
-
 	VSIFree(p_buffer);
 	VSIFree(p_filtered);
 
-	std::cout << "in quantiles thread" << std::endl;
-	std::cout << "locking mutex" << std::endl;
 	mutex.lock();
-	std::cout << "setting calculated to true, calculated at memory location: " << &calculated << std::endl;
 	calculated = true;
-	std::cout << "unlocking mutex" << std::endl;
 	mutex.unlock();
-	std::cout << "notifying all on the cv" << std::endl;
 	cv.notify_all();
 }
 
 
-/**
+/* This helper function is used to calculate the quantiles of a
+ * large raster which is more efficient to calculate in batches
+ * rather than trying to allocate into memory. This is the double
+ * precision version of this function.
  *
+ * Intel's MKL (Math Kernel Library) package is used to calculate the quantiles.
+ * The MKL package does not account for nan values, 
+ * so the data must be filtered first, leaving only the data 
+ * pixel values left.
+ *
+ * the following MKL VSL (Vector Statistics Library) functions
+ * are used to calculate the quantiles:
+ * vsldSSCreateTask()
+ * vsldSSEditStreamQuantiles()
+ * vsldSSCompute()
+ * vslSSDeleteTask()
+ *
+ * CreateTask is called at the start of execution, and
+ * VSLsSSEditStreamQuantiles() is called after the first
+ * set of values has been written into the buffer. It was 
+ * found that calling this function before resulted in 
+ * incorrect values, although the funciton still only
+ * has to be called once. The Compute function is called many
+ * times, to continuously update the quantiles across batches.
+ * The fast calculation method is used, which means afterwards
+ * the Compute funciton must be called again with the normal
+ * method and an observable count of 0 to get the final quantile
+ * values. Quantile streaming algorithms are not exact, since the 
+ * entire raster must be in memory to get the most precise
+ * possible values. However, the amount of error can be controlled
+ * to a specific epsilon (eps) value.
+ *
+ * The Quantile streaming method is the method introduced by 
+ * Zhang et al. and utilized by MKL:
+ * https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
+ * https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
+ *
+ * Due to the fact that large raster processing in batches is
+ * multi-threaded in SGS, a condition variable (cv) is used to 
+ * ensure a thread which would be using the calculated quantiles
+ * doesn't begin processing or writing any data before the quantiles
+ * are finalized. The shared resource is a boolean representing the
+ * band which is set to true by this thread once the quantiles are
+ * calculated. Any number of processing threads may be waiting on 
+ * the quantiles of this band to be calculated, so notify_all is 
+ * called on the cv to wake those threads up.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param RasterBandMetaData& band
+ * @param std::vector<double>& probabilities
+ * @param std::vector<double>& quantiles
+ * @param std::mutex& mutex
+ * @param std::condition_variable& cdv
+ * @param bool& calculated
+ * @param double eps
  */
 void batchCalcDPQuantiles(
 	GDALRasterWrapper *p_raster, 
@@ -309,11 +455,6 @@ void batchCalcDPQuantiles(
 	n = 0;
 	vsldSSCompute(task, VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW);	
 	status = vslSSDeleteTask(&task);
-
-	std::cout << "quantiles are:" << std::endl;
-	for (size_t i = 0; i < quantiles.size(); i++) {
-		std::cout << quantiles[i] << std::endl;
-	}
 
 	mutex.lock();
 	calculated = true;
@@ -416,33 +557,117 @@ processPixel(
  * and the user may pass the map variable to combine the stratification of
  * the given raster bands.
  *
- * The raster bands are initially iterated through, and vectors are 
- * creatied containing their value, index in the original raster, and 
- * resulting stratum (not set). The vectors are sorted by value, and
- * their stratum is set according to which quantile they are in.
+ * The function can be thought of in four different sections: the setup,
+ * the quantiles calculation, the processing, and the finish/return. During
+ * the setup, metadata is acquired for the input raster, and an output dataset
+ * is created which depends on user-given parameters and the input raster.
+ * During the quantiles calculation, Intel's Math Kernel Library (MKL) is
+ * used to calculate quantiles either with the entire raster in memory
+ * or in batches. During the processing step the raster is iterated through,
+ * either by blocks or with the entire raster in memory, the strata are determined
+ * for each pixel and then written to the output dataset. During the finish/return 
+ * step, a GDALRasterWrapper object is created using the output dataset.
  *
- * The vectors are then re-sorted by index -- in order to take advantage
- * of the CPU cache and spatial locality for large images -- before being
- * iterated through (now sequentially by index) and having their stratum
- * written to the output raster. 
  *
- * An additional band is added to the output raster if map is specified,
- * and multipliers are determined, so that every unique combination of 
- * stratifications of the normal raster bands corresponds to a single
- * stratification of the mapped raster band. For example, if there were
- * 3 normal raster bands each with 5 possible stratifications, there
- * would be 5^3 or 125 possible mapped stratifications.
+ * SETUP:
+ * the data structures holding metadata are initialized and it is determined
+ * whether the raster is a virtual raster or not, and if it is a virtual raster
+ * whether it is fully in-memory or whether it must be stored on disk.
  *
- * A new GDALRasterWrapper object is created and initialized using
- * the stratifications as raster bands, and the raster is written to disk
- * if a filename is given.
+ * If the user provides an output filename, the dataset will not be a virtual
+ * dataset instead it will be associated with the filename. If the user does
+ * not provide an output filename then a virtual dataset driver will be used.
+ * In the case of a large raster (whether or not the raster is large enough for
+ * this is calculated and passed by hte Python side of the application), the dataset
+ * will be VRT. If the package is comfortable fitting the entire raster in memory,
+ * an in-memory dataset will be used.
  *
- * NOTE: stratifications have the data type 'float' to accomodate nan values
+ * The input raster bands are iterated through, metadata is stored on them,
+ * and bands are created for the output dataset. In the case of a VRT dataset,
+ * each band is a complete dataset itself which must be added after it has
+ * been written to. In the case of a MEM dataset, the bands must be acquired
+ * from the input raster. Both MEM and VRT support the addBand function,
+ * and support bands of different types. Thus, the bands are added dynamically
+ * while iterating through input raster bands. Non virtual formats require the
+ * data types to be known at dataset initialization and don't support the
+ * addBand function, so the dataset must be created after iterating through
+ * the input bands.
  *
- * @param GDALRasterWrapper * a pointer to the raster image to stratify
- * @param std::map<int, std::vector<double>> band mapped to user-defined probs
- * @param bool map whether to add a mapped stratification
- * @param std::string filename the filename to write to (if desired)
+ *
+ * QUANTILES CALCULATION:
+ * There are four different functions which do the quantiles calculation.
+ * Different functions are used depending on whether the raster should be
+ * batch processed, or whether it is entirely in memory. Further, there
+ * are different functions for single precision (float) or double precision
+ * (double) floating point values. Intels Math Kernel Library (MKL) is used
+ * to calculate the quantiles.
+ *
+ * For single precision vs. double precision, the only case where double
+ * precision would be used is if the raster data type is double. the
+ * functions within the MKL library are slightly different for double 
+ * and single precision. Further, the input and output vectors representing
+ * quantile probabilities and the quantiles themselves are vectors of
+ * double, so in the case where single precision is used, intermediate
+ * versions of the data must be written to and read from at the beginning
+ * and end of the function. The reasing why double precision is not used
+ * in every case, is because the same amount of values of single precision
+ * take up half the ammount of memory as their double precision counterparts.
+ * As a result, the memory usage due to intermediate stored values should
+ * be significantly less for single precision floating point values.
+ *
+ * For batch processing vs non-batch processing, slightly different algorithms
+ * are used. The batch processing algorithm is a quantile streaming algorithm
+ * within MKL which creates a fast and accurate approximation of the quantiles
+ * without requiring the whole raster to be in memory at once. More information
+ * is contained in the documentation for those particular functions.
+ *
+ * PROCESSING:
+ * the processing section iterated through ever pixel in every input band,
+ * and calculates/writes the strata to the corresponding output band.
+ *
+ * There are four different cases dealing with whether or not the entire
+ * raster band is allocated in memory (the largeRaster bariable is false),
+ * and whether or not the values of each band should be mapped to an extra
+ * output raster band.
+ *
+ * If the raster is large, it is porcessed in blocks and split into
+ * groups of blocks to be processed by multiple threads. If the raster 
+ * bands are in-memory, the entire raster is processed at once by a 
+ * single thread. The mapped rasters store information on an extra
+ * output raster band, the output values of which are determined
+ * as a function of all other output raster bands. The multipliers
+ * vector stores the information for this.
+ *
+ * For the large rasters, the processing starts out by splitting the
+ * raster into chunks depending on the number of threads. A thread is
+ * then ctreated for each chunk. Within each thread, the blocks within 
+ * it's designated chunk are iterated through and first read from the
+ * input bands, processed, then written to the output bands. In the
+ * case of a mapped raster all of the bands are iterated through
+ * alongside achother so that the intermediate mapping calculations
+ * don't have to be written then read again. In the case of a non
+ * mapped raster, each band is processed sequentially. 
+ *
+ * CLEANUP:
+ * If the output dataset is a VRT dataset, the dataset which represent
+ * its bands (which have not yet been added as bands) must be added as
+ * bands now that they are populated with data and are thus allowed
+ * to be added.
+ *
+ * If the dataset output bands are fully in memory, they are moved to a
+ * vector from their metadata objects to be passed as a parameter to the
+ * GDALRasterWrapper constructor (or not if the bands aren't in memory). 
+ * This GDALRasterWrapper is then returned.
+ * 
+ * @param GDALRasterWrapper *p_raster
+ * @param std::map<int, std::vector<double>> userProbabilities
+ * @param bool map 
+ * @param std::string filename
+ * @param std::string tempFolder,
+ * @param bool largeRaster,
+ * @param int threadCount
+ * @param std::map<std::string, std::string> driverOptions,
+ * @param double eps
  */
 GDALRasterWrapper *quantiles(
 	GDALRasterWrapper *p_raster,
@@ -496,6 +721,7 @@ GDALRasterWrapper *quantiles(
 		}
 	}
 
+	//allocate, read, and initialize raster data and breaks information
 	GDALDataType stratPixelType = GDT_Int8;
 	size_t stratPixelSize = 1;
 	size_t band = 0;
@@ -513,8 +739,10 @@ GDALRasterWrapper *quantiles(
 		p_dataBand->p_mutex = &dataBandMutex;
 		p_band->GetBlockSize(&p_dataBand->xBlockSize, &p_dataBand->yBlockSize);
 
+		//add probabilities
 		probabilities.push_back(val);	
 
+		//update metadata of new strat raster
 		size_t maxStrata = val.size() + 1;
 		setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
 		p_stratBand->name = "strat_" + bandNames[key];
@@ -539,9 +767,10 @@ GDALRasterWrapper *quantiles(
 		band++;
 	}
 
-	//step 3 set strat multipliers for mapped stratum raster if required
+	//set multipliers if mapped stratification
 	std::vector<size_t> multipliers(probabilities.size(), 1);
 	if (map) {
+		//determine the stratification band index multiplier for the mapped band
 		for (int i = 0; i < bandCount - 1; i++) {
 			multipliers[i + 1] = multipliers[i] * (probabilities[i].size() + 1);
 		}
@@ -570,7 +799,7 @@ GDALRasterWrapper *quantiles(
 		}
 	}
 
-		
+	//create full non-virtual dataset now that we have all required band information
 	if (!isMEMDataset && !isVRTDataset) {
 		bool useTiles = stratBands[0].xBlockSize != width &&
 				stratBands[0].yBlockSize != height;
@@ -595,21 +824,17 @@ GDALRasterWrapper *quantiles(
 		);
 	}
 
-	//step 4 calculate the quantiles for each raster band
 	std::vector<std::vector<double>> quantiles(probabilities.size());
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;
 		boost::asio::thread_pool pool(threadCount); 
 	
-		//if mapping only use one mutex/cv because every quantiles calculation thread needs to be able to
-		//wake up every processing/writing thread
+		//initialize synchronization variables
 		std::vector<std::mutex> mutexes(map ? 1 : bandCount);
 		std::vector<std::condition_variable> cvs(map ? 1 : bandCount);
-		//use bool * rather than vector of bool because bitmask means we can't have
-		//a reference to a single bool value
 		bool *quantilesCalculated = reinterpret_cast<bool *>(VSIMalloc2(bandCount, sizeof(bool)));
-		std::cout << "calculated starting location: " << quantilesCalculated << std::endl;
 
+		//call batch processing quantiles function depending on data type
 		for (int i = 0; i < bandCount; i++) {
 			RasterBandMetaData band = dataBands[i];
 			quantiles[i].resize(probabilities[i].size());
@@ -640,7 +865,11 @@ GDALRasterWrapper *quantiles(
 			}
 		}
 
+		//iterate through all pixels and update the stratified raster bands
 		if (map) {
+
+			//NOTE: all processing threads in the case of a mapped raster must wait
+			//until quantiles have been calculated for every band.
 			std::unique_lock lock(mutexes[0]);
 			bool allBandsQuantilesCalculated = true;
 			for (int i = 0; i < bandCount; i++) {
@@ -648,15 +877,12 @@ GDALRasterWrapper *quantiles(
 			}
 
 			while (!allBandsQuantilesCalculated) {
-				std::cout << "calling cv wait at a cv located at " << &cvs[0] << std::endl;
 				cvs[0].wait(lock);
-
 				allBandsQuantilesCalculated = true;
 				for (int i = 0; i < bandCount; i++) {
 					allBandsQuantilesCalculated &= quantilesCalculated[i];
 				}
 			}
-			std::cout << "OUT OF WAIT!!" << std::endl;
 
 			//use the first raster band to determine block size
 			int xBlockSize = dataBands[0].xBlockSize;
@@ -681,7 +907,6 @@ GDALRasterWrapper *quantiles(
 					&quantiles,
 					&multipliers
 				] {			
-					std::cout << "HERE IN A WRIITNG THREAD" << std::endl;		
 					std::vector<void *> dataBuffers(dataBands.size());
 					std::vector<void *> stratBuffers(stratBands.size());
 					for (size_t band = 0; band < dataBuffers.size(); band++) {
@@ -771,9 +996,7 @@ GDALRasterWrapper *quantiles(
 			}	
 		}
 		else {	
-			std::cout << "in large raster writing else rn" << std::endl;
 			for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
-				std::cout << "band: " << band << std::endl;
 				RasterBandMetaData* p_dataBand = &dataBands[band];
 				RasterBandMetaData* p_stratBand = &stratBands[band];
 
@@ -806,12 +1029,9 @@ GDALRasterWrapper *quantiles(
 					] {
 						std::unique_lock lock(*p_mutex);
 
-						std::cout << "checking calculated at memory location: " << p_calculated << std::endl;
 						if (!(*p_calculated)) {
-							std::cout << "calling cv wait at a cv located at " << p_cv << std::endl;
 							p_cv->wait(lock);
 						}
-						std::cout << "out of wait in processing thread" << std::endl;
 
 						void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
 						void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
@@ -871,6 +1091,7 @@ GDALRasterWrapper *quantiles(
 		pybind11::gil_scoped_release release;
 	}
 	else {
+		//call quantiles calculation fuction depending on type
 		for (int i = 0; i < bandCount; i++) {
 			RasterBandMetaData band = dataBands[i];
 			quantiles[i].resize(probabilities[i].size());

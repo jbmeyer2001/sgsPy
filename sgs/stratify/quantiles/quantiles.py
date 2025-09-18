@@ -39,6 +39,39 @@ def quantiles(
     the form of a dict where the key is the name of a raster band and the value is the 
     quantiles (dict[str, int | list[float]).
 
+    if the map parameter is given, an extra output band will be used which combines
+    all stratifications from the bands used into an extra outpu band. A single
+    value in the mapped output band corresponds to a combination a single combination
+    of values from the previous bands.
+
+    the filename parameter species an output file name. Right now the only file
+    format except is GTiff (.tiff).
+
+    The thread_count parameter specifies the number of threads which this function 
+    will utilize the the case where the raster is large and may not fit in memory. If
+    the full raster can fit in memory and does not need to be processed in blocks, this
+    argument will be ignored. The default is 8 threads, although the optimal number
+    will depend significantly on the hardware being used and may be more or less
+    than 8.
+
+    the driver_options parameter is used to specify creation options for the output
+    raster. See options for the Gtiff driver here: 
+    https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
+    The keys in the driver_options dict must be strings, the values are converted to
+    string. THe options must be valid for the driver corresponding to the filename,
+    and if filename is not given they must be valid for the GTiff format, as that
+    is the format used to store temporary raster files. Note that if this parameter
+    is given, but filename is not and the raster fits entirely in memory, the 
+    driver_options parameter will be ignored.
+
+    the eps parameter is used only if batch processing is used to calculate the quantiles
+    for a raster. Quantile streaming algorithms cannot be perfectly accurate, as this
+    would necessitate having the entire raster in memory at once. A good approximation
+    can be made, and the error is controlled by this epsilon (eps) value.
+    The Quantile streaming method is the method introduced by  Zhang et al. and utilized by MKL:
+        https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
+        https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
+
     Parameters
     --------------------
     rast : SpatialRaster
@@ -49,23 +82,12 @@ def quantiles(
         whether to map the stratifiction of multiple raster bands onto a single band
     filename : str
         filename to write to or ''  if no file should be written
-
-    Raises
-    --------------------
-    ValueError
-        if number of bands required by the format/values of num_strata is inequal to the number of raster bands
-    ValueError
-        if quantiles specified by a list of floats (list[float]) have a maximum over 1
-    ValueError
-        if quantiles specified by a list of floats (list[float]) have a minimum under 0
-    ValueError
-        if maximum strata value would result in an integer overflow error
-    RuntimeError (C++)
-        if the data type of the raster is not accepted
-    RuntimeError (C++)
-        if num_strata is too large to the point where it would result in integer overflow
-    RuntimeError (C++)
-        if the number of strata required by mapping is too large to the point where it would result in integer overflow    
+    thread_count : int
+        the number of threads to use when multithreading large images
+    driver_options : dict[]
+        the creation options as defined by GDAL which will be passed when creating output files
+    eps : float
+        the epsilon value, controlling the error of stream-processed quantiles
     """
 
     if type(num_strata) is list and len(num_strata) < 1:
@@ -145,8 +167,6 @@ def quantiles(
     #error check max value for potential overflow error
     max_mapped_strata = int(map)
     for _, val in probabilities_dict.items():
-        print("PYTHON probabilities list:")
-        print(val)
         strata_count = len(val) + 1
         if strata_count > MAX_STRATA_VAL:
             raise ValueError("one of the quantiles given will cause an integer overflow error because the max strata number is too large.")
