@@ -6,12 +6,20 @@ if WIN
     link_with: [
       raster_lib,
     ],
-    link_args: win_link_args,
-    dependencies: [lib_deps],
+    link_args: [
+      win_link_args, 
+    ],
+    dependencies: [
+      lib_deps
+    ],
     include_directories: [
       inc_dir,
       utils_inc_dir,
       mkl_inc_dir,
+    ],
+    cpp_args: [
+      '-DMKL_ILP64',
+      '-m64',
     ],
     install: true,
   )

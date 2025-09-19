@@ -18,7 +18,7 @@ if WIN
   run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio:x64-windows-static', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11:x64-windows-static', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl:x64-windows', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-windows-static', '--recurse', check:true)
 else #linux
@@ -38,6 +38,7 @@ if WIN
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
   mkl_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib/intel64'
   tbb_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib'
+  mkl_tbb_bin = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/bin' 
 else #linux
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
@@ -95,20 +96,29 @@ if WIN
     'mkl_lapack95_ilp64',
   ]
 
-  tbb_libs = [
-    'tbb12',
-    'tbbbind_2_5',
-    'tbbmalloc',
-    'tbbmalloc_proxy',
-  ]
+  #tbb_libs = [
+  #    ]
+
+  #dlls = [
+  #  'mkl_core.2',
+  #  'mkl_tbb_threadd.2',
+  #  'tbb12',
+  #  'tbbbind_2_5',
+  #  'tbbmalloc',
+  #  'tbbmalloc_proxy',
+  #]
 
   foreach lib : mkl_libs
-    lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir])
+    lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir], static:true)
   endforeach
 
-  foreach lib : tbb_libs
-    lib_deps += cxx.find_library(lib, dirs : [tbb_lib_dir])
-  endforeach
+  #foreach lib : tbb_libs
+  #  lib_deps += cxx.find_library(lib, dirs : [tbb_lib_dir])
+  #endforeach
+
+  #foreach dll : dlls
+  #  lib_deps += cxx.find_library(lib, dirs : [mkl_tbb_bin])
+  #endforeach
 
 else #linux
   python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
