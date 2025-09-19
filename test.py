@@ -16,9 +16,10 @@ import sys
 #end = time.time()
 #print(str(end - start))
 
-rast = sgs.SpatialRaster('/home/jbmeyer/RMF_LiDAR_Metrics/CHM.tif')
+rast = sgs.SpatialRaster('/home/jbmeyer/RMF_LiDAR_Metrics/RMF_DEM1m.tif')
+vect = sgs.SpatialVector('/home/jbmeyer/RMF_vector_files/species.shp')
 start = time.time()
-srast_chm = sgs.stratify.quantiles(rast, 10)
+srast_species_poly = sgs.stratify.poly(rast, vect, attribute='speciesmaj', layer_name='species', features=[0, 1, 2, 3, 4], filename = 'srast_species.tif')
 end = time.time()
 print(str(end - start))
 

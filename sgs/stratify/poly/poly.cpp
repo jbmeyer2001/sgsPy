@@ -53,18 +53,19 @@ GDALRasterWrapper *poly(
 	
 	RasterBandMetaData band;
 	setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
+	p_rasterDS->GetRasterBand(1)->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 	band.name = "strata";
-	std::vector<VRTBandDatasetInfo> VRTBandInfo(isVRTDataset);
+	std::vector<VRTBandDatasetInfo> VRTBandInfo;
 
 	//step 2: create dataset
 	GDALDataset *p_dataset = nullptr;
 	if (isMEMDataset) {
-		p_dataset = createVirtualDataset("MEM", height, width, geotransform, projection);
+		p_dataset = createVirtualDataset("MEM", width, height, geotransform, projection);
 	       	addBandToMEMDataset(p_dataset, band);
 	}
 	else if (isVRTDataset) {
-		p_dataset = createVirtualDataset("VRT", height, width, geotransform, projection);
-		createVRTBandDataset(p_dataset, band, tempFolder, band.name, VRTBandInfo, driverOptions); 
+		p_dataset = createVirtualDataset("VRT", width, height, geotransform, projection);
+		createVRTBandDataset(p_dataset, band, tempFolder, layerName + ".tif", VRTBandInfo, driverOptions); 
 	}
 	else {
 		std::string driver;
@@ -80,7 +81,9 @@ GDALRasterWrapper *poly(
 
 		p_dataset = createDataset(filename, driver, width, height, geotransform, projection, &band, 1, false, driverOptions);
 	}
-	
+
+	band.p_band->Fill(band.nan);
+
 	//step 4: generate options list for GDALRasterize()
 	char ** argv = nullptr;
 
@@ -97,7 +100,6 @@ GDALRasterWrapper *poly(
 	argv = CSLAddString(argv, "SQLITE");	
 
 	GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
-
 	//step 5: rasterize vector to in-memory dataset
 	GDALRasterize(
 		nullptr,
