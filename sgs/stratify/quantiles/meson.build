@@ -11,7 +11,7 @@ if WIN
     include_directories: [
       inc_dir,
       utils_inc_dir,
-      oneDAL_inc_dir,
+      mkl_inc_dir,
     ],
     install: true,
   )
@@ -24,7 +24,6 @@ else
     include_directories: [
       inc_dir,
       utils_inc_dir,
-      oneDAL_inc_dir,
     ],
     objects: [
       #from sgs/utils

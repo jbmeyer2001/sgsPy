@@ -34,8 +34,10 @@ endif
 #define directories
 if WIN
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
+  mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
-  intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib/intel64'
+  mkl_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib/intel64'
+  tbb_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib'
 else #linux
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
@@ -85,32 +87,31 @@ if WIN
     endif
   endforeach
 
+  mkl_libs = [
+    'mkl_blas95_ilp64',
+    'mkl_core_dll',
+    'mkl_intel_ilp64_dll',
+    'mkl_intel_thread_dll',
+    'mkl_lapack95_ilp64',
+  ]
 
-  #the 'tree' command *should* work with both PowerShell and CMD
-  #libs = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows-static/lib/intel64', '/f', '/a', check: true).stdout().strip().split('|')
-  #foreach lib : libs
-  #  lib = lib.strip()
+  tbb_libs = [
+    'tbb12',
+    'tbbbind_2_5',
+    'tbbmalloc',
+    'tbbmalloc_proxy',
+  ]
 
-    #ensure the file is actually a library, since the tree command also searches subdirectories
-    #and there are often files of other types which we don't want
-  #  if lib.endswith('.lib')
+  foreach lib : mkl_libs
+    lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir])
+  endforeach
 
-      #remove 'lib' at beginning of library if it exists
-  #    if lib.startswith('lib')
-  #      lib = lib.replace('lib', '')
-  #    endif
-
-      #get just the lib name and add it to the dependencies
-  #    lib = lib.split('.').get(0)
-  #    lib_deps += cxx.find_library(lib, dirs: lib_dir, static: true)
-   
-  #  endif
-  #endforeach
+  foreach lib : tbb_libs
+    lib_deps += cxx.find_library(lib, dirs : [tbb_lib_dir])
+  endforeach
 
 else #linux
   python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
-  #intel_libs = run_command('find', lib_dir, '-regex', '.*lib.*a', check:true).stdout().split('/n')
-  #message(intel_libs)
 
   #in linux list all of the libs rather than programatically finding them
   #because of multiple definition errors. 

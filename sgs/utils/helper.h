@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <filesystem>
+#include <mutex>
 #include <gdal_priv.h>
 
 #define MAXINT8		127
