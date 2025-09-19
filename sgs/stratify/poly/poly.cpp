@@ -118,7 +118,7 @@ GDALRasterWrapper *poly(
 	//step 7: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python
 	return isMEMDataset ?
-		new GDALRasterWrapper(p_dataset, {datapointer}) :
+		new GDALRasterWrapper(p_dataset, {band.p_buffer}) :
 		new GDALRasterWrapper(p_dataset);
 }
 
