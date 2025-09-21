@@ -18,6 +18,14 @@
 #define MAXINT16	32767
 
 /**
+ *
+ */
+struct Index {
+	int x = -1;
+	int y = -1;
+}
+
+/**
  * The RasterBandMetaData struct stores information
  * on a particular raster band. It stores:
  *
@@ -55,6 +63,12 @@ struct RasterBandMetaData {
 	int yBlockSize = -1;
 	std::mutex *p_mutex = nullptr;
 };
+
+/**
+ *
+ */
+inline void getMetaDataFromBand(
+	GDALRasterWrapper *p_
 
 /**
  * When adding a raster band to a VRT dataset, the dataset
@@ -661,4 +675,199 @@ rasterBandIO(
 			std::runtime_error("unable to read block from raster.") :
 			std::runtime_error("unable to write block to raster.");
 	}
+}
+
+/**
+ *
+ */
+struct Access {
+	bool used = false;
+	double area = 0;
+	GDALDataset *p_dataset = nullptr;
+	RasterBandMetaData band;
+}
+
+/**
+ *
+ */
+inline void
+updateAccess(
+	GDALVectorWrapper *p_vector,
+	GDALRasterWrapper *p_raster,
+	std::string layerName, 
+	double buffInner, 
+	double buffOuter,
+	bool largeRaster,
+	std::string tempFolder,
+	int xBlockSize,
+	int yBlockSize,
+	Access& access) 
+{
+	if (!p_vector) {
+		return;
+	}
+
+	//step 1: create multipolygon buffers
+	OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
+	OGRMultiPolygon *buffOuterPolygons = new OGRMultiPolygon;
+	OGRGeometry *p_polygonMask;
+
+	//step 2: add geometries to access polygon buffers
+	for (const auto& p_feature : *p_vector->getLayer(layerName.c_str())) {
+		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
+
+		switch (type) {
+			case OGRwkbGeometryType::wkbLineString: {
+				OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
+				throw std::runtime_error("calculating area this way is wrong, and it's not fixed yet!");
+				access.area += p_outer->get_Area();
+				buffOuterPolygons->addGeometry(p_outer);
+
+				if (buffInner != 0) {
+					p_inner = p_geometry->Buffer(buffInner);
+					access.area -= p_inner->getArea();
+					buffInnerPolygons->addGeometry(p_inner);
+				}
+
+				break;
+			}
+			case OGRwkbGeometryType::wkbMultiLineString: {
+				for (const auto& p_lineString : *p_geometry->toMultiLineString()) {
+					OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
+					access.area += p_outer->get_Area();
+					buffOuterPolygons->addGeometry(p_outer);
+
+					if (buffInner != 0) {
+						p_inner = p_geometry->Buffer(buffInner);
+						access.area -= p_inner->getArea();
+						buffInnerPolygons->addGeometry(p_inner);
+					}
+				}
+
+				break;
+			}
+			default: {
+				throw std::runtime_error("geometry type must be LineString or MultiLineString");
+			}
+		}
+	}	
+
+	//step 3: generate the polygon mask and free no longer used memory
+	if (buffInner == 0) {
+		p_polygonMask = buffOuterPolygons->UnionCascaded();
+		free(buffOuterPolygons);
+	}
+	else {
+		OGRGeometry *buffOuterUnion = buffOuterPolygons->UnionCascaded();
+		OGRGeometry *buffInnerUnion = buffInnerPolygons->UnionCascaded();
+		p_polygonMask = buffOuterUnion->Difference(buffInnerUnion);
+		free(buffOuterPolygons);
+		free(buffInnerPolygons);
+		free(buffOuterUnion);
+		free(buffInnerUnion);
+	}
+
+	//TODO: error check output of these
+	
+	//step 4: create new GDAL dataset to rasterize as access mask
+	GDALDataset *p_accessPolygonDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
+		"",
+		0,
+		0,
+		0,
+		GDT_Unknown,
+		nullptr
+	);
+
+	OGRLayer *p_layer = p_accessPolygonDataset->CreateLayer(
+		"access", 
+		p_vector->getLayer(layerName.c_str())->GetSpatialRef(), 
+		wkbPolygon, 
+		nullptr
+	);
+	OGRFieldDefn field("index", OFTInteger);
+	p_layer->CreateField(&field);
+	
+	//step 6: add the access polygon to the new layer
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetField("index", 0);
+	p_feature->SetGeometry(p_polygonMask);
+	p_layer->CreateFeature(p_feature); //error handling here???
+	OGRFeature::DestroyFeature(p_feature);
+
+	int width = p_raster->getWidth();
+	int height = p_raster->getHeight();
+	double *geotransform = p_raster->getGeotransform();
+	std::string projection = std::string(p_raster->getDataset()->GetProjectionRef());
+
+	access.band.size = 1;
+	access.band.type = GDT_Byte;
+	access.band.name = "access_mask";
+	if (largeRaster) {
+		std::filesystem::path tempPath = tempFolder;
+		std::filesystem::path tmpName = "access.tif";
+		tmpPath = tmpPath / tmpName;
+		
+		std::map<std::string, std::string> driverOptions = {};
+		
+		bool useTiles = xBlockSize != p_raster->getWidth() &&
+				yBlockSize != p_raster->getHeight();
+		access.band.xBlockSize = xBlockSize;
+		access.band.yBlockSize = yBlockSize;
+
+		access.p_dataset = createDataset(
+			tmpPath.string(),
+			"GTiff",
+			width,
+			height,
+			geotransform,
+			projection,
+			&access.band,
+			1,
+			useTiles,
+			driverOptions,
+		);
+	}
+	else {
+		access.p_dataset = createVirtualDataset("MEM", width, height, geotransform, projection);
+		addBandToMEMDataset(access.p_dataset, access.band);
+	}
+
+	access.band.p_band->Fill(1);
+	
+	//step 9: generate options list for rasterization	
+	char **argv = nullptr;
+
+	//specify invert rasterization and ALL_TOUCHED true
+	//this ensures pixels whos upper-left corner is outside the
+	//accessable area don't accidentally get included.
+	//The upper left corner is where the geotransform applies to.
+	argv = CSLAddString(argv, "-i");
+	argv = CSLAddString(argv, "-at");
+
+	//specify the burn value for the polygon
+	argv = CSLAddString(argv, "-burn");
+	argv = CSLAddString(argv, std::to_string(0).c_str());
+
+	//specify the layer
+	argv = CSLAddString(argv, "-l");
+	argv = CSLAddString(argv, "access");
+
+	GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
+
+	//step 10: rasterize vector creating in-memory dataset
+	GDALRasterize(
+		nullptr,
+		access.p_dataset,
+		p_accessPolygonDataset,
+		options,
+		nullptr
+	);
+
+	//step 11: free dynamically allocated data
+	GDALRasterizeOptionsFree(options);
+	free(p_accessPolygonDataset);
+
+	access.used = true;
 }

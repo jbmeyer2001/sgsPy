@@ -86,6 +86,27 @@ calculateAllocation(
 	return retval;
 }
 
+inline uint64_t
+getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMindist, double accessibleArea) {
+	double height = static_cast<double>(p_raster->getHeight());
+	double width = static_cast<double>(p_raster->getWidth());
+	double samples = static_cast<double>(numSamples);
+
+	double numer = samples * 2 * (useMindist ? 3 : 1);
+	double denum = height * width;
+
+	if (accessibleArea != -1) {
+		double pixelHeight = static_cast<double>(p_raster->getPixelHeight());
+		double pixelWidth = static_cast<double>(p_raster->getPixelWidth());
+		double totalArea = width * pixelWidth * height * pixelHeight;
+
+		numer *= (totalArea / accessibleArea);
+	}
+
+	double bits = std::ceil(std::log2(denom) - std::log2(numer));
+	return (bits <= 0) ? 0 : (1 << bits) - 1;
+}
+
 /**
  * This function conducts stratified random sampling on the provided stratified raster.
  *
@@ -133,48 +154,159 @@ strat_random(
 	bool plot,
 	std::string filename)
 {
+	bool useMindist = mindist != 0;
+	int width = p_raster->getWidth();
+	int height = p_raster->getHeight();
+
+	std::mutex bandMutex;
+	std::mutex rngMutex;
+	std::mutex accessMutex;
+
 	//step 1: get raster band
-	GDALDataType type = p_raster->getRasterBandType(band);
-	printTypeWarningsForInt32Conversion(type);
+	GDALRasterBandMetaData band;
 
 	GDALRasterBand *p_band = p_raster->getRasterBand(band);
-	void *p_data = VSIMalloc3(
-		p_raster->getHeight(),
-		p_raster->getWidth(),
-		p_raster->getRasterBandTypeSize(band)
+	band.p_band = p_band;
+	band.type = p_raster->getRasterBandType(band);
+	band.size = p_raster->getRasterBandTypeSize(band);
+	band.p_buffer = nullptr;
+	band.nan = p_band->GetNoDataValue();
+	band.p_mutex = &bandMutes;
+	p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
+
+	printTypeWarningsForInt32Conversion(band.type);
+
+	Access access;
+	updateAccess(
+		p_raster, 
+		p_access, 
+		layerName, 
+		buffInner, 
+		buffOuter, 
+		largeRaster, 
+		tempFolder, 
+		band.xBlockSize,
+		band.yBlockSize,
+		access
 	);
-	CPLErr err = p_band->RasterIO(
-		GF_Read,
-		0,
-		0,
-		p_raster->getWidth(),
-		p_raster->getHeight(),
-		p_data,
-		p_raster->getWidth(),
-		p_raster->getHeight(),
-		type,
-		0,
-		0
-	);
-	if (err) {
-		throw std::runtime_error("error reading raster band from dataset.");
-	}
+
+	int xBlockSize = data.xBlockSize;
+	int yBlockSize = data.yBlockSize;
+
+	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
+	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
+
+	band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, band.size);
+	std::vector<bool> randVals(xBlockSize * yBlockSize);
+	int randValIndex = xBlockSize * yBlockSize;
+	int nanInt = static_cast<int>(band.nan);
 	
-	//step 2: create stratum index storing vectors
-	std::vector<std::vector<size_t>> stratumIndexes;
-	stratumIndexes.resize(numStrata);
+	p_access = nullptr;
+	if (access.used) {
+		p_access = largeRaster ?
+			VSIMalloc2(xBlockSize, yBlockSize) :
+			access.band.p_buffer;
 
-	//step 3: get access mask if access is defined
-	GDALDataset *p_accessMaskDataset = nullptr;
-	void *p_mask = nullptr;
-	if (p_access) {
-		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
-		p_accessMaskDataset = maskInfo.first; //GDALDataset to free after using mask
-		p_mask = maskInfo.second; //pointer to mask
+		double totalArea = static_cast<double>(height) * 
+				   p_raster->getPixelHeight() *
+				   static_cast<double>(width) *
+				   p_raster->getPixelWidth();
+
+		//multiply pixel added chance by the inverse percentage of the area which is accessible
+		pixelAddedChance *= totalArea / access.area;
 	}
 
+	std::vector<size_t> strataCounts(numStrata, 0);
+	std::vector<std::vector<Index>> indexesPerStrata(numStrata, std::vector<Index>(numSamples * 2 * 3 * useMindist));
+	std::vector<size_t> indexCountPerStrata(numStrata, 0);
+	std::vector<std::vector<Index>> firstThousandIndexesPerStrata(numStrata, std::vector<Index>(1000));
+	std::vector<size_t> firstThousandIndexCountPerStrata(numStrata, 0);
+
+	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, mindist != 0, access.area);
+
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+			int xValid, yValid;
+
+			//READ BLOCK
+			bandMutex.lock();
+			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+			rasterBandIO(band, band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true); 
+			bandMutex.unlock();									//read = true
+
+			//READ ACCESS BLOCK IF NECESSARY
+			if (access.used) {
+				accessMutex.lock();
+				rasterBandIO(access.band, p_access, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true);
+				accessMutex.lock();									  //read = true	
+			}
+			
+			//CALCULATE RAND VALUES
+			rngMutex.lock();
+			for (int i = 0; i < randValIndex; i++) {
+				randVals[i] = //CALCULATE RANDOM NUMBER HERE AND COMPARE TO PIXEL ADDED CHANCE
+			}
+			randValIndex = 0;
+			rngMutex.unlock();
+
+			//ITERATE THROUGH BLOCK AND UPDATE VECTORS
+			for (int y = 0; y < yValid; y++) {
+				blockIndex = static_cast<size_t>(y * blockSize);
+				for (int x = 0; x < xValid; x++) {
+					//GET VAL
+					int val = getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex);
+					
+					//CHECK NAN
+					bool isNan = val == nanInt;
+					if (isNan) {
+						blockIndex++;
+						continue;
+					}
+
+					//CHECK ACCESS
+					if (access.used && p_access[blockIndex] == 0) {
+						blockIndex++;
+						continue;
+					}
+
+					//CREATE INDEX STRUCTURE
+					Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
+
+					//UPDATE FIRST 1000 AUTOMATIC VALS 
+					if (firstThousandIndexCountPerStrata[val] < 1000) {
+						int i = firstThousandIndexCountPerStrata[val];
+						firstThousandIndexCountPerStrata[val]++;
+						firstThousandIndexesPerStrata[val][i] = index;
+					}
+
+					//CHECK RNG
+					bool use = randVals[randValIndex];
+					randValIndex++;
+
+					//UPDATE VECTORS
+					strataCount[val]++;
+					indexesPerStrata[val][indexCountPerStrata[val]] = index;
+					indexCountPerStrata += use;
+
+					//INCREMENT WITHIN-BLOCK INDEX
+					blockIndex++;
+				}
+			}
+		}
+	}
+
+	if (access.used) {
+		if (largeRaster) {
+			GDAlClose(access.p_dataset);
+			free(p_access);
+		}
+		else {
+			free(access.p_dataset);
+		}
+	}
+
+	/*
 	//stpe 4: iterate through raster band
-	double noDataValue = p_raster->getDataset()->GetRasterBand(1)->GetNoDataValue();
 	size_t noDataPixelCount = 0;
 	for (size_t i = 0; i < (size_t)p_raster->getWidth() * (size_t)p_raster->getHeight(); i++) {
 		if (p_access) {
@@ -198,7 +330,7 @@ strat_random(
 	if (p_access) {
 		free(p_accessMaskDataset);
 	}
-
+	*/
 	size_t numDataPixels = (p_raster->getWidth() * p_raster->getHeight()) - noDataPixelCount;
 	
 	//step 5: determine the number of samples to take from each strata
@@ -279,16 +411,21 @@ strat_random(
 			strataNum.erase(strataNum.begin() + sIndex);
 		}
 		else {
-			size_t index = *sampleIterators[strata];
+			std::cout << "HERE 11.6" << std::endl;
+			auto iterator = sampleIterators[strata];
+			std::cout << "got iterator!!" << std::endl;
+			size_t index = *iterator;
+			std::cout << "11.6.1" << std::endl;
 			sampleIterators[strata] = std::next(sampleIterators[strata]);
-
+			std::cout << "11.6.2" << std::endl;
 			double yIndex = index / p_raster->getWidth();
 			double xIndex = index - (yIndex * p_raster->getWidth());
-
+			std::cout << "11.6.3" << std::endl;
 			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
 			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
+			std::cout << "11.6.4" << std::endl;
 			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-	
+			
 			if (mindist != 0.0 && p_sampleLayer->GetFeatureCount() != 0) {
 				bool add = true;
 				for (const auto& p_feature : *p_sampleLayer) {
