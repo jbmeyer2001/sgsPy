@@ -12,6 +12,7 @@ if WIN
     include_directories: [
       inc_dir,
       utils_inc_dir,
+      xoshiro_inc_dir
     ],
     install: true,
     link_args: win_link_args,
@@ -25,6 +26,7 @@ else #linux
     include_directories: [
       inc_dir,
       utils_inc_dir,
+      xoshiro_inc_dir
     ],
     objects: [
       #from sgs/utils

@@ -4,3 +4,6 @@
 [submodule "sgs/extern/oneDAL"]
 	path = sgs/extern/oneDAL
 	url = https://github.com/uxlfoundation/oneDAL
+[submodule "sgs/extern/xoshiro"]
+	path = sgs/extern/xoshiro
+	url = https://github.com/nessan/xoshiro.git

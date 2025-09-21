@@ -13,6 +13,11 @@
 #include <filesystem>
 #include <mutex>
 #include <gdal_priv.h>
+#include <gdal_utils.h>
+#include <ogr_geometry.h>
+
+#include "raster.h"
+#include "vector.h"
 
 #define MAXINT8		127
 #define MAXINT16	32767
@@ -23,7 +28,7 @@
 struct Index {
 	int x = -1;
 	int y = -1;
-}
+};
 
 /**
  * The RasterBandMetaData struct stores information
@@ -63,12 +68,6 @@ struct RasterBandMetaData {
 	int yBlockSize = -1;
 	std::mutex *p_mutex = nullptr;
 };
-
-/**
- *
- */
-inline void getMetaDataFromBand(
-	GDALRasterWrapper *p_
 
 /**
  * When adding a raster band to a VRT dataset, the dataset
@@ -685,7 +684,7 @@ struct Access {
 	double area = 0;
 	GDALDataset *p_dataset = nullptr;
 	RasterBandMetaData band;
-}
+};
 
 /**
  *
@@ -720,13 +719,10 @@ updateAccess(
 		switch (type) {
 			case OGRwkbGeometryType::wkbLineString: {
 				OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
-				throw std::runtime_error("calculating area this way is wrong, and it's not fixed yet!");
-				access.area += p_outer->get_Area();
 				buffOuterPolygons->addGeometry(p_outer);
 
 				if (buffInner != 0) {
-					p_inner = p_geometry->Buffer(buffInner);
-					access.area -= p_inner->getArea();
+					OGRGeometry *p_inner = p_geometry->Buffer(buffInner);
 					buffInnerPolygons->addGeometry(p_inner);
 				}
 
@@ -735,12 +731,10 @@ updateAccess(
 			case OGRwkbGeometryType::wkbMultiLineString: {
 				for (const auto& p_lineString : *p_geometry->toMultiLineString()) {
 					OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
-					access.area += p_outer->get_Area();
 					buffOuterPolygons->addGeometry(p_outer);
 
 					if (buffInner != 0) {
-						p_inner = p_geometry->Buffer(buffInner);
-						access.area -= p_inner->getArea();
+						OGRGeometry *p_inner = p_geometry->Buffer(buffInner);
 						buffInnerPolygons->addGeometry(p_inner);
 					}
 				}
@@ -766,10 +760,27 @@ updateAccess(
 		free(buffInnerPolygons);
 		free(buffOuterUnion);
 		free(buffInnerUnion);
+			
 	}
 
-	//TODO: error check output of these
-	
+	access.area = 0;
+	switch(wkbFlatten(p_polygonMask->getGeometryType())) {
+		case OGRwkbGeometryType::wkbPolygon: {
+			OGRCurvePolygon *p_cp = p_polygonMask->toPolygon()->toUpperClass();
+			access.area += p_cp->get_Area();
+			break;
+		}
+		case OGRwkbGeometryType::wkbMultiPolygon: {
+			for (const auto&p_polygon : *p_polygonMask->toMultiPolygon()) {
+				OGRCurvePolygon *p_cp = p_polygon->toUpperClass();
+				access.area += p_cp->get_Area();
+			}
+			break;
+		}
+		default:
+			throw std::runtime_error("p_polygonMask is not a polygon or a multipolygon!");
+	}
+
 	//step 4: create new GDAL dataset to rasterize as access mask
 	GDALDataset *p_accessPolygonDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
 		"",
@@ -806,8 +817,8 @@ updateAccess(
 	access.band.name = "access_mask";
 	if (largeRaster) {
 		std::filesystem::path tempPath = tempFolder;
-		std::filesystem::path tmpName = "access.tif";
-		tmpPath = tmpPath / tmpName;
+		std::filesystem::path tempName = "access.tif";
+		tempPath = tempPath / tempName;
 		
 		std::map<std::string, std::string> driverOptions = {};
 		
@@ -817,7 +828,7 @@ updateAccess(
 		access.band.yBlockSize = yBlockSize;
 
 		access.p_dataset = createDataset(
-			tmpPath.string(),
+			tempPath.string(),
 			"GTiff",
 			width,
 			height,
@@ -826,7 +837,7 @@ updateAccess(
 			&access.band,
 			1,
 			useTiles,
-			driverOptions,
+			driverOptions
 		);
 	}
 	else {

@@ -3,7 +3,7 @@
  * Project: sgs
  * Purpose: C++ implementation of stratified sampling
  * Author: Joseph Meyer
- * Date: July, 2025
+ * Date: September, 2025
  *
  ******************************************************************************/
 
@@ -15,6 +15,8 @@
 #include "raster.h"
 #include "vector.h"
 
+#include <xoshiro.h>
+
 /**
  * Helper function which calculates the count of values for each strata
  * depending on the allocation method.
@@ -25,43 +27,44 @@
  * @param size_t total number of pixels
  * @returns std::vector<size_t> counts of each stratum
  */
-std::vector<size_t>
+template <typename T>
+std::vector<T>
 calculateAllocation(
-	size_t numSamples,
+	T numSamples,
 	std::string allocation, 
-	std::vector<size_t> *p_strataSizes, 
-	std::vector<double> *p_weights,
-	size_t numPixels)
+	std::vector<T>& strataCounts, 
+	std::vector<double>& weights,
+	T numPixels)
 {
-	std::vector<size_t> retval;
-	size_t remainder = numSamples;
-	size_t numStrata = p_strataSizes->size();
+	std::vector<T> retval;
+	T remainder = numSamples;
+	T numStrata = strataCounts.size();
 	if (allocation == "prop") {
 		//allocate the samples per stratum according to stratum size
-		size_t pixelsPerSample = numPixels / numSamples;
+		T pixelsPerSample = numPixels / numSamples;
 
 		//add 1 if pixelsPerSample was truncated down, to avoid adding too many samples
-		pixelsPerSample += static_cast<size_t>(pixelsPerSample * numSamples < numPixels);
+		pixelsPerSample += static_cast<T>(pixelsPerSample * numSamples < numPixels);
 
-		for (size_t i = 0; i < numStrata; i++) {
-			size_t count = p_strataSizes->at(i) / pixelsPerSample;
+		for (T i = 0; i < numStrata; i++) {
+			T count = strataCounts[i] / pixelsPerSample;
 			retval.push_back(count);
 			remainder -= count;
 		}
 	}
 	else if (allocation == "equal") {
 		//determine the count of samples per strata
-		size_t strataSampleCount = numSamples / numStrata;
+		T strataSampleCount = numSamples / numStrata;
 		
-		for (size_t i = 0; i < numStrata; i++) {
+		for (T i = 0; i < numStrata; i++) {
 			retval.push_back(strataSampleCount);
 			remainder -= strataSampleCount;
 		}
 	}
 	else if (allocation == "manual") {
 		//allocate samples accordign to weights.
-		for (size_t i = 0; i < numStrata; i++) {
-			size_t count = static_cast<size_t>(static_cast<double>(numSamples) * p_weights->at(i));
+		for (T i = 0; i < numStrata; i++) {
+			T count = static_cast<T>(static_cast<double>(numSamples) * weights[i]);
 			retval.push_back(count);
 			remainder -= count;
 		}
@@ -72,14 +75,14 @@ calculateAllocation(
 	}
 
 	//redistribute remainder pixels among strata, and check strata sizes
-	for (size_t i = numStrata; i > 0; i--) {
-		size_t extra = remainder / i;
+	for (T i = numStrata; i > 0; i--) {
+		T extra = remainder / i;
 		retval[i - 1] += extra;
 		remainder -= extra;
 
-		if (retval[i - 1] > p_strataSizes->at(i - 1)) {
+		if (retval[i - 1] > strataCounts[i - 1]) {
 			std::cout << "warning: strata " << i - 1 << " does not have enough pixels for the full " << retval[i - 1] << " samples it should recieve. There will be less than " << numSamples << " final samples." << std::endl;
-			retval[i - 1] = p_strataSizes->at(i - 1);
+			retval[i - 1] = strataCounts[i - 1];
 		}
 	}
 
@@ -93,7 +96,7 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 	double samples = static_cast<double>(numSamples);
 
 	double numer = samples * 2 * (useMindist ? 3 : 1);
-	double denum = height * width;
+	double denom = height * width;
 
 	if (accessibleArea != -1) {
 		double pixelHeight = static_cast<double>(p_raster->getPixelHeight());
@@ -103,7 +106,7 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 		numer *= (totalArea / accessibleArea);
 	}
 
-	double bits = std::ceil(std::log2(denom) - std::log2(numer));
+	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer)));
 	return (bits <= 0) ? 0 : (1 << bits) - 1;
 }
 
@@ -141,7 +144,7 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
 strat_random(
 	GDALRasterWrapper *p_raster,
-	int band,
+	int bandNum,
 	size_t numSamples,
 	size_t numStrata,
 	std::string allocation,
@@ -152,8 +155,12 @@ strat_random(
 	double buffInner,
 	double buffOuter,
 	bool plot,
-	std::string filename)
+	std::string filename,
+	bool largeRaster,
+	std::string tempFolder)
 {
+	GDALAllRegister();
+
 	bool useMindist = mindist != 0;
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
@@ -163,23 +170,37 @@ strat_random(
 	std::mutex accessMutex;
 
 	//step 1: get raster band
-	GDALRasterBandMetaData band;
+	RasterBandMetaData band;
 
-	GDALRasterBand *p_band = p_raster->getRasterBand(band);
+	GDALRasterBand *p_band = p_raster->getRasterBand(bandNum);
 	band.p_band = p_band;
-	band.type = p_raster->getRasterBandType(band);
-	band.size = p_raster->getRasterBandTypeSize(band);
+	band.type = p_raster->getRasterBandType(bandNum);
+	band.size = p_raster->getRasterBandTypeSize(bandNum);
 	band.p_buffer = nullptr;
 	band.nan = p_band->GetNoDataValue();
-	band.p_mutex = &bandMutes;
+	band.p_mutex = &bandMutex;
 	p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 
 	printTypeWarningsForInt32Conversion(band.type);
+	
+	//create output dataset before doing anything which will take a long time in case of failure.
+	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
+	if (!p_driver) {
+		throw std::runtime_error("unable to create output sample dataset driver.");
+	}
+	GDALDataset *p_samples = p_driver->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	if (!p_samples) {
+		throw std::runtime_error("unable to create output dataset with driver.");
+	}
+	OGRLayer *p_layer = p_samples->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+	if (!p_layer) {
+		throw std::runtime_error("unable to create output dataset layer.");
+	}
 
 	Access access;
 	updateAccess(
-		p_raster, 
 		p_access, 
+		p_raster, 
 		layerName, 
 		buffInner, 
 		buffOuter, 
@@ -190,8 +211,8 @@ strat_random(
 		access
 	);
 
-	int xBlockSize = data.xBlockSize;
-	int yBlockSize = data.yBlockSize;
+	int xBlockSize = band.xBlockSize;
+	int yBlockSize = band.yBlockSize;
 
 	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
@@ -201,29 +222,46 @@ strat_random(
 	int randValIndex = xBlockSize * yBlockSize;
 	int nanInt = static_cast<int>(band.nan);
 	
-	p_access = nullptr;
+	uint8_t *p_accessMask = nullptr;
 	if (access.used) {
-		p_access = largeRaster ?
+		p_accessMask = static_cast<uint8_t *>(largeRaster ?
 			VSIMalloc2(xBlockSize, yBlockSize) :
-			access.band.p_buffer;
-
-		double totalArea = static_cast<double>(height) * 
-				   p_raster->getPixelHeight() *
-				   static_cast<double>(width) *
-				   p_raster->getPixelWidth();
-
-		//multiply pixel added chance by the inverse percentage of the area which is accessible
-		pixelAddedChance *= totalArea / access.area;
+			access.band.p_buffer);
 	}
 
-	std::vector<size_t> strataCounts(numStrata, 0);
+	std::vector<unsigned long long int> strataCounts(numStrata, 0);
 	std::vector<std::vector<Index>> indexesPerStrata(numStrata, std::vector<Index>(numSamples * 2 * 3 * useMindist));
 	std::vector<size_t> indexCountPerStrata(numStrata, 0);
-	std::vector<std::vector<Index>> firstThousandIndexesPerStrata(numStrata, std::vector<Index>(1000));
-	std::vector<size_t> firstThousandIndexCountPerStrata(numStrata, 0);
 
-	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, mindist != 0, access.area);
+	size_t firstX = 10000;
+	std::vector<std::vector<Index>> firstXIndexesPerStrata(numStrata, std::vector<Index>(firstX));
+	std::vector<size_t> firstXIndexCountPerStrata(numStrata, 0);
+	
+	//fast random number generator using xoshiro256+
+	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
+	xso::xoshiro_4x64_plus rng; 
 
+	//the multiplier which will be multiplied by the 53 most significant bits of the output of the
+	//random number generator to see whether a pixel should be added or not. The multiplier is
+	//a uint64_t number where the least significant n bits are 1 and the remaining are 0. The pixel
+	//is added when the least significant n bits (of the bit shifted 53 bits) within the rng match
+	//those of the multiplier. The probability a pixel is add is then (1/2^n). Using this method,
+	//knowing the amount of pixels, estimating the number of nan pixels, taking into account mindist
+	//and accessable area, we can estimate a percentage chance for each pixel and set up a multiplier
+	//to make that percentage happen. Doing this enables retaining only a small portion of pixel data
+	//and reducing memory footprint significantly, otherwise the index of every pixel in each strata
+	//would have to be stored, which would not be feasible for large rasters.
+	//
+	//NOTE that this method is imprecise, and has an achilles heel where if there are not very many
+	//pixels of a particular strata, they may not show up at all in the final samples. For this reason,
+	//the first 10000 pixels of every strata are added no matter what. If there aren't enough pixels
+	//of a particular strata from the normal probability method, but there are more than 10000 pixels
+	//of that strata in the raster, we may have some problems because taking from the 10000 would
+	//no longer be random. Perhaps there is a way to dynamically adjust the size of the first 'thousand'
+	//pixels as the raster is iterating to take this into account, without retaining too many pixels
+	//to be feasible for large images.
+	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area);
+	
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
@@ -237,21 +275,21 @@ strat_random(
 			//READ ACCESS BLOCK IF NECESSARY
 			if (access.used) {
 				accessMutex.lock();
-				rasterBandIO(access.band, p_access, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true);
-				accessMutex.lock();									  //read = true	
+				rasterBandIO(access.band, p_accessMask, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true);
+				accessMutex.lock();									      //read = true	
 			}
 			
 			//CALCULATE RAND VALUES
 			rngMutex.lock();
 			for (int i = 0; i < randValIndex; i++) {
-				randVals[i] = //CALCULATE RANDOM NUMBER HERE AND COMPARE TO PIXEL ADDED CHANCE
+				randVals[i] = ((rng() >> 11) & multiplier) == multiplier;
 			}
 			randValIndex = 0;
 			rngMutex.unlock();
 
 			//ITERATE THROUGH BLOCK AND UPDATE VECTORS
 			for (int y = 0; y < yValid; y++) {
-				blockIndex = static_cast<size_t>(y * blockSize);
+				size_t blockIndex = static_cast<size_t>(y * xBlockSize);
 				for (int x = 0; x < xValid; x++) {
 					//GET VAL
 					int val = getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex);
@@ -264,7 +302,7 @@ strat_random(
 					}
 
 					//CHECK ACCESS
-					if (access.used && p_access[blockIndex] == 0) {
+					if (access.used && p_accessMask[blockIndex] == 0) {
 						blockIndex++;
 						continue;
 					}
@@ -272,11 +310,11 @@ strat_random(
 					//CREATE INDEX STRUCTURE
 					Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
 
-					//UPDATE FIRST 1000 AUTOMATIC VALS 
-					if (firstThousandIndexCountPerStrata[val] < 1000) {
-						int i = firstThousandIndexCountPerStrata[val];
-						firstThousandIndexCountPerStrata[val]++;
-						firstThousandIndexesPerStrata[val][i] = index;
+					//UPDATE FIRST X VALS AUTOMATICALLY
+					if (firstXIndexCountPerStrata[val] < firstX) {
+						int i = firstXIndexCountPerStrata[val];
+						firstXIndexCountPerStrata[val]++;
+						firstXIndexesPerStrata[val][i] = index;
 					}
 
 					//CHECK RNG
@@ -284,12 +322,19 @@ strat_random(
 					randValIndex++;
 
 					//UPDATE VECTORS
-					strataCount[val]++;
+					strataCounts[val]++;
 					indexesPerStrata[val][indexCountPerStrata[val]] = index;
-					indexCountPerStrata += use;
+					indexCountPerStrata[val] += use;
 
 					//INCREMENT WITHIN-BLOCK INDEX
 					blockIndex++;
+				}
+			}
+
+			//free any firstX vectors which can no longer be used
+			for (size_t i = 0; i < numStrata; i++) {
+				if (firstXIndexCountPerStrata[i] == firstX) {
+					std::vector<Index>().swap(firstXIndexesPerStrata[i]);
 				}
 			}
 		}
@@ -297,180 +342,137 @@ strat_random(
 
 	if (access.used) {
 		if (largeRaster) {
-			GDAlClose(access.p_dataset);
-			free(p_access);
+			GDALClose(access.p_dataset);
+			free(p_accessMask);
 		}
 		else {
 			free(access.p_dataset);
 		}
 	}
 
-	/*
-	//stpe 4: iterate through raster band
-	size_t noDataPixelCount = 0;
-	for (size_t i = 0; i < (size_t)p_raster->getWidth() * (size_t)p_raster->getHeight(); i++) {
-		if (p_access) {
-			//step 4.1 if the current pixel is not accessable, mark it as nodata and don't read it
-			if (((uint8_t *)p_mask)[i] == 0) {
-				noDataPixelCount++;
-				continue;
-			}
-		}
-
-		int val = getPixelValueDependingOnType<int>(type, p_data, i);
-		if (std::isnan(val) || (double)val == noDataValue) {
-			//step 4.2: increment noDataPixelCount if encountered noData
-			noDataPixelCount++;
-		}
-		else {
-			//step 4.3: add data index to stratum index array
-			stratumIndexes[(size_t)val].push_back(i);
-		}
-	}
-	if (p_access) {
-		free(p_accessMaskDataset);
-	}
-	*/
-	size_t numDataPixels = (p_raster->getWidth() * p_raster->getHeight()) - noDataPixelCount;
-	
-	//step 5: determine the number of samples to take from each strata
-	std::vector<size_t> strataSizes;
-	for (size_t i = 0; i < stratumIndexes.size(); i++) {
-		strataSizes.push_back(stratumIndexes[i].size());
+	uint64_t numDataPixels = 0;
+	for (const uint64_t& count : strataCounts) {
+		numDataPixels += count;
 	}
 
-	std::vector<size_t> stratumCounts = calculateAllocation(
+	std::vector<uint64_t> strataSampleCounts = calculateAllocation<uint64_t>(
 		numSamples,
 		allocation,
-		&strataSizes,
-		&weights,
+		strataCounts,
+		weights,
 		numDataPixels
 	);
 
-	//step 6: create new in-memory dataset to store sample points
-	GDALAllRegister();
-	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
-	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+	std::vector<std::vector<Index> *> strataIndexVectors(numStrata, nullptr);
+	std::vector<size_t> nextIndexes(numStrata, 0);
+	for (size_t i = 0; i < numStrata; i++) {
+		uint64_t totalPixels = strataCounts[i];
+		uint64_t desiredSamples = strataSampleCounts[i];
 
-	//step 7: determine pixel values to include as samples.
-	std::vector<std::unordered_set<size_t>> sampleIndexes;
-	std::vector<typename std::unordered_set<size_t>::iterator> sampleIterators;
-	std::vector<size_t> samplesAdded;
-	std::vector<size_t> strataNum;
-	size_t totalSamplesAdded = 0;
+		uint64_t probIndexesCount = indexCountPerStrata[i];
+		uint64_t firstXIndexesCount = firstXIndexCountPerStrata[i];
 
-	std::mt19937::result_type seed = time(nullptr);
-	for (size_t i = 0; i < stratumCounts.size(); i++) {	
-		sampleIndexes.push_back({});
-		samplesAdded.push_back(0);
-		strataNum.push_back(i);
-
-		auto rng = std::bind(
-			std::uniform_int_distribution<size_t>(0, stratumIndexes[i].size() - 1),
-			std::mt19937(seed)
-		);
-
-		size_t stratumSamples = std::min((mindist == 0) ? 
-				(size_t)stratumCounts[i] : 
-				(size_t)stratumCounts[i] * 3, stratumIndexes[i].size());
-
-		if (stratumSamples > stratumIndexes[i].size() / 2) {
-			std::unordered_set<size_t> dontSamplePixels;
-			while (dontSamplePixels.size() < stratumIndexes[i].size() - stratumSamples) {
-				dontSamplePixels.insert(rng());
-			}
-			for (size_t j = 0; j < stratumIndexes[i].size(); j++) {
-				if (dontSamplePixels.find(j) == dontSamplePixels.end()) {
-					sampleIndexes[i].insert(stratumIndexes[i][j]);
-				}
-			}
+		//shuffle the desired vectors so we can iterate starting at 0 without compromising randomness
+		if (probIndexesCount >= desiredSamples || firstXIndexesCount < totalPixels) {
+			auto begin = indexesPerStrata[i].begin();
+			auto end = indexesPerStrata[i].end();
+			std::shuffle(begin, end, rng); 
+			strataIndexVectors[i] = &indexesPerStrata[i];
 		}
-		else {
-			while (sampleIndexes[i].size() < stratumSamples) {
-				sampleIndexes[i].insert(stratumIndexes[i][rng()]);
-			}
+		else  {
+			auto begin = firstXIndexesPerStrata[i].begin();
+			auto end = firstXIndexesPerStrata[i].end();
+			std::shuffle(begin, end, rng);
+			strataIndexVectors[i] = &firstXIndexesPerStrata[i];
 		}
-
-		sampleIterators.push_back(sampleIndexes[i].begin());
 	}
-
+	
 	//step 8: generate coordinate points for each sample index.
 	std::vector<double> xCoords, yCoords;
-
-	size_t sIndex = 0;
-	size_t completedStratum = 0;
+	std::vector<bool> completedStrata(numStrata, false);
+	std::vector<size_t> samplesAddedPerStrata(numStrata, 0);
+	size_t numCompletedStrata = 0;
 	double *GT = p_raster->getGeotransform();
-	while (completedStratum < stratumCounts.size()) {
-		if (sIndex >= strataNum.size()) {
-			sIndex = 0;
+	size_t curStrata = 0;
+	while (numCompletedStrata < numStrata) {
+		if (completedStrata[curStrata]) {
+			curStrata++;
+			continue;
 		}
-		size_t strata = strataNum[sIndex];
 
-		if (sampleIterators[strata] == sampleIndexes[strata].end() || stratumCounts[strata] == samplesAdded[strata]) {
-			completedStratum++;
-			strataNum.erase(strataNum.begin() + sIndex);
+		size_t sampleCount = strataSampleCounts[curStrata];
+		size_t samplesAdded = samplesAddedPerStrata[curStrata];
+		if (samplesAdded == sampleCount) {
+			numCompletedStrata++;
+			completedStrata[curStrata] = true;
+			curStrata++;
+			continue;
 		}
-		else {
-			std::cout << "HERE 11.6" << std::endl;
-			auto iterator = sampleIterators[strata];
-			std::cout << "got iterator!!" << std::endl;
-			size_t index = *iterator;
-			std::cout << "11.6.1" << std::endl;
-			sampleIterators[strata] = std::next(sampleIterators[strata]);
-			std::cout << "11.6.2" << std::endl;
-			double yIndex = index / p_raster->getWidth();
-			double xIndex = index - (yIndex * p_raster->getWidth());
-			std::cout << "11.6.3" << std::endl;
-			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
-			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
-			std::cout << "11.6.4" << std::endl;
-			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-			
-			if (mindist != 0.0 && p_sampleLayer->GetFeatureCount() != 0) {
-				bool add = true;
-				for (const auto& p_feature : *p_sampleLayer) {
-					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
-					if (newPoint.Distance(p_point) < mindist) {
-						add = false;
-						break;
-					}
-				}
-				if (!add) {
-					sIndex++;
-					continue;
+
+		std::vector<Index> *strataIndexes = strataIndexVectors[curStrata];
+		size_t nextIndex = nextIndexes[curStrata];
+		if (strataIndexes->size() == nextIndex) {
+			numCompletedStrata++;
+			completedStrata[curStrata] = true;
+			curStrata++;
+			continue;
+		}
+
+		Index index = strataIndexes->at(nextIndex);
+		nextIndexes[curStrata]++;
+
+		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
+		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
+		OGRPoint newPoint = OGRPoint(x, y);
+
+		if (mindist != 0.0 && p_layer->GetFeatureCount() != 0) {
+			bool add = true;
+			for (const auto &p_feature : *p_layer) {
+				OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
+				if (newPoint.Distance(p_point) < mindist) {
+					add = false;
+					break;
 				}
 			}
-
-			OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
-			p_feature->SetGeometry(&newPoint);
-			p_sampleLayer->CreateFeature(p_feature);
-			OGRFeature::DestroyFeature(p_feature);
-
-			samplesAdded[strata]++;
-			totalSamplesAdded++;
-			sIndex++;
-
-			if (plot) {
-				xCoords.push_back(xCoord);
-				yCoords.push_back(yCoord);
+		
+			if (!add) {
+				curStrata++;
+				continue;
 			}
+
 		}
+
+		OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+		p_feature->SetGeometry(&newPoint);
+		p_layer->CreateFeature(p_feature);
+		OGRFeature::DestroyFeature(p_feature);
+
+		if (plot) {
+			xCoords.push_back(x);
+			yCoords.push_back(y);
+		}
+
+		curStrata++;
 	}
-
+	
 	//step 9: create GDALVectorWrapper to store dataset of sample points
-	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+	GDALVectorWrapper *p_vector = new GDALVectorWrapper(p_samples);
 
 	//step 10: write vector if filename is not "".
+	//
+	//TODO rather than first making an in-memory dataset then writing to a file afterwards,
+	//just make the correct type of dataset from the get go
 	if (filename != "") {
 		try {
-			p_sampleVectorWrapper->write(filename);
+			p_vector->write(filename);
 		}
 		catch (const std::exception& e) {
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
 	}
 
-	return {{xCoords, yCoords}, p_sampleVectorWrapper, totalSamplesAdded};
+	size_t actualSampleCount = static_cast<size_t>(p_layer->GetFeatureCount());
+	return {{xCoords, yCoords}, p_vector, actualSampleCount};
 }
 	
 /**
@@ -812,11 +814,11 @@ strat_queinnec(
 		strataSizes.push_back(randomStratumIndexes[i].size() + queinnecStratumIndexes[i].size());
 	}
 
-	std::vector<size_t> stratumCounts = calculateAllocation(
+	std::vector<size_t> stratumCounts = calculateAllocation<size_t>(
 		numSamples,
 		allocation,
-		&strataSizes,
-		&weights,
+		strataSizes,
+		weights,
 		numDataPixels
 	);
 
@@ -1053,7 +1055,9 @@ strat_cpp_access(
 	double buffInner,
 	double buffOuter,
 	bool plot,
-	std::string filename)
+	std::string filename,
+	bool largeRaster,
+	std::string tempFolder)
 {
 	if (method == "random") {
 		return strat_random(
@@ -1069,7 +1073,9 @@ strat_cpp_access(
 			buffInner,
 			buffOuter,
 			plot,
-			filename
+			filename,
+			largeRaster,
+			tempFolder
 		);
 	}
 	else { //method == "Queinnec"
@@ -1114,7 +1120,9 @@ strat_cpp(
 	std::vector<double> weights,
 	double mindist,
 	bool plot,
-	std::string filename)
+	std::string filename,
+	bool largeRaster,
+	std::string tempFolder)
 {
 	if (method == "random") {
 		return strat_random(
@@ -1130,7 +1138,9 @@ strat_cpp(
 			0, 
 			0,
 		       	plot,	
-			filename
+			filename,
+			largeRaster,
+			tempFolder
 		);
 	}
 	else { //method == "Queinnec"
