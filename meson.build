@@ -43,7 +43,6 @@ else #linux
 endif
 oneDAL_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
 utils_inc_dir = include_directories('sgs/utils')
-balanced_sampling_inc_dir = include_directories('sgs/extern/BalancedSampling')
 
 #add to link args if necessary
 if WIN
