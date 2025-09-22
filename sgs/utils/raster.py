@@ -135,6 +135,7 @@ class SpatialRaster:
     Optionally, any of the arguments that can be passed to matplotlib.pyplot.imshow 
         can also be passed to plot_image().
     """
+    have_temp_dir = False
 
     def __init__(self, 
                  image: str | GDALRasterWrapper):
@@ -182,7 +183,6 @@ class SpatialRaster:
         else:
             self.cpp_raster = image
 
-        self.have_temp_dir = False
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
         self.height = self.cpp_raster.get_height()

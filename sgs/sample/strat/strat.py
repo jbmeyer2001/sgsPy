@@ -3,10 +3,11 @@
 #  Project: sgs
 #  Purpose: stratified random sampling (srs)
 #  Author: Joseph Meyer
-#  Date: July, 2025
+#  Date: September, 2025
 #
 # ******************************************************************************
 
+import tempfile
 from typing import Optional
 
 import numpy as np
@@ -22,6 +23,8 @@ from strat import (
     strat_cpp,
     strat_cpp_access,
 )
+
+GIGABYTE = 1073741824
 
 def strat(
     strat_rast: SpatialRaster, #TODO add band name for strat rast
@@ -190,6 +193,15 @@ def strat(
     if strat_rast.band_count != 1:
         raise ValueError("strat_raster must have a single band.")
 
+    height = strat_rast.height
+    width = strat_rast.width
+    pixel_size = strat_rast.cpp_raster.get_raster_band_type_size(band);
+    large_raster = height * width * pixel_size < GIGABYTE * 4
+
+    if not strat_rast.have_temp_dir:
+        strat_rast.temp_dir = tempfile.mkdtemp()
+        strat_rast.have_temp_dir = True
+
     if access:
         [sample_coordinates, samples, num_points] = strat_cpp_access(
             strat_rast.cpp_raster,
@@ -208,6 +220,8 @@ def strat(
             buff_outer,
             plot,
             filename,
+            large_raster,
+            strat_rast.temp_dir
         )
 
     else:
@@ -224,6 +238,8 @@ def strat(
             mindist,
             plot,
             filename,
+            large_raster,
+            strat_rast.temp_dir
         )
 
     if num_points < num_samples:

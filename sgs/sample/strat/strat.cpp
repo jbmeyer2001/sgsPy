@@ -230,7 +230,7 @@ strat_random(
 	}
 
 	std::vector<unsigned long long int> strataCounts(numStrata, 0);
-	std::vector<std::vector<Index>> indexesPerStrata(numStrata, std::vector<Index>(numSamples * 2 * 3 * useMindist));
+	std::vector<std::vector<Index>> indexesPerStrata(numStrata);
 	std::vector<size_t> indexCountPerStrata(numStrata, 0);
 
 	size_t firstX = 10000;
@@ -267,25 +267,25 @@ strat_random(
 			int xValid, yValid;
 
 			//READ BLOCK
-			bandMutex.lock();
+			//bandMutex.lock();
 			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 			rasterBandIO(band, band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true); 
-			bandMutex.unlock();									//read = true
+			//bandMutex.unlock();									//read = true
 
 			//READ ACCESS BLOCK IF NECESSARY
 			if (access.used) {
-				accessMutex.lock();
+				//accessMutex.lock();
 				rasterBandIO(access.band, p_accessMask, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true);
-				accessMutex.lock();									      //read = true	
+				//accessMutex.lock();									      //read = true	
 			}
 			
 			//CALCULATE RAND VALUES
-			rngMutex.lock();
+			//rngMutex.lock();
 			for (int i = 0; i < randValIndex; i++) {
 				randVals[i] = ((rng() >> 11) & multiplier) == multiplier;
 			}
 			randValIndex = 0;
-			rngMutex.unlock();
+			//rngMutex.unlock();
 
 			//ITERATE THROUGH BLOCK AND UPDATE VECTORS
 			for (int y = 0; y < yValid; y++) {
@@ -309,6 +309,7 @@ strat_random(
 
 					//CREATE INDEX STRUCTURE
 					Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
+					strataCounts[val]++;
 
 					//UPDATE FIRST X VALS AUTOMATICALLY
 					if (firstXIndexCountPerStrata[val] < firstX) {
@@ -318,26 +319,50 @@ strat_random(
 					}
 
 					//CHECK RNG
-					bool use = randVals[randValIndex];
+					if (!randVals[randValIndex]) {
+						randValIndex++;
+						blockIndex++;
+						continue;
+					}
 					randValIndex++;
+
+					//std::cout << "HERE 4.7" << std::endl;
+					//std::cout << "index.x: " << index.x << std::endl;
+					//std::cout << "index.y: " << index.y << std::endl;
+					//std::cout << "val: " << val << std::endl;
+					//std::cout << "strataCounts.size(): " << strataCounts.size() << std::endl;
+					//std::cout << "indexesPerStrata.size(): " << indexesPerStrata.size() << std::endl;
+					//std::cout << "indexesPerStrata[val].size(): " << indexesPerStrata[val].size() << std::endl;
+					//std::cout << "indexCountPerStrata[val]: " << indexCountPerStrata[val] << std::endl;
 
 					//UPDATE VECTORS
 					strataCounts[val]++;
-					indexesPerStrata[val][indexCountPerStrata[val]] = index;
-					indexCountPerStrata[val] += use;
+					indexesPerStrata[val].push_back(index);
+					indexCountPerStrata[val]++;
 
+					//std::cout << "HERE 4.8" << std::endl;
+
+					//std::cout << "HERE 4.9" << std::endl;
 					//INCREMENT WITHIN-BLOCK INDEX
 					blockIndex++;
 				}
 			}
 
+
 			//free any firstX vectors which can no longer be used
 			for (size_t i = 0; i < numStrata; i++) {
 				if (firstXIndexCountPerStrata[i] == firstX) {
 					std::vector<Index>().swap(firstXIndexesPerStrata[i]);
+					firstXIndexCountPerStrata[i]++;
 				}
 			}
+
 		}
+	}
+
+	for (size_t strata = 0; 0 < numStrata; strata++) {
+		std::cout << indexesPerStrata.size() << " indexes saved from strata " << strata << std::endl;
+		std::cout << "total count: " << strataCounts[strata] << std::endl; 
 	}
 
 	if (access.used) {
