@@ -23,6 +23,8 @@ git clone https://github.com/jbmeyer2001/sgs.git
 pip install .
 ```
 
+5. The best resource for examples of how to use sgsPy is within the tests, official documentation has not yet been published. Each algorithm also has it's own documentation within its python file (ex: sgs/stratify/breaks/breaks.py gives information on how breaks is supposed to be used).
+
 ## Develoment progress
 ### stratification:
  - breaks (including large raster processing)
