@@ -9,7 +9,7 @@ ideas you may have. The easiest way to reach me is by posting within the github
 issues or by emailing jmeyer03 'at' mail.ubc.ca .
 
 ## Installation
-# NOTE: the Windows build is currently broken.
+### NOTE: the Windows build is currently broken.
 1. ensure you have Python (has been tested on 3.13), git, and a c++ compiler. 
 
 2. clone the repository with the following command.
