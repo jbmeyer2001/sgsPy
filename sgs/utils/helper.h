@@ -730,11 +730,11 @@ updateAccess(
 			}
 			case OGRwkbGeometryType::wkbMultiLineString: {
 				for (const auto& p_lineString : *p_geometry->toMultiLineString()) {
-					OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
+					OGRGeometry *p_outer = p_lineString->Buffer(buffOuter);
 					buffOuterPolygons->addGeometry(p_outer);
 
 					if (buffInner != 0) {
-						OGRGeometry *p_inner = p_geometry->Buffer(buffInner);
+						OGRGeometry *p_inner = p_lineString->Buffer(buffInner);
 						buffInnerPolygons->addGeometry(p_inner);
 					}
 				}
@@ -759,8 +759,7 @@ updateAccess(
 		free(buffOuterPolygons);
 		free(buffInnerPolygons);
 		free(buffOuterUnion);
-		free(buffInnerUnion);
-			
+		free(buffInnerUnion);	
 	}
 
 	access.area = 0;

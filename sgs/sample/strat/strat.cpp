@@ -229,7 +229,7 @@ strat_random(
 			access.band.p_buffer);
 	}
 
-	std::vector<unsigned long long int> strataCounts(numStrata, 0);
+	std::vector<uint64_t> strataCounts(numStrata, 0);
 	std::vector<std::vector<Index>> indexesPerStrata(numStrata);
 	std::vector<size_t> indexCountPerStrata(numStrata, 0);
 
@@ -376,8 +376,8 @@ strat_random(
 	}
 
 	uint64_t numDataPixels = 0;
-	for (const uint64_t& count : strataCounts) {
-		numDataPixels += count;
+	for (size_t i = 0; i < strataCounts.size(); i++) {
+		numDataPixels += strataCounts[i];
 	}
 
 	std::vector<uint64_t> strataSampleCounts = calculateAllocation<uint64_t>(
