@@ -258,7 +258,7 @@ void batchCalcSPQuantiles(
 	float *quant_order = reinterpret_cast<float *>(spProbabilities.data());
 	float *quants = reinterpret_cast<float *>(spQuantiles.data());
 
-	vslsSSNewTask(&task, &p, &n, &xstorage, p_filtered, 0, 0);
+	status = vslsSSNewTask(&task, &p, &n, &xstorage, p_filtered, nullptr, nullptr);
 
 	//read and compute raster by blocks
 	bool calledEditStreamQuantiles = false;

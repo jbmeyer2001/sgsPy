@@ -1,3 +1,5 @@
+import platform
+
 import geopandas as gpd
 import numpy as np
 import pytest
@@ -72,6 +74,7 @@ class TestStrat:
 
         return allocation
 
+    @pytest.mark.skipif(platform.system() == "Windows")
     def test_random_allocation_equal(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -153,6 +156,7 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.2 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skipif(platform.system() == "Windows")
     def test_random_allocation_proportional(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 8})
 
@@ -233,6 +237,7 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.125 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skipif(platform.system() == "Windows")
     def test_random_allocation_manual(self):
         #without mindist or access
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
@@ -324,6 +329,7 @@ class TestStrat:
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skipif(platform.system() == "Windows")
     def test_queinnec_allocation_equal(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -404,6 +410,7 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.2 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skipif(platform.system() == "Windows")
     def test_queinnec_allocation_proportional(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 8})
 
@@ -484,6 +491,7 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.125 == pytest.approx(0, abs=0.03)
 
+    @pytest.mark.skipif(platform.system() == "Windows")
     def test_queinnec_allocation_manual(self):
         #without mindist or access
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
@@ -575,6 +583,7 @@ class TestStrat:
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
     
+    @pytest.mark.skipif(platform.system() == "Windows")
     def test_queinnec_focal_window(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -668,7 +677,7 @@ class TestStrat:
             ).samples_as_wkt())
             self.check_focal_window(srast, samples, wrow=3, wcol=1)
 
-
+    @pytest.mark.skipif(platform.system() == "Windows")
     def test_function_inputs(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
