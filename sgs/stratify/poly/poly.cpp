@@ -26,6 +26,7 @@ GDALRasterWrapper *poly(
 	std::string tempFolder,
 	std::map<std::string, std::string> driverOptions)
 {
+	std::cout << "HERE 1" << std::endl;
 	GDALAllRegister();
 
 	//step 1: get required info from vector and raster objects
@@ -36,6 +37,7 @@ GDALRasterWrapper *poly(
 	int height = p_raster->getHeight();
 	double *geotransform = p_raster->getGeotransform();
 	std::string projection = std::string(p_rasterDS->GetProjectionRef());
+	std::cout << "HERE 2" << std::endl;
 
 	const OGRSpatialReference *p_layerSrs = p_vector->getLayer(layerName)->GetSpatialRef();
 	if (!p_layerSrs) {
@@ -47,6 +49,7 @@ GDALRasterWrapper *poly(
 	if (!OGRSpatialReference(projection.c_str()).IsSame(p_layerSrs)) {
 		throw std::runtime_error("raster and vector projections don't match.");
 	}
+	std::cout << "HERE 3" << std::endl;
 
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
@@ -56,6 +59,7 @@ GDALRasterWrapper *poly(
 	p_rasterDS->GetRasterBand(1)->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 	band.name = "strata";
 	std::vector<VRTBandDatasetInfo> VRTBandInfo;
+	std::cout << "HERE 4" << std::endl;
 
 	//step 2: create dataset
 	GDALDataset *p_dataset = nullptr;
@@ -81,6 +85,7 @@ GDALRasterWrapper *poly(
 
 		p_dataset = createDataset(filename, driver, width, height, geotransform, projection, &band, 1, false, driverOptions);
 	}
+	std::cout << "HERE 5" << std::endl;
 
 	band.p_band->Fill(band.nan);
 
@@ -99,7 +104,9 @@ GDALRasterWrapper *poly(
 	argv = CSLAddString(argv, "-dialect");
 	argv = CSLAddString(argv, "SQLITE");	
 
+	std::cout << "HERE 6" << std::endl;
 	GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
+	std::cout << "HERE 6.1" << std::endl;
 	//step 5: rasterize vector to in-memory dataset
 	GDALRasterize(
 		nullptr,
@@ -108,14 +115,17 @@ GDALRasterWrapper *poly(
 		options,
 		nullptr
 	);
+	std::cout << "HERE 7" << std::endl;
 
 	//step 6: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
 	
+	std::cout << "HERE 8" << std::endl;
 	if (isVRTDataset) {
 		GDALClose(VRTBandInfo[0].p_dataset);
 		addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	
 	}
+	std::cout << "HERE 9" << std::endl;
 
 	//step 7: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python

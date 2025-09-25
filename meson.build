@@ -15,11 +15,11 @@ run_command('git', 'submodule', 'update', '--init', '--recursive')
 if WIN
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio:x64-windows-static', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11:x64-windows-static', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-windows-static', '--recurse', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
 else #linux
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
@@ -34,9 +34,8 @@ endif
 if WIN
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
   mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
-  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
+  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/bin'
   mkl_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib/intel64'
-  tbb_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib'
   mkl_tbb_bin = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/bin' 
 else #linux
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
@@ -71,16 +70,16 @@ if WIN
 
     #ensure the file is actually a library, since the tree command also searches subdirectories
     #and there are often files of other types which we don't want
-    if lib.endswith('.lib')
+    if lib.endswith('.dll')
 
       #remove 'lib' at beginning of library if it exists
-      if lib.startswith('lib')
-        lib = lib.replace('lib', '')
-      endif
+      #if lib.startswith('lib')
+      #  lib = lib.replace('lib', '')
+      #endif
 
       #get just the lib name and add it to the dependencies
       lib = lib.split('.').get(0)
-      lib_deps += cxx.find_library(lib, dirs: lib_dir, static: true)
+      lib_deps += cxx.find_library(lib, dirs: lib_dir)
    
     endif
   endforeach
@@ -106,7 +105,7 @@ if WIN
   #]
 
   foreach lib : mkl_libs
-    lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir], static:true)
+    lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir])
   endforeach
 
   #foreach lib : tbb_libs
