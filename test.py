@@ -39,14 +39,16 @@ import sys
 #end = time.time()
 #print(str(end - start))
 
-rast = sgs.SpatialRaster('D:/RMF_LiDAR_Metrics/CHM.tif')
+#rast = sgs.SpatialRaster('D:/RMF_LiDAR_Metrics/CHM.tif')
 #access = sgs.SpatialVector('C:/Users/jmeyer03/projects/github/sgs/tests/files/access.shp')
+
+#rast = sgs.SpatialRaster('/home/jbmeyer/RMF_LiDAR_Metrics/CHM.tif')
 
 #print("about to start stratifying CHM Into 5 equal quantiles")
 #srast = sgs.stratify.quantiles(rast, num_strata=5, filename="srast_CHM.tif")
-srast = sgs.SpatialRaster('C:/Users/jmeyer03/projects/github/sgs/srast_CHM.tif')
-print(srast.bands)
-print("about to start sampling using strat")
-svect = sgs.sample.strat(srast, 0, num_samples=500, num_strata = 5, allocation="equal", method="random", plot=True)
+
+srast = sgs.SpatialRaster('srast_CHM.tif')
+#srast = sgs.stratify.quantiles(sgs.SpatialRaster('/home/jbmeyer/extdata/mraster.tif'), num_strata={'pzabove2': 5})
+svect = sgs.sample.strat(srast, 0, num_samples=500, num_strata = 5, allocation="equal", method="random", filename="sampuls.shp")
 print("finished sampling!")
 #svect.plot('Point')

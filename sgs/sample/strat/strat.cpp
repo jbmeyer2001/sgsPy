@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <random>
+#include <bitset>
 
 #include "access.h"
 #include "helper.h"
@@ -90,12 +91,12 @@ calculateAllocation(
 }
 
 inline uint64_t
-getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMindist, double accessibleArea) {
+getProbabilityMask(GDALRasterWrapper *p_raster, int numSamples, bool useMindist, double accessibleArea) {
 	double height = static_cast<double>(p_raster->getHeight());
 	double width = static_cast<double>(p_raster->getWidth());
 	double samples = static_cast<double>(numSamples);
 
-	double numer = samples * 2 * (useMindist ? 3 : 1);
+	double numer = samples * 4 * (useMindist ? 3 : 1);
 	double denom = height * width;
 
 	if (accessibleArea != -1) {
@@ -106,10 +107,10 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 		numer *= (totalArea / accessibleArea);
 	}
 
-	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer)));
+
+	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer))); 
 	return (bits <= 0) ? 0 : (1 << bits) - 1;
 }
-
 /**
  * This function conducts stratified random sampling on the provided stratified raster.
  *
@@ -221,7 +222,7 @@ strat_random(
 	std::vector<bool> randVals(xBlockSize * yBlockSize);
 	int randValIndex = xBlockSize * yBlockSize;
 	int nanInt = static_cast<int>(band.nan);
-	
+
 	uint8_t *p_accessMask = nullptr;
 	if (access.used) {
 		p_accessMask = static_cast<uint8_t *>(largeRaster ?
@@ -231,6 +232,9 @@ strat_random(
 
 	std::vector<uint64_t> strataCounts(numStrata, 0);
 	std::vector<std::vector<Index>> indexesPerStrata(numStrata);
+	for (size_t i = 0 ; i < numStrata ; i++) {
+		indexesPerStrata[i].resize(numSamples * 4 * (useMindist ? 3 : 1));
+	}
 	std::vector<size_t> indexCountPerStrata(numStrata, 0);
 
 	size_t firstX = 10000;
@@ -260,8 +264,8 @@ strat_random(
 	//no longer be random. Perhaps there is a way to dynamically adjust the size of the first 'thousand'
 	//pixels as the raster is iterating to take this into account, without retaining too many pixels
 	//to be feasible for large images.
-	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area);
-	
+	uint64_t mask = getProbabilityMask(p_raster, numSamples, useMindist, access.area);
+
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
@@ -280,9 +284,8 @@ strat_random(
 			}
 			
 			//CALCULATE RAND VALUES
-			//rngMutex.lock();
 			for (int i = 0; i < randValIndex; i++) {
-				randVals[i] = ((rng() >> 11) & multiplier) == multiplier;
+				randVals[i] = ((rng() >> 11) & mask) == mask;
 			}
 			randValIndex = 0;
 			//rngMutex.unlock();
@@ -326,23 +329,12 @@ strat_random(
 					}
 					randValIndex++;
 
-					//std::cout << "HERE 4.7" << std::endl;
-					//std::cout << "index.x: " << index.x << std::endl;
-					//std::cout << "index.y: " << index.y << std::endl;
-					//std::cout << "val: " << val << std::endl;
-					//std::cout << "strataCounts.size(): " << strataCounts.size() << std::endl;
-					//std::cout << "indexesPerStrata.size(): " << indexesPerStrata.size() << std::endl;
-					//std::cout << "indexesPerStrata[val].size(): " << indexesPerStrata[val].size() << std::endl;
-					//std::cout << "indexCountPerStrata[val]: " << indexCountPerStrata[val] << std::endl;
-
 					//UPDATE VECTORS
 					strataCounts[val]++;
-					indexesPerStrata[val].push_back(index);
+					indexesPerStrata[val][indexCountPerStrata[val]] = index;
+					//indexesPerStrata[val].push_back(index);
 					indexCountPerStrata[val]++;
 
-					//std::cout << "HERE 4.8" << std::endl;
-
-					//std::cout << "HERE 4.9" << std::endl;
 					//INCREMENT WITHIN-BLOCK INDEX
 					blockIndex++;
 				}
@@ -352,17 +344,12 @@ strat_random(
 			//free any firstX vectors which can no longer be used
 			for (size_t i = 0; i < numStrata; i++) {
 				if (firstXIndexCountPerStrata[i] == firstX) {
+					std::cout << "freeing first index for " << i << std::endl;
 					std::vector<Index>().swap(firstXIndexesPerStrata[i]);
 					firstXIndexCountPerStrata[i]++;
 				}
 			}
-
 		}
-	}
-
-	for (size_t strata = 0; 0 < numStrata; strata++) {
-		std::cout << indexesPerStrata.size() << " indexes saved from strata " << strata << std::endl;
-		std::cout << "total count: " << strataCounts[strata] << std::endl; 
 	}
 
 	if (access.used) {
@@ -401,7 +388,7 @@ strat_random(
 		if (probIndexesCount >= desiredSamples || firstXIndexesCount < totalPixels) {
 			auto begin = indexesPerStrata[i].begin();
 			auto end = indexesPerStrata[i].end();
-			std::shuffle(begin, end, rng); 
+		std::shuffle(begin, end, rng); 
 			strataIndexVectors[i] = &indexesPerStrata[i];
 		}
 		else  {
@@ -420,6 +407,10 @@ strat_random(
 	double *GT = p_raster->getGeotransform();
 	size_t curStrata = 0;
 	while (numCompletedStrata < numStrata) {
+		if (curStrata == numStrata) {
+			curStrata = 0;
+		}
+
 		if (completedStrata[curStrata]) {
 			curStrata++;
 			continue;
@@ -445,7 +436,7 @@ strat_random(
 
 		Index index = strataIndexes->at(nextIndex);
 		nextIndexes[curStrata]++;
-
+	
 		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
 		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
 		OGRPoint newPoint = OGRPoint(x, y);
@@ -464,14 +455,12 @@ strat_random(
 				curStrata++;
 				continue;
 			}
-
 		}
 
 		OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
 		p_feature->SetGeometry(&newPoint);
 		p_layer->CreateFeature(p_feature);
 		OGRFeature::DestroyFeature(p_feature);
-
 		if (plot) {
 			xCoords.push_back(x);
 			yCoords.push_back(y);
