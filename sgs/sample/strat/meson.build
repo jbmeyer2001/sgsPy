@@ -5,7 +5,6 @@ if WIN
     'strat.cpp',
     link_with: [
       raster_lib,
-      vector_lib,
       access_lib,
     ],
     dependencies: [lib_deps],

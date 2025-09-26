@@ -32,9 +32,9 @@ endif
 
 #define directories
 if WIN
-  inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
+  inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
   mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
-  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/bin'
+  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib'
   mkl_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib/intel64'
   mkl_tbb_bin = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/bin' 
 else #linux
@@ -64,22 +64,24 @@ lib_deps = []
 #the following is hacky meson build code to add all the external libraries required for the project from the vcpkg install folder
 if WIN
   #the 'tree' command *should* work with both PowerShell and CMD
-  libs = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows-static/lib', '/f', '/a', check: true).stdout().strip().split('|')
+  libs = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows/lib', '/f', '/a', check: true).stdout().strip().split('|')
   foreach lib : libs
     lib = lib.strip()
 
     #ensure the file is actually a library, since the tree command also searches subdirectories
     #and there are often files of other types which we don't want
-    if lib.endswith('.dll')
+    if lib.endswith('.lib')
 
       #remove 'lib' at beginning of library if it exists
-      #if lib.startswith('lib')
-      #  lib = lib.replace('lib', '')
-      #endif
+      if lib.startswith('lib')
+        lib = lib.replace('lib', '')
+      endif
 
       #get just the lib name and add it to the dependencies
-      lib = lib.split('.').get(0)
-      lib_deps += cxx.find_library(lib, dirs: lib_dir)
+      if not lib.contains('omp') and not lib.contains('mkl')
+        lib = lib.split('.').get(0)
+        lib_deps += cxx.find_library(lib, dirs: lib_dir)
+      endif
    
     endif
   endforeach

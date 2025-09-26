@@ -1,16 +1,26 @@
 #build GDALRasterWrapper as library
-raster_lib = static_library(
-  'raster_lib', 'raster.cpp', 'raster.h',
-  dependencies: [lib_deps, py.dependency()],
-  include_directories: [inc_dir],
-)
+#raster_lib = library(
+#  'raster_lib', 'raster.cpp', 'raster.h',
+#  dependencies: [lib_deps, py.dependency()],
+#  include_directories: [inc_dir],
+#)
+
+#raster_lib_dep = declare_dependency(
+#  link_with: raster_lib,
+#  include_directories: [inc_dir, utils_inc_dir]
+#)
 
 #build GDALVectorWrapper as library
-vector_lib = static_library(
-  'vector_lib', 'vector.cpp', 'vector.h',
-  dependencies: [lib_deps, py.dependency()],
-  include_directories: [inc_dir],
-)
+#vector_lib = library(
+#  'vector_lib', 'vector.cpp', 'vector.h',
+#  dependencies: [lib_deps, py.dependency()],
+#  include_directories: [inc_dir],
+#)
+
+#vector_lib_dep = declare_dependency(
+#  link_with: vector_lib,
+#  include_directories: [inc_dir, utils_inc_dir]
+#)
 
 #both windows and linux builds need to be linked slightly differently.
 #windows requires the use of the link_with argument, whereas Linux
@@ -20,33 +30,36 @@ vector_lib = static_library(
 #from the Windows SDK.
 if WIN
   #create access lib
-  access_lib = static_library(
-    'access_lib', 'access.cpp', 'access.h',
-    link_with: [raster_lib, vector_lib],
-    link_args: win_link_args,
-    dependencies: [lib_deps, py.dependency()],
-    include_directories: inc_dir,
-  )
+  #access_lib = library(
+  #  'access_lib', 'access.cpp', 'access.h', 'vector.h',
+  #  link_with: [raster_lib],
+  #  link_args: win_link_args,
+  #  dependencies: [lib_deps, py.dependency()],
+  #  include_directories: inc_dir,
+  #)
+
+  #access_lib_dep = declare_dependency(
+  #  link_with: access_lib,
+  #  include_directories: [inc_dir, utils_inc_dir]
+  #)
 
   #create raster module
   py.extension_module(
     'raster',
-    ['raster_pybind.cpp'],
-    link_with: [raster_lib],
+    ['raster_pybind.cpp', 'raster.h'],
     link_args: win_link_args, 
     dependencies: [lib_deps],
-    include_directories: inc_dir,
+    include_directories: [inc_dir],
     install: true,
   )
 
   #create vector module
   py.extension_module(
     'vector',
-    ['vector_pybind.cpp'],
-    link_with: [vector_lib],
+    ['vector_pybind.cpp', 'vector.h'],
     link_args: win_link_args,
     dependencies: [lib_deps],
-    include_directories: inc_dir,
+    include_directories: [inc_dir],
     install: true,
   )
 
@@ -56,7 +69,7 @@ else #linux
   vector_obj = vector_lib.extract_objects('vector.cpp')
 
   #create access library and extract object, using raster and vector objects
-  access_lib = static_library(
+  access_lib = library(
     'access_lib', 'access.cpp', 'access.h',
     dependencies: [lib_deps, py.dependency()],
     include_directories: inc_dir,

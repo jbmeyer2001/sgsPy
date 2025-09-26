@@ -3,11 +3,6 @@ if WIN
   py.extension_module(
     'srs',
     'srs.cpp',
-    link_with: [
-      raster_lib,
-      vector_lib,
-      access_lib,
-    ],
     dependencies: [lib_deps],
     include_directories: [
       inc_dir,

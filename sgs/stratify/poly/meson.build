@@ -5,7 +5,6 @@ if WIN
     'poly.cpp',
     link_with: [
       raster_lib,
-      vector_lib,
     ],
     link_args: win_link_args,
     dependencies: [lib_deps],
