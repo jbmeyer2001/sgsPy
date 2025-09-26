@@ -3,9 +3,6 @@ if WIN
   py.extension_module(
     'map_stratifications',
     'map_stratifications.cpp',
-    link_with: [
-      raster_lib,
-    ],
     link_args: win_link_args,
     dependencies: [lib_deps],
     include_directories: [

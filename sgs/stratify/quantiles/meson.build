@@ -3,9 +3,6 @@ if WIN
   py.extension_module(
     'quantiles',
     'quantiles.cpp',
-    link_with: [
-      raster_lib,
-    ],
     link_args: [
       win_link_args, 
     ],

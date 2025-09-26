@@ -138,7 +138,7 @@ class GDALRasterWrapper {
 	 * @returns py::buffer memoryview object of the data
 	 */
 	template <typename T> 
-	py::buffer getBuffer(size_t size, void *p_raster, int width, int height){
+	py::buffer getBuffer(size_t size, void *p_buffer, int width, int height){
 	//see https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#memory-view
 	return py::memoryview::from_buffer(
 		(T*)p_buffer, 		//buffer
@@ -591,7 +591,7 @@ class GDALRasterWrapper {
 	 * @param int band zero-indexed
 	 * @returns void *data pointer to band
 	 */
-	void *getRasterBandBuffer(int){
+	void *getRasterBandBuffer(int band){
 	if (!this->rasterBandRead[band]) {
 		this->readRasterBand(
 			this->getWidth(), 

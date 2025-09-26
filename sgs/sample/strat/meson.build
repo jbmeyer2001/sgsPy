@@ -3,10 +3,6 @@ if WIN
   py.extension_module(
     'strat',
     'strat.cpp',
-    link_with: [
-      raster_lib,
-      access_lib,
-    ],
     dependencies: [lib_deps],
     include_directories: [
       inc_dir,
