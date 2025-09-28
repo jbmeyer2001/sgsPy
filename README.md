@@ -1,15 +1,15 @@
-## Statement of ongoing development
+## Overview
 The sgsPy Python pacakge (Structurally Guided Sampling) is a package in development.
 
 While the package has not yet been officially distributed or released, beta testers
 are highly encouraged! See the lower sections of this readme for installation and
 running instructions. 
 
-### How to stay up to date?
+#### How to stay up to date?
 Either by watching this repository, or if you would like to recieve more detailed information on
 larger updates, you may email me at jmeyer03 'at' mail.ubc.ca asking to join the sgs mailing list.
 
-### How to contribute?
+#### How to contribute?
 The easiest way to contribute is by logging any errors, or posting any ideas as an issue on this github repository.
 
 ## Installation
@@ -17,7 +17,6 @@ The easiest way to contribute is by logging any errors, or posting any ideas as 
 
 ### Linux:
 1. Ensure you have Python with pip installed, and git.
-
 2. clone the repository with the following command:
 ```
 git clone https://github.com/jbmeyer2001/sgsPy.git
