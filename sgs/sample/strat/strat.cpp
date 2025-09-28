@@ -133,7 +133,7 @@ strat_random(
 	bool plot,
 	std::string filename)
 {
-#ifdef __WIN32__ || __WIN64||
+#ifdef _WIN32 || _WIN64
 	throw std::runtime_error("strat_random does not work on windows, an updated implementation is in progress.");
 #endif
 
@@ -339,7 +339,7 @@ strat_random(
 
 	return {{xCoords, yCoords}, p_sampleVectorWrapper, totalSamplesAdded};
 }
-	
+
 /**
  * This function conducts stratified sampling on the provided stratified raster
  * using the Queinnec method. The queinnec method first tries to sample pixels which 
@@ -399,7 +399,6 @@ strat_random(
  * strata vectors are then used to added any required remaining
  * samples using the same random selection technique. 
  */
-
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
 strat_queinnec(
 	GDALRasterWrapper *p_raster,
@@ -418,8 +417,8 @@ strat_queinnec(
 	bool plot,
 	std::string filename)
 {
-#ifdef __WIN32__ || __WIN64||
-	throw std::runtime_error("strat_random does not work on windows, an updated implementation is in progress.");
+#ifdef _WIN32 || _WIN64
+	throw std::runtime_error("strat_queinnec does not work on windows, an updated implementation is in progress.");
 #endif
 
 	//step 1: get raster band
@@ -626,6 +625,7 @@ strat_queinnec(
 	size_t numDataPixels = p_raster->getWidth() * p_raster->getHeight() - noDataPixelCount;
 
 	//step 6: test to ensure focal queinnec/random vector additions are correct
+
 	/*
 	//FOR TESTING PURPOSES	
 	size_t checkNumDataPixels = 0;
@@ -676,7 +676,7 @@ strat_queinnec(
 		}
 	}
 	*/
-
+	
 	//step 7: calculate allocation of samples depending on stratum sizes 
 	std::vector<size_t> strataSizes;
 	for (size_t i = 0; i < queinnecStratumIndexes.size(); i++) {
@@ -898,7 +898,6 @@ strat_queinnec(
 
 	return {{xCoords, yCoords}, p_sampleVectorWrapper, totalSamplesAdded};
 }
-
 /**
  * This function is called by the Python side of the application
  * if the user provided access information. Depending on the

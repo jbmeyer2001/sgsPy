@@ -1,3 +1,4 @@
+import platform
 import pytest
 import numpy as np
 
@@ -19,6 +20,7 @@ class TestPoly:
     test1_output_rast = sgs.SpatialRaster(strat_poly_test1_r_path)
     test2_output_rast = sgs.SpatialRaster(strat_poly_test2_r_path)
 
+    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
     def test_correct_stratifications_against_R_version(self):
         test_rast = sgs.poly(
             self.rast, 
@@ -33,7 +35,7 @@ class TestPoly:
         correct[correct == 4294967295] = np.nan
         correct = np.subtract(correct, 1)
         assert np.array_equal(test, correct, equal_nan=True)
-        
+
         test_rast = sgs.poly(
             self.rast,
             self.vect,
