@@ -1,4 +1,4 @@
-if WIN
+#if WIN
   #create breaks module
   py.extension_module(
     'breaks',
@@ -14,20 +14,4 @@ if WIN
     ],
     install: true,
   )
-else
-  #create srs module
-  py.extension_module(
-    'breaks',
-    'breaks.cpp',
-    dependencies: [lib_deps],
-    include_directories: [
-      inc_dir,
-      utils_inc_dir,
-    ],
-    objects: [
-      #from sgs/utils
-      raster_obj,
-    ],
-    install: true,
-  )
-endif
+

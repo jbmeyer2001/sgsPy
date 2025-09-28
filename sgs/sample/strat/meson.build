@@ -19,16 +19,13 @@ else #linux
   py.extension_module(
     'strat',
     'strat.cpp',
-    dependencies: [lib_deps],
+    dependencies: [
+      lib_deps,
+      pybind11_dep,
+    ],
     include_directories: [
       inc_dir,
       utils_inc_dir,
-    ],
-    objects: [
-      #from sgs/utils
-      raster_obj,
-      vector_obj,
-      access_obj,
     ],
     install: true,
   )

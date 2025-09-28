@@ -1,4 +1,4 @@
-if WIN
+#if WIN
   #create systematic module
   py.extension_module(
     'systematic',
@@ -14,22 +14,4 @@ if WIN
     install: true,
     link_args: win_link_args,
   )
-else #linux
-  #create systematic module
-  py.extension_module(
-    'systematic',
-    'systematic.cpp',
-    dependencies: [lib_deps],
-    include_directories: [
-      inc_dir,
-      utils_inc_dir,
-    ],
-    objects: [
-      #from sgs/utils
-      raster_obj,
-      vector_obj,
-      access_obj,
-    ],
-    install: true,
-  )
-endif
+
