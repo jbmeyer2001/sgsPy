@@ -1,30 +1,129 @@
-## Statement of ongoing development
+## Overview
 The sgsPy Python pacakge (Structurally Guided Sampling) is a package in development.
 
-It has not been distributed, nor officially released besides making this github 
-repository public. As such, errors are not unlikely, despite any tests which it 
-may pass. However, you are highly encouraged to test sgsPy out, and contribute 
-to development of the package by notifying me of any bugs which you may find or
-ideas you may have. The easiest way to reach me is by posting within the github
-issues or by emailing jmeyer03 'at' mail.ubc.ca .
+While the package has not yet been officially distributed or released, beta testers
+are highly encouraged! See the lower sections of this readme for installation and
+running instructions. 
+
+#### How to stay up to date?
+Either by watching this repository, or if you would like to recieve more detailed information on
+larger updates, you may email me at jmeyer03 'at' mail.ubc.ca asking to join the sgs mailing list.
+
+#### How to contribute?
+The easiest way to contribute is by logging any errors, or posting any ideas as an issue on this github repository.
 
 ## Installation
-### NOTE: the Windows build is currently broken.
-1. ensure you have Python (has been tested on 3.13), git, and a c++ compiler. 
+### NOTE: when distributed, the package will be available through PyPI and thus a quick 'pip install sgs'. For now, the package can be installed and built as follows depending on operating system.
 
-2. clone the repository with the following command.
+### Linux:
+1. Ensure you have Python with pip installed, and git.
+2. clone the repository with the following command:
 ```
-git clone https://github.com/jbmeyer2001/sgs.git
+git clone https://github.com/jbmeyer2001/sgsPy.git
 ```
 
-3. create a Python virtual environment (recommended).
+3. create a python virtual environment (highly recommended)
+```
+python -m venv .venv
+```
 
-4. to install dependencies and build, run the following command from the directory containing this file. This may take quite some time to run, as it has to install all of the dependencies. When distributing the package officially, it will be distributed using pre-built binaries.
+the virtual environment then resides in the .venv folder, and can be activated with the following command:
+```
+source ./.venv/bin/activate
+```
+
+4. install dependency requirements. If you do not already have these, the dependency installation will fail.
+ - build-essential (if you don't already have a C++ compiler)
+ - pkg-config
+ - auto-conf
+ - libtool
+ - bison
+ - flex
+
+```
+sudo apt install build-essential
+sudo apt install pkg-config
+sudo apt install auto-conf
+sudo apt install libtool
+sudo apt install bison
+sudo apt install flex
+```
+
+5. Run the following commands to install dependencies from vcpkg (a C++ package manager). These commands will be automatically run any time the project is built, but the first time it is recommended to run them seperately to view the outputs. These commands may take a while (potentially a few hours), but once they are installed the build command will run much faster.
+```
+git submodule update --init --recursive #check out vcpkg submodule
+cd sgs/extern/vcpkg
+./bootstrap-vcpkg
+./vcpkg integrate install
+./vcpkg install gdal
+./vcpkg install boost-asio
+./vpckg install intel-mkl
+./vcpkg install tbb
+```
+
+6. build the package: run the following command from within the folder containing this file.
 ```
 pip install .
 ```
 
-5. The best resource for examples of how to use sgsPy is within the tests, official documentation has not yet been published. Each algorithm also has it's own documentation within its python file (ex: sgs/stratify/breaks/breaks.py gives information on how breaks is supposed to be used).
+7. If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow:
+```
+pip install pytest
+pip install geopandas
+```
+
+### Windows:
+
+1. ensure you have Python with pip, git, and a C++ compiler.
+
+2. If you do not already have a C++ compiler, one can installed by installing the Microsoft Visual Studio IDE with C++ build tools.
+
+3. clone the repository with the following command.
+```
+git clone https://github.com/jbmeyer2001/sgsPy.git
+```
+
+4. create a Python virtual environment (highly recommended).
+```
+python -m venv .venv
+```
+
+if you are usign powershell, the activation command is shown below, the activation command for command prompt may be different.
+```
+./.venv/Scripts/activate
+```
+
+5. Run the following commands to install dependencies from vcpkg (a C++ package manager). These commands will be automatically run any time the project is built, but the first time it is recommended to run them seperately to view the outputs. These commands may take a while (potentially a few hours), but once they are installed the build command will run much faster.
+```
+git submodule update --init --recursive #check out vcpkg submodule
+cd sgs/extern/vcpkg
+./bootstrap-vcpkg
+./vcpkg integrate install
+./vcpkg install gdal
+./vcpkg install boost-asio
+./vpckg install intel-mkl
+./vcpkg install tbb
+```
+
+6. build the package: run the following command from within the folder containing this file.
+```
+pip install .
+```
+
+7. If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow:
+```
+pip install pytest
+pip install geopandas
+```
+
+## How to run sgsPy
+
+Tests may be ran by running the following command from within the folder containing this file. Both pytest and geopandas must be installed to run the tests.
+```
+pytest
+```
+
+To run sgs on your own data, the best resource to look to is the tests, which are in the 'tests/' directory. Additionally, preliminary documentation for each function is available within the Python file that contains that function. For example, for information on how to run quantiles stratification on a raster, look to the comments within 'sgs/stratify/quantiles/quantiles.py'. Alternatively, you may contact me directly at jmeyer03 'at' mail.ubc.ca . 
 
 ## Develoment progress
 ### stratification:
