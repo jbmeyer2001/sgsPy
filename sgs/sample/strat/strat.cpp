@@ -111,6 +111,187 @@ getProbabilityMask(GDALRasterWrapper *p_raster, int numSamples, bool useMindist,
 	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer))); 
 	return (bits <= 0) ? 0 : (1 << bits) - 1;
 }
+
+/**
+ *
+ */
+struct IndexStorageVectors {
+	//for storing and updating total strata counts
+	std::vector<uint64_t> strataCounts;
+	std::mutex stratCountsMutex;
+
+	//for storing and updating the indexes per strata
+	std::vector<size_t> indexCountPerStrata;
+	std::vector<std::vector<Index>> indexesPerStrata;
+	std::mutex indexesPerStrataMutex;
+
+	//for storing and updating the first X always added
+	std::vector<size_t> firstXIndexCountPerStrata;
+	std::vector<std::vector<Index>> firstXIndexesPerStrata;
+	std::vector<bool> useFirstX;
+	std::mutex firstXIndexesPerStrataMutex;
+
+	//for storing and updating total queinnec strata pixel counts
+	std::vector<uint64_t> strataCountsQ;
+	std::mutex strataCountsQMutex
+
+	//for storing and updating the queinnec indexes per strata
+	std::vector<size_t> indexCountPerStrataQ;
+	std::vector<std::vector<Index>> indexesPerStrataQ;
+	std::mutex indexesPerStrataQMutex;
+	
+	//for storing and updating the first X queinnec indexes per strata
+	std::vector<size_t> firxtXIndexCountPerStrataQ;
+	std::vector<std::vector<Index>> firstXIndexesPerStrataQ;
+	std::vector<bool> useFirstXQ;
+	std::mutex firstXIndexesPerStrataQMutex;
+
+	size_t numStrata = 0;
+	size_t x = 0;
+
+	IndexStorageVectors(size_t numStrata,
+			    size_t x, 
+			    bool queinnec, 
+			    size_t randomMaxSize, 
+			    size_t queinnecMaxSize) 
+	{
+		this->numStrata = numStrata;
+		this->x = x;
+
+		this->strataCounts.resize(numStrata, 0);
+
+		this->indexCountPerStrata.resize(numStrata, 0);
+		this->indexesPerStrata.resize(numStrata);
+
+		this->firstXIndexCountPerStrata.resize(numStrata, 0);
+		this->firstXIndexesPerStrata.resize(numStrata);
+		this->useFirstX.resize(numStrata);
+
+		for (size_t strata = 0; strata < numStrata; strata++) {
+			this->indexesPerStrata[strata].resize(randomMaxSize);
+			this->firstXIndexesPerStrata[strata].resize(x);
+		}
+
+		if (queinnec) {
+			this->strataCountsQ.resize(numStrata, 0);
+
+			this->indexCountPerStrataQ.resize(numStrata, 0);
+			this->indexesPerStrataQ.resize(numStrata);
+
+			this->firstXIndexCountPerStrataQ.resize(numStrata, 0);
+			this->firstXIndexesPerStrataQ.resize(numStrata);
+			this->useFirstXQ.resize(numStrata);
+
+			for (size_t strata = 0; strata < numStrata; strata++) {
+				this->indexesPerStrataQ[strata].resize(queinnecMaxSize);
+				this->firstXIndexesPerStrataQ[strata].resize(x);
+			}
+		}
+	}
+
+	updateStrataCounts(std::vector<uint64_t>& counts) {
+		this->strataCountsMutex.lock();
+		for (size_t strata = 0; strata < this->numStrata; strata++) {
+			this->strataCounts[strata] += counts[strata];
+			counts[strata] = 0;
+		}
+		this->strataCountsMutex.unlock();
+	}
+
+	updateIndexCounts(std::vector<size_t>& counts, std::vector<std::vector<Index>>& indexes) {
+		this->indexesPerStrataMutex.lock();
+		for (size_t strata = 0; strata < this->numStrata; strata++) {
+			std::memcpy(
+				indexes[strata].data(),
+				indexesPerStrata[strata].data(),
+				counts[strata] * sizeof(Index)
+			);
+
+			indexCountPerStrata[strata] += counts[strata];
+			counts[strata] = 0;
+		}
+		this->indexesPerStrataMutex.unlock();
+	}
+
+	updateFirstXIndexCounts(std::vector<size_t>& counts, std::vector<std::vector<Index>>& indexes, std::vector<bool>& use) {
+		this->firstXIndexesPerStrataMutex.lock();
+		for (size_t strata = 0; strata < this->numStrata; strata++) {
+			if (!useFirstX[strata]) {
+				use[strata] = false;
+				continue;
+			}
+
+			if (firstXIndexCountPerStrata[strata] + counts[strata] > x) {
+				std::vector<Index>().swap(firstXIndexesPerStrata[strata]);
+				useFirstX[strata] = false;
+				use[strata] = false;
+				continue;
+			}
+
+			std::memcpy(
+				indexes[strata].data(),
+				firstXIndexesPerStrata[strata].data(),
+				counts[strata] * sizeof(Index)
+			);
+
+			firstXIndexCountPerStrata[strata] += counts[strata];
+			counts[strata] = 0;
+		}
+		this->firstXIndexesPerStradtaMutex.unlock();
+	}
+
+	updateStrataCountsQ(std::vector<uint64_t>& counts) {
+		this->strataCountsQMutex.lock();
+		for (size_t strata = 0; strata < this->numStrata; strata++) {
+			this->strataCountsQ[strata] += counts[strata];
+			counts[strata] = 0;
+		}
+		this->strataCountsQMutex.unlock();
+	}
+
+	updateIndexCountsQ(std::vector<size_t>& counts, std::vector<std::vector<Index>>& indexes) {
+		this->indexesPerStrataQMutex.lock();
+		for (size_t strata = 0; strata < this->numStrata; strata++) {
+			std::memcpy(
+				indexes[strata].data(),
+				indexesPerStrataQ[strata].data(),
+				counts[strata] * sizeof(Index)
+			);
+
+			indexCountPerStrataQ[strata] += counts[strata];
+			counts[strata] = 0;
+		}
+		this->indexesPerStrataQMutex.unlock();
+	}
+
+	updateFirstXIndexCountsQ(std::vector<size_t>& counts, std::vector<std::vector<Index>>& indexes, std::vector<bool>& use) {
+		this->firstXIndexesPerStrataQMutex.lock();
+		for (size_t strata = 0; strata < this->numStrata; strata++) {
+			if (!useFirstXQ[strata]) {
+				use[strata] = false;
+				continue;
+			}
+
+			if (firstXIndexCountPerStrataQ[strata] + counts[strata] > x) {
+				std::vector<Index>().swap(firstXIndexesPerStrataQ[strata]);
+				useFirstXQ[strata] = false;
+				use[strata] = false;
+				continue;
+			}
+
+			std::memcpy(
+				indexes[strata].data(),
+				firstXIndexesPerStrataQ[strata].data(),
+				counts[strata] * sizeof(Index)
+			);
+
+			firstXIndexCountPerStrataQ[strata] += counts[strata];
+			counts[strata] = 0;
+		}
+		this->firstXIndexesPerStrataQMutex.unlock();
+	}
+}
+
 /**
  * This function conducts stratified random sampling on the provided stratified raster.
  *
@@ -230,16 +411,13 @@ strat_random(
 			access.band.p_buffer);
 	}
 
-	std::vector<uint64_t> strataCounts(numStrata, 0);
-	std::vector<std::vector<Index>> indexesPerStrata(numStrata);
-	for (size_t i = 0 ; i < numStrata ; i++) {
-		indexesPerStrata[i].resize(numSamples * 4 * (useMindist ? 3 : 1));
-	}
-	std::vector<size_t> indexCountPerStrata(numStrata, 0);
-
-	size_t firstX = 10000;
-	std::vector<std::vector<Index>> firstXIndexesPerStrata(numStrata, std::vector<Index>(firstX));
-	std::vector<size_t> firstXIndexCountPerStrata(numStrata, 0);
+	IndexStorageVectors vectors(
+		numStrata,
+	        10000,
+		false, //TODO: HAVE NOT IMPLEMENTED QUEINNEC YET
+		numSamples * 4 * (useMindist ? 3 : 1),
+		0 //TODO: HAVE NOT IMPLEMENTED QUIENNEC YET
+	);	
 	
 	//fast random number generator using xoshiro256+
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
