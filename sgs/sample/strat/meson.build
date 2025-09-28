@@ -3,7 +3,10 @@ if WIN
   py.extension_module(
     'strat',
     'strat.cpp',
-    dependencies: [lib_deps],
+    dependencies: [
+      lib_deps,
+      pybind11_dep,
+    ],
     include_directories: [
       inc_dir,
       utils_inc_dir,

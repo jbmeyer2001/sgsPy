@@ -48,7 +48,10 @@ if WIN
     'raster',
     ['raster_pybind.cpp', 'raster.h'],
     link_args: win_link_args, 
-    dependencies: [lib_deps],
+    dependencies: [
+      lib_deps,
+      pybind11_dep
+    ],
     include_directories: [inc_dir],
     install: true,
   )
@@ -58,7 +61,10 @@ if WIN
     'vector',
     ['vector_pybind.cpp', 'vector.h'],
     link_args: win_link_args,
-    dependencies: [lib_deps],
+    dependencies: [
+      lib_deps,
+      pybind11_dep
+    ],
     include_directories: [inc_dir],
     install: true,
   )

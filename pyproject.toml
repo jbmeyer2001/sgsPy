@@ -1,7 +1,8 @@
 [build-system]
 build-backend = "mesonpy"
 requires = [
-	"meson-python"
+	"meson-python",
+	"pybind11",
 ]
 
 [project]
@@ -9,7 +10,7 @@ name = "sgs"
 version = "0.0.0"
 dependencies = [
 	"numpy", #TODO add version
-	"matplotlib" #TODO add version
+	"matplotlib", #TODO add version
 ]
 
 [project.optional-dependencies]
@@ -17,13 +18,16 @@ test = [
 	"geopandas" #TODO add version
 ]
 
-license = {file = "LICENSE.txt"}
+#license = {file = "LICENSE.txt"}
 
 [tool.meson-python]
 allow-windows-internal-shared-libs = true
 
 [tool.meson-python.args]
 setup = ['-Db_vscrt=md']
+
+[tools.setuptools.package-data]
+"sgs" = ['sgs/extern/vcpkg/installed/x64-windows']
 
 [tool.pytest.ini_options]
 pythonpath = "."

@@ -7,6 +7,18 @@
 #
 # ******************************************************************************
 
+import os
+import platform
+
+if (platform.system() == 'Windows'):
+    path_to_file = os.path.dirname(__file__)
+    bin_path = os.path.join(path_to_file, "..", "extern", "vcpkg", "installed", "x64-windows", "bin")
+    os.add_dll_directory(bin_path)
+
+    proj_dir = os.path.join(path_to_file, "..", "extern", "vcpkg", "installed", "x64-windows", "share", "proj")
+    os.environ['PROJ_DATA'] = proj_dir
+
+
 import json
 import shutil
 from typing import Optional

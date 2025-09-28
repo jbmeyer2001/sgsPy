@@ -7,7 +7,8 @@ if WIN
       win_link_args, 
     ],
     dependencies: [
-      lib_deps
+      lib_deps,
+      pybind11_dep,
     ],
     include_directories: [
       inc_dir,

@@ -3,7 +3,10 @@ if WIN
   py.extension_module(
     'srs',
     'srs.cpp',
-    dependencies: [lib_deps],
+    dependencies: [
+      lib_deps,
+      pybind11_dep,
+    ],
     include_directories: [
       inc_dir,
       utils_inc_dir,
