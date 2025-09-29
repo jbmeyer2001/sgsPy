@@ -51,12 +51,6 @@ GDALRasterWrapper *poly(
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
 	
-#ifdef _WIN32 || _WIN64
-	if (isMEMDataset || isVRTDataset) {
-		throw std::runtime_error("The sgs windows build is failing some tests for the stratify.poly() method. Pass the filename parameter for the stratify.poly() method to run correctly on windows.");
-	}
-#endif
-
 	RasterBandMetaData band;
 	setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
 	p_rasterDS->GetRasterBand(1)->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
