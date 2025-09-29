@@ -22,10 +22,10 @@ if WIN
 else #linux
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio:x64-linux-dynamic', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl:x64-linux-dynamic', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb:x64-linux-dynamic', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-linux-dynamic', '--recurse', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio:x64-linux', check: true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl:x64-linux', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb:x64-linux', check: true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-linux', '--recurse', check:true)
 endif
 
 #define directories

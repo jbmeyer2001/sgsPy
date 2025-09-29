@@ -24,10 +24,11 @@ test = [
 allow-windows-internal-shared-libs = true
 
 [tool.meson-python.args]
-setup = ['-Db_vscrt=md']
+setup = ['-Db_vscrt=md ; sys_platform=win32',
+	 '-Db_vscrt=mt ; sys_platform=linux']
 
-[tools.setuptools.package-data]
-"sgs" = ['sgs/extern/vcpkg/installed/x64-windows']
+#[tools.setuptools.package-data]
+#"sgs" = ['sgs/extern/vcpkg/installed/x64-windows']
 
 [tool.pytest.ini_options]
 pythonpath = "."
