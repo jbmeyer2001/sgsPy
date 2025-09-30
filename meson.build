@@ -9,7 +9,6 @@ project(
 #get build operating system
 WIN = host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
 
-#ensure intel oneDAL git submodule is updated
 run_command('git', 'submodule', 'update', '--init', '--recursive')
 
 #install required dependencies using vcpkg
@@ -44,9 +43,7 @@ else #linux
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
   intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib/intel64'
 endif
-oneDAL_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
 utils_inc_dir = include_directories('sgs/utils')
-balanced_sampling_inc_dir = include_directories('sgs/extern/BalancedSampling')
 
 #add to link args if necessary
 if WIN

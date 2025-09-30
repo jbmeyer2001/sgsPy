@@ -20,7 +20,6 @@ from .calculate import (
 
 from .sample import (
     ahels,
-    balanced,
     clhs,
     existing,
     nc,
