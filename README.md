@@ -12,6 +12,10 @@ larger updates, you may email me at jmeyer03 'at' mail.ubc.ca asking to join the
 #### How to contribute?
 The easiest way to contribute is by logging any errors, or posting any ideas as an issue on this github repository.
 
+#### known issues:
+ - the implementation of sample.strat does not work on windows. A new method which is effective across large areas, and runs error-free on windows is under development.
+ - occasionally, an access-related test will fail.
+
 ## Installation
 ### NOTE: when distributed, the package will be available through PyPI and thus a quick 'pip install sgs'. For now, the package can be installed and built as follows depending on operating system.
 
