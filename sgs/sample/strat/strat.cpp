@@ -133,6 +133,10 @@ strat_random(
 	bool plot,
 	std::string filename)
 {
+
+#ifdef _WIN32 || _WIN64
+	throw std::runtime_error("strat_random does not work on windows, an updated implementation is in progress.");
+#endif
 	//step 1: get raster band
 	GDALDataType type = p_raster->getRasterBandType(band);
 	printTypeWarningsForInt32Conversion(type);
@@ -414,6 +418,11 @@ strat_queinnec(
 	bool plot,
 	std::string filename)
 {
+
+#ifdef _WIN32 || _WIN64
+	throw std::runtime_error("strat_queinnec does not work on windows, an updated implementation is in progress.");
+#endif
+
 	//step 1: get raster band
 	GDALDataType type = p_raster->getRasterBandType(band);
 	printTypeWarningsForInt32Conversion(type);	
