@@ -370,7 +370,7 @@ GDALRasterWrapper *mapStratifications(
 	}
 	else {
 		std::vector<int> intNoDataValues(bandCount);
-		for (size_t band; band < bandCount; band++) {
+		for (size_t band = 0; band < bandCount; band++) {
 			intNoDataValues[band] = static_cast<int>(stratBands[band].nan);
 		}
 

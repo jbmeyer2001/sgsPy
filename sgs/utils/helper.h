@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <filesystem>
+#include <mutex>
 #include <gdal_priv.h>
 
 #define MAXINT8		127
@@ -461,8 +462,8 @@ addBandToMEMDataset(
 
 	CPLErr err;
 	char **papszOptions = nullptr;
-	const char *datapointer = std::to_string((size_t)band.p_buffer).c_str();
-	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", datapointer);
+	std::string datapointer = std::to_string((size_t)band.p_buffer);
+	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", datapointer.c_str());
 	
 	err = p_dataset->AddBand(band.type, papszOptions);
 	CSLDestroy(papszOptions);
