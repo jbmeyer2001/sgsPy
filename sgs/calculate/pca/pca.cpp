@@ -13,15 +13,15 @@
 #include "raster.h"
 
 template <typename T>
-dal::pca::train_result 
+void //dal::pca::train_result 
 calculatePCA(
 	std::vector<RasterBandMetaData>& bands,
 	GDALDataType type,
 	size_t size,
 	int bandCount,
 	void *p_data,
-	int height,
 	int width,
+	int height,
 	int nComp)
 {
 	//read full bands into p_data
@@ -49,16 +49,16 @@ calculatePCA(
 	}
 
 	for (int i = 0; i < height * width; i++) {
-		bool noData = false;
-		for (int band = 0; band < bandCount; band++) {
-			T val = getPixelValueDependingOnType<T>(type, p_data, i * bandCount + band);
-			noData = val == noDataVals[i];
+		bool isNan = false;
+		for (int b = 0; b < bandCount; b++) { 
+			T val = reinterpret_cast<T *>(p_data)[((y * xBlockSize) + x) * bandCount + b]
+			isNan = val == noDataVals[b];
 			if (noData) {
 				break;
 			}
-			static_cast<T *>(p_data)[index * bandCount + band] = static_cast<T *>(p_data)[i * bandCount + band];
+			reinterpret_cast<T *>(p_data)[index * bandCount + b] = val;
 		}
-		index += !noData;
+		index += !isNan;
 	}
 
 	//create dal::homogen_table
@@ -71,11 +71,14 @@ calculatePCA(
 
 	//calculate pca
 	const auto desc = dal::pca::descriptor<float, Method>().set_component_count(nComp).set_deterministic(true);
-       	return dal::train::(desc, table);	
+       	const auto result = dal::pca::train(desc);
+	std::cout << "Eigenvectors: " << std::endl << result.get_eigenvectors() << std::endl;
+	std::cout << "Eigenvalues: " << std::endl << result.get_eigenvalues() << std::endl;
+	return;	
 }
 
 template <typename T>
-dal::pca::train_result
+void//dal::pca::train_result
 calculatePCA(
 	std::vector<RasterBandMetaData>& bands,
 	GDALDataType type,
@@ -85,9 +88,73 @@ calculatePCA(
 	int xBlockSize,
 	int yBlockSize,
 	int xBlocks,
-	int yBlocks)
+	int yBlocks
+	int nComp)
 {
+	std::vector<T> noDataValues(bands.size());
+	for (size_t i = 0; i < bands.size(); i++) {
+		noDataVals[i] = static_cast<T>(bands.nan);
+	}
 
+	const auto desc = dal::pca::descriptor<float, Method>().set_component_count(nComp).set_deterministic(true);
+	dal::pca::partial_train_result<> partial_result;
+
+	for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+		for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+			int xValid, yValid;
+			bands[0].GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+		
+			//read bands into memory	
+			for (size_t i = 0; i < bands.size(); i++) {
+				bands[i].p_band->RasterIO(
+					GF_Read,
+					xBlock * xBlockSize,
+					yBlock * yBlockSize,
+					xValid,
+					yValid,
+					(void *)((size_t)p_data + i * size),
+					xValid,
+					yValid,
+					type,
+					size * static_cast<size_t>(bandCount),
+					size * static_cast<size_t>(bandCount) * static_cast<size_t>(xBlockSize)		
+				);
+			}
+
+			//remove nodata values
+			int index;
+			for (int x = 0; x < xValid; x++) {
+				for (int y = 0; y < yValid; y++) {
+					bool isNan = false;
+					for (int b = 0; b < bandCount; b++) { 
+						T val = reinterpret_cast<T *>(p_data)[((y * xBlockSize) + x) * bandCount + b]
+						isNan = val == noDataVals[b];
+						if (noData) {
+							break;
+						}
+						reinterpret_cast<T *>(p_data)[index * bandCount + b] = val;
+					}
+					index += !isNan;
+				}
+			}
+
+			//create dal::homogen_table and update partial result
+			auto table = dal::homogen_table::wrap<T>(
+				reinterpret_cast<T *>(p_data),
+				index,
+				bandCount,
+				data_layout::row_major
+			);
+
+			//calculate partial result
+			partial_result = dal::partial_train(desc, partial_result, table);
+		}
+	}
+
+	auto result = dal::finalize_train(desc, partial_result);
+	std::cout << "Eigenvectors: " << std::endl << result.get_eigenvectors() << std::endl;
+	std::cout << "Eigenvalues: " << std::endl << result.get_eigenvalues() << std::endl;
+	return;
 }
 
 GDALRasterWrapper *pca(
@@ -196,9 +263,6 @@ GDALRasterWrapper *pca(
 		);
 	}
 
-	//TODO Move this to new function
-	dal::pca::partial_train_result<> partial_result;
-	
 	void *p_data = isMEMDataset ?
 		VSIMalloc3(height * width, numBlocks, size) :
 		VSIMalloc3(xBlockSize * yBlockSize, numBlocks, size);	
@@ -209,50 +273,15 @@ GDALRasterWrapper *pca(
 	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
 
-	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
-		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
-			int xValid, yValid;
-			bands[0].getActualBlockSize(xBlock, yBlock, xValid, yValid);
-			
-			//read blocks into memory
-			for (size_t band = 0; band < bands.size(); band++) {
-				band->RasterIO(
-					GF_Read,
-					xBlock * xBlockSize,
-					yBlock * yBlockSize,
-					xValid,
-					yValid,
-					(void *)((size_t)p_data + band * size),
-					xValid,
-					yValid,
-					type,
-					size * static_cast<size_t>(bandCount),
-					size * static_cast<size_t>(bandCount) * xBlockSize,
-					nullptr
-				);
-			
-				int rows = 0; //number of data values (rows) where columns are number of features
-							
-				switch(type) {
-					case GDT_Int32:
-						rows = removeNoDataFromBlock<int>(noDataValues, p_data, type, bandCount, xValid, yValid);
-						auto table = dal::homogen_table::wrap<int>(
-							reinterpret_cast<int *>(p_data), 
-							rows, 
-							bandCount,
-							data_layout::row_major);
-						break;
-					case GDT_Float32;
-						rows = removeNoDataFromBlock<float>(noDataValues, p_data, type, bandCount, xValid, yValid);
-						break;
-					default: //can only be GDT_Flaot64
-						rows = removeNoDataFromBlock<double>(noDataValues, p_data, type, bandCount, xValid, yValid);
-				}
-			}
-		}
+	if (largeRaster) {
+		calculatePCA(pcaBands, type, size, bandCount, p_data, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);	
+	}	
+	else {
+		calculatePCA(pcaBands, type, size, bandCount , p_data, width, height, nComp);
 	}
 
-	auto table = dal::homogen_table::wrap()
+	throw std::runtime_error("debugging stop.");
+	return nullptr;
 	//call rasterio to read as a specific data type in
 	//	row or column major
 	
