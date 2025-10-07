@@ -9,7 +9,7 @@ project(
 #get build operating system
 WIN = host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
 
-run_command('git', 'submodule', 'update', '--init', '--recursive')
+#run_command('git', 'submodule', 'update', '--init', '--recursive')
 
 #install required dependencies using vcpkg
 if WIN
@@ -21,13 +21,13 @@ if WIN
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-windows-static', '--recurse', check:true)
 else #linux
-  run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
+  #run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
+  #run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
+  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check: true)
+  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
+  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
+  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
+  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
 endif
 
 #define directories

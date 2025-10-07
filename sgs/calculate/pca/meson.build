@@ -1,6 +1,5 @@
 oneapi_dir = root_dir + '/sgs/extern/oneDAL/cpp/oneapi/dal/'
 input_files = [
-  'pca.cpp',
   oneapi_dir + 'exceptions.cpp',
   oneapi_dir + 'algo/pca/common.cpp',
   oneapi_dir + 'algo/pca/train_types.cpp',
@@ -31,6 +30,7 @@ input_files = [
   oneapi_dir + 'table/detail/table_builder.cpp',
   oneapi_dir + 'table/detail/table_kinds.cpp',
   oneapi_dir + 'table/detail/table_utils.cpp',
+  'pca.cpp',
 ]
 
 if WIN
