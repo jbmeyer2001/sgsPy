@@ -80,9 +80,11 @@ calculatePCA(
 
 	VSIFree(p_data);
 
-	std::cout << "Eigenvectors: " << std::endl << result.get_eigenvectors() << std::endl;
-	std::cout << "Eigenvalues: " << std::endl << result.get_eigenvalues() << std::endl;
+	//std::cout << "Eigenvectors: " << std::endl << result.get_eigenvectors() << std::endl;
+	//std::cout << "Eigenvalues: " << std::endl << result.get_eigenvalues() << std::endl;
 	
+	std::cout << "CALCULATED PCA" << std::endl;
+
 	return;	
 }
 
@@ -101,7 +103,7 @@ calculatePCA(
 	int bandCount = static_cast<int>(bands.size());
 	T *p_data = reinterpret_cast<T *>(VSIMalloc3(xBlockSize * yBlockSize, bandCount, size));
 
-	std::vector<T> noDataValues(bandCount);
+	std::vector<T> noDataVals(bandCount);
 	for (size_t i = 0; i < bands.size(); i++) {
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
@@ -112,11 +114,11 @@ calculatePCA(
 	for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 		for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 			int xValid, yValid;
-			bands[0].GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 		
 			//read bands into memory	
 			for (size_t i = 0; i < bandCount; i++) {
-				bands[i].p_data->RasterIO(
+				bands[i].p_band->RasterIO(
 					GF_Read,
 					xBlock * xBlockSize,
 					yBlock * yBlockSize,
@@ -126,8 +128,8 @@ calculatePCA(
 					xValid,
 					yValid,
 					type,
-					size * band.size(),
-					size * band.size * static_cast<size_t>(xBlockSize)
+					size * bands.size(),
+					size * bands.size() * static_cast<size_t>(xBlockSize)
 				);				
 			}
 
@@ -137,9 +139,9 @@ calculatePCA(
 				for (int y = 0; y < yValid; y++) {
 					bool isNan = false;
 					for (int b = 0; b < bandCount; b++) { 
-						T val = p_data[((y * xBlockSize) + x) * bandCount + b]
+						T val = p_data[((y * xBlockSize) + x) * bandCount + b];
 						isNan = val == noDataVals[b];
-						if (noData) {
+						if (isNan) {
 							break;
 						}
 						p_data[nFeatures * bandCount + b] = val;
@@ -149,7 +151,7 @@ calculatePCA(
 			}
 
 			//calculate partial result
-			DALHomogenTable table = DALHomogenTable(p_data, nFeatures, bandCount, oneapi::dal::data_layout::row_major);
+			DALHomogenTable table = DALHomogenTable(p_data, nFeatures, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
 			partial_result = oneapi::dal::partial_train(desc, partial_result, table);
 		}
 	}
@@ -158,15 +160,16 @@ calculatePCA(
 
 	VSIFree(p_data);
 
-	std::cout << "Eigenvectors: " << std::endl << result.get_eigenvectors() << std::endl;
-	std::cout << "Eigenvalues: " << std::endl << result.get_eigenvalues() << std::endl;
+	//std::cout << "Eigenvectors: " << std::endl << result.get_eigenvectors() << std::endl;
+	std::cout << "CALCULATED PCA" << std::endl;
+	//std::cout << "Eigenvalues: " << std::endl << result.get_eigenvalues() << std::endl;
 	
 	return;
 }
 
 GDALRasterWrapper *pca(
 	GDALRasterWrapper *p_raster,
-	size_t nComp,
+	int nComp,
 	bool plot,
 	bool largeRaster,
 	std::string tempFolder,
@@ -212,7 +215,7 @@ GDALRasterWrapper *pca(
 		p_dataset = createVirtualDataset("MEM", width, height, geotransform, projection);
 	
 		for (int i = 0; i < nComp; i++) {
-			pcaBands[i].type = type == GDT_Float64 ? double : float;
+			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			addBandToMEMDataset(p_dataset, pcaBands[i]);
@@ -222,8 +225,8 @@ GDALRasterWrapper *pca(
 		p_dataset = createVirtualDataset("VRT", width, height, geotransform, projection);
 	
 		for (int i = 0; i < nComp; i++) {
-			pcaBands[i].type = float;
-			pcaBands[i].size = sizeof(float);
+			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
+			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			createVRTBandDataset(p_dataset, pcaBands[i], tempFolder, pcaBands[i].name, VRTBandInfo, driverOptions);
 		}
@@ -231,6 +234,7 @@ GDALRasterWrapper *pca(
 	else {
 		std::filesystem::path filepath = filename;
 		std::string extension = filepath.extension().string();
+		std::string driver;
 
 		if (extension == ".tif") {
 			driver = "GTiff";
@@ -243,8 +247,8 @@ GDALRasterWrapper *pca(
 				yBlockSize != height;
 
 		for (int i = 0; i < nComp; i++) {
-			pcaBands[i].type = float;
-			pcaBands[i].size = sizeof(float);
+			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
+			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			if (useTiles) {
 				pcaBands[i].xBlockSize = xBlockSize;
@@ -270,11 +274,33 @@ GDALRasterWrapper *pca(
 	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
 
-	if (largeRaster) {
-		calculatePCA(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);	
-	}	
-	else {
-		calculatePCA(bands, type, size, width, height, nComp);
+	switch(type) {
+		case GDT_Int32:
+			if (largeRaster) {
+				calculatePCA<int32_t>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);
+			}
+			else {
+				calculatePCA<int32_t>(bands, type, size, width, height, nComp);
+			}
+			break;
+		case GDT_Float32:
+			if (largeRaster) {
+				calculatePCA<float>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);
+			}
+			else {
+				calculatePCA<float>(bands, type, size, width, height, nComp);
+			}
+			break;
+		case GDT_Float64:
+			if (largeRaster) { 
+				calculatePCA<double>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);
+			}
+			else {
+				calculatePCA<double>(bands, type, size, width, height, nComp);
+			}
+			break;
+		default:
+			throw std::runtime_error("should not be here! GDALDataType should be one of Int32/Float32/Float64!");
 	}
 
 	throw std::runtime_error("debugging stop.");
