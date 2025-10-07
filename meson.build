@@ -44,7 +44,8 @@ else #linux
   intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib/intel64'
 endif
 utils_inc_dir = include_directories('sgs/utils')
-daal_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
+oneapi_inc_dir = include_directories('sgs/extern/oneDAL/cpp')
+oneapi_daal_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
 root_dir = meson.current_source_dir()
 
 #add to link args if necessary

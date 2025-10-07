@@ -1,66 +1,36 @@
-daal_pca_dir = root_dir + '/sgs/extern/oneDAL/cpp/daal/src/algorithms/pca/'
-daal_data_management_dir = root_dir + '/sgs/extern/oneDAL/cpp/daal/src/data_management/'
+oneapi_dir = root_dir + '/sgs/extern/oneDAL/cpp/oneapi/dal/'
 input_files = [
   'pca.cpp',
-  daal_data_management_dir + 'homogen_numeric_table.cpp',
-  daal_pca_dir + 'pca_dense_correlation_distr_step2_kernel.h',       	  
-  daal_pca_dir + 'pca_dense_svd_online_kernel.h',
-  daal_pca_dir + 'pca_baseparameter.cpp',                                 
-  daal_pca_dir + 'pca_dense_correlation_online_container.h',         
-  daal_pca_dir + 'pca_distributedinput_correlation.cpp',
-  daal_pca_dir + 'pca_baseparameter_fpt.cpp',                        
-  daal_pca_dir + 'pca_dense_correlation_online_fpt_cpu.cpp',         
-  daal_pca_dir + 'pca_distributedinput_svd.cpp',
-  daal_pca_dir + 'pca_batchparameter_correlation_fpt.cpp',              
-  daal_pca_dir + 'pca_dense_correlation_online_fpt_dispatcher.cpp',  
-  daal_pca_dir + 'pca_distributedparameter_correlation.h',
-  daal_pca_dir + 'pca_batchparameter_svd_fpt.cpp',                              
-  daal_pca_dir + 'pca_distributedparameter_correlation_fpt.cpp',
-  daal_pca_dir + 'pca_dense_base.h',                                    
-  daal_pca_dir + 'pca_dense_correlation_online_kernel.h',            
-  daal_pca_dir + 'pca_input.cpp',
-  daal_pca_dir + 'pca_dense_base_fpt_cpu.cpp',                          
-  daal_pca_dir + 'pca_dense_svd_base.h',                             
-  daal_pca_dir + 'pca_onlineparameter_correlation.h',
-  daal_pca_dir + 'pca_dense_base_iface.h',                            
-  daal_pca_dir + 'pca_dense_svd_batch_container.h',                  
-  daal_pca_dir + 'pca_onlineparameter_correlation_fpt.cpp',                            
-  daal_pca_dir + 'pca_dense_svd_batch_fpt_cpu.cpp',                  
-  daal_pca_dir + 'pca_onlineparameter_svd.h',
-  daal_pca_dir + 'pca_dense_correlation_base.h',                     
-  daal_pca_dir + 'pca_dense_svd_batch_fpt_dispatcher.cpp',           
-  daal_pca_dir + 'pca_onlineparameter_svd_fpt.cpp',
-  daal_pca_dir + 'pca_dense_correlation_base_fpt_cpu.cpp',                               
-  daal_pca_dir + 'pca_partialresult_correlation.cpp',
-  daal_pca_dir + 'pca_dense_correlation_base_iface.h',                
-  daal_pca_dir + 'pca_dense_svd_batch_kernel.h',                     
-  daal_pca_dir + 'pca_partialresult_correlation.h',             
-  daal_pca_dir + 'pca_dense_svd_batch_kernel_instance.h',            
-  daal_pca_dir + 'pca_partialresult_correlation_fpt.cpp',
-  daal_pca_dir + 'pca_dense_correlation_batch_container.h',          
-  daal_pca_dir + 'pca_dense_svd_container.h',                        
-  daal_pca_dir + 'pca_partialresult_svd.cpp',
-  daal_pca_dir + 'pca_dense_correlation_batch_fpt_cpu.cpp',           
-  daal_pca_dir + 'pca_dense_svd_distr_step2_container.h',            
-  daal_pca_dir + 'pca_partialresult_svd.h',
-  daal_pca_dir + 'pca_dense_correlation_batch_fpt_dispatcher.cpp',     
-  daal_pca_dir + 'pca_dense_svd_distr_step2_fpt_cpu.cpp',            
-  daal_pca_dir + 'pca_partialresult_svd_fpt.cpp',             
-  daal_pca_dir + 'pca_dense_svd_distr_step2_fpt_dispatcher.cpp',     
-  daal_pca_dir + 'pca_result.cpp',
-  daal_pca_dir + 'pca_dense_correlation_batch_kernel.h',                           
-  daal_pca_dir + 'pca_result_fpt.cpp',
-  daal_pca_dir + 'pca_dense_correlation_batch_kernel_instance.h',      
-  daal_pca_dir + 'pca_dense_svd_distr_step2_kernel.h',               
-  daal_pca_dir + 'pca_result_impl.cpp',
-  daal_pca_dir + 'pca_dense_correlation_distr_step2_container.h',       
-  daal_pca_dir + 'pca_dense_svd_online_container.h',                 
-  daal_pca_dir + 'pca_result_impl.h',
-  daal_pca_dir + 'pca_dense_correlation_distr_step2_fpt_cpu.cpp',    
-  daal_pca_dir + 'pca_dense_svd_online_fpt_cpu.cpp',                 
-  daal_pca_dir + 'pca_result_impl_fpt.cpp',
-  daal_pca_dir + 'pca_dense_correlation_distr_step2_fpt_dispatcher.cpp',  
-  daal_pca_dir + 'pca_dense_svd_online_fpt_dispatcher.cpp'
+  oneapi_dir + 'exceptions.cpp',
+  oneapi_dir + 'algo/pca/common.cpp',
+  oneapi_dir + 'algo/pca/train_types.cpp',
+  oneapi_dir + 'backend/memory.cpp',
+  oneapi_dir + 'backend/communicator.cpp',
+  oneapi_dir + 'detail/array_impl.cpp',
+  oneapi_dir + 'detail/chunked_array_impl.cpp',
+  oneapi_dir + 'detail/common.cpp',
+  oneapi_dir + 'detail/cpu.cpp',
+  oneapi_dir + 'detail/error_messages.cpp',
+  oneapi_dir + 'detail/global_context.cpp',
+  oneapi_dir + 'detail/global_context_impl.cpp',
+  oneapi_dir + 'detail/memory_impl_host.cpp',
+  oneapi_dir + 'detail/policy.cpp',
+  oneapi_dir + 'detail/serialization.cpp',
+  oneapi_dir + 'detail/spmd_policy.cpp',
+  oneapi_dir + 'spmd/communicator.cpp',
+  oneapi_dir + 'table/common.cpp',
+  oneapi_dir + 'table/csr.cpp',
+  oneapi_dir + 'table/heterogen.cpp',
+  oneapi_dir + 'table/homogen.cpp',
+  oneapi_dir + 'table/backend/csr_kernels.cpp',
+  oneapi_dir + 'table/backend/heterogen_kernels.cpp',
+  oneapi_dir + 'table/backend/homogen_kernels.cpp',
+  oneapi_dir + 'table/backend/convert/common.cpp',
+  oneapi_dir + 'table/backend/convert/common_convert.cpp',
+  oneapi_dir + 'table/backend/convert/copy_convert.cpp',
+  oneapi_dir + 'table/detail/table_builder.cpp',
+  oneapi_dir + 'table/detail/table_kinds.cpp',
+  oneapi_dir + 'table/detail/table_utils.cpp',
 ]
 
 if WIN
@@ -76,7 +46,12 @@ if WIN
     include_directories: [
       inc_dir,
       utils_inc_dir,
-      daal_inc_dir
+      oneapi_inc_dir,
+      oneapi_daal_inc_dir
+    ],
+    cpp_args: [
+      '-D__ONEDAL_IDE_MODE__', #read why I do this here: 
+                              #https://github.com/uxlfoundation/oneDAL/blob/340926e2284d2c1cc87238538fcba2b265aa4980/cpp/oneapi/dal/backend/dispatcher_cpu.hpp#L22
     ],
     install: true,
   )
@@ -89,11 +64,16 @@ else
     include_directories: [
       inc_dir,
       utils_inc_dir,
-      daal_inc_dir
+      oneapi_inc_dir,
+      oneapi_daal_inc_dir
     ],
     objects: [
       #from sgs/utils
       raster_obj,
+    ],
+    cpp_args: [
+      '-D__ONEDAL_IDE_MODE__', #read why I do this here: 
+                              #https://github.com/uxlfoundation/oneDAL/blob/340926e2284d2c1cc87238538fcba2b265aa4980/cpp/oneapi/dal/backend/dispatcher_cpu.hpp#L22
     ],
     install: true,
   )
