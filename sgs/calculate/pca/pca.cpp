@@ -329,3 +329,7 @@ GDALRasterWrapper *pca(
 	
 	//return
 }
+
+PYBIND11_MODULE(pca, m) {
+	m.def("pca_cpp", &pca);
+}
