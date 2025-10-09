@@ -1,5 +1,5 @@
 if WIN
-  #create breaks module
+  #create quantiles module
   py.extension_module(
     'quantiles',
     'quantiles.cpp',
@@ -10,7 +10,8 @@ if WIN
       win_link_args, 
     ],
     dependencies: [
-      lib_deps
+      lib_deps,
+      pybind11_dep
     ],
     include_directories: [
       inc_dir,
@@ -24,11 +25,11 @@ if WIN
     install: true,
   )
 else
-  #create srs module
+  #create quantiles module
   py.extension_module(
     'quantiles',
     'quantiles.cpp',
-    dependencies: [lib_deps],
+    dependencies: [lib_deps, mkl_lib_deps, pybind11_dep],
     include_directories: [
       inc_dir,
       utils_inc_dir,

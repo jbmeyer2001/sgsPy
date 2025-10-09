@@ -19,6 +19,7 @@
 #include "oneapi/dal/algo/pca/common.hpp"
 */
 
+//#include "oneapi/dal.hpp"
 #include "oneapi/dal.hpp"
 
 typedef oneapi::dal::homogen_table	DALHomogenTable;

@@ -9,25 +9,49 @@ project(
 #get build operating system
 WIN = host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
 
-#run_command('git', 'submodule', 'update', '--init', '--recursive')
+#get python installation
+py = import('python').find_installation(pure: false)
+
+#this is some very hacky build code... 
+#
+#The problem is that I have a build dependency (daal). Trying to compile daal
+#from source opens up a massive massive can of worms.
+#
+#The daal python module, for some reason, doesn't have pkg-config or cmake information
+#anywhere, so it isn't discoverable as a dependency by meson using the dependency()
+#function (like pybind11 is).
+#
+#Thus, the only way to access those headers and libraries is to find the path of the 
+#isolated build environment created by pip. This directory isn't given to meson directly --
+#rather, the directory is prepended to the PATH environment variable before calling any
+#meson build commands.
+#
+#meson doesn't have direct access to this variable (probably for good reason...) so the way
+#to actually get access to it is by running a quick python script which prints the PATH
+#variable, and parsing the printed string in meson...
+pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
+pip_inc_dir = pip_build_dir + 'include'
+#oneapi_inc_dir = pip_build_dir + 'include/oneapi'
+#dal_inc_dir = pip_build_dir + 'include/dal'
+pip_build_lib = pip_build_dir + 'lib'
+
+run_command('git', 'submodule', 'update', '--init', '--recursive')
 
 #install required dependencies using vcpkg
 if WIN
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio:x64-windows-static', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11:x64-windows-static', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
   run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-windows-static', '--recurse', check:true)
 else #linux
-  #run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
-  #run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check: true)
-  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'pybind11', check:true)
-  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
-  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
-  #run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
+  run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check: true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
+  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
 endif
 
 #define directories
@@ -44,8 +68,9 @@ else #linux
   intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib/intel64'
 endif
 utils_inc_dir = include_directories('sgs/utils')
-oneapi_inc_dir = include_directories('sgs/extern/oneDAL/cpp')
-oneapi_daal_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
+#oneapi_inc_dir = include_directories('sgs/extern/oneDAL/cpp')
+#oneapi_daal_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal')
+#oneapi_daal_include_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
 root_dir = meson.current_source_dir()
 
 #add to link args if necessary
@@ -63,6 +88,8 @@ endif
 cxx = meson.get_compiler('cpp')
 
 lib_deps = []
+mkl_lib_deps = []
+oneDAL_lib_deps = []
 
 #add all libraries in the vcpkg lib directory to the project
 #the following is hacky meson build code to add all the external libraries required for the project from the vcpkg install folder
@@ -121,12 +148,9 @@ if WIN
   #endforeach
 
 else #linux
-  python_lib = run_command('find', lib_dir, '-regex', '.*libpython.*a', check:true).stdout().strip().split('/').get(-1).replace('lib', '').replace('.a', '')
-
   #in linux list all of the libs rather than programatically finding them
   #because of multiple definition errors. 
   libs = [
-    python_lib,
     'aec',
     'crypto',
     'curl',
@@ -187,6 +211,13 @@ else #linux
     'z',
     'zstd',
     'mod_spatialite',
+  ]
+
+  foreach lib : libs
+    lib_deps += cxx.find_library(lib, dirs : [lib_dir], static:true)
+  endforeach
+
+  mkl_libs = [
     'mkl_blacs_intelmpi_lp64',
     'mkl_blas95_lp64',
     'mkl_cdft_core',
@@ -198,12 +229,29 @@ else #linux
     'tbb',
     'tbbmalloc'
   ]
-  
-  foreach lib : libs
-    lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
+
+  foreach lib : mkl_libs
+    mkl_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
+  endforeach
+
+  oneDAL_libs = [
+    'hwloc',
+    'onedal',
+    'onedal_core',
+    'onedal_parameters',
+    'onedal_thread',
+    'tbb',
+    'tbbbind_2_5',
+    'tbbmalloc',
+    'tbbmalloc_proxy',
+    'tcm'
+  ]
+
+  foreach lib : oneDAL_libs
+    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_build_lib])
   endforeach
 endif
 
-py = import('python').find_installation(pure: false)
+pybind11_dep = dependency('pybind11')
 
 subdir('sgs')
