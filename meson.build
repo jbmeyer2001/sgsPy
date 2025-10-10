@@ -33,7 +33,7 @@ pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', ch
 pip_inc_dir = pip_build_dir + 'include'
 #oneapi_inc_dir = pip_build_dir + 'include/oneapi'
 #dal_inc_dir = pip_build_dir + 'include/dal'
-pip_build_lib = pip_build_dir + 'lib'
+pip_lib_dir = pip_build_dir + 'lib'
 
 run_command('git', 'submodule', 'update', '--init', '--recursive')
 
@@ -90,6 +90,7 @@ cxx = meson.get_compiler('cpp')
 lib_deps = []
 mkl_lib_deps = []
 oneDAL_lib_deps = []
+tbb_lib_deps = []
 
 #add all libraries in the vcpkg lib directory to the project
 #the following is hacky meson build code to add all the external libraries required for the project from the vcpkg install folder
@@ -226,30 +227,68 @@ else #linux
     'mkl_lapack95_lp64',
     'mkl_scalapack_lp64',
     'mkl_tbb_thread',
-    'tbb',
-    'tbbmalloc'
   ]
 
   foreach lib : mkl_libs
     mkl_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
   endforeach
 
+  tbb_libs = [
+    'tbb',
+    'tbbmalloc'
+  ]
+
+  foreach lib : tbb_libs
+    tbb_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
+  endforeach
+
+
+  #oneDAL_libs_TEST = [
+    #static_library('libonedal.a', pip_lib_dir + '/libonedal.a', implicit_include_directories: false),
+    #static_library('libonedal_core.a', pip_lib_dir + '/libonedal_core.a'),
+    #static_library('libonedal_parameters.a', pip_lib_dir + '/libonedal_parameters.a'),
+    #static_library('libonedal_thread.a', pip_lib_dir + '/libonedal_thread.a'),
+    #shared_library('libhwloc.so', pip_lib_dir + '/libhwloc.so'),
+    #shared_library('libhwloc.so.15', pip_lib_dir + '/libhwloc.so.15'),
+    #shared_library('libhwloc.so.15.8.1', pip_lib_dir + '/libhwloc.so.15.8.1'),
+    #shared_library('libtbb.so', pip_lib_dir + '/libtbb.so'),
+    #shared_library('libtbb.so.12', pip_lib_dir + '/libtbb.so.12'),
+    #shared_library('libtbb.so.12.16', pip_lib_dir + '/libtbb.so.12.16'),
+    #shared_library('libtbbbind_2_5.so', pip_lib_dir + '/libtbbbind_2_5.so'),
+    #shared_library('libtbbbind_2_5.so.3', pip_lib_dir + '/libtbbbind_2_5.so.3'),
+    #shared_library('libtbbbind_2_5.so.3.16', pip_lib_dir + '/libtbbbind_2_5.so.3.16'),
+    #shared_library('libtbbmalloc.so', pip_lib_dir + '/libtbbmalloc.so'),
+    #shared_library('libtbbmalloc.so.2', pip_lib_dir + '/libtbbmalloc.so.2'),
+    #shared_library('libtbbmalloc.so.2.16', pip_lib_dir + '/libtbbmalloc.so.2.16'),
+    #shared_library('libtbbmalloc_proxy.so', pip_lib_dir + '/libtbbmalloc_proxy.so'),
+    #shared_library('libtbbmalloc_proxy.so.2', pip_lib_dir + '/libtbbmalloc_proxy.so.2'),
+    #shared_library('libtbbmalloc_proxy.so.2.16', pip_lib_dir + '/libtbbmalloc_proxy.so.2.16'),
+    #shared_library('liblibtcm.so', pip_lib_dir + '/libtcm.so'),
+    #shared_library('libtcm.so.1', pip_lib_dir + '/libtcm.so.1'),
+    #shared_library('libtcm.so.1.4.0', pip_lib_dir + '/libtcm.so.1.4.0')
+    #]
+
   oneDAL_libs = [
-    'hwloc',
     'onedal',
     'onedal_core',
     'onedal_parameters',
-    'onedal_thread',
-    'tbb',
-    'tbbbind_2_5',
-    'tbbmalloc',
-    'tbbmalloc_proxy',
-    'tcm'
+    'onedal_thread'
   ]
 
+  #message('py install dir:')
+  #message(py.get_install_dir())
+  
   foreach lib : oneDAL_libs
-    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_build_lib])
+    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
   endforeach
+  
+  #install_data(pip_lib_dir + '/libtbb.so.12', install_dir: py.get_install_dir())
+  
+  #oneDAL_dep = declare_dependency(
+  #  include_directories: pip_inc_dir,
+  #  link_with: oneDAL_libs
+  #)
+
 endif
 
 pybind11_dep = dependency('pybind11')

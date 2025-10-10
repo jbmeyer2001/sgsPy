@@ -24,8 +24,13 @@
 
 typedef oneapi::dal::homogen_table	DALHomogenTable;
 
+struct PCAResult {
+	std::vector<std::vector<double>> eigenvectors;
+	std::vector<double> eigenvalues;
+};
+
 template <typename T>
-void //dal::pca::train_result 
+PCAResult
 calculatePCA(
 	std::vector<RasterBandMetaData>& bands,
 	GDALDataType type,
@@ -65,7 +70,7 @@ calculatePCA(
 		bool isNan = false;
 		for (int b = 0; b < bandCount; b++) { 
 			T val = p_data[i * bandCount + b];
-			isNan = val == noDataVals[b];
+			isNan = val == noDataVals[b] || std::isnan(val);
 			if (isNan) {
 				break;
 			}
@@ -73,7 +78,7 @@ calculatePCA(
 		}
 		nFeatures += !isNan;
 	}
-
+	
 	//calculate pca
 	DALHomogenTable table = DALHomogenTable::wrap<T>(p_data, nFeatures, bandCount, oneapi::dal::data_layout::row_major);
 	const auto desc = oneapi::dal::pca::descriptor<float, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
@@ -81,16 +86,34 @@ calculatePCA(
 
 	VSIFree(p_data);
 
-	//std::cout << "Eigenvectors: " << std::endl << result.get_eigenvectors() << std::endl;
-	//std::cout << "Eigenvalues: " << std::endl << result.get_eigenvalues() << std::endl;
-	
-	std::cout << "CALCULATED PCA" << std::endl;
+	PCAResult retval;
+	auto eigenvectors = result.get_eigenvectors();
+	auto eigenvalues = result.get_eigenvalues();
+	int64_t eigRows = eigenvectors.get_row_count();
+	int64_t eigCols = eigenvectors.get_column_count();
 
-	return;	
+	oneapi::dal::row_accessor<const float> eigVecAcc {eigenvectors};
+	auto eigVecBlock = eigVecAcc.pull({0, eigRows});
+
+	oneapi::dal::row_accessor<const float> eigValAcc {eigenvalues};
+	auto eigValBlock = eigValAcc.pull({0, 1});
+
+	retval.eigenvectors.resize(eigRows);
+	retval.eigenvalues.resize(eigRows);
+	for (int64_t i = 0; i < eigRows; i++) {
+		retval.eigenvalues[i] = static_cast<double>(eigValBlock[i]);
+
+		retval.eigenvectors[i].resize(eigCols);
+		for (int64_t j = 0; j < eigCols; j++) {
+			retval.eigenvectors[i][j] = static_cast<double>(eigVecBlock[i * eigCols + j]);
+		}
+	}
+	
+	return retval;	
 }
 
 template <typename T>
-void//dal::pca::train_result
+PCAResult
 calculatePCA(
 	std::vector<RasterBandMetaData>& bands,
 	GDALDataType type,
@@ -141,7 +164,7 @@ calculatePCA(
 					bool isNan = false;
 					for (int b = 0; b < bandCount; b++) { 
 						T val = p_data[((y * xBlockSize) + x) * bandCount + b];
-						isNan = val == noDataVals[b];
+						isNan = std::isnan(val) || val == noDataVals[b];
 						if (isNan) {
 							break;
 						}
@@ -158,14 +181,33 @@ calculatePCA(
 	}
 
 	auto result = oneapi::dal::finalize_train(desc, partial_result);
-
+	
 	VSIFree(p_data);
 
-	//std::cout << "Eigenvectors: " << std::endl << result.get_eigenvectors() << std::endl;
-	std::cout << "CALCULATED PCA" << std::endl;
-	//std::cout << "Eigenvalues: " << std::endl << result.get_eigenvalues() << std::endl;
+	PCAResult retval;
+	auto eigenvectors = result.get_eigenvectors();
+	auto eigenvalues = result.get_eigenvalues();
+	int64_t eigRows = eigenvectors.get_row_count();
+	int64_t eigCols = eigenvectors.get_column_count();
+
+	oneapi::dal::row_accessor<const float> eigVecAcc {eigenvectors};
+	auto eigVecBlock = eigVecAcc.pull({0, eigRows});
+
+	oneapi::dal::row_accessor<const float> eigValAcc {eigenvalues};
+	auto eigValBlock = eigValAcc.pull({0, 1});
+
+	retval.eigenvectors.resize(eigRows);
+	retval.eigenvalues.resize(eigRows);
+	for (int64_t i = 0; i < eigRows; i++) {
+		retval.eigenvalues[i] = static_cast<double>(eigValBlock[i]);
+
+		retval.eigenvectors[i].resize(eigCols);
+		for (int64_t j = 0; j < eigCols; j++) {
+			retval.eigenvectors[i][j] = static_cast<double>(eigValBlock[i * eigCols + j]);
+		}
+	}
 	
-	return;
+	return retval;	
 }
 
 GDALRasterWrapper *pca(
@@ -196,19 +238,15 @@ GDALRasterWrapper *pca(
 	int xBlockSize, yBlockSize;
 	p_raster->getRasterBand(0)->GetBlockSize(&xBlockSize, &yBlockSize);
 
-	GDALDataType type = GDT_Int32;
-	size_t size = sizeof(int32_t);
+	GDALDataType type = GDT_Float32;
+	size_t size = sizeof(float);
 	for (int i = 0; i < p_raster->getBandCount(); i++) {
 		bands[i].p_band = p_raster->getRasterBand(i);
 		bands[i].nan = bands[i].p_band->GetNoDataValue();
 
-		if (type != GDT_Float64 && p_raster->getRasterBandType(i) == GDT_Float64) {
+		if (p_raster->getRasterBandType(i) == GDT_Float64) {
 			type = GDT_Float64;
 			size = sizeof(double);
-		}
-		else if (type == GDT_Int32 && p_raster->getRasterBandType(i) == GDT_Float32) {
-			type = GDT_Float32;
-			size = sizeof(float);
 		}
 	}
 
@@ -275,33 +313,35 @@ GDALRasterWrapper *pca(
 	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
 
+	PCAResult result;
 	switch(type) {
-		case GDT_Int32:
-			if (largeRaster) {
-				calculatePCA<int32_t>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);
-			}
-			else {
-				calculatePCA<int32_t>(bands, type, size, width, height, nComp);
-			}
-			break;
 		case GDT_Float32:
-			if (largeRaster) {
-				calculatePCA<float>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);
-			}
-			else {
+			result = largeRaster ?
+				calculatePCA<float>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp) :
 				calculatePCA<float>(bands, type, size, width, height, nComp);
-			}
 			break;
 		case GDT_Float64:
-			if (largeRaster) { 
-				calculatePCA<double>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);
-			}
-			else {
+			result = largeRaster ?
+				calculatePCA<double>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp) :
 				calculatePCA<double>(bands, type, size, width, height, nComp);
-			}
 			break;
 		default:
 			throw std::runtime_error("should not be here! GDALDataType should be one of Int32/Float32/Float64!");
+	}
+
+	std::cout << "got result." << std::endl;
+
+	std::cout << "eigenvalues:" << std::endl;
+	for (const double& val : result.eigenvalues) {
+		std::cout << val << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "eigenvectors: " << std::endl;
+	for (const std::vector<double>& vector : result.eigenvectors) {
+		for (const double& val : vector) {
+			std::cout << val << " ";
+		}
+		std::cout << std::endl;
 	}
 
 	throw std::runtime_error("debugging stop.");

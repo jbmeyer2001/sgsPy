@@ -29,7 +29,7 @@ else
   py.extension_module(
     'quantiles',
     'quantiles.cpp',
-    dependencies: [lib_deps, mkl_lib_deps, pybind11_dep],
+    dependencies: [lib_deps, mkl_lib_deps, tbb_lib_deps, pybind11_dep],
     include_directories: [
       inc_dir,
       utils_inc_dir,

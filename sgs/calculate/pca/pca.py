@@ -13,7 +13,7 @@ from pca import pca_cpp
 
 GIGABYTE = 1073741824
 
-def principal_components(
+def pca(
     rast: SpatialRaster,
     num_comp: int,
     plot: bool = False,
@@ -40,7 +40,7 @@ def principal_components(
     height = rast.height
     width = rast.width
     for i in range(len(rast.bands)):
-        pixel_size = rast.cpp_raster.get_raster_band_type_size(key)
+        pixel_size = rast.cpp_raster.get_raster_band_type_size(i)
         band_size = height * width * pixel_size
         raster_size_bytes += band_size
         if band_size >= GIGABYTE:
@@ -58,7 +58,7 @@ def principal_components(
         large_raster,
         temp_dir,
         filename,
-        driverOptions
+        driver_options_str
     ))
     
     pcomp_rast = SpatialRaster(pcomp)
