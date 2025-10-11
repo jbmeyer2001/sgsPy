@@ -627,13 +627,16 @@ rasterBandIO(
 	int yBlock,
 	int xValid,
 	int yValid,
-	bool read)
+	bool read,
+	bool threaded = true)
 {
 	CPLErr err;
 	bool useBlock = xBlockSize == band.xBlockSize &&
 			yBlockSize == band.yBlockSize;
 
-	band.p_mutex->lock();
+	if (threaded) {
+		band.p_mutex->lock();
+	}
 	if (useBlock && read) {
 		err = read ?
 			band.p_band->ReadBlock(xBlock, yBlock, p_buffer) :
@@ -654,8 +657,9 @@ rasterBandIO(
 			0
 		);
 	}
-	band.p_mutex->unlock();
-	
+	if (threaded) {
+		band.p_mutex->unlock();
+	}
 	if (err) {
 		throw read ?
 			std::runtime_error("unable to read block from raster.") :
