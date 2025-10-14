@@ -27,7 +27,7 @@ struct PCAResult {
  *
  */
 template <typename T>
-PCAResult
+PCAResult<T>
 calculatePCA(
 	std::vector<RasterBandMetaData>& bands,
 	GDALDataType type,
@@ -83,7 +83,7 @@ calculatePCA(
 
 	VSIFree(p_data);
 
-	PCAResult retval;
+	PCAResult<T> retval;
 	auto eigenvectors = result.get_eigenvectors();
 	auto eigenvalues = result.get_eigenvalues();
 	int64_t eigRows = eigenvectors.get_row_count();
@@ -113,7 +113,7 @@ calculatePCA(
  *
  */
 template <typename T>
-PCAResult
+PCAResult<T>
 calculatePCA(
 	std::vector<RasterBandMetaData>& bands,
 	GDALDataType type,
@@ -184,7 +184,7 @@ calculatePCA(
 	
 	VSIFree(p_data);
 
-	PCAResult retval;
+	PCAResult<T> retval;
 	auto eigenvectors = result.get_eigenvectors();
 	auto eigenvalues = result.get_eigenvalues();
 	int64_t eigRows = eigenvectors.get_row_count();
@@ -212,7 +212,7 @@ calculatePCA(
 
 inline void 
 processSPPixel(
-	int index,
+	int i,
 	int bandCount,
 	void *p_data,
 	std::vector<void *>& PCABandBuffers,
@@ -221,13 +221,13 @@ processSPPixel(
 	MKL_INT incx,
 	MKL_INT incy)
 {
-	for (const void *& p_buffer : PCABandBuffers) {
-		float *p_features = reinterpret_cast<float *>(p_data) + i * bandCount;
-		reinterpret_cast<float *>(p_buffer)[i] = cblas_sdot(
+	float *p_features = reinterpret_cast<float *>(p_data) + i * bandCount;
+	for (int b = 0; b < bandCount; b++) {
+		reinterpret_cast<float *>(PCABandBuffers[b])[i] = cblas_sdot(
 			n,
 			p_features,
 			incx,
-			reinterpret_cast<double *>(eigBuffers)[i],
+			reinterpret_cast<float *>(eigBuffers[b]),
 			incy
 		);
 	}
@@ -235,7 +235,7 @@ processSPPixel(
 
 inline void 
 processDPPixel(
-	int index,
+	int i,
 	int bandCount,
 	void *p_data,
 	std::vector<void *>& PCABandBuffers,
@@ -244,13 +244,13 @@ processDPPixel(
 	MKL_INT incx,
 	MKL_INT incy)
 {
-	for (const void *& p_buffer : PCABandBuffers) {
-		float *p_features = reinterpret_cast<double *>(p_data) + i * bandCount;
-		reinterpret_cast<double *>(p_buffer)[i] = cblas_ddot(
+	double *p_features = reinterpret_cast<double *>(p_data) + i * bandCount;
+	for (int b = 0; b < bandCount; b++) {
+		reinterpret_cast<double *>(PCABandBuffers[b])[i] = cblas_ddot(
 			n,
 			p_features,
 			incx,
-			reinterpret_cast<double *>(eigBuffers)[i],
+			reinterpret_cast<double *>(eigBuffers[b]),
 			incy
 		);
 	}
@@ -265,8 +265,9 @@ void
 writePCA(
 	std::vector<RasterBandMetaData>& bands,
 	std::vector<RasterBandMetaData>& PCABands,
-	PCAResult& result,
+	PCAResult<T>& result,
 	GDALDataType type,
+	size_t size,
 	int height,
 	int width)
 {
@@ -315,13 +316,13 @@ writePCA(
 		}
 
 		if (isNan) {
-			for (const void *& p_buffer : PCABandBuffers) {
+			for (void *& p_buffer : PCABandBuffers) {
 				reinterpret_cast<T *>(p_buffer)[i] = resultNan;
 			}
 		}
 		else {
 			//depending on type, call single or double precision floating point
-			//which call cblas_sdot and cblas_ddot respectively
+			//processing functions which use cblas_sdot and cblas_ddot respectively
 			type == GDT_Float32 ?
 				processSPPixel(i, bandCount, p_data, PCABandBuffers, eigBuffers, n, incx, incy) :
 				processDPPixel(i, bandCount, p_data, PCABandBuffers, eigBuffers, n, incx, incy);
@@ -337,7 +338,7 @@ void
 writePCA(
 	std::vector<RasterBandMetaData>& bands,
 	std::vector<RasterBandMetaData>& PCABands,
-	PCAResult& result,
+	PCAResult<T>& result,
 	GDALDataType type,
 	size_t size,
 	int xBlockSize,
@@ -353,7 +354,7 @@ writePCA(
 	for (int b = 0; b < bandCount; b++) {
 		noDataVals[b] = static_cast<T>(bands[b].nan);
 		PCABandBuffers[b] = VSIMalloc3(xBlockSize, yBlockSize, size);
-		eigBuffers[i] = reinterpret_cast<void *>(result.eigenvectors[i].data());
+		eigBuffers[b] = reinterpret_cast<void *>(result.eigenvectors[b].data());
 	}
 
 	void *p_data = VSIMalloc3(xBlockSize * yBlockSize, size, bandCount);
@@ -384,10 +385,9 @@ writePCA(
 				);				
 			}
 
-			//call cblas_sdot to calculate dot product for single precision floating point values
-			//and call cblas_ddot for double precision.
-			if (type == GDT_Float32) {
-				for (int i = 0; i < height * width; i++) {
+			for (int y = 0; y < yValid; y++) {
+				int i = y * xBlockSize;
+				for (int x = 0; x < xValid; x++) {
 					bool isNan;
 					for (int  b = 0; b < bandCount; b++) {
 						T val = reinterpret_cast<T *>(p_data)[i * bandCount + b];
@@ -396,19 +396,21 @@ writePCA(
 							break;
 						}
 					}
-	
+
 					if (isNan) {
-						for (const void *& p_buffer : PCABandBuffers) {
+						for (void *& p_buffer : PCABandBuffers) {
 							reinterpret_cast<T *>(p_buffer)[i] = resultNan;
 						}
 					}
 					else {
 						//depending on type, call single or double precision floating point
-						//which call cblas_sdot and cblas_ddot respectively
+						//processing functions which use cblas_sdot and cblas_ddot respectively
 						type == GDT_Float32 ?
 							processSPPixel(i, bandCount, p_data, PCABandBuffers, eigBuffers, n, incx, incy) :
 							processDPPixel(i, bandCount, p_data, PCABandBuffers, eigBuffers, n, incx, incy);
 					}
+
+					i++;
 				}
 			}
 			
@@ -424,7 +426,7 @@ writePCA(
 					xValid,
 					yValid,
 					false, //read = false
-					false, //threaded = false
+					false //threaded = false
 				);
 			}		
 		}
@@ -434,8 +436,8 @@ writePCA(
 /**
  *
  */
-std::tuple(GDALRasterWrapper *, std::vector<std::vector<double>>
-GDALRasterWrapper *pca(
+std::tuple<GDALRasterWrapper *, std::vector<std::vector<double>>, std::vector<double>>
+pca(
 	GDALRasterWrapper *p_raster,
 	int nComp,
 	bool plot,
@@ -514,7 +516,7 @@ GDALRasterWrapper *pca(
 			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
-			pcaBands[i].p_buffer = != largeRaster ? VSIMalloc3(height, width, size) : nullptr;
+			pcaBands[i].p_buffer = !largeRaster ? VSIMalloc3(height, width, size) : nullptr;
 		
 			if (useTiles) {
 				pcaBands[i].xBlockSize = xBlockSize;
@@ -540,18 +542,54 @@ GDALRasterWrapper *pca(
 	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
 
-	PCAResult result;
+	//these vectors are not used for calculation, but set and returned to the Python side of the application for reference
+	std::vector<std::vector<double>> eigenvectors; 
+	std::vector<double> eigenvalues;
+
+	//calculate PCA eigenvectors (and eigenvalues), and write values to PCA bands
 	switch(type) {
-		case GDT_Float32:
-			result = largeRaster ?
-				calculatePCA<float>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp) :
-				calculatePCA<float>(bands, type, size, width, height, nComp);
+		case GDT_Float32: {
+			PCAResult<float> result;
+			if (largeRaster) {
+				result = calculatePCA<float>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);
+				writePCA<float>(bands, pcaBands, result, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks);
+			}
+			else {
+				result = calculatePCA<float>(bands, type, size, width, height, nComp);
+				writePCA<float>(bands, pcaBands, result, type, size, height, width);
+			}
+
+			eigenvectors.resize(result.eigenvectors.size());
+			for (size_t i = 0; i < result.eigenvectors.size(); i++) {
+				eigenvectors[i].resize(result.eigenvectors[i].size());
+				for (size_t j = 0; j < result.eigenvectors[i].size(); j++) {
+					eigenvectors[i][j] = static_cast<double>(result.eigenvectors[i][j]);
+				}
+			}
+
+			eigenvalues.resize(result.eigenvalues.size());
+			for (size_t i = 0; i < result.eigenvalues.size(); i++) {
+				eigenvalues[i] = static_cast<double>(result.eigenvalues[i]);
+			}
+			
 			break;
-		case GDT_Float64:
-			result = largeRaster ?
-				calculatePCA<double>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp) :
-				calculatePCA<double>(bands, type, size, width, height, nComp);
+		}
+		case GDT_Float64: {
+			PCAResult<double> result;
+			if (largeRaster) {
+				result = calculatePCA<double>(bands, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks, nComp);
+				writePCA<double>(bands, pcaBands, result, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks);
+			}
+			else {
+				result = calculatePCA<double>(bands, type, size, width, height, nComp);
+				writePCA<double>(bands, pcaBands, result, type, size, height, width);
+			}
+
+			eigenvectors = result.eigenvectors;
+			eigenvalues = result.eigenvalues;
+			
 			break;
+		}
 		default:
 			throw std::runtime_error("should not be here! GDALDataType should be one of Float32/Float64!");
 	}
@@ -572,31 +610,25 @@ GDALRasterWrapper *pca(
 	}
 	*/
 
-	//write values to output bands using pca eigenvector values
-	largeRaster ?
-		writePCA(bands, PCABands, result, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks) :
-		writePCA(bands, PCABands, result, type, height, width);
-
-
 	if (isVRTDataset) {
 		for (int b = 0; b < bandCount; b++) {
-			GDALClose(VRTBandInfo[band].p_dataset);
-			addBandToVRTDataset(p_dataset, PCABands[b], VRTBandInfo[b]);
+			GDALClose(VRTBandInfo[b].p_dataset);
+			addBandToVRTDataset(p_dataset, pcaBands[b], VRTBandInfo[b]);
 		}
 	}
 
 	std::vector<void *> buffers(bandCount);
 	if (!largeRaster) {
 		for (int b = 0; b < bandCount; b++) {
-			buffers[b] = PCABands[band].p_buffer;
+			buffers[b] = pcaBands[b].p_buffer;
 		}
 	}
 
-	GDALRasterWrapper *p_outrast largeRaster ?
+	GDALRasterWrapper *p_outrast = largeRaster ?
 		new GDALRasterWrapper(p_dataset) :
 		new GDALRasterWrapper(p_dataset, buffers);
 
-	return {p_outrast, result.eigenvectors, result.eigenvalues};
+	return {p_outrast, eigenvectors, eigenvalues};
 }
 
 PYBIND11_MODULE(pca, m) {
