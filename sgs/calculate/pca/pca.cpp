@@ -17,6 +17,9 @@
 
 typedef oneapi::dal::homogen_table	DALHomogenTable;
 
+/**
+ *
+ */
 template <typename T>
 struct PCAResult {
 	std::vector<std::vector<T>> eigenvectors;
@@ -25,6 +28,9 @@ struct PCAResult {
 	std::vector<double> stdevs;
 };
 
+/**
+ *
+ */
 //https://jonisalonen.com/2013/deriving-welfords-method-for-computing-variance/
 struct Variance {
 	int64_t k;
@@ -271,6 +277,9 @@ calculatePCA(
 	return retval;	
 }
 
+/**
+ *
+ */
 inline void 
 processSPPixel(
 	int i,
@@ -305,6 +314,9 @@ processSPPixel(
 	}
 }
 
+/**
+ *
+ */
 inline void 
 processDPPixel(
 	int i,
@@ -634,7 +646,6 @@ pca(
 	std::vector<std::vector<double>> eigenvectors; 
 	std::vector<double> eigenvalues;
 
-	std::cout << "HERE 1" << std::endl;
 	//calculate PCA eigenvectors (and eigenvalues), and write values to PCA bands
 	switch(type) {
 		case GDT_Float32: {
@@ -644,14 +655,10 @@ pca(
 				writePCA<float>(bands, pcaBands, result, type, size, xBlockSize, yBlockSize, xBlocks, yBlocks);
 			}
 			else {
-				std::cout << "HERE 2" << std::endl;
 				result = calculatePCA<float>(bands, type, size, width, height, nComp);
-				std::cout << "HERE 3" << std::endl;
 				writePCA<float>(bands, pcaBands, result, type, size, height, width);
-				std::cout << "HERE 4" << std::endl;
 			}
 
-			std::cout << "HERE 5" << std::endl;
 			eigenvectors.resize(result.eigenvectors.size());
 			for (size_t i = 0; i < result.eigenvectors.size(); i++) {
 				eigenvectors[i].resize(result.eigenvectors[i].size());
@@ -686,24 +693,7 @@ pca(
 		default:
 			throw std::runtime_error("should not be here! GDALDataType should be one of Float32/Float64!");
 	}
-	std::cout << "HERE 7" << std::endl;
-	/*
-	std::cout << "got result." << std::endl;
-
-	std::cout << "eigenvalues:" << std::endl;
-	for (const double& val : result.eigenvalues) {
-		std::cout << val << " ";
-	}
-	std::cout << std::endl;
-	std::cout << "eigenvectors: " << std::endl;
-	for (const std::vector<double>& vector : result.eigenvectors) {
-		for (const double& val : vector) {
-			std::cout << val << " ";
-		}
-		std::cout << std::endl;
-	}
-	*/
-
+	
 	if (isVRTDataset) {
 		for (int b = 0; b < bandCount; b++) {
 			GDALClose(VRTBandInfo[b].p_dataset);

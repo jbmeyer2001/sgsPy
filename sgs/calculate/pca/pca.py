@@ -17,6 +17,7 @@ def pca(
     rast: SpatialRaster,
     num_comp: int,
     filename: str = '',
+    display_info: bool = False,
     driver_options: dict = None
     ):
     """
@@ -59,13 +60,13 @@ def pca(
         driver_options_str
     )
 
-    pcomp_rast = SpatialRaster(pcomp)
-   
-    print("eigenvectors are:")
-    print(eigenvectors)
-    print()
-    print("eigenvalues are:")
-    print(eigenvalues)
+    if display_info:
+        print('eigenvectors:')
+        print(eigenvectors)
+        print()
+        print('eigenvalues:')
+        print(eigenvalues)
+        print()
 
     pcomp_rast = SpatialRaster(pcomp)
     pcomp_rast.have_temp_dir = True
