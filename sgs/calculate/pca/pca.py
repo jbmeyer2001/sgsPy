@@ -16,7 +16,6 @@ GIGABYTE = 1073741824
 def pca(
     rast: SpatialRaster,
     num_comp: int,
-    plot: bool = False,
     filename: str = '',
     driver_options: dict = None
     ):
@@ -51,24 +50,26 @@ def pca(
 
     temp_dir = tempfile.mkdtemp()
 
-    [pcomp, plot_results] = SpatialRaster(pca_cpp(
+    [pcomp, eigenvectors, eigenvalues] = pca_cpp(
         rast.cpp_raster,
         num_comp,
-        plot,
         large_raster,
         temp_dir,
         filename,
         driver_options_str
-    ))
-    
+    )
+
+    pcomp_rast = SpatialRaster(pcomp)
+   
+    print("eigenvectors are:")
+    print(eigenvectors)
+    print()
+    print("eigenvalues are:")
+    print(eigenvalues)
+
     pcomp_rast = SpatialRaster(pcomp)
     pcomp_rast.have_temp_dir = True
     pcomp_rast.temp_dir = temp_dir
 
-    #TODO plot plot results???
-    if plot:
-        pass
-
     return pcomp_rast
-    
 
