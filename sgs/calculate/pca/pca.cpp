@@ -18,7 +18,13 @@
 typedef oneapi::dal::homogen_table	DALHomogenTable;
 
 /**
+ * This struct contains the output eigenvectors and eigenvalues for
+ * the principal components. It also contains the mean and standard
+ * deviation for each raster band.
  *
+ * The mean and standard deviation are used when writing the outputs
+ * to both center and scale each band. The eigenvectors are then
+ * used when calculating the output principal component values.
  */
 template <typename T>
 struct PCAResult {
@@ -29,13 +35,20 @@ struct PCAResult {
 };
 
 /**
+ * This struct contains the intermediate values, as well as functions
+ * for updating the intermediate values of the variance of a raster
+ * band using Welfords method. The mean and standard deviation of
+ * a raster band can be calculated afterwards without requiring the
+ * whole raster to be in memory.
  *
+ * Double precision is always used for higher precision of potentially small values.
+ *
+ * https://jonisalonen.com/2013/deriving-welfords-method-for-computing-variance/
  */
-//https://jonisalonen.com/2013/deriving-welfords-method-for-computing-variance/
 struct Variance {
-	int64_t k;
-	double M = 0;
-	double S = 0;
+	int64_t k;	//count
+	double M = 0;	//running mean
+	double S = 0;	//sum of squares
 	double oldM = 0;
 	
 	inline void
@@ -57,13 +70,35 @@ struct Variance {
 
 	inline double 
 	getStdev() {
-		double variance = S / static_cast<double>(k - 1);
+		double variance = S / static_cast<double>(k);
 		return std::sqrt(variance);
 	}
 };
 
 /**
+ * This function is used by the pca() function to calculate the principal component
+ * eigenvectors and eigenvalues, along with the mean and standard deviation of each
+ * input raster band. This function is used in the case where the input raster is
+ * small, and can reasonably be expected to fit entirely into memory.
  *
+ * First, the input raster bands are read into memory usign the GDALRasterBand 
+ * RasterIO function. Bands are read into memory in a row-wise manor 
+ * such that a row indicates a single pixel, and a column indicates a raster band.
+ * This means that in between each pixel and the next, a gap must be left for the
+ * remaining band values for that pixel index to be written to. This is done
+ * using the nPixelSpace, and nLineSpace arguments of RasterIO.
+ *
+ * Second, each pixel is checked to ensure it isn't a nan pixel. Any pixel
+ * containing a nan value in any band is overwritten completely with the
+ * next not-nan pixel, the total number of not-nan pixels is stored as the
+ * number of features.
+ *
+ * The mean, standard deviation are then calculated using Welfords method,
+ * and the pca eigenvectors and eigenvalues are calculated using the oneDAL
+ * library principal components functionality.
+ *
+ * A result containing the eigenvectors, eigenvalues, mean per band, and
+ * standard deviation per band, is returned.
  */
 template <typename T>
 PCAResult<T>
@@ -163,7 +198,33 @@ calculatePCA(
 }
 
 /**
+ * This function is used by the pca() function to calculate the principal component
+ * eigenvectors and eigenvalues, along with the mean and standard deviation of each
+ * input raster band. This function is used in the case where the input raster is
+ * large, will be processed in blocks.
  *
+ * All of the blocks are iterated through, and within each iteration the following
+ * is done:
+ *
+ * First, the input raster band blocks are read into memory using the GDALRasterBand 
+ * RasterIO function. Bands are read into memory in a row-wise manor 
+ * such that a row indicates a single pixel, and a column indicates a raster band.
+ * This means that in between each pixel and the next, a gap must be left for the
+ * remaining band values for that pixel index to be written to. This is done
+ * using the nPixelSpace, and nLineSpace arguments of RasterIO.
+ *
+ * Second, each pixel is checked to ensure it isn't a nan pixel. Any pixel
+ * containing a nan value in any band is overwritten completely with the
+ * next not-nan pixel, the total number of not-nan pixels is stored as the
+ * number of features.
+ *
+ * The mean, standard deviation are then updated using Welfords method,
+ * and the pca eigenvectors and eigenvalues partial result are updated 
+ * using the oneDAL library principal components functionality.
+ *
+ * once all blocks have been iterated through, the final resulting mean per band,
+ * standard deviation per band, eigenvectors, and eigenvalues are calculated 
+ * and returned.
  */
 template <typename T>
 PCAResult<T>
@@ -282,7 +343,17 @@ calculatePCA(
 }
 
 /**
+ * This function is used to process and write a pixel to the output principal
+ * component bands, using a single precision data type (float).
  *
+ * First, a pointer to the feature array of the specific pixel being processed
+ * is determined. Then, the values in this feature array are first centered
+ * then scaled depending on the mean and standard deviation of that specific
+ * band.
+ *
+ * The result for each principal component output band is then the dot product
+ * of the centered and scaled feature array, with the corresponding eigenvector.
+ * The cblas_sdot() function is used to take the dot product.
  */
 inline void 
 processSPPixel(
@@ -319,7 +390,17 @@ processSPPixel(
 }
 
 /**
+ * This function is used to process and write a pixel to the output principal
+ * component bands, using a double precision data type (double).
  *
+ * First, a pointer to the feature array of the specific pixel being processed
+ * is determined. Then, the values in this feature array are first centered
+ * then scaled depending on the mean and standard deviation of that specific
+ * band.
+ *
+ * The result for each principal component output band is then the dot product
+ * of the centered and scaled feature array, with the corresponding eigenvector.
+ * The cblas_ddot() function is used to take the dot product.
  */
 inline void 
 processDPPixel(
@@ -355,9 +436,26 @@ processDPPixel(
 	}
 }
 
-
 /**
+ * This function is used to write the output principal components to a
+ * raster dataset, after the eigenvectors and eigenvalues have already
+ * been calculated for the input raster. This function is used in the
+ * case where the raster is small, and would not be expected to cause
+ * errors for being entirely in memory.
  *
+ * First, the input raster bands are read into memory using the GDALRasterBand 
+ * RasterIO function. Bands are read into memory in a row-wise manor 
+ * such that a row indicates a single pixel, and a column indicates a raster band.
+ * This means that in between each pixel and the next, a gap must be left for the
+ * remaining band values for that pixel index to be written to. This is done
+ * using the nPixelSpace, and nLineSpace arguments of RasterIO.
+ *
+ * Second, the pixels are iterated over. If any value in any band is a no-data
+ * value, then nan is written. If none of the values for any band are nodata,
+ * then the output pca value is calculated. A different function is called
+ * depending on whether the data type is float (single precision), or double 
+ * (double precision). The function centers, scales, then calculates the dot
+ * product of the pixel with the eigenvector for each output component.
  */
 template <typename T>
 void 
@@ -376,7 +474,7 @@ writePCA(
 	std::vector<void *> PCABandBuffers(nComp);
 	std::vector<void *> eigBuffers(nComp);
 	std::vector<T> noDataVals(bandCount); 
-	T resultNan = -1;
+	T resultNan = std::nan("");
 	for (int i = 0; i < bandCount; i++) {
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
@@ -435,7 +533,28 @@ writePCA(
 }
 
 /**
+ * This function is used to write the output principal components to a
+ * raster dataset, after the eigenvectors and eigenvalues have already
+ * been calculated for the input raster. This function is used in the
+ * case where the raster is large, and should be processed in blocks.
  *
+ * For each block:
+ *
+ * First, the input raster band blockss are read into memory using the GDALRasterBand 
+ * RasterIO function. Bands are read into memory in a row-wise manor 
+ * such that a row indicates a single pixel, and a column indicates a raster band.
+ * This means that in between each pixel and the next, a gap must be left for the
+ * remaining band values for that pixel index to be written to. This is done
+ * using the nPixelSpace, and nLineSpace arguments of RasterIO.
+ *
+ * Second, the pixels are iterated over. If any value in any band is a no-data
+ * value, then nan is written. If none of the values for any band are nodata,
+ * then the output pca value is calculated. A different function is called
+ * depending on whether the data type is float (single precision), or double 
+ * (double precision). The function centers, scales, then calculates the dot
+ * product of the pixel with the eigenvector for each output component.
+ *
+ * Lastly, the output values are written to the output dataset.
  */
 template <typename T>
 void 
@@ -455,7 +574,7 @@ writePCA(
 	std::vector<void *> PCABandBuffers(nComp);
 	std::vector<void *> eigBuffers(nComp);
 	std::vector<T> noDataVals(bandCount); 
-	T resultNan = -1;
+	T resultNan = std::nan("");
 	for (int i = 0; i < bandCount; i++) {
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
@@ -550,7 +669,31 @@ writePCA(
 }
 
 /**
+ * This function conducts principal component analysis on the input raster,
+ * writing output bands to a new GDALRasterWrapper, and returning the
+ * eigenvectors and eigenvalues calculated for each raster band. The output
+ * values are both centered and scaled before being projected onto the pca
+ * eigenvectors.
  *
+ * First, depending on whether the raster is large (should be processed in
+ * blocks) or not, and whether an output filename is given, an output
+ * dataset is created to store the output results. In the case of a small
+ * raster without a given filename, an in-memory raster is created. In the
+ * case of a large raster without a given filename, a VRT dataset is created
+ * where each VRT band is a GTiff raster. When a filename is created, the 
+ * driver which corresponds to that filename is used.
+ *
+ * Then, the calculatePCA() function is called, with specific template
+ * parameters depending on the data type, and a specific function overload
+ * depending on whether the raster should be processed by blocks. This
+ * function calculates the principal component eigenvectors, eigenvalues,
+ * mean per band, and standard deviation per band. The writePCA() function
+ * is then called (again with specific template and overload) to center,
+ * scale, and project the input raster values to output pca bands which
+ * are written to the output dataset.
+ *
+ * Finally, a GDALRasterWrapper is created using the output dataset,
+ * and returned in a tuple alongside the eigenvectors and eigenvalues. 
  */
 std::tuple<GDALRasterWrapper *, std::vector<std::vector<double>>, std::vector<double>>
 pca(
@@ -599,6 +742,7 @@ pca(
 			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
+			pcaBands[i].nan = std::nan("");
 			addBandToMEMDataset(p_dataset, pcaBands[i]);
 		}
 	}
@@ -609,6 +753,7 @@ pca(
 			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
+			pcaBands[i].nan = std::nan("");
 			createVRTBandDataset(p_dataset, pcaBands[i], tempFolder, pcaBands[i].name, VRTBandInfo, driverOptions);
 		}
 	}
@@ -631,6 +776,7 @@ pca(
 			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
+			pcaBands[i].nan = std::nan("");
 			pcaBands[i].p_buffer = !largeRaster ? VSIMalloc3(height, width, size) : nullptr;
 		
 			if (useTiles) {

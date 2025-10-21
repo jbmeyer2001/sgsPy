@@ -21,11 +21,47 @@ def pca(
     driver_options: dict = None
     ):
     """
+    This functions conducts principal component analysis on the given
+    raster.
 
+    A number of output components must be provided as an integer. This integer
+    must be less than or equal to the total number of bands in the input raster.
+    This will be the number of bands in the output raster.
+    A filename may be given to specify an output file location, otherwise
+    a virtual file type will be used. The driver_options parameter is 
+    used to specify creation options for a the output raster.
+    See options for the Gtiff driver here: https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
+
+    Principal components are calculated across all raster bands, 
+    along with mean and standard deviation of each raster band. The
+    raster is both centered and scaled, then output values are calculated
+    for each principal component.
+
+    Parameters
+    --------------------
+    rast : SpatialRaster
+        raster data structure containing input raster bands
+    num_comp : int
+        the number of components
+    filename : str
+        output filename or '' if there should not be an output file
+    display_info : bool
+        whether to display principal component eigenvalues/eigenvectors
+    driver_options : dict
+       the creation options as defined by GDAL which will be passed when creating output files
+
+    Returns
+    --------------------
+    a SpatialRaster object containing principal component output bands.
     """
     breaks_dict = {}
     large_raster = False
     temp_folder = ""
+
+    #ensure number of components is acceptabe
+    if num_comp < 0 or num_comp > len(rast.bands):
+        msg = f"the number of components must be greater than zero and less than or equal to the total number of raster bands ({len(rast.bands)})."
+        raise ValueError(msg)
 
     #ensure driver options keys are string, and convert driver options vals to string
     driver_options_str = {}
