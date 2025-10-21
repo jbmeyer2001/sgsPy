@@ -189,8 +189,8 @@ calculatePCA(
 	const auto desc = oneapi::dal::pca::descriptor<float, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
 	oneapi::dal::pca::partial_train_result<> partial_result;
 
-	for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
-		for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
 			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 		
@@ -212,11 +212,11 @@ calculatePCA(
 			}
 
 			//remove nodata values
-			int nFeatures;
+			int nFeatures = 0;
 			for (int x = 0; x < xValid; x++) {
 				for (int y = 0; y < yValid; y++) {
 					bool isNan = false;
-					for (int b = 0; b < bandCount; b++) { 
+					for (int b = 0; b < bandCount; b++) {
 						T val = p_data[((y * xBlockSize) + x) * bandCount + b];
 						isNan = std::isnan(val) || val == noDataVals[b];
 						if (isNan) {
@@ -239,6 +239,10 @@ calculatePCA(
 			//calculate partial result
 			DALHomogenTable table = DALHomogenTable(p_data, nFeatures, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
 			partial_result = oneapi::dal::partial_train(desc, partial_result, table);
+		}
+		
+		if (yBlock % 1000 == 0) {
+			std::cout << "completed y block " << yBlock << "/" << yBlocks << std::endl;
 		}
 	}
 
@@ -426,6 +430,8 @@ writePCA(
 				processDPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy);
 		}
 	}
+
+	VSIFree(p_data);
 }
 
 /**
@@ -454,7 +460,7 @@ writePCA(
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
 	for (int i = 0; i < nComp; i++) {
-		PCABandBuffers[i] = reinterpret_cast<void *>(PCABands[i].p_buffer);
+		PCABandBuffers[i] = VSIMalloc3(xBlockSize, yBlockSize, size);
 		eigBuffers[i] = reinterpret_cast<void *>(result.eigenvectors[i].data());
 	}
 
@@ -464,8 +470,8 @@ writePCA(
 	MKL_INT incx = 1;
 	MKL_INT incy = 1;
 
-	for (int yBlock = 0; yBlock < yBlockSize; yBlock++) {
-		for (int xBlock = 0; xBlock < xBlockSize; xBlock++) {
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
 			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 		
@@ -489,7 +495,7 @@ writePCA(
 			for (int y = 0; y < yValid; y++) {
 				int i = y * xBlockSize;
 				for (int x = 0; x < xValid; x++) {
-					bool isNan;
+					bool isNan = false;
 					for (int  b = 0; b < bandCount; b++) {
 						T val = reinterpret_cast<T *>(p_data)[i * bandCount + b];
 						isNan = val == noDataVals[b] || std::isnan(val);
@@ -516,7 +522,7 @@ writePCA(
 			}
 			
 			//write bands to disk
-			for (int b = 0; b < bandCount; b++) {
+			for (int b = 0; b < nComp; b++) {
 				rasterBandIO(
 					PCABands[b],
 					PCABandBuffers[b],
@@ -531,6 +537,15 @@ writePCA(
 				);
 			}		
 		}
+
+		if (yBlock % 1000 == 0) {
+			std::cout << "completed y block " << yBlock << "/" << yBlocks << std::endl;
+		}
+	}
+
+	VSIFree(p_data);
+	for (int i = 0; i < nComp; i++) {
+		VSIFree(PCABandBuffers[i]);
 	}
 }
 
