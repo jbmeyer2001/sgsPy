@@ -855,6 +855,29 @@ pca(
 			throw std::runtime_error("should not be here! GDALDataType should be one of Float32/Float64!");
 	}
 	
+	//write to file if data is still in memory (the case where largeRaster is false)
+	if (!largeRaster && filename != "") {
+		CPLErr err;
+		for (int b = 0; b < nComp; b++) {
+			err = pcaBands[b].p_band->RasterIO(
+				GF_Write,
+				0,
+				0,
+				width,
+				height, 
+				pcaBands[b].p_buffer,
+				width,
+				height,
+				pcaBands[b].type,
+				0,
+				0
+			);
+			if (err) {
+				throw std::runtime_error("error writing band to file.");
+			}
+		}
+	}
+
 	if (isVRTDataset) {
 		for (int b = 0; b < bandCount; b++) {
 			GDALClose(VRTBandInfo[b].p_dataset);

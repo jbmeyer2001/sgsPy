@@ -59,7 +59,7 @@ def pca(
     temp_folder = ""
 
     #ensure number of components is acceptabe
-    if num_comp < 0 or num_comp > len(rast.bands):
+    if num_comp <= 0 or num_comp > len(rast.bands):
         msg = f"the number of components must be greater than zero and less than or equal to the total number of raster bands ({len(rast.bands)})."
         raise ValueError(msg)
 
