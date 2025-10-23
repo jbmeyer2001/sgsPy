@@ -74,6 +74,7 @@ utils_inc_dir = include_directories('sgs/utils')
 root_dir = meson.current_source_dir()
 
 #add to link args if necessary
+win_link_args = []
 if WIN
   win_link_args = [
     '-lws2_32',   #ws2_32.lib from Windows SDK 

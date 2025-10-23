@@ -3,9 +3,6 @@ if WIN
   py.extension_module(
     'quantiles',
     'quantiles.cpp',
-    link_with: [
-      raster_lib,
-    ],
     link_args: [
       win_link_args, 
     ],
@@ -33,10 +30,6 @@ else
     include_directories: [
       inc_dir,
       utils_inc_dir,
-    ],
-    objects: [
-      #from sgs/utils
-      raster_obj,
     ],
     install: true,
   )
