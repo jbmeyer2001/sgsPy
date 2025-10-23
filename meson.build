@@ -29,11 +29,22 @@ py = import('python').find_installation(pure: false)
 #meson doesn't have direct access to this variable (probably for good reason...) so the way
 #to actually get access to it is by running a quick python script which prints the PATH
 #variable, and parsing the printed string in meson...
-pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
-pip_inc_dir = pip_build_dir + 'include'
-#oneapi_inc_dir = pip_build_dir + 'include/oneapi'
-#dal_inc_dir = pip_build_dir + 'include/dal'
-pip_lib_dir = pip_build_dir + 'lib'
+if WIN
+  path_entries = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(';')
+  message('PATH')
+  foreach entry : path_entries
+    if entry.contains('Temp') and entry.contains('pip-build-env') and entry.contains('overlay') and entry.contains('Scripts')
+      pip_build_dir = entry.split('Scripts').get(0)
+      pip_inc_dir = pip_build_dir + join_paths('Library', 'include')
+      pip_lib_dir = pip_build_dir + join_paths('Library', 'lib')
+      pip_bin_dir = pip_build_dir + join_paths('Library', 'bin')
+    endif
+  endforeach
+else
+  pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
+  pip_inc_dir = pip_build_dir + 'include'
+  pip_lib_dir = pip_build_dir + 'lib'
+endif
 
 run_command('git', 'submodule', 'update', '--init', '--recursive')
 
@@ -57,20 +68,15 @@ endif
 #define directories
 if WIN
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
-  mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
+  mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
   mkl_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib/intel64'
-  tbb_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib'
-  mkl_tbb_bin = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/bin' 
 else #linux
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
   intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib/intel64'
 endif
 utils_inc_dir = include_directories('sgs/utils')
-#oneapi_inc_dir = include_directories('sgs/extern/oneDAL/cpp')
-#oneapi_daal_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal')
-#oneapi_daal_include_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
 root_dir = meson.current_source_dir()
 
 #add to link args if necessary
@@ -123,31 +129,21 @@ if WIN
     'mkl_intel_thread_dll',
     'mkl_lapack95_ilp64',
   ]
-
-  #tbb_libs = [
-  #    ]
-
-  #dlls = [
-  #  'mkl_core.2',
-  #  'mkl_tbb_threadd.2',
-  #  'tbb12',
-  #  'tbbbind_2_5',
-  #  'tbbmalloc',
-  #  'tbbmalloc_proxy',
-  #]
-
+ 
   foreach lib : mkl_libs
-    lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir], static:true)
+    mkl_lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir], static:true)
   endforeach
 
-  #foreach lib : tbb_libs
-  #  lib_deps += cxx.find_library(lib, dirs : [tbb_lib_dir])
-  #endforeach
+  oneDAL_libs = [
+    'onedal',
+    'onedal_core',
+    'onedal_thread'
+  ]
 
-  #foreach dll : dlls
-  #  lib_deps += cxx.find_library(lib, dirs : [mkl_tbb_bin])
-  #endforeach
-
+  foreach lib : oneDAL_libs
+    oneDAL_lib_deps += cxx.find_library(lib, dirs : [pip_lib_dir], static:true)
+  endforeach
+ 
 else #linux
   #in linux list all of the libs rather than programatically finding them
   #because of multiple definition errors. 
@@ -242,53 +238,16 @@ else #linux
     tbb_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
   endforeach
 
-
-  #oneDAL_libs_TEST = [
-    #static_library('libonedal.a', pip_lib_dir + '/libonedal.a', implicit_include_directories: false),
-    #static_library('libonedal_core.a', pip_lib_dir + '/libonedal_core.a'),
-    #static_library('libonedal_parameters.a', pip_lib_dir + '/libonedal_parameters.a'),
-    #static_library('libonedal_thread.a', pip_lib_dir + '/libonedal_thread.a'),
-    #shared_library('libhwloc.so', pip_lib_dir + '/libhwloc.so'),
-    #shared_library('libhwloc.so.15', pip_lib_dir + '/libhwloc.so.15'),
-    #shared_library('libhwloc.so.15.8.1', pip_lib_dir + '/libhwloc.so.15.8.1'),
-    #shared_library('libtbb.so', pip_lib_dir + '/libtbb.so'),
-    #shared_library('libtbb.so.12', pip_lib_dir + '/libtbb.so.12'),
-    #shared_library('libtbb.so.12.16', pip_lib_dir + '/libtbb.so.12.16'),
-    #shared_library('libtbbbind_2_5.so', pip_lib_dir + '/libtbbbind_2_5.so'),
-    #shared_library('libtbbbind_2_5.so.3', pip_lib_dir + '/libtbbbind_2_5.so.3'),
-    #shared_library('libtbbbind_2_5.so.3.16', pip_lib_dir + '/libtbbbind_2_5.so.3.16'),
-    #shared_library('libtbbmalloc.so', pip_lib_dir + '/libtbbmalloc.so'),
-    #shared_library('libtbbmalloc.so.2', pip_lib_dir + '/libtbbmalloc.so.2'),
-    #shared_library('libtbbmalloc.so.2.16', pip_lib_dir + '/libtbbmalloc.so.2.16'),
-    #shared_library('libtbbmalloc_proxy.so', pip_lib_dir + '/libtbbmalloc_proxy.so'),
-    #shared_library('libtbbmalloc_proxy.so.2', pip_lib_dir + '/libtbbmalloc_proxy.so.2'),
-    #shared_library('libtbbmalloc_proxy.so.2.16', pip_lib_dir + '/libtbbmalloc_proxy.so.2.16'),
-    #shared_library('liblibtcm.so', pip_lib_dir + '/libtcm.so'),
-    #shared_library('libtcm.so.1', pip_lib_dir + '/libtcm.so.1'),
-    #shared_library('libtcm.so.1.4.0', pip_lib_dir + '/libtcm.so.1.4.0')
-    #]
-
   oneDAL_libs = [
     'onedal',
     'onedal_core',
     'onedal_parameters',
     'onedal_thread'
   ]
-
-  #message('py install dir:')
-  #message(py.get_install_dir())
-  
+ 
   foreach lib : oneDAL_libs
     oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
   endforeach
-  
-  #install_data(pip_lib_dir + '/libtbb.so.12', install_dir: py.get_install_dir())
-  
-  #oneDAL_dep = declare_dependency(
-  #  include_directories: pip_inc_dir,
-  #  link_with: oneDAL_libs
-  #)
-
 endif
 
 pybind11_dep = dependency('pybind11')

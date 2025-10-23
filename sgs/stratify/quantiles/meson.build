@@ -11,6 +11,7 @@ if WIN
     ],
     dependencies: [
       lib_deps,
+      mkl_lib_deps,
       pybind11_dep
     ],
     include_directories: [

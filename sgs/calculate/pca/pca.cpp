@@ -13,7 +13,6 @@
 #include "raster.h"
 
 #include "oneapi/dal.hpp"
-#include <mkl.h>
 
 typedef oneapi::dal::homogen_table	DALHomogenTable;
 
@@ -342,99 +341,6 @@ calculatePCA(
 	return retval;	
 }
 
-/**
- * This function is used to process and write a pixel to the output principal
- * component bands, using a single precision data type (float).
- *
- * First, a pointer to the feature array of the specific pixel being processed
- * is determined. Then, the values in this feature array are first centered
- * then scaled depending on the mean and standard deviation of that specific
- * band.
- *
- * The result for each principal component output band is then the dot product
- * of the centered and scaled feature array, with the corresponding eigenvector.
- * The cblas_sdot() function is used to take the dot product.
- */
-inline void 
-processSPPixel(
-	int i,
-	int bandCount,
-	int nComp,
-	void *p_data,
-	std::vector<void *>& PCABandBuffers,
-	std::vector<void *>& eigBuffers,
-	std::vector<double>& means,
-	std::vector<double>& stdevs,
-	MKL_INT n,
-	MKL_INT incx,
-	MKL_INT incy)
-{
-	//get features array
-	float *p_features = reinterpret_cast<float *>(p_data) + i * bandCount;
-	
-	//scale and center features
-	for (int b = 0; b < bandCount; b++) {
-		p_features[b] = (p_features[b] - static_cast<float>(means[b])) / static_cast<float>(stdevs[b]);
-	}
-
-	//use blas to calculate projection (dot product) for output raster
-	for (int b = 0; b < nComp; b++) {
-		reinterpret_cast<float *>(PCABandBuffers[b])[i] = cblas_sdot(
-			n,
-			p_features,
-			incx,
-			reinterpret_cast<float *>(eigBuffers[b]),
-			incy
-		);
-	}
-}
-
-/**
- * This function is used to process and write a pixel to the output principal
- * component bands, using a double precision data type (double).
- *
- * First, a pointer to the feature array of the specific pixel being processed
- * is determined. Then, the values in this feature array are first centered
- * then scaled depending on the mean and standard deviation of that specific
- * band.
- *
- * The result for each principal component output band is then the dot product
- * of the centered and scaled feature array, with the corresponding eigenvector.
- * The cblas_ddot() function is used to take the dot product.
- */
-inline void 
-processDPPixel(
-	int i,
-	int bandCount,
-	int nComp,
-	void *p_data,
-	std::vector<void *>& PCABandBuffers,
-	std::vector<void *>& eigBuffers,
-	std::vector<double>& means,
-	std::vector<double>& stdevs,
-	MKL_INT n,
-	MKL_INT incx,
-	MKL_INT incy)
-{
-	//get features array
-	double *p_features = reinterpret_cast<double *>(p_data) + i * bandCount;
-	
-	//scale and center features
-	for (int b = 0; b < bandCount; b++) {
-		p_features[b] = (p_features[b] - means[b]) / stdevs[b];
-	}
-
-	//use blas to calculate projection (dot product) for output raster
-	for (int b = 0; b < nComp; b++) {
-		reinterpret_cast<double *>(PCABandBuffers[b])[i] = cblas_ddot(
-			n,
-			p_features,
-			incx,
-			reinterpret_cast<double *>(eigBuffers[b]),
-			incy
-		);
-	}
-}
 
 /**
  * This function is used to write the output principal components to a
@@ -470,66 +376,102 @@ writePCA(
 {
 	int bandCount = static_cast<int>(bands.size());
 	int nComp = static_cast<int>(PCABands.size());
-	void *p_data = VSIMalloc3(width * height, bandCount, size);
-	std::vector<void *> PCABandBuffers(nComp);
-	std::vector<void *> eigBuffers(nComp);
 	std::vector<T> noDataVals(bandCount); 
+	std::vector<T *> inputBuffers(bandCount);
+	std::vector<T *> PCABandBuffers(nComp);
+	std::vector<T *> eigBuffers(nComp);
 	T resultNan = std::nan("");
-	for (int i = 0; i < bandCount; i++) {
-		noDataVals[i] = static_cast<T>(bands[i].nan);
-	}
-	for (int i = 0; i < nComp; i++) {
-		PCABandBuffers[i] = reinterpret_cast<void *>(PCABands[i].p_buffer);
-		eigBuffers[i] = reinterpret_cast<void *>(result.eigenvectors[i].data());
-	}
+	
+	//set no data values and read input bands
+	T *p_data = reinterpret_cast<T *>(VSIMalloc3(bandCount, height * width, size);
+	for (int b = 0; b < bandCount; b++) {
+		noDataVals[b] = static_cast<T>(bands[b].nan);
 
-	//read full bands into p_data
-	for (size_t i = 0; i < bands.size(); i++) {
-		bands[i].p_band->RasterIO(
+		inputBuffers[b] = VSIMalloc3(height, width, size);
+		bands[b].p_band->RasterIO(
 			GF_Read,
 			0,
 			0,
 			width,
 			height,
-			(void *)((size_t)p_data + i * size),	
+			(void *)((size_t)p_data + b * size),	
 			width,
 			height,
 			type,
-			size * bands.size(),
-			size * bands.size() * width
+			size * bandCount,
+			size * bandCount * width
 		);	
 	}
 
-	MKL_INT n = result.eigenvectors.size();
-	MKL_INT incx = 1;
-	MKL_INT incy = 1;
-
-	//process chunk of data
-	for (int i = 0; i < height * width; i++) {
-		bool isNan;
-		for (int  b = 0; b < bandCount; b++) {
-			T val = reinterpret_cast<T *>(p_data)[i * bandCount + b];
-			isNan = val == noDataVals[b] || std::isnan(val);
-			if (isNan) {
-				break;
-			}
+	//populate PCABandBuffers vector, initialize values to 0, and populate eigBuffers vector
+	for (int b = 0; i < nComp; i++) {
+		PCABandBuffers[b] = reinterpret_cast<T *>(PCABands[b].p_buffer);
+		for (int i = 0; i < height * width; i++) { //this for loop *should* be optimized by compiler
+			PCABandBuffers[b][i] = 0;
 		}
 
-		if (isNan) {
-			for (void *& p_buffer : PCABandBuffers) {
-				reinterpret_cast<T *>(p_buffer)[i] = resultNan;
-			}
+		eigBuffers[i] = result.eigenvectors[i].data();
+	}
+
+	//calculate dot product of eigenvectors and values in a *hopefully* SIMD friendly way
+	std::vector<std::vector<T>> multipliers(nComp);
+	std::vector<std::vector<T>> adders(nComp);
+
+	for (int c = 0; c < nComp; c++) {
+		multipliers[c].resize(bandCount);
+		adders[c].resize(bandCount);
+
+		for (int b = 0; b < bandCount; b++) {
+			T mean = static_cast<T> result.means[b];
+			T stdev = static_cast<T> result.means[b];
+			multipliers[c][b] = eigBuffers[c][b] / stdev;
+			adders[c][b] = -1 * multipliers[c][b] * mean;
 		}
-		else {
-			//depending on type, call single or double precision floating point
-			//processing functions which use cblas_sdot and cblas_ddot respectively
-			type == GDT_Float32 ?
-				processSPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy) :
-				processDPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy);
+	}
+	
+	for (int b = 0; b < bandCount; b++) {
+		T mean = static_cast<T> result.means[b];
+		T stdev = static_cast<T> result.stdevs[b];
+		T *buffIn = inputBuffers[b];
+		for (int c = 0; c < nComp; c++) {
+			T eig = eigBuffers[c][b];
+			T mult = eig / stdev;
+			T add = -1 * mean * mult;
+			buffOut = PCABandBuffers[c];
+
+			for (int i = 0; i < height * width; i++) {
+				buffOut[i] += buffIn[i] * mult + add;
+				//equivalent to:
+				//buffOut[i] += ((buffIn[i] - mean) / stdev) * 	eig
+				//
+				//which can be decomposed to
+				//buffOut[i] += (buffIn[i] - mean) * (eig / stdev)
+				//
+				//then
+				//buffOut[i] += (buffIn[i]) * (eig / stdev) + (-mean * (eig / stdev))
+				//
+				//setting (eig / stdev) as 'mult' and (-mean * (eig / stdev)) as 'add'
+				//limits the number of instructions, and especially division instructions
+			}
 		}
 	}
 
-	VSIFree(p_data);
+	//set nan values
+	for (int i = 0; i < height * width; i++) {
+		for (int b = 0; b < bandCount ; b++) {
+			T val = inputBuffers[b][i];
+			if (val == noDataVals[b] || std::isnan(val)) {
+				for (int c = 0; c < nComp; c++) {
+					pcaBandBuffers[c][i] = resultNan;
+				}
+				break;
+			}
+		}
+	}
+
+	for (int b = 0; b < bandCount; b++) {
+		VSIFree(inputBuffers[b]);
+	}
 }
 
 /**
@@ -571,8 +513,8 @@ writePCA(
 {
 	int bandCount = static_cast<int>(bands.size());
 	int nComp = static_cast<int>(PCABands.size());
-	std::vector<void *> PCABandBuffers(nComp);
-	std::vector<void *> eigBuffers(nComp);
+	std::vector<T *> PCABandBuffers(nComp);
+	std::vector<T *> eigBuffers(nComp);
 	std::vector<T> noDataVals(bandCount); 
 	T resultNan = std::nan("");
 	for (int i = 0; i < bandCount; i++) {
@@ -584,10 +526,6 @@ writePCA(
 	}
 
 	void *p_data = VSIMalloc3(xBlockSize * yBlockSize, size, bandCount);
-
-	MKL_INT n = result.eigenvectors.size();
-	MKL_INT incx = 1;
-	MKL_INT incy = 1;
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
