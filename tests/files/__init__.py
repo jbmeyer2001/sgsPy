@@ -27,6 +27,8 @@ strat_quantiles_pz2_r_path = os.path.join(folder, 'strat_quantiles_pz2_R.tif')
 strat_poly_test1_r_path = os.path.join(folder, 'strat_poly_test1_R.tif')
 strat_poly_test2_r_path = os.path.join(folder, 'strat_poly_test2_R.tif')
 
+pca_result_path = os.path.join(folder, 'pca_result.tif')
+
 __all__ = [
     'access_shapefile_path',
     'existing_shapefile_path',
@@ -51,4 +53,5 @@ __all__ = [
     'strat_quantiles_pz2_r_path',
     'strat_poly_test1_r_path',
     'strat_poly_test2_r_path',
+    'pca_result_path',
 ]

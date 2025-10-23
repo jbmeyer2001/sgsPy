@@ -13,7 +13,7 @@ from .calculate import (
     coobs,
     lhs_optimal,
     pop,
-    principal_components,
+    pca,
     representation,
     sample_size,
 )

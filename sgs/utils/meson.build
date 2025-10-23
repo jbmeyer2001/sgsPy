@@ -1,14 +1,14 @@
 #build GDALRasterWrapper as library
 raster_lib = static_library(
   'raster_lib', 'raster.cpp', 'raster.h',
-  dependencies: [lib_deps, py.dependency()],
+  dependencies: [lib_deps, py.dependency(), pybind11_dep],
   include_directories: [inc_dir],
 )
 
 #build GDALVectorWrapper as library
 vector_lib = static_library(
   'vector_lib', 'vector.cpp', 'vector.h',
-  dependencies: [lib_deps, py.dependency()],
+  dependencies: [lib_deps, py.dependency(), pybind11_dep],
   include_directories: [inc_dir],
 )
 
@@ -24,7 +24,7 @@ if WIN
     'access_lib', 'access.cpp', 'access.h',
     link_with: [raster_lib, vector_lib],
     link_args: win_link_args,
-    dependencies: [lib_deps, py.dependency()],
+    dependencies: [lib_deps, py.dependency(), pybind11_dep],
     include_directories: inc_dir,
   )
 
@@ -34,7 +34,7 @@ if WIN
     ['raster_pybind.cpp'],
     link_with: [raster_lib],
     link_args: win_link_args, 
-    dependencies: [lib_deps],
+    dependencies: [lib_deps, pybind11_dep],
     include_directories: inc_dir,
     install: true,
   )
@@ -45,7 +45,7 @@ if WIN
     ['vector_pybind.cpp'],
     link_with: [vector_lib],
     link_args: win_link_args,
-    dependencies: [lib_deps],
+    dependencies: [lib_deps, pybind11_dep],
     include_directories: inc_dir,
     install: true,
   )
@@ -68,7 +68,7 @@ else #linux
   py.extension_module(
     'raster',
     ['raster_pybind.cpp'],
-    dependencies: [lib_deps],
+    dependencies: [lib_deps, pybind11_dep],
     include_directories: inc_dir,
     objects: [raster_obj],
     install: true,
@@ -78,7 +78,7 @@ else #linux
   py.extension_module(
     'vector',
     ['vector_pybind.cpp'],
-    dependencies: [lib_deps, py.dependency()],
+    dependencies: [lib_deps, py.dependency(), pybind11_dep],
     include_directories: inc_dir,
     objects: [vector_obj],
     install: true,
