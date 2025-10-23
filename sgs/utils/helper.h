@@ -681,7 +681,7 @@ rasterBandIO(
  */
 struct Access {
 	bool used = false;
-	double area = -1;
+	double area = 0;
 	GDALDataset *p_dataset = nullptr;
 	RasterBandMetaData band;
 };
