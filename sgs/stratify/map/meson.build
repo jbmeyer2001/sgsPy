@@ -1,6 +1,6 @@
 #create map module
 py.extension_module(
-  'map',
+  'map_stratifications',
   'map_stratifications.cpp',
   link_args: win_link_args,
   dependencies: [
