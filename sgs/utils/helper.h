@@ -666,3 +666,18 @@ rasterBandIO(
 			std::runtime_error("unable to write block to raster.");
 	}
 }
+
+/**
+ * Helper function to Add a point to a layer.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ */
+inline void
+addPoint(OGRPoint *p_point, OGRLayer *p_layer) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+

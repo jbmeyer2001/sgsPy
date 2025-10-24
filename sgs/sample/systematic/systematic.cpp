@@ -14,6 +14,82 @@
 #include "raster.h"
 #include "vector.h"
 
+OGRGeometry *getAccessPolygon(GDALVectorWrapper *p_access) {
+	//step 1: create multipolygon buffers
+	OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
+	OGRMultiPolygon *buffOuterPolygons = new OGRMultiPolygon;
+	OGRGeometry *p_polygonMask;
+
+	//step 2: add geometries to access polygon buffers
+	for (const auto& p_feature : *p_vector->getLayer(layerName.c_str())) {
+		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
+
+		switch (type) {
+			case OGRwkbGeometryType::wkbLineString: {
+				buffOuterPolygons->addGeometry(p_geometry->Buffer(buffOuter));
+				if (buffInner != 0) {
+					buffInnerPolygons->addGeometry(p_geometry->Buffer(buffInner));
+				}
+				break;
+			}
+			case OGRwkbGeometryType::wkbMultiLineString: {
+				for (const auto& p_lineString : *p_geometry->toMultiLineString()) {
+					buffOuterPolygons->addGeometry(p_lineString->Buffer(buffOuter));
+					if (buffInner != 0) {
+						buffInnerPolygons->addGeometry(p_lineString->Buffer(buffInner));
+					}
+				}
+				break;
+			}
+			default: {
+				throw std::runtime_error("access polygon geometry type must be LineString or MultiLineString");
+			}
+		}
+	}	
+
+	//step 3: generate the polygon mask and free no longer used memory
+	if (buffInner == 0) {
+		p_polygonMask = buffOuterPolygons->UnionCascaded();
+		free(buffOuterPolygons);
+	}
+	else {
+		OGRGeometry *buffOuterUnion = buffOuterPolygons->UnionCascaded();
+		OGRGeometry *buffInnerUnion = buffInnerPolygons->UnionCascaded();
+		p_polygonMask = buffOuterUnion->Difference(buffInnerUnion);
+		free(buffOuterPolygons);
+		free(buffInnerPolygons);
+		free(buffOuterUnion);
+		free(buffInnerUnion);
+	}
+
+	return p_polygonMask;
+}
+
+/**
+ *
+ */
+inline bool
+checkExtent(double x, double y, double xMin, double xMax, double yMin, double yMax) {
+	return (x >= xMin && x <= xMax && y >= yMin && y <= yMax); 
+}
+
+/**
+ *
+ */
+inline bool
+checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
+	return !p_geometry || p_point->Within(p_geometry);
+}
+
+/**
+ *
+ */
+inline bool
+checkExisting(double x, double y, Existing& existing) {
+	return !existing.used || !existing.contains(x, y);
+}
+
 /*
  * This function conducts Systematic sampling on an input raster image.
  *
@@ -56,6 +132,11 @@ systematic(
 	double cellSize,
 	std::string shape,
 	std::string location,
+	GDALVectorWrapper *p_existing,
+	GDALVectorWrapper *p_access,
+	std::string layerName,
+	double buffInner,
+	double buffOuter,
 	bool plot,
 	std::string filename)
 {
@@ -119,6 +200,15 @@ systematic(
 	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
 	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);	
 
+	//get access polygon if access is given
+	OGRGeometry *access = nullptr;
+	if (p_access) {
+		access = getAccessPolygon(p_access);
+	}
+
+	//create existing struct
+	Existing existing(p_existing, p_raster->getGeotransform(), p_raster->getWidth(), p_sampleLayer);
+
 	//coordinate representations the samples as vectors only if PLOT is true, returned to the (Python) caller
 	std::vector<double> xCoords, yCoords;
 
@@ -134,10 +224,53 @@ systematic(
 			OGRPoint secondPoint;
 			if (location == "centers") {
 				p_polygon->Centroid(&point);
+
+				double x = point.getX();
+				double y = point.getY();
+				if (checkExtent(x, y, xMin, xMax, yMin, yMax) &&
+				    checkAccess(&point, access) &&
+				    checkExisting(x, y, existing)) 
+				{
+					addPoint(&point, p_sampleLayer);
+
+					if (plot) {
+						xCoords.push_back(x);
+						yCoords.push_back(y);
+					}	
+				}
 			}
 			else if (location == "corners") {
 				(*p_polygon->begin())->getPoint(0, &point);
 				(*p_polygon->begin())->getPoint(1, &secondPoint);
+
+				double x = point.getX();
+				double y = point.getY();
+				if (checkExtent(x, y, xMin, xMax, yMin, yMax) &&
+				    checkAccess(&point, access) &&
+				    checkExisting(x, y, existing)) 
+				{
+					addPoint(&point, p_sampleLayer);
+
+					if (plot) {
+						xCoords.push_back(x);
+						yCoords.push_back(y);
+					}	
+				}
+
+				x = secondPoint.getX();
+				y = secondPoint.getY();
+				if (checkExtent(x, y, xMin, xMax, yMin, yMax) &&
+				    checkAccess(&secondPoint, access) &&
+				    checkExisting(x, y, existing)) 
+				{
+					addPoint(&secondPoint, p_sampleLayer);
+
+					if (plot) {
+						xCoords.push_back(x);
+						yCoords.push_back(y);
+					}	
+				}
+
 			}
 			else { //location == "random"
 				OGREnvelope envelope;
@@ -149,48 +282,34 @@ systematic(
 				double yMaxEnv = envelope.MaxY;
 				double yDiffEnv = yMaxEnv - yMinEnv;
 
-				point.setX(xMinEnv + rng() / (rngMax / xDiffEnv));
-				point.setY(yMinEnv + rng() / (rngMax / yDiffEnv));
-				while (!p_polygon->Contains(&point)) {
+				int tries = 0;
+
+				while (tries < 10) {
 					point.setX(xMinEnv + rng() / (rngMax / xDiffEnv));
 					point.setY(yMinEnv + rng() / (rngMax / yDiffEnv));
-				}
-			}
-
-			double x = point.getX();
-			double y = point.getY();
-
-			//only add (and potentially plot/write) a point if it is within the grid polygon
-			if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
-				if (plot) {
-					xCoords.push_back(x);
-					yCoords.push_back(y);
-				}
-
-				OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
-				p_feature->SetGeometry(&point);
-				p_sampleLayer->CreateFeature(p_feature);
-				OGRFeature::DestroyFeature(p_feature);
-			}
-
-			//if location is corners, there will be a second point
-			if (location == "corners") {
-				x = secondPoint.getX();
-				y = secondPoint.getY();
-
-				if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
-					if (plot) {
-						xCoords.push_back(x);
-						yCoords.push_back(y);
+					while (!p_polygon->Contains(&point)) {
+						point.setX(xMinEnv + rng() / (rngMax / xDiffEnv));
+						point.setY(yMinEnv + rng() / (rngMax / yDiffEnv));
 					}
 
-					OGRFeature *p_feature = OGRFeature::CreateFeature(p_sampleLayer->GetLayerDefn());
-					p_feature->SetGeometry(&secondPoint);
-					p_sampleLayer->CreateFeature(p_feature);
-					OGRFeature::DestroyFeature(p_feature);
+					double x = point.getX();
+					double y = point.getY();
+					if (checkExtent(x, y, xMin, xMax, yMin, yMax) &&
+				    	    checkAccess(&point, access) &&
+				    	    checkExisting(x, y, existing)) 
+					{
+						addPoint(&point, p_sampleLayer);
+
+						if (plot) {
+							xCoords.push_back(x);
+							yCoords.push_back(y);
+						}	
+					}
+
+					tries++;
 				}
 			}
-
+	
 			//set grid vector to be plot
 			if (plot) {
 				grid.push_back({}); //add new polygon to grid
@@ -221,5 +340,16 @@ systematic(
 }
 
 PYBIND11_MODULE(systematic, m) {
-	m.def("systematic_cpp", &systematic);
+	m.def("systematic_cpp", &systematic,
+		pybind11::arg("p_raster"),
+		pybind11::arg("cellSize"),
+		pybind11::arg("shape"),
+		pybind11::arg("location"),
+		pybind11::arg("p_existing").none(true),
+		pybind11::arg("p_access").none(true),
+		pybind11::arg("layerName"),
+		pybind11::arg("buffInner"),
+		pybind11::arg("buffOuter"),
+		pybind11::arg("plot"),
+		pybind11::arg("filename"));
 }
