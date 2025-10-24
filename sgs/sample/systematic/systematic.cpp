@@ -90,6 +90,30 @@ checkExisting(double x, double y, Existing& existing) {
 	return !existing.used || !existing.contains(x, y);
 }
 
+/**
+ *
+ */
+inline bool
+checkNotNan(GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoord, bool force) {
+	if (force) {
+		int x = static_cast<int>(IGT[0] + xCoord * IGT[1] + yCoord * IGT[2]);
+		int y = static_cast<int>(IGT[3] + xCoord * IGT[4] + yCoord * IGT[5]);
+	
+		for (int i = 0; i < p_raster->getBandCount(); i++) {
+			GDALRasterBand *p_band = p_raster->getRasterBand(i);
+			
+			double val;
+			p_band->RasterIO(GF_Read, x, y, 1, 1, &val, 1, 1, GDT_Float64, 0, 0);
+	
+			if (val == p_band->GetNoDataValue()) {
+				return false;
+			}	
+		}	
+	}
+
+	return true;
+}	
+
 /*
  * This function conducts Systematic sampling on an input raster image.
  *
@@ -137,10 +161,15 @@ systematic(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
+	bool force,
 	bool plot,
 	std::string filename)
 {
-	
+	double *GT; 	//geotransform
+	double[6] IGT;	//inverse geotransform
+	GT = p_raster->getGeotransform();
+	inv_geotransform(GT, IGT);	
+
 	//determine raster extent
 	double xMin, xMax, yMin, yMax;
 	xMin = p_raster->getXMin();
@@ -207,7 +236,7 @@ systematic(
 	}
 
 	//create existing struct
-	Existing existing(p_existing, p_raster->getGeotransform(), p_raster->getWidth(), p_sampleLayer);
+	Existing existing(p_existing, GT, p_raster->getWidth(), p_sampleLayer);
 
 	//coordinate representations the samples as vectors only if PLOT is true, returned to the (Python) caller
 	std::vector<double> xCoords, yCoords;
@@ -229,7 +258,8 @@ systematic(
 				double y = point.getY();
 				if (checkExtent(x, y, xMin, xMax, yMin, yMax) &&
 				    checkAccess(&point, access) &&
-				    checkExisting(x, y, existing)) 
+				    checkExisting(x, y, existing) &&
+				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
 					addPoint(&point, p_sampleLayer);
 
@@ -247,7 +277,8 @@ systematic(
 				double y = point.getY();
 				if (checkExtent(x, y, xMin, xMax, yMin, yMax) &&
 				    checkAccess(&point, access) &&
-				    checkExisting(x, y, existing)) 
+				    checkExisting(x, y, existing) &&
+				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
 					addPoint(&point, p_sampleLayer);
 
@@ -261,7 +292,8 @@ systematic(
 				y = secondPoint.getY();
 				if (checkExtent(x, y, xMin, xMax, yMin, yMax) &&
 				    checkAccess(&secondPoint, access) &&
-				    checkExisting(x, y, existing)) 
+				    checkExisting(x, y, existing) &&
+				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
 					addPoint(&secondPoint, p_sampleLayer);
 
@@ -296,7 +328,8 @@ systematic(
 					double y = point.getY();
 					if (checkExtent(x, y, xMin, xMax, yMin, yMax) &&
 				    	    checkAccess(&point, access) &&
-				    	    checkExisting(x, y, existing)) 
+				    	    checkExisting(x, y, existing) &&
+					    checkNotNan(p_raster, IGT, x, y, force)) 
 					{
 						addPoint(&point, p_sampleLayer);
 

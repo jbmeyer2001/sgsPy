@@ -17,26 +17,6 @@
 #include <ogr_core.h>
 
 /**
- * Helper function for calculating the index of a point in a raster.
- * The inverse geotransform is used to calculate the x index and y index.
- * The width is used to calculate a single index assuming row-major.
- *
- * @param double xCoord
- * @param double yCoord
- * @param double *IGT
- * @param int64_t width
- * @returns int64_t index
- */
-inline int64_t 
-point2index(double xCoord, double yCoord, double *IGT, int64_t width) {
-	int64_t x = static_cast<int64_t>(IGT[0] + xCoord * IGT[1] + yCoord * IGT[2]);
-	int64_t y = static_cast<int64_t>(IGT[3] + xCoord * IGT[4] + yCoord * IGT[5]);
-
-	int64_t index = y * width + x;
-	return index;
-}
-
-/**
  * This struct handles existing sample plot points. It has a constructor
  * which takes a GDALVectorWrapper, geotransform, and width of the raster
  * as parameters. 
@@ -95,14 +75,14 @@ struct Existing {
 			switch (wkbFlatten(p_geometry->getGeometryType())) {
 				case OGRwkbGeometryType::wkbPoint: {
 					OGRPoint *p_point = p_geometry->toPoint();
-					int64_t index = point2index(p_point->getX(), p_point->getY(), IGT, width);
+					int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 					this->samples.insert(index);
 					addPoint(p_point, p_samples);
 					break;
 				}
 				case OGRwkbGeometryType::wkbMultiPoint: {
 					for (const auto& p_point : *p_geometry->toMultiPoint()) {
-						int64_t index = point2index(p_point->getX(), p_point->getY(), IGT, width);
+						int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 						this->samples.insert(index);
 						addPoint(p_point, p_samples);
 					}
@@ -140,7 +120,7 @@ struct Existing {
 	 */
 	inline bool
 	contains (double xCoord, double yCoord) {
-		int64_t index = point2index(x, y, this->IGT, this->width);
+		int64_t index = point2index<int64_t>(x, y, this->IGT, this->width);
 		return this->samples.contains(index);
 	}
 
