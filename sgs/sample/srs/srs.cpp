@@ -297,32 +297,16 @@ srs(
 	return {{xCoords, yCoords}, p_sampleVectorWrapper, pointsAdded};
 }
 
-/*
- * srs function for when access has not been specified. 
- * Calls srsTypeSpecifier() which calls srs().
- */
-std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t> 
-srs_cpp(
-	GDALRasterWrapper *p_raster,
-	size_t numSamples,
-	double mindist,
-	bool plot,
-	std::string filename) 
-{
-	return srs(
-		p_raster, 
-		numSamples,
-		mindist, 
-		nullptr, 
-		"",
-		0, 
-		0,
-	       	plot,	
-		filename
-	);
-}
-
 PYBIND11_MODULE(srs, m) {
-	m.def("srs_cpp", &srs_cpp);
-	m.def("srs_cpp_access", &srs);
+	m.def("srs_cpp", &srs, 
+		pybind11::arg("p_raster"),
+		pybind11::arg("numSamples"),
+		pybind11::arg("mindist"),
+		pybind11::arg("p_access").none(true),
+		pybind11::arg("layerName"),
+		pybind11::arg("buffInner"),
+		pybind11::arg("buffOuter"),
+		pybind11::arg("plot"),
+		pybind11::arg("filename"));
+
 }

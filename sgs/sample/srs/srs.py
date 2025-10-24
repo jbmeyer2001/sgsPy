@@ -18,7 +18,7 @@ from sgs.utils import (
     plot,
 )
 
-from srs import srs_cpp, srs_cpp_access
+from srs import srs_cpp
 
 def srs(
     rast: SpatialRaster,
@@ -78,7 +78,7 @@ def srs(
         ValueError
             if access vector is passed, and buff_outer is either not provided or less than or equal to 0
         ValueError
-            if buff_inner is greater than buff_outer
+            if access is true and buff_inner is greater than buff_outer
         RuntimeError (from C++)
             if the number of samples is greater than the number of data pixels in the image
         RuntimeError (from C++)
@@ -107,6 +107,13 @@ def srs(
         if buff_inner >= buff_outer:
             raise ValueError("buff_outer must be greater than buff_inner")
 
+        access_vector = access.cpp_vector
+    else:
+        access_vector = None
+        layer_name = ""
+        buff_inner = -1
+        buff_outer = -1
+
     if mindist is None:
         mindist = 0
 
@@ -114,26 +121,17 @@ def srs(
         raise ValueError("mindist must be greater than or equal to 0")
 
     #call random sampling function
-    if (access):
-        [sample_coordinates, cpp_vector, num_points] = srs_cpp_access(
-            rast.cpp_raster,
-            num_samples,
-            mindist,
-            access.cpp_vector,
-            layer_name,
-            buff_inner,
-            buff_outer,
-            plot,
-            filename
-        )
-    else:
-        [sample_coordinates, cpp_vector, num_points] = srs_cpp(
-            rast.cpp_raster, 
-            num_samples, 
-            mindist, 
-            plot,
-            filename
-        )
+    [sample_coordinates, cpp_vector, num_points] = srs_cpp(
+        rast.cpp_raster,
+        num_samples,
+        mindist,
+        access_vector,
+        layer_name,
+        buff_inner,
+        buff_outer,
+        plot,
+        filename
+    )
     
     if num_points < num_samples:
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, num_points))
