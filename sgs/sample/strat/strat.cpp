@@ -275,8 +275,8 @@ strat(
 	std::vector<size_t> queinnecIndexCountPerStrata(numStrata * queinnec, 0);
 
 	size_t queinnecFirstX = 10000 * queinnec;
-	std::vector<std::vector<Index>> firstXQueinnecIndexesPerStrata(numStrata * queinnec);
-	std::vector<size_t> firstXQueinnecIndexCountPerStrata(numStrata * queinnec, 0);
+	std::vector<std::vector<Index>> queinnecFirstXIndexesPerStrata(numStrata * queinnec);
+	std::vector<size_t> queinnecFirstXIndexCountPerStrata(numStrata * queinnec, 0);
 
 	uint64_t multiplierQ = 0;
 	if (queinnec) {
@@ -284,10 +284,10 @@ strat(
 	}
 
 	bool scanlines = xBlockSize == width; 
-	size_t horizontalPad = wcol / 2;
-	size_t verticalPad = wrow / 2;
-	size_t fwHeight = wrow;
-	size_t fwWidth = xBlockSize - wcol + 1;
+	int horizontalPad = wcol / 2;
+	int verticalPad = wrow / 2;
+	int fwHeight = wrow;
+	int fwWidth = xBlockSize - wcol + 1;
 	std::vector<bool> focalWindowMatrix(fwWidth * fwHeight, true);
 	std::vector<bool> prevVertSame(xBlockSize, true);
 	bool prevHoriSame = true;
@@ -297,7 +297,7 @@ strat(
 	int64_t fwx;
 	int64_t fwyStart, fwyMidStart, fwyEnd, fwyMidEnd;
 	int64_t fwxStart, fwxMidStart, fwxEnd, fwxMidEnd;
-	int xOff, xSize, yOff, ySize;
+	int xOff, yOff;
 	bool addSelf;
 	bool addFw;
 	bool blockTopPad, blockBotPad, blockLeftPad, blockRightPad;
@@ -308,7 +308,7 @@ strat(
 	std::vector<bool> queinnecRandVals(xBlockSize * yBlockSize * queinnec);
 	int queinnecRandValIndex = xBlockSize * yBlockSize * queinnec;
 
-	void *p_fwScanline = scanlines ? VSIMalloc3(width, band.size) : nullptr;
+	void *p_fwScanline = scanlines ? VSIMalloc2(width, band.size) : nullptr;
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {	
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
@@ -349,7 +349,7 @@ strat(
 
 			//READ ACCESS BLOCK IF NECESSARY
 			if (access.used) {
-				if (!queinnec || scalines) {
+				if (!queinnec || scanlines) {
 					//accessMutex.lock();
 					rasterBandIO(access.band, p_accessMask, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true);
 					//accessMutex.lock();									      //read = true
@@ -476,10 +476,12 @@ strat(
 
 					fwyStart = std::max(fwy, static_cast<int64_t>(0));
 					fwyMidStart = std::max(fwy + 1, static_cast<int64_t>(0));
-					fwyEnd = std::min(y, static_cast<size_t>(yValid - wrow + 1));
+					fwyEnd = scanlines ? 
+						std::min(y + yBlock * yBlockSize, height - wrow + 1) :
+						std::min(y, yValid - wrow + 1);
 					fwyMidEnd = scanlines ? 
-						fwyEnd - 1 + static_cast<int64_t>(y > static_cast<size_t>(height - wrow + 1)) :
-						fwyEnd - 1 + static_cast<int64_t>(y > static_cast<size_t>(yValid - wrow + 1));
+						fwyEnd - 1 + static_cast<int64_t>(y + yBlock * yBlockSize > height - wrow + 1) :
+						fwyEnd - 1 + static_cast<int64_t>(y > yValid - wrow + 1);
 			
 					fwx = -wcol + 1;
 
@@ -502,19 +504,19 @@ strat(
 						fwxMidStart = std::max(fwx + 1, static_cast<int64_t>(0));
 						fwxEnd = std::min(x, fwWidth);
 						fwxMidEnd = scanlines ?
-							fwxEnd - 1 + static_cast<int64_t>(y > static_cast<size_t>(height - wrow + 1)) :
-							fwxEnd - 1 + static_cast<int64_t>(y > static_cast<size_t>(yValid - wrow + 1));
+							fwxEnd - 1 + static_cast<int64_t>(y + yBlock * yBlockSize > height - wrow + 1) :
+							fwxEnd - 1 + static_cast<int64_t>(y > yValid - wrow + 1);
 					
 						//GET VAL
 						int val = getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex);
 
 						bool isNan = val == nanInt;
-						bool accessible = !access.used || access.used && p_accessMask[blockIndex] == 1;
+						bool accessible = !access.used || (access.used && p_accessMask[blockIndex] == 1);
 						
 						nextVertSame = !isNan && ((y == yValid - 1) || 
-							val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, index + scanlines ? xBlockSize : xValid));
+							val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + (scanlines ? xBlockSize : xValid)));
 						nextHoriSame = !isNan && ((x == xValid - 1) ||
-							val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, index + 1));
+							val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + 1));
 
 						//UPDATE FOCAL WINDOW MATRIX
 						int64_t fwi;
@@ -585,7 +587,7 @@ strat(
 						if ((isNan || !accessible) && x - horizontalPad >= 0 && y - verticalPad >= 0) {
 							int64_t fwyi = ((scanlines ? y + yBlock * yBlockSize : y) - verticalPad) % wrow;
 							int64_t fwxi = x - horizontalPad;
-							focalWindowMatrix(fwyi * fwWidth + fwxi)
+							focalWindowMatrix[fwyi * fwWidth + fwxi] = false;
 						}
 
 						//ADD INDEX
@@ -620,7 +622,7 @@ strat(
 
 								if (queinnecFirstXIndexCountPerStrata[val] < queinnecFirstX) {
 									int i = queinnecFirstXIndexCountPerStrata[val];
-									queinnecFirstIndexCountPerStrata[val]++;
+									queinnecFirstXIndexCountPerStrata[val]++;
 									queinnecFirstXIndexesPerStrata[val][i] = index;
 								}
 
@@ -709,7 +711,7 @@ strat(
 			uint64_t probIndexesCount = queinnecIndexCountPerStrata[i];
 			uint64_t firstXIndexesCount = queinnecFirstXIndexCountPerStrata[i];
 			
-			if (probIndexesCount >= desiredSamples || queinnecFirstXIndexesCount < totalPixels) {
+			if (probIndexesCount >= desiredSamples || firstXIndexesCount < totalPixels) {
 				queinnecIndexesPerStrata[i].resize(probIndexesCount);
 				auto begin = queinnecIndexesPerStrata[i].begin();
 				auto end = queinnecIndexesPerStrata[i].end();
@@ -728,7 +730,7 @@ strat(
 		size_t curStrata = 0;
 		while (numCompletedStrataQueinnec < numStrata) {
 			if (completedStrataQueinnec[curStrata]) {
-				curStata++;
+				curStrata++;
 				continue;
 			}
 
@@ -814,7 +816,7 @@ strat(
 		}
 
 		//set next indexes to 0 if they wre adjusted from adding queinnec indexes
-		nextIndex[i] = 0;
+		nextIndexes[i] = 0;
 	}
 	
 	//step 8: generate coordinate points for each sample index.
@@ -929,16 +931,16 @@ strat_cpp_access(
 	bool largeRaster,
 	std::string tempFolder)
 {
-	return strat_random(
+	return strat(
 		p_raster,
 		band,
 		numSamples,
 		numStrata,
 		allocation,
 		weights,
+		method,
 		wrow,
 		wcol,
-		method,
 		mindist,
 		p_access,
 		layerName,
@@ -976,16 +978,16 @@ strat_cpp(
 	bool largeRaster,
 	std::string tempFolder)
 {
-	return strat_random(
+	return strat(
 		p_raster, 
 		band,
 		numSamples,
 		numStrata, 
 		allocation, 
 		weights,
+		method,
 	       	wrow,			
-		wcol,
-		method	
+		wcol,	
 		mindist, 
 		nullptr, 
 		"", 
