@@ -475,8 +475,8 @@ addBandToMEMDataset(
 
 	CPLErr err;
 	char **papszOptions = nullptr;
-	const char *datapointer = std::to_string((size_t)band.p_buffer).c_str();
-	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", datapointer);
+	std::string datapointer = std::to_string((size_t)band.p_buffer);
+	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", datapointer.c_str());
 	
 	err = p_dataset->AddBand(band.type, papszOptions);
 	CSLDestroy(papszOptions);
@@ -640,13 +640,16 @@ rasterBandIO(
 	int yBlock,
 	int xValid,
 	int yValid,
-	bool read)
+	bool read,
+	bool threaded = true)
 {
 	CPLErr err;
 	bool useBlock = xBlockSize == band.xBlockSize &&
 			yBlockSize == band.yBlockSize;
 
-	band.p_mutex->lock();
+	if (threaded) {
+		band.p_mutex->lock();
+	}
 	if (useBlock && read) {
 		err = read ?
 			band.p_band->ReadBlock(xBlock, yBlock, p_buffer) :
@@ -667,8 +670,9 @@ rasterBandIO(
 			0
 		);
 	}
-	band.p_mutex->unlock();
-	
+	if (threaded) {
+		band.p_mutex->unlock();
+	}
 	if (err) {
 		throw read ?
 			std::runtime_error("unable to read block from raster.") :

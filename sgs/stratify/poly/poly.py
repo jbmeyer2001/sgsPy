@@ -7,6 +7,8 @@
 #
 # ******************************************************************************
 
+import tempfile
+
 from sgs.utils import (
     SpatialRaster,
     SpatialVector,
@@ -14,6 +16,7 @@ from sgs.utils import (
 
 from poly import poly_cpp
 
+GIGABYTE = 1073741824
 MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
 def poly(
@@ -22,7 +25,8 @@ def poly(
     layer_name: str,
     attribute: str,
     features: list[str|list[str]],
-    filename:str = ''):
+    filename:str = '',
+    driver_options: dict = None):
     """
     this function conducts stratification on a polygon by rasterizing a polygon
     layer, and using its values to determine stratifications.
@@ -73,27 +77,44 @@ def poly(
 
     #generate query cases and where clause using features and attribute
     for i in range(len(features)):
-        if type(features[i]) is str:
-            cases += "WHEN '{}' THEN {} ".format(features[i], i)
-            where_entries.append("{}='{}'".format(attribute, features[i]))
+        if type(features[i]) is not list:
+            cases += "WHEN '{}' THEN {} ".format(str(features[i]), i)
+            where_entries.append("{}='{}'".format(attribute, str(features[i])))
         else:
             for j in range(len(features[i])):
-                cases += "WHEN '{}' THEN {} ".format(features[i][j], i)
-                where_entries.append("{}='{}'".format(attribute, features[i][j]))
+                cases += "WHEN '{}' THEN {} ".format(str(features[i][j]), i)
+                where_entries.append("{}='{}'".format(attribute, str(features[i][j])))
 
     where_clause = " OR ".join(where_entries)
 
     #generate SQL query
     sql_query = f"""SELECT CASE {attribute} {cases}ELSE NULL END AS strata, {layer_name}.* FROM {layer_name} WHERE {where_clause}"""
 
-    strat_rast = poly_cpp(
+    driver_options_str = {}
+    if driver_options:
+        for (key, val) in driver_options.items():
+            if type(key) is not str:
+                raise ValueError("the key for al key/value pairs in teh driver_options dict must be a string.")
+            driver_options_str[key] = str(val)
+
+    large_raster = raster.height * raster.width > GIGABYTE
+    temp_dir = tempfile.mkdtemp()
+
+    srast = SpatialRaster(poly_cpp(
         vector.cpp_vector,
         raster.cpp_raster,
         num_strata,
         layer_name,
         sql_query,
-        filename
-    )
+        filename,
+        large_raster,
+        temp_dir,
+        driver_options_str
+    ))
 
-    return SpatialRaster(strat_rast)
+    #give srast ownership of it's own temp directory
+    srast.have_temp_dir = True
+    srast.temp_dir = temp_dir
+
+    return srast
 

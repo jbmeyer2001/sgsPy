@@ -13,14 +13,13 @@ from .calculate import (
     coobs,
     lhs_optimal,
     pop,
-    principal_components,
+    pca,
     representation,
     sample_size,
 )
 
 from .sample import (
     ahels,
-    balanced,
     clhs,
     existing,
     nc,

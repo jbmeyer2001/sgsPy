@@ -1,4 +1,3 @@
-import time
 import sgs
 import sys
 #rast = sgs.SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
@@ -22,6 +21,9 @@ import sys
 #end = time.time()
 #print(str(end - start))
 
+rast = sgs.SpatialRaster('/home/jbmeyer/extdata/mraster.tif')
+pcomp = sgs.calculate.pca(rast, 3, filename='sgspy_pca_result.tif')
+pcomp.plot(band=1)
 #rast = sgs.SpatialRaster('/home/jbmeyer/RMF_LiDAR_Metrics/Merged_Aspect_DEM5m.tif')
 #start = time.time()
 #srast = sgs.stratify.quantiles(rast, [10, 50], filename="srast_merged_mapped.tif", map=True, thread_count = 8)
@@ -50,3 +52,4 @@ print("about to start sampling using strat")
 svect = sgs.sample.strat(srast, 0, num_samples=500, num_strata = 5, allocation="equal", method="random", plot=True)
 print("finished sampling!")
 #svect.plot('Point')
+

@@ -1,7 +1,9 @@
 [build-system]
 build-backend = "mesonpy"
 requires = [
-	"meson-python"
+	"meson-python",
+	"pybind11",
+	"daal-static",
 ]
 
 [project]
