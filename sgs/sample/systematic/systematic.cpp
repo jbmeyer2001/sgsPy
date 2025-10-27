@@ -11,17 +11,20 @@
 #include <iostream>
 #include <random>
 
+#include "access.h"
+#include "existing.h"
+#include "helper.h"
 #include "raster.h"
 #include "vector.h"
 
-OGRGeometry *getAccessPolygon(GDALVectorWrapper *p_access) {
+OGRGeometry *getAccessPolygon(GDALVectorWrapper *p_access, std::string layerName, double buffInner, double buffOuter) {
 	//step 1: create multipolygon buffers
 	OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
 	OGRMultiPolygon *buffOuterPolygons = new OGRMultiPolygon;
 	OGRGeometry *p_polygonMask;
 
 	//step 2: add geometries to access polygon buffers
-	for (const auto& p_feature : *p_vector->getLayer(layerName.c_str())) {
+	for (const auto& p_feature : *p_access->getLayer(layerName.c_str())) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
 		OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
 
@@ -87,7 +90,7 @@ checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
  */
 inline bool
 checkExisting(double x, double y, Existing& existing) {
-	return !existing.used || !existing.contains(x, y);
+	return !existing.used || !existing.containsCoordinates(x, y);
 }
 
 /**
@@ -166,9 +169,9 @@ systematic(
 	std::string filename)
 {
 	double *GT; 	//geotransform
-	double[6] IGT;	//inverse geotransform
+	double IGT[6];	//inverse geotransform
 	GT = p_raster->getGeotransform();
-	inv_geotransform(GT, IGT);	
+	GDALInvGeoTransform(GT, IGT);	
 
 	//determine raster extent
 	double xMin, xMax, yMin, yMax;
@@ -232,7 +235,7 @@ systematic(
 	//get access polygon if access is given
 	OGRGeometry *access = nullptr;
 	if (p_access) {
-		access = getAccessPolygon(p_access);
+		access = getAccessPolygon(p_access, layerName, buffInner, buffOuter);
 	}
 
 	//create existing struct
@@ -383,6 +386,8 @@ PYBIND11_MODULE(systematic, m) {
 		pybind11::arg("layerName"),
 		pybind11::arg("buffInner"),
 		pybind11::arg("buffOuter"),
+		pybind11::arg("force"),
 		pybind11::arg("plot"),
 		pybind11::arg("filename"));
 }
+

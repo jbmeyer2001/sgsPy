@@ -11,8 +11,10 @@
 #include <iostream>
 #include <random>
 
-//sgs/utils cpp code
+#include <xoshiro.h>
+
 #include "access.h"
+#include "existing.h"
 #include "helper.h"
 #include "raster.h"
 #include "vector.h"
@@ -32,9 +34,10 @@ processBlock(
 	int yValid)
 {
 	T nan = static_cast<T>(band.nan);
+	int8_t *p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
 
 	for (int y = 0; y < yValid; y++) {
-		size_t blockIndex = static_cast<size_t>(y * xBlockSize);
+		size_t blockIndex = static_cast<size_t>(y * band.xBlockSize);
 		for (int x = 0; x < xValid; x++) {
 			//GET VAL
 			T val = getPixelValueDependingOnType<T>(band.type, band.p_buffer, blockIndex);
@@ -47,14 +50,14 @@ processBlock(
 			}
 
 			//CHECK ACCESS
-			if (access.used && access.band.p_buffer[blockIndex] == 0) {
+			if (access.used && p_access[blockIndex] == 0) {
 				blockIndex++;
 				continue;
 			}
 
-			Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
+			Index index = {x + xBlock * band.xBlockSize, y + yBlock * band.yBlockSize};
 			//CHECK EXISTING
-			if (existing.used && existing.contains(index.x, index.y)) {
+			if (existing.used && existing.containsIndex(index.x, index.y)) {
 				blockIndex++;
 				continue;
 			}
@@ -65,7 +68,7 @@ processBlock(
 				blockIndex++;
 				continue;
 			}
-			randvalIndex++;
+			randValIndex++;
 
 			//ADD TO INDICES
 			indices.push_back(index);
@@ -137,24 +140,23 @@ srs(
 	double buffInner,
 	double buffOuter,
 	bool plot,
+	std::string tempFolder,
 	std::string filename)
 {
-	//Step 1: get dataset and geotransform
-	GDALDataset *p_dataset = p_raster->getDataset();
+	int width = p_raster->getWidth();
+	int height = p_raster->getHeight();
 	double *GT = p_raster->getGeotransform();
-
-	//step 2: allocate index array which maps the adjusted index to the orignial index
-	std::vector<size_t> indexes;
-	size_t noDataPixelCount = 0;
-
+	bool useMindist = mindist != 0;
 	std::mutex mutex;
+
+	std::vector<size_t> indexes;
 
 	//step 3: get first raster band
 	RasterBandMetaData band;
 	band.p_band = p_raster->getRasterBand(0);
 	band.type = p_raster->getRasterBandType(0);
-	band.size = p_raster->getRasterBadnTypeSize(0);
-	band.nan = p_band->GetNoDataValue();
+	band.size = p_raster->getRasterBandTypeSize(0);
+	band.nan = band.p_band->GetNoDataValue();
 	band.p_mutex = &mutex;
 	band.p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 	band.p_buffer = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
@@ -180,7 +182,7 @@ srs(
 		layerName,
 		buffInner,
 		buffOuter,
-		largeRaster,
+		true,
 		tempFolder,
 		band.xBlockSize,
 		band.yBlockSize
@@ -201,7 +203,7 @@ srs(
 	int xBlocks = (width + band.xBlockSize - 1) / band.xBlockSize;
 	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
 
-	std::vector<bool> randVal(band.xBlockSize * band.yBlockSize);
+	std::vector<bool> randVals(band.xBlockSize * band.yBlockSize);
 	int randValIndex = band.xBlockSize * band.yBlockSize;
 
 	//fast random number generator using xoshiro256+i
@@ -246,37 +248,35 @@ srs(
 
 			//CALCULATE RAND VALUES
 			for (int i = 0; i < randValIndex; i++) {
-				rnadVals[i] = ((rng() >> 11) & mask) == mask;
+				randVals[i] = ((rng() >> 11) & multiplier) == multiplier;
 			}
 			randValIndex = 0;
 
 			//PROCESS BLOCK
 			switch (band.type) {
-				switch(type) {
-					case GDT_Int8:
-						processBlock<int8_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
-						break;
-					case GDT_UInt16:
-						processBlock<uint16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
-						break;
-					case GDT_Int16:
-						processBlock<int16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
-						break;
-					case GDT_UInt32:
-						processBlock<uint32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
-						break;
-					case GDT_Int32:
-						processBlock<int32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
-						break;
-					case GDT_Float32:
-						processBlock<float>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
-						break;
-					case GDT_Float64:
-						processBlock<double>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
-						break;
-					default:
-						throw std::runtime_error("raster pixel data type is not supported.");
-				}
+				case GDT_Int8:
+					processBlock<int8_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_UInt16:
+					processBlock<uint16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_Int16:
+					processBlock<int16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_UInt32:
+					processBlock<uint32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_Int32:
+					processBlock<int32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_Float32:
+					processBlock<float>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_Float64:
+					processBlock<double>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				default:
+					throw std::runtime_error("raster pixel data type is not supported.");
 			}
 		}
 	}
@@ -319,7 +319,7 @@ srs(
 	}
 
 	//step 10: create GDALVectorWrapper with dataset containing points
-	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_samples);
 
 	//TODO rather than first making an in-memory dataset then writing to a file afterwards,
 	//just make the correct type of dataset from the get go
@@ -346,6 +346,7 @@ PYBIND11_MODULE(srs, m) {
 		pybind11::arg("buffInner"),
 		pybind11::arg("buffOuter"),
 		pybind11::arg("plot"),
+		pybind11::arg("tempFolder"),
 		pybind11::arg("filename"));
 
 }

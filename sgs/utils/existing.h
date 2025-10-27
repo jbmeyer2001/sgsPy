@@ -27,7 +27,7 @@
 struct Existing {
 	bool used;
 	std::unordered_set<int64_t> samples;
-	double[6] IGT;
+	double IGT[6];
 	int64_t width;
 
 	/**
@@ -65,7 +65,7 @@ struct Existing {
 		}
 
 		//invert geotransform so we can use IGT to convert from point to indexes
-		inv_geotransform(GT, this->IGT);
+		GDALInvGeoTransform(GT, this->IGT);
 
 		std::string name = layerNames[0];
 		OGRLayer *p_layer = p_vect->getLayer(name);
@@ -106,9 +106,9 @@ struct Existing {
 	 * when iterating through an input raster. 
 	 */
 	inline bool
-	contains(int64_t x, int64_t y) {
+	containsIndex(int64_t x, int64_t y) {
 		int64_t index = y * this->width + x;
-		return this->samples.contains(index);	
+		return this->samples.find(index) != this->samples.end();	
 	}
 
 	/**
@@ -119,9 +119,9 @@ struct Existing {
 	 * is returned, otherwise the result will be false.
 	 */
 	inline bool
-	contains (double xCoord, double yCoord) {
-		int64_t index = point2index<int64_t>(x, y, this->IGT, this->width);
-		return this->samples.contains(index);
+	containsCoordinates(double xCoord, double yCoord) {
+		int64_t index = point2index<int64_t>(xCoord, yCoord, this->IGT, this->width);
+		return this->samples.find(index) != this->samples.end();
 	}
 
 	/**
@@ -129,6 +129,6 @@ struct Existing {
 	 */
 	inline size_t
 	count() {
-		return this->samples.count();
+		return this->samples.size();
 	}
 };
