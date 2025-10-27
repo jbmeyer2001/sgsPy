@@ -43,7 +43,7 @@ processBlock(
 			T val = getPixelValueDependingOnType<T>(band.type, band.p_buffer, blockIndex);
 
 			//CHECK NAN
-			bool isNan = val == nan;
+			bool isNan = val == nan || std::isnan(val);
 			if (isNan) {
 				blockIndex++;
 				continue;
@@ -143,6 +143,8 @@ srs(
 	std::string tempFolder,
 	std::string filename)
 {
+	GDALAllRegister();
+
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
 	double *GT = p_raster->getGeotransform();

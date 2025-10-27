@@ -7,6 +7,7 @@
 #
 # ******************************************************************************
 
+import tempfile
 from typing import Optional
 
 import numpy as np
@@ -24,6 +25,7 @@ def srs(
     rast: SpatialRaster,
     num_samples: int,
     mindist: float = 0,
+    existing: Optional[SpatialVector] = None,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
     buff_inner: Optional[int | float] = None,
@@ -89,6 +91,14 @@ def srs(
     if num_samples < 1:
         raise ValueError("num_samples must be greater than 0")
 
+    if mindist is None:
+        mindist = 0
+
+    if mindist < 0:
+        raise ValueError("mindist must be greater than or equal to 0")
+
+
+
     if (access):
         if layer_name is None:
             if len(access.layers) > 1:
@@ -114,22 +124,25 @@ def srs(
         buff_inner = -1
         buff_outer = -1
 
-    if mindist is None:
-        mindist = 0
+    if (existing):
+        existing_vector = existing.cpp_vector
+    else:
+        existing_vector = None
 
-    if mindist < 0:
-        raise ValueError("mindist must be greater than or equal to 0")
+    temp_dir = tempfile.mkdtemp()
 
     #call random sampling function
     [sample_coordinates, cpp_vector, num_points] = srs_cpp(
         rast.cpp_raster,
         num_samples,
         mindist,
+        existing_vector,
         access_vector,
         layer_name,
         buff_inner,
         buff_outer,
         plot,
+        temp_dir,
         filename
     )
     
