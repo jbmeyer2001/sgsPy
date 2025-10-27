@@ -378,7 +378,6 @@ writePCA(
 	int nComp = static_cast<int>(PCABands.size());
 	std::vector<T> noDataVals(bandCount); 
 	std::vector<T *> inputBuffers(bandCount);
-	std::vector<T *> PCABandBuffers(nComp);
 	std::vector<T *> eigBuffers(nComp);
 	T resultNan = std::nan("");
 	
@@ -387,7 +386,6 @@ writePCA(
 	for (int b = 0; b < bandCount; b++) {
 		noDataVals[b] = static_cast<T>(bands[b].nan);
 
-		inputBuffers[b] = VSIMalloc3(height, width, size);
 		bands[b].p_band->RasterIO(
 			GF_Read,
 			0,
@@ -403,21 +401,15 @@ writePCA(
 		);	
 	}
 
-	//populate PCABandBuffers vector, initialize values to 0, and populate eigBuffers vector
-	for (int b = 0; i < nComp; i++) {
-		PCABandBuffers[b] = reinterpret_cast<T *>(PCABands[b].p_buffer);
-		for (int i = 0; i < height * width; i++) { //this for loop *should* be optimized by compiler
-			PCABandBuffers[b][i] = 0;
-		}
-
-		eigBuffers[i] = result.eigenvectors[i].data();
-	}
+	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(nComp, height * width, size));
 
 	//calculate dot product of eigenvectors and values in a *hopefully* SIMD friendly way
 	std::vector<std::vector<T>> multipliers(nComp);
 	std::vector<std::vector<T>> adders(nComp);
+	std::vector<T> prod(bandCount);
 
 	for (int c = 0; c < nComp; c++) {
+		eigBuffers[c] = result.eigenvectors[c].data();
 		multipliers[c].resize(bandCount);
 		adders[c].resize(bandCount);
 
@@ -428,7 +420,23 @@ writePCA(
 			adders[c][b] = -1 * multipliers[c][b] * mean;
 		}
 	}
-	
+
+	for (int i = 0; i < height * width; i++) {
+		int bi = i * bandCount;
+		int ci = i * nComp;
+
+		for (int c = 0; c < nComp; c++) {
+			bool isNan;
+			for (int b = 0; b < bandCount; b++) {
+				prod[b] = p_data[bi + b] * multipliers[c][b] + adders[c][b];
+				isNan |= p_data[bi + b] == noDataVals[b];
+			}
+
+			p_comp[ci + c] = isNan ? resultNan : std::accumulate(prod.begin(), prod.end(), 0);
+		}
+	}
+
+	/*
 	for (int b = 0; b < bandCount; b++) {
 		T mean = static_cast<T> result.means[b];
 		T stdev = static_cast<T> result.stdevs[b];
@@ -455,23 +463,26 @@ writePCA(
 			}
 		}
 	}
+	*/
 
-	//set nan values
-	for (int i = 0; i < height * width; i++) {
-		for (int b = 0; b < bandCount ; b++) {
-			T val = inputBuffers[b][i];
-			if (val == noDataVals[b] || std::isnan(val)) {
-				for (int c = 0; c < nComp; c++) {
-					pcaBandBuffers[c][i] = resultNan;
-				}
-				break;
-			}
-		}
+	for (int c = 0; c < nComp; c++) {
+		PCABands[c].p_band->RasterIO(
+			GF_Write,
+			0,
+			0,
+			width,
+			height,
+			(void *)((size_t)p_comp + c * size),	
+			width,
+			height,
+			type,
+			size * nComp,
+			size * nComp * width
+		);	
 	}
 
-	for (int b = 0; b < bandCount; b++) {
-		VSIFree(inputBuffers[b]);
-	}
+	VSIFree(p_data);
+	VSIFree(p_comp);
 }
 
 /**
