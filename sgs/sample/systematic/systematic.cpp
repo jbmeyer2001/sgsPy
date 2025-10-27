@@ -238,11 +238,11 @@ systematic(
 		access = getAccessPolygon(p_access, layerName, buffInner, buffOuter);
 	}
 
-	//create existing struct
-	Existing existing(p_existing, GT, p_raster->getWidth(), p_sampleLayer);
-
 	//coordinate representations the samples as vectors only if PLOT is true, returned to the (Python) caller
 	std::vector<double> xCoords, yCoords;
+
+	//create existing struct
+	Existing existing(p_existing, GT, p_raster->getWidth(), p_sampleLayer, plot, xCoords, yCoords);
 
 	//grid represents the grid used to create the sampels only if PLOT is true, and is returned to the (Python) caller
 	std::vector<std::vector<std::vector<double>>> grid;

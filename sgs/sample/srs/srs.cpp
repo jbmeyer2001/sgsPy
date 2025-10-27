@@ -88,7 +88,7 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 	double width = static_cast<double>(p_raster->getWidth());
 	double samples = static_cast<double>(numSamples);
 
-	double numer = samples * 2 * (useMindist ? 3 : 1);
+	double numer = samples * 4 * (useMindist ? 3 : 1);
 	double denom = height * width;
 
 	if (accessibleArea != -1) {
@@ -151,6 +151,7 @@ srs(
 	bool useMindist = mindist != 0;
 	std::mutex mutex;
 
+	std::vector<double> xCoords, yCoords;
 	std::vector<size_t> indexes;
 
 	//step 3: get first raster band
@@ -191,7 +192,7 @@ srs(
 	);
 
 	if (access.used) {
-		access.band.p_buffer = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
+		access.band.p_buffer = VSIMalloc3(band.xBlockSize, band.yBlockSize, access.band.size);
 	}
 
 	//generate existing structure
@@ -199,7 +200,10 @@ srs(
 		p_existing,
 		GT,
 		p_raster->getWidth(),
-		p_layer
+		p_layer,
+		plot,
+		xCoords,
+		yCoords
 	);
 
 	int xBlocks = (width + band.xBlockSize - 1) / band.xBlockSize;
@@ -232,7 +236,7 @@ srs(
 	//pixels as the raster is iterating to take this into account, without retaining too many pixels
 	//to be feasible for large images.
 	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area);
-	
+
 	std::vector<Index> indices;
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
@@ -241,11 +245,11 @@ srs(
 
 			//READ BLOCK
 			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-			rasterBandIO(band, band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true);
+			rasterBandIO(band, band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 															  //read = true
 			//READ ACCESS BLOCK IF NECESSARY
 			if (access.used) {
-				rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true); 
+				rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false); 
 			}
 
 			//CALCULATE RAND VALUES
@@ -285,7 +289,6 @@ srs(
 
 	std::shuffle(indices.begin(), indices.end(), rng);
 
-	std::vector<double> xCoords, yCoords;
 	size_t samplesAdded = existing.used ? existing.count() : 0;
 	size_t i = 0;
 	while (samplesAdded < numSamples && i < indices.size()) {

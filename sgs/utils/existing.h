@@ -51,7 +51,15 @@ struct Existing {
 	 * @param int64_t width
 	 * @param OGRLayer *p_samples
 	 */
-	Existing(GDALVectorWrapper *p_vect, double *GT, int64_t width, OGRLayer *p_samples) {
+	Existing(
+		GDALVectorWrapper *p_vect, 
+		double *GT, 
+		int64_t width, 
+		OGRLayer *p_samples, 
+		bool plot,
+	       	std::vector<double>& xCoords,
+		std::vector<double>& yCoords) 
+	{
 		if (!p_vect) {
 			this->used = false;
 			return;
@@ -78,6 +86,10 @@ struct Existing {
 					int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 					this->samples.insert(index);
 					addPoint(p_point, p_samples);
+					if (plot) {
+						xCoords.push_back(p_point->getX());
+						yCoords.push_back(p_point->getY());
+					}
 					break;
 				}
 				case OGRwkbGeometryType::wkbMultiPoint: {
@@ -85,6 +97,10 @@ struct Existing {
 						int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 						this->samples.insert(index);
 						addPoint(p_point, p_samples);
+						if (plot) {
+							xCoords.push_back(p_point->getX());
+							yCoords.push_back(p_point->getY());
+						}
 					}
 					break;
 				}
