@@ -91,6 +91,8 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 	double numer = samples * 4 * (useMindist ? 3 : 1);
 	double denom = height * width;
 
+	std::cout << "accessibleArea: " << accessibleArea << std::endl;
+
 	if (accessibleArea != -1) {
 		double pixelHeight = static_cast<double>(p_raster->getPixelHeight());
 		double pixelWidth = static_cast<double>(p_raster->getPixelWidth());
@@ -100,6 +102,7 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 	}
 
 	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer)));
+	std::cout << "bits: " << static_cast<int>(bits) << std::endl;
 	return (bits <= 0) ? 0 : (1 << bits) - 1;
 }
 
@@ -236,9 +239,13 @@ srs(
 	//pixels as the raster is iterating to take this into account, without retaining too many pixels
 	//to be feasible for large images.
 	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area);
+	std::cout << "multiplier: " << multiplier << std::endl;
 
 	std::vector<Index> indices;
 
+	std::cout << "about to enter loop!" << std::endl;
+	std::cout << "xBlocks: " << xBlocks << std::endl;
+	std::cout << "yBlocks: " << yBlocks << std::endl;
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
@@ -287,6 +294,7 @@ srs(
 		}
 	}
 
+	std::cout << "size of indices: " << indices.size() << std::endl;
 	std::shuffle(indices.begin(), indices.end(), rng);
 
 	size_t samplesAdded = existing.used ? existing.count() : 0;
