@@ -207,7 +207,16 @@ struct Access {
 		if (!p_vector) {
 			return;
 		}
-	
+
+		std::string rastProj = p_raster->getDataset()->GetProjectionRef();
+		OGRSpatialReference rastSRS;
+		rastSRS.importFromWkt(rastProj.c_str());
+		OGRLayer *p_inputLayer = p_vector->getLayer(layerName.c_str());
+		OGRSpatialReference *p_vectSRS = p_inputLayer->GetSpatialRef();
+		if (!rastSRS.IsSame(p_vectSRS)) {
+			throw std::runtime_error("access vector adn raster do not have the same spatial reference system.");
+		}
+
 		//step 1: create multipolygon buffers
 		OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
 		OGRMultiPolygon *buffOuterPolygons = new OGRMultiPolygon;
@@ -308,75 +317,57 @@ struct Access {
 		p_layer->CreateFeature(p_feature); //error handling here???
 		OGRFeature::DestroyFeature(p_feature);
 	
-		int width = p_raster->getWidth();
-		int height = p_raster->getHeight();
-		double *geotransform = p_raster->getGeotransform();
-		std::string projection = std::string(p_raster->getDataset()->GetProjectionRef());
-	
-		this->band.size = 1;
-		this->band.type = GDT_Byte;
-		this->band.name = "access_mask";
-		if (largeRaster) {
-			std::filesystem::path tempPath = tempFolder;
-			std::filesystem::path tempName = "access.tif";
-			tempPath = tempPath / tempName;
-			
-			std::map<std::string, std::string> driverOptions = {};
-			
-			bool useTiles = xBlockSize != p_raster->getWidth() &&
-					yBlockSize != p_raster->getHeight();
-			this->band.xBlockSize = xBlockSize;
-			this->band.yBlockSize = yBlockSize;
-	
-			this->p_dataset = createDataset(
-				tempPath.string(),
-				"GTiff",
-				width,
-				height,
-				geotransform,
-				projection,
-				&this->band,
-				1,
-				useTiles,
-				driverOptions
-			);
-		}
-		else {
-			this->p_dataset = createVirtualDataset("MEM", width, height, geotransform, projection);
-			addBandToMEMDataset(this->p_dataset, this->band);
-		}
-	
-		this->band.p_band->Fill(1);
-		
+		std::filesystem::path path = tempFolder;
+		path = path / "access.tif";
+
 		//step 9: generate options list for rasterization	
 		char **argv = nullptr;
 	
-		//specify invert rasterization and ALL_TOUCHED true
+		//specify ALL_TOUCHED true
 		//this ensures pixels whos upper-left corner is outside the
 		//accessable area don't accidentally get included.
-		//The upper left corner is where the geotransform applies to.
-		argv = CSLAddString(argv, "-i");
 		argv = CSLAddString(argv, "-at");
 	
 		//specify the burn value for the polygon
 		argv = CSLAddString(argv, "-burn");
-		argv = CSLAddString(argv, std::to_string(0).c_str());
+		argv = CSLAddString(argv, std::to_string(1).c_str());
 	
 		//specify the layer
 		argv = CSLAddString(argv, "-l");
 		argv = CSLAddString(argv, "access");
+
+		//specify extent
+		argv = CSLAddString(argv, "-te");
+		argv = CSLAddString(argv, std::to_string(p_raster->getXMin()).c_str());
+		argv = CSLAddString(argv, std::to_string(p_raster->getYMin()).c_str());
+		argv = CSLAddString(argv, std::to_string(p_raster->getXMax()).c_str());
+		argv = CSLAddString(argv, std::to_string(p_raster->getYMax()).c_str());
 	
+		//specify dimensions
+		argv = CSLAddString(argv, "-ts");
+		argv = CSLAddString(argv, std::to_string(p_raster->getWidth()).c_str());
+		argv = CSLAddString(argv, std::to_string(p_raster->getHeight()).c_str());
+
+		//specify output type
+		argv = CSLAddString(argv, "-ot");
+		argv = CSLAddString(argv, "Int8");
+
 		GDALRasterizeOptions *options = GDALRasterizeOptionsNew(argv, nullptr);
-	
+
 		//step 10: rasterize vector creating in-memory dataset
-		GDALRasterize(
+		this->p_dataset = GDALDataset::FromHandle(GDALRasterize(
+			path.string().c_str(),
 			nullptr,
-			this->p_dataset,
 			p_accessPolygonDataset,
 			options,
 			nullptr
-		);
-	
+		));
+
+		this->band.p_band = this->p_dataset->GetRasterBand(1);
+		this->band.type = GDT_Int8;
+		this->band.size = sizeof(int8_t);
+		this->band.p_band->GetBlockSize(&this->band.xBlockSize, &this->band.yBlockSize);
+
 		//step 11: free dynamically allocated data
 		GDALRasterizeOptionsFree(options);
 		free(p_accessPolygonDataset);
