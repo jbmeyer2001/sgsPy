@@ -25,6 +25,12 @@ def systematic(
     cellsize: float,
     shape: str = "square",
     location: str = "centers",
+    existing: Optional[SpatialVector] = None,
+    access: Optional[SpatialVector] = None,
+    layer_name: Optional[str] = None,
+    buff_inner: Optional[int | float] = None,
+    buff_outer: Optional[int | float] = None,
+    force: bool = False,
     plot: bool = False,
     filename: str = ""):
     """
@@ -67,11 +73,47 @@ def systematic(
     if location not in ["centers", "corners", "random"]:
         raise ValueError("location parameter must be one of 'centers', 'corners', 'random'")
 
+    if (access):
+        if layer_name is None:
+            if len(access.layers) > 1:
+                raise ValueError("if there are multiple layers in the access vector, layer_name parameter must be passed.")
+            layer_name = access.layers[0]
+
+        if layer_name not in access.layers:
+            raise ValueError("layer specified by 'layer_name' does not exist in the access vector")
+
+        if buff_inner is None or buff_inner < 0:
+            buff_inner = 0
+
+        if buff_outer is None or buff_outer < 0:
+            raise ValueError("if an access vector is given, buff_outer must be a float greater than 0.")
+
+        if buff_inner >= buff_outer:
+            raise ValueError("buff_outer must be greater than buff_inner")
+
+        access_vector = access.cpp_vector
+    else:
+        access_vector = None
+        layer_name = ""
+        buff_inner = -1
+        buff_outer = -1
+
+    if (existing):
+        existing_vector = existing.cpp_vector
+    else:
+        existing_vector = None
+
     [samples, points, grid] = systematic_cpp(
         rast.cpp_raster,
         cellsize,
         shape,
         location,
+        existing_vector,
+        access_vector,
+        layer_name,
+        buff_inner,
+        buff_outer,
+        force,
         plot,
         filename
     )
