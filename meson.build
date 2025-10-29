@@ -70,11 +70,6 @@ endif
 utils_inc_dir = include_directories('sgs/utils')
 xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
 
-#oneapi_inc_dir = include_directories('sgs/extern/oneDAL/cpp')
-#oneapi_daal_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal')
-#oneapi_daal_include_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
-root_dir = meson.current_source_dir()
-
 #add to link args if necessary
 win_link_args = []
 if WIN

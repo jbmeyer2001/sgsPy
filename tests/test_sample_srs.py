@@ -10,6 +10,7 @@ from files import (
     mraster_geotiff_path,
     mraster_small_geotiff_path,
     access_shapefile_path,
+    existing_shapefile_path,
 )
 
 class TestSrs:
@@ -17,6 +18,7 @@ class TestSrs:
     
     mrast_full = sgs.SpatialRaster(mraster_geotiff_path)
     access = sgs.SpatialVector(access_shapefile_path)
+    existing = sgs.SpatialVector(existing_shapefile_path)
 
     def test_num_points(self):
         with pytest.raises(ValueError):
@@ -92,7 +94,7 @@ class TestSrs:
         
         assert len(gs_samples.intersection(gs_file)) == 1000
 
-    def test_access_with_srs(self):
+    def test_access(self):
         gs_access = gpd.read_file(access_shapefile_path)
 
         #test just buff_outer working
@@ -119,4 +121,11 @@ class TestSrs:
         for sample in samples:
             assert accessable.contains(sample)
 
+    def test_existing(self):
+        existing = gpd.read_file(existing_shapefile_path)['geometry']
+        samples = gpd.GeoSeries.from_wkt(sgs.srs(self.mrast_full, 1000, existing=self.existing).samples_as_wkt())
+
+        for sample in existing:
+            assert samples.contains(sample).any()
+    
     #TODO test input values

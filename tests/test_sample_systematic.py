@@ -1,12 +1,20 @@
+import numpy as np
 import geopandas as gpd
 import pytest
 
 import sgs
 
-from files import mraster_geotiff_path
+from files import (
+    mraster_geotiff_path,
+    access_shapefile_path,
+    existing_shapefile_path
+)
 
 class TestSystematic:
     rast = sgs.SpatialRaster(mraster_geotiff_path)
+
+    access = sgs.SpatialVector(access_shapefile_path)
+    existing = sgs.SpatialVector(existing_shapefile_path)
 
     def check_samples(self, samples):
         for sample in samples:
@@ -87,3 +95,48 @@ class TestSystematic:
         gs_file = gpd.read_file(temp_file)
 
         assert len(gs_samples.intersection(gs_file)) == len(gs_samples)
+
+    def test_existing(self):
+        existing = gpd.read_file(existing_shapefile_path)['geometry']
+
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "square", "centers", existing=self.existing).samples_as_wkt())
+        for sample in existing: assert samples.contains(sample).any()
+
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "hexagon", "centers", existing=self.existing).samples_as_wkt())
+        for sample in existing: assert samples.contains(sample).any()
+        
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "square", "corners", existing=self.existing).samples_as_wkt())
+        for sample in existing: assert samples.contains(sample).any()
+        
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "hexagon", "corners", existing=self.existing).samples_as_wkt())
+        for sample in existing: assert samples.contains(sample).any()
+        
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "square", "random", existing=self.existing).samples_as_wkt())
+        for sample in existing: assert samples.contains(sample).any()
+        
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "hexagon", "random", existing=self.existing).samples_as_wkt())
+        for sample in existing: assert samples.contains(sample).any()
+
+
+    def test_access(self):
+        gs_access = gpd.read_file(access_shapefile_path)
+        accessible = gs_access.buffer(120).union_all()
+
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "square", "centers", access=self.access, buff_outer=120).samples_as_wkt())
+        for sample in samples: assert accessible.contains(sample)
+
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "hexagon", "centers", access=self.access, buff_outer=120).samples_as_wkt())
+        for sample in samples: assert accessible.contains(sample)
+        
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "square", "corners", access=self.access, buff_outer=120).samples_as_wkt())
+        for sample in samples: assert accessible.contains(sample)
+        
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "hexagon", "corners", access=self.access, buff_outer=120).samples_as_wkt())
+        for sample in samples: assert accessible.contains(sample)
+        
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "square", "random", access=self.access, buff_outer=120).samples_as_wkt())
+        for sample in samples: assert accessible.contains(sample)
+        
+        samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 300, "hexagon", "random", access=self.access, buff_outer=120).samples_as_wkt())
+        for sample in samples: assert accessible.contains(sample)
+
