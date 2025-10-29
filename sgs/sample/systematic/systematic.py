@@ -34,10 +34,29 @@ def systematic(
     plot: bool = False,
     filename: str = ""):
     """
-    This function conducts error-checking on user input parameters
-    for systematic sampling, then calls a c++ function to conduct
-    the sampling. The return values are plotted using matplotlib
-    depending on the 'plot' parameter.
+    This function conducts systematic sampling within the extent of
+    the raster given. The cellsize parameter specifies the grid size,
+    shape specifies the grid type, and location specifies where in
+    the grid a sample should fall into.
+
+    shape can be one of 'square', and 'hexagon'.
+    location can be one of 'corners', 'centers', 'random'.
+
+    An access vector of LineString or MultiLineString type can be provided.
+    buff_outer specifies the buffer distance around the geometry which is
+    allowed to be included in the sampling, buff_inner specifies the geometry
+    which is not allowed to be included in teh sampling. buff_outer must
+    be larger than buff_inner. For a multi-layer vector, layer_name
+    must be provided.
+
+    A vector containing existing sample points can be provided. If this is
+    the case then all of the points in the existing sample are automatically
+    added and random samples are then chosen as required until num_samples 
+    number of samples are chosen.
+
+    If the force parameter is True, then the the samples are forced to 
+    fall on an index which is NOT a no data value. This may result
+    in some grids not being sampled.
 
     Parameters
     --------------------
@@ -49,19 +68,20 @@ def systematic(
         the shape of the grid cells to be sampled
     location : str
         the location within the grid cell to be sampled
+    existing (optional) : SpatialVector
+        a vector specifying existing sample points
+    access (optional) : SpatialVector
+        a vector specifying access network
+    layer_name (optional) : str
+        the layer within access that is to be used for sampling
+    buff_inner (optional) : int | float
+        buffer boundary specifying distance from access which CANNOT be sampled
+    buff_outer (optional) : int | float
+        buffer boundary specifying distance from access which CAN be sampled
     plot : bool
         whether or not to plot the resulting samples
     filename : str
         the filename to write to or "" if not to write
-
-    Raises
-    --------------------
-    ValueError
-        if cellsize is less than or equal to 0
-    ValueError
-        if 'shape' parameter is not one of 'square', 'hexagon'
-    ValueError
-        if 'location' parameter is not on e of 'centers', 'corners', 'random'
     """
     
     if cellsize <= 0:

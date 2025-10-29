@@ -17,6 +17,22 @@
 #include "raster.h"
 #include "vector.h"
 
+/**
+ * Helper function for generating a vector geometry containing polygons of the accessible
+ * area. This function is called if an access vector is given.
+ *
+ * The input vector dataset must be comprised of solely LineString and MultiLineString geometries.
+ * The LineStrings are buffered by buff outer, then have buff_inner subtracted from them.
+ *
+ * The returned geometry is checked to see whether it contains points which are trying to be
+ * sampled. If the geometry does not contain a given point, that point is considered inaccessible
+ * and thus not sampled.
+ *
+ * @param GDALVectorWrapper *p_access
+ * @param std::string layerName
+ * @param double buffInner
+ * @param double buffOuter
+ */
 OGRGeometry *getAccessPolygon(GDALVectorWrapper *p_access, std::string layerName, double buffInner, double buffOuter) {
 	//step 1: create multipolygon buffers
 	OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
@@ -70,7 +86,14 @@ OGRGeometry *getAccessPolygon(GDALVectorWrapper *p_access, std::string layerName
 }
 
 /**
+ * Helper function for ensuring the x and y coordinates are within the raster extent.
  *
+ * @param double x
+ * @param double y
+ * @param double xMin
+ * @param double xMax
+ * @param double yMin
+ * @param double yMax
  */
 inline bool
 checkExtent(double x, double y, double xMin, double xMax, double yMin, double yMax) {
@@ -78,7 +101,10 @@ checkExtent(double x, double y, double xMin, double xMax, double yMin, double yM
 }
 
 /**
+ * Helper function for checking to see whether a pixel occurs within accessible area.
  *
+ * @param OGRPoint *p_point
+ * @param OGRGeometry *p_geometry
  */
 inline bool
 checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
@@ -86,7 +112,11 @@ checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
 }
 
 /**
+ * Helper function for checking to see whether a pixel is already an existing sample location.
  *
+ * @param double x
+ * @param double y
+ * @param Existing& existing
  */
 inline bool
 checkExisting(double x, double y, Existing& existing) {
@@ -94,7 +124,21 @@ checkExisting(double x, double y, Existing& existing) {
 }
 
 /**
+ * Helper function for checking to see whether a coordinate occurs in an area of nodata.
  *
+ * the 'force' parameter is first checked, because if force is not true, then samples
+ * are allowed to occur on nodata pixels.
+ *
+ * THe inverted geotransform is used to find the x and y values from the coordinates
+ * given. Then, every raster band within the input raster is checked, and if that 
+ * pixel is a no data value in any of them false is returned. the GDALRasterBand
+ * RasterIO function is used to read the desried pixel from the raster.
+ *
+ * @param GDALRasterWrapper *p_raster,
+ * @param double *IGT
+ * @param double xCoord
+ * @param double yCoord
+ * @param bool force
  */
 inline bool
 checkNotNan(GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoord, bool force) {
@@ -133,6 +177,21 @@ checkNotNan(GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoo
  * saved to an OGRLayer which is part of GDALDataset. Plot-required data
  * is saved if plot is true (to later be utilized by the Python side
  * of the application with matplotlib).
+ *
+ * If the an access vector is given, then polygons of the accessible area
+ * are created, and each sample is check to ensure it falls within the
+ * accessible area.
+ *
+ * If an existing vector is given, all of the sample points within the
+ * existing vector are added, and each point is checked to ensure it
+ * has not already been added by virtue of already existing as a sample
+ * point.
+ *
+ * If the force parameter is given, every sample added is checked against
+ * the input raster to ensure the sample does not fall in a no data pixel.
+ * If it does the sample is thrown out. In the case where each grid cell
+ * is randomly sampled, 10 tries are allowed to find a point which is
+ * contains a data pixel otherwise that cell is not sampled.
  *
  * @param GDALRasterWrapper *p_raster raster to be systematically sampled
  * @param double cellSize the size of the grid cell shapes

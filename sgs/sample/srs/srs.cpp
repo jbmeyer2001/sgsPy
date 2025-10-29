@@ -19,6 +19,25 @@
 #include "raster.h"
 #include "vector.h"
 
+/**
+ * This is a helper function for processing a block of the raster. For each
+ * pixel in the block: 
+ * The value is checked, and not added if it is a nanvalue. 
+ * The pixel is checked to ensure it is within an accessible area.
+ * The pixel is checked to ensure it hasn't already been added as a pre-existing sample point.
+ * The next rng value is checked to see whether it is one of the chosen pixels to be added.
+ *
+ * @param RasterBandMetaData& band
+ * @param Access& access
+ * @param Existing& existing
+ * @param std::vector<Index>& indices
+ * @param std::vector<Index>& randVals,
+ * @param int& randValIndex
+ * @param int xBlock
+ * @param int yBlock
+ * @param int xValid
+ * @param int yValid 
+ */
 template <typename T>
 inline void
 processBlock(
@@ -31,9 +50,7 @@ processBlock(
 	int xBlock,
 	int yBlock,
 	int xValid,
-	int yValid,
-	int64_t& accessible,
-	int64_t& notAccessible)
+	int yValid)
 {
 	T nan = static_cast<T>(band.nan);
 	int8_t *p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
@@ -53,13 +70,12 @@ processBlock(
 
 			//CHECK ACCESS
 			if (access.used && p_access[blockIndex] != 1) {
-				notAccessible++;
 				blockIndex++;
 				continue;
 			}
-			accessible++;
 
 			Index index = {x + xBlock * band.xBlockSize, y + yBlock * band.yBlockSize};
+			
 			//CHECK EXISTING
 			if (existing.used && existing.containsIndex(index.x, index.y)) {
 				blockIndex++;
@@ -84,7 +100,46 @@ processBlock(
 }
 
 /**
+ * This is a helper function used for determine the probability multiplier for a given raster.
+ * The probability of any given function being added is the number of samples divided by the
+ * number of total pixels. 
  *
+ * Rather than storing the indexes of all possible (accessible, not nan) pixels, which is potentially
+ * encredibly memory-inefficient for large rasters, it is much better to only store the indexes
+ * of roughly the number of total pixels we need to sample. A random number generator is used 
+ * for each pixel which is a candidate for being added as a sample. The sample is retained if 
+ * the random number generator creates a series of 1's for the first n bits. This value n determines 
+ * the probability a sample is added. For example, if n were three then 1/8 or 1/(2^n) pixels would
+ * be sampled.
+ *
+ * It can be seen that setting up an n value which is close to the probability samples/pixels but
+ * an over estimation would result in an adequte number of indexes stored WITHOUT storing a
+ * rediculous number of values.
+ *
+ * The way this number n is enforced, is by determining a multiplier that takes the form of the first
+ * n bits are 1 and the remaining are 0. For example:
+ * 1 	-> 00000001 	-> 50%
+ * 3 	-> 00000011 	-> 25%
+ * 7 	-> 00000111 	-> 12.5%
+ * 63 	-> 00111111	-> 1.56%
+ *
+ * The AND of this multiplier is taken with the rng value, and the result of that and is compared against
+ * the multiplier. The 0's from the and remove the unimportant bits, and the 1's enforce the first n
+ * values at the beginning.
+ *
+ * The multiplier is determined by determining the numerator and denominator of this probability (samples/pixels),
+ * with extra multipliers for an unknonwn amount of nan values, and multiplying by extra if the mindist parameter
+ * is passed as it may cause samples to be thrown out. Further, if an access vector is given and all samples 
+ * must fall within the accessible area, the probability is increased by the ratio of the total area in the raster
+ * to the accessible area. The probability would then simply be numerator/denominator, but we want a multiplier
+ * with a specific number of bits not a small floating point value. The log base 2 is used to transform this division
+ * int a subtraction problem, resulting in the number of bits. The value 1 is then left shifted by the number of bits,
+ * and subtracted by 1 to give the multiplier.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param int numSamples
+ * @param bool useMindist
+ * @param double accessibleArea
  */
 inline uint64_t
 getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMindist, double accessibleArea) {
@@ -109,29 +164,67 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 
 /**
  * This function uses random sampling to determine the location
- * of sample plots given a raster image which may contain nodata
- * pixels.
+ * of sample plots given a raster image.
  *
- * A single raster band is read from the raster, and each pixel
- * is checked to ensure a sample is not located on a nodata
- * pixel, and the pixel is accessable if access information is provided. 
- * The indeces of the data pixels are saved in a vector. 
- * When all pixels have been read, the indexes are randomly 
- * drawn from the data pixels, converted to geographic coordinates 
- * using the geotransform, and returned as a new GDALVectorWrapper object.
+ * First, metadata is acquired on the first raster band, which is 
+ * to be read to check and ensure samples don't occur over nodata pixels.
  *
- * The function is a template function which contains the data
- * type of the raster (T), as well as the type of the 
- * index matrix (U). The use of U as a template argument is
- * to ensure the index matrix data type can represent every
- * index in the raster without overflow, and do it with
- * the most efficient use of memory.
+ * Next, and output vector dataset is created as an in-memory dataset.
+ * If the user specifies a filename, this in-memory dataset will be 
+ * written to disk in a different format after all points have been added.
  *
- * @param GDALRasterWrapper * a pointer to the raster image we're sampling
- * @param GDALRasterVector * a pointer to an access vector image if it exists
- * @param U <unsigned short, unsigned, unsigned long, unsigned long long> the number of samples
- * @returns std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
- * 	coordinate and dataset representation of samples
+ * An Access struct is created, which creates a raster dataset containing
+ * a rasterized version of access buffers. This raster will be 1 over
+ * accessible areas. In the case where there is no access vector given,
+ * the structs 'used' member will be false and no processing or rasterization
+ * will be done.
+ *
+ * An Existing struct is created, which retains information on already existing
+ * sample points passed in the form of a vector dataset. The points are iterated
+ * through and added to the output dataset. The points are also added to a set,
+ * and during iteration the indexes of every pixel will be checked against this set
+ * to ensure there are no duplicate pixels. In the case whre there is no existing
+ * vector given, the structs 'used' member will be false and no processing
+ * will be done.
+ *
+ * Next, a rng() function is created usign the xoshiro library, the specific
+ * randm number generator is the xoshrio256++
+ * https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
+ *
+ * The impetus behind usign the rng() function to determine which pixels
+ * should be added DURING iteration, rather than afterwards, is it removes the
+ * necessity of storing every available pixel, which quickly becomes extrordinarily
+ * inefficient for large rasters. Rather, for pixels which are accessible, not nan,
+ * and not already existing, there is a pre-determined percentage chance to be stored
+ * which uses this random number generator. An over-estimation for the percentage
+ * chance is made, because it is better to have too many than not enough possible options
+ * to sample from. This over-estimation might result in the storage of 2x-3x extra pixels
+ * rather than the many orders of magnitude extra storage of adding all pixels. The
+ * calculation for this percentage is done and explained in detail in the
+ * getProbabilityMultiplier() function.
+ *
+ * The raster is then processed in blocks, each block is read into memory,
+ * and potentially the block of the access raster is read into memory as well.
+ * The processBlock() funciton is called depending on the data type of the 
+ * raster, to add the available / chosen pixel indices.
+ *
+ * Once the entire raster has been iterated through, there may be extra
+ * indices in the indicies vector. Because simply sampling the first
+ * few we need would NOT be random, the indices are first shuffled.
+ * After being shuffled, the indexes are added to the output dataset
+ * as samples if they don't occur within mindist if an already existing pixel.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param size_t numSamples
+ * @param double mindist
+ * @param GDALVectorWrapper *p_existing
+ * @param GDALVectorWrapper *p_access
+ * @param std::string layerName
+ * @param double buffInner
+ * @param double buffOuter
+ * @param bool plot
+ * @param std::string tempFolder
+ * @param std::string filename
  */
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t> 
 srs(
@@ -216,7 +309,7 @@ srs(
 	std::vector<bool> randVals(band.xBlockSize * band.yBlockSize);
 	int randValIndex = band.xBlockSize * band.yBlockSize;
 
-	//fast random number generator using xoshiro256+i
+	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
 	xso::xoshiro_4x64_plus rng;
 	
@@ -228,22 +321,11 @@ srs(
 	//knowing the amount of pixels, estimating the number of nan pixels, taking into account mindist
 	//and accessible area, we can estimate a percentage chance for each pixel and set up a multiplier
 	//to make that percentage happen. Doing this enables retaining only a small portion of pixel data
-	//and reducing memory footprint significantly, otherwise the index of every pixel in each strata
+	//and reducing memory footprint significantly, otherwise the index of every pixel
 	//would have to be stored, which would not be feasible for large rasters.
-	//
-	//NOTE that this method is imprecise, and has an achilles heel where if there are not very many
-	//pixels of a particular strata, they may not show up at all in the final samples. For this reason,
-	//the first 10000 pixels of every strata are added no matter what. If there aren't enough pixels
-	//of a particular strata from the normal probability method, but there are more than 10000 pixels
-	//of that strata in the raster, we may have some problems because taking from the 10000 would
-	//no longer be random. Perhaps there is a way to dynamically adjust the size of the first 'thousand'
-	//pixels as the raster is iterating to take this into account, without retaining too many pixels
-	//to be feasible for large images.
 	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area);
 
 	std::vector<Index> indices;
-	int64_t accessible = 0;
-	int64_t notAccessible = 0;
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
@@ -266,25 +348,25 @@ srs(
 			//PROCESS BLOCK
 			switch (band.type) {
 				case GDT_Int8:
-					processBlock<int8_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid, accessible, notAccessible);
+					processBlock<int8_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_UInt16:
-					processBlock<uint16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid, accessible, notAccessible);
+					processBlock<uint16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_Int16:
-					processBlock<int16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid, accessible, notAccessible);
+					processBlock<int16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_UInt32:
-					processBlock<uint32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid, accessible, notAccessible);
+					processBlock<uint32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_Int32:
-					processBlock<int32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid, accessible, notAccessible);
+					processBlock<int32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_Float32:
-					processBlock<float>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid, accessible, notAccessible);
+					processBlock<float>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_Float64:
-					processBlock<double>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid, accessible, notAccessible);
+					processBlock<double>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
 					break;
 				default:
 					throw std::runtime_error("raster pixel data type is not supported.");

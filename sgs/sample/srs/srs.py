@@ -34,7 +34,7 @@ def srs(
     filename: str = ''):
     """
     This function conducts simple random sampling on the raster given. 
-    Sample points are randomly selected from data pixels (not be nodata).
+    Sample points are randomly selected from data pixels (can't be nodata).
     All sample points are at least mindist distance away from eachother.
     If unable to get the full number of sample points, a message is printed.
 
@@ -45,8 +45,10 @@ def srs(
     must be larger than buff_inner. For a multi-layer vector, layer_name
     must be specified.
 
-    Most of the calculation is done within the srs_cpp function which can
-    be found in sgs/sample/srs/srs.cpp.
+    A vector containing existing sample points can be provided. If this is
+    the case then all of the points in the existing sample are automatically
+    added and random samples are chosen as required until num_samples number
+    of samples are chosen.
 
     Parameters
     --------------------
@@ -56,6 +58,8 @@ def srs(
         the target number of samples
     mindist : float
         the minimum distance each sample point must be from each other
+    existing (optional) : SpatialVector
+        a vector specifying existing sample points
     access (optional) : SpatialVector
         a vector specifying access network
     layer_name (optional) : str
@@ -68,26 +72,8 @@ def srs(
         whether to plot the samples or not
     filename : str
         the filename to write to, or '' if file should not be written
+   """
 
-    Raises
-    --------------------
-        ValueError
-            if num_samples is less than 1
-        ValueError
-            if there access vector is provided and has multiple layers, but layer_name is not provided
-        ValueError
-            if 'layer_name' does not exist in the provided access vector
-        ValueError
-            if access vector is passed, and buff_outer is either not provided or less than or equal to 0
-        ValueError
-            if access is true and buff_inner is greater than buff_outer
-        RuntimeError (from C++)
-            if the number of samples is greater than the number of data pixels in the image
-        RuntimeError (from C++)
-            if there is an issue reading a band from the raster
-        RuntimeError (from C++)
-            type errors for not valid/accepted types -- if this error shows up from this function, it means there's a bug
-    """
     if num_samples < 1:
         raise ValueError("num_samples must be greater than 0")
 

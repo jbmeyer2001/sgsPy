@@ -21,7 +21,7 @@
 #define MAXINT16	32767
 
 /**
- *
+ * This struct represents an index in a raster.
  */
 struct Index {
 	int x = -1;

@@ -3,7 +3,7 @@
  * Project: sgs
  * Purpose: generate an access mask using vector and raster datasets
  * Author: Joseph Meyer
- * Date: July, 2025
+ * Date: October, 2025
  *
  ******************************************************************************/
 
@@ -13,23 +13,8 @@
 #include "gdal_utils.h"
 
 /*
- * Calculates a polygon for each LineString or MultiLineString in
- * the provided access polygon, Buffer() with outerBuffer, and with
- * innerBuffer if innerBuffer is not equal to zero.
- *
- * Takes the union of all outerBuffer polygons, and the union of all
- * innerBuffer polygons, then finds the difference. Get a single 
- * geometry (polygon) which is the difference.
- *
- * Rasterize the polygon into an access mask of type GDT_Byte,
- * return the dataset which contains this band.
- *
- * All geometries in the layer must be of type LineString or MultiLineString.
- *
- * @param std::string layerName layer to get access polygons for
- * @param double buffInner buffer not to sample from
- * @param double buffOuter buffer which must be sampled from
- * @returns GDALDataset * access mask
+ * This function is old and will no longer be used, and can be removed,
+ * once sample_strat has been updated to no longer use it.
  */
 std::pair<GDALDataset *, void *>
 getAccessMask(
@@ -183,7 +168,8 @@ getAccessMask(
 }
 
 /**
- *
+ * This Struct controls the creation and storage of access networks
+ * for use in sampling functions.
  */
 struct Access {
 	bool used = false;
@@ -192,7 +178,40 @@ struct Access {
 	RasterBandMetaData band;
 
 	/**
+	* This constructor is responsible for setting the used, area, p_dataset, and band
+	* members of this struct. In the case where an access vector is given, the dataset
+	* which contain a raster dataset with a rasterized version of the access, where a
+	* pixel is '1' if it falls within accessible area.
 	*
+	* First, if p_vector is not given, then the 'used' member remains false.
+	*
+	* If p_vector is given, it is checked to ensure it has the same spatial reference
+	* system as the p_raster. Polygons are created such that The polygons contain
+	* the accessible area. This is done by buffering the linestrings in the access
+	* vector using buff_outer, and removing the buff_inner buffer.
+	*
+	* A vector is created usign the output polygons from this calculation. Then,
+	* GDALRasterize() is called specifying:
+	* -burn 1 				(setting the burn value to 1)
+	* -l access 				(specifying the layer name in the polygon dataset as 'access')
+	* -te {xmin} {ymin} {xmax} {ymax}	(setting the extent to the raster extent)
+	* -ts {width} {height}			(setting the dimensions to the raster dimensions)
+	* -ot Int8				(setting the output type to int8_t)
+	*
+	* The resulting raster dataset created by the GDALRasterize() function is then
+	* checked by sampling functions to ensure their samples fall within accessible
+	* areas. The 'band' parameter's metadata is set according to the output raster
+	* dataset.
+	*
+	* @param GDALVectorWrapper *p_vector
+	* @param GDALRasterWrapper *p_raster
+	* std::string layerName
+	* double buffInner
+	* double buffOuter
+	* bool largeRaster
+	* std::string tempFolder
+	* int xBlockSize
+	* int yBlockSize
 	*/
 	Access(GDALVectorWrapper *p_vector,
 		GDALRasterWrapper *p_raster,
@@ -214,7 +233,7 @@ struct Access {
 		OGRLayer *p_inputLayer = p_vector->getLayer(layerName.c_str());
 		OGRSpatialReference *p_vectSRS = p_inputLayer->GetSpatialRef();
 		if (!rastSRS.IsSame(p_vectSRS)) {
-			throw std::runtime_error("access vector adn raster do not have the same spatial reference system.");
+			throw std::runtime_error("access vector and raster do not have the same spatial reference system.");
 		}
 
 		//step 1: create multipolygon buffers
@@ -322,11 +341,6 @@ struct Access {
 
 		//step 9: generate options list for rasterization	
 		char **argv = nullptr;
-	
-		//specify ALL_TOUCHED true
-		//this ensures pixels whos upper-left corner is outside the
-		//accessable area don't accidentally get included.
-		argv = CSLAddString(argv, "-at");
 	
 		//specify the burn value for the polygon
 		argv = CSLAddString(argv, "-burn");
