@@ -291,25 +291,35 @@ struct Access {
 			free(buffOuterUnion);
 			free(buffInnerUnion);	
 		}
-	
+
+		//update area to contain the total accessible are within the raster	
 		this->area = 0;
-		switch(wkbFlatten(p_polygonMask->getGeometryType())) {
-			case OGRwkbGeometryType::wkbPolygon: {
-				OGRCurvePolygon *p_cp = p_polygonMask->toPolygon()->toUpperClass();
-				this->area += p_cp->get_Area();
-				break;
-			}
-			case OGRwkbGeometryType::wkbMultiPolygon: {
-				for (const auto&p_polygon : *p_polygonMask->toMultiPolygon()) {
-					OGRCurvePolygon *p_cp = p_polygon->toUpperClass();
-					this->area += p_cp->get_Area();
-				}
-				break;
-			}
-			default:
-				throw std::runtime_error("p_polygonMask is not a polygon or a multipolygon!");
+		OGRPolygon extent(p_raster->getXMin(), p_raster->getYMin(), p_raster->getXMax(), p_raster->getYMax());
+		OGRGeometry *p_polygonWithinExtent;
+		OGRwkbGeometryType geomtype = p_polygonMask->getGeometryType();
+		if (geomtype == wkbPolygon) {
+			p_polygonWithinExtent = p_polygonMask->toPolygon()->Intersection(&extent);
 		}
-	
+		else if (geomtype == wkbMultiPolygon) {
+			p_polygonWithinExtent = p_polygonMask->toMultiPolygon()->Intersection(&extent);
+		}
+		else {
+			throw std::runtime_error("p_polygonMask is not a polygon or a multipolygon!");
+		}
+
+		geomtype = p_polygonWithinExtent->getGeometryType();
+		if (geomtype == wkbPolygon) {
+			this->area += p_polygonWithinExtent->toPolygon()->toUpperClass()->get_Area();
+		}
+		else if (geomtype == wkbMultiPolygon) {
+			for (const auto& p_polygon : *p_polygonWithinExtent->toMultiPolygon()) {
+				this->area += p_polygon->toUpperClass()->get_Area();
+			}
+		}
+		else {
+			throw std::runtime_error("taking the intersection of polygons somehow resulted in something not a polygon! This is a bug.");
+		}
+
 		//step 4: create new GDAL dataset to rasterize as access mask
 		GDALDataset *p_accessPolygonDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
 			"",
