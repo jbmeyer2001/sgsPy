@@ -12,10 +12,21 @@
 #include <iostream>
 #include <filesystem>
 #include <mutex>
+
 #include <gdal_priv.h>
+#include <ogrsf_frmts.h>
+#include <ogr_core.h>
 
 #define MAXINT8		127
 #define MAXINT16	32767
+
+/**
+ * This struct represents an index in a raster.
+ */
+struct Index {
+	int x = -1;
+	int y = -1;
+};
 
 /**
  * The RasterBandMetaData struct stores information
@@ -666,3 +677,39 @@ rasterBandIO(
 			std::runtime_error("unable to write block to raster.");
 	}
 }
+
+/**
+ * Helper function to Add a point to a layer.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ */
+inline void
+addPoint(OGRPoint *p_point, OGRLayer *p_layer) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * Helper function for calculating the index of a point in a raster.
+ * The inverse geotransform is used to calculate the x index and y index.
+ * The width is used to calculate a single index assuming row-major.
+ *
+ * @param double xCoord
+ * @param double yCoord
+ * @param double *IGT
+ * @param T width
+ * @returns int64_t index
+ */
+template <typename T>
+inline T
+point2index(double xCoord, double yCoord, double *IGT, T width) {
+	T x = static_cast<T>(IGT[0] + xCoord * IGT[1] + yCoord * IGT[2]);
+	T y = static_cast<T>(IGT[3] + xCoord * IGT[4] + yCoord * IGT[5]);
+
+	T index = y * width + x;
+	return index;
+}
+

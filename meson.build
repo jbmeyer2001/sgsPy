@@ -2,7 +2,7 @@ project(
   'sgs',
   'cpp',
   default_options: [
-    'cpp_std=c++17'
+    'cpp_std=c++20'
   ],
 )
 
@@ -68,6 +68,7 @@ else #linux
   intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib/intel64'
 endif
 utils_inc_dir = include_directories('sgs/utils')
+xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
 #oneapi_inc_dir = include_directories('sgs/extern/oneDAL/cpp')
 #oneapi_daal_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal')
 #oneapi_daal_include_inc_dir = include_directories('sgs/extern/oneDAL/cpp/daal/include')
