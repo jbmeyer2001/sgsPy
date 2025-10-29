@@ -203,8 +203,7 @@ strat(
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
 
-	Access access;
-	updateAccess(
+	Access access(
 		p_access, 
 		p_raster, 
 		layerName, 
@@ -213,8 +212,7 @@ strat(
 		largeRaster, 
 		tempFolder, 
 		band.xBlockSize,
-		band.yBlockSize,
-		access
+		band.yBlockSize
 	);
 
 	int xBlockSize = band.xBlockSize;

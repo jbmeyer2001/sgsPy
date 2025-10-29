@@ -14,26 +14,14 @@
 #include <mutex>
 
 #include <gdal_priv.h>
-<<<<<<< HEAD
-#include <gdal_utils.h>
-#include <ogr_geometry.h>
-
-#include "raster.h"
-#include "vector.h"
-=======
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
->>>>>>> main
 
 #define MAXINT8		127
 #define MAXINT16	32767
 
 /**
-<<<<<<< HEAD
- *
-=======
  * This struct represents an index in a raster.
->>>>>>> main
  */
 struct Index {
 	int x = -1;
