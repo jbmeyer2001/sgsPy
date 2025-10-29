@@ -156,6 +156,7 @@ strat(
 	int wrow,
 	int wcol,
 	double mindist,
+	GDALVectorWrapper *p_existing,
 	GDALVectorWrapper *p_access,
 	std::string layerName,
 	double buffInner,
@@ -170,6 +171,7 @@ strat(
 	bool useMindist = mindist != 0;
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
+	double GT[6] = p_raster->getGeotransform();
 
 	std::mutex bandMutex;
 	std::mutex rngMutex;
@@ -203,6 +205,8 @@ strat(
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
 
+	std::vector<double> xCoords, yCoords;
+	
 	Access access(
 		p_access, 
 		p_raster, 
@@ -214,6 +218,16 @@ strat(
 		band.xBlockSize,
 		band.yBlockSize
 	);
+
+	Existing existing(
+		p_existing,
+		GT,
+		width,
+		p_layer,
+		plot,
+		xCoords,
+		yCoords	
+	);	
 
 	int xBlockSize = band.xBlockSize;
 	int yBlockSize = band.yBlockSize;
@@ -410,6 +424,14 @@ strat(
 						//CREATE INDEX STRUCTURE
 						Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
 						strataCounts[val]++;
+						
+						//CHECK EXISTING
+						if (existing.used && existing.containsIndex(index.x, index.y)) {
+							//TODO record strata of existing sample
+							strataCounts[val]++;
+							blockIndex++;
+							continue;
+						}
 	
 						//UPDATE FIRST X VALS AUTOMATICALLY
 						if (firstXIndexCountPerStrata[val] < firstX) {
@@ -693,7 +715,6 @@ strat(
 	std::vector<std::vector<Index> *> strataIndexVectors(numStrata, nullptr);
 	std::vector<size_t> nextIndexes(numStrata, 0);
 
-	std::vector<double> xCoords, yCoords;
 	std::vector<bool> completedStrata(numStrata, false);
 	std::vector<bool> completedStrataQueinnec(numStrata, false);
 	std::vector<size_t> samplesAddedPerStrata(numStrata, 0);
@@ -899,106 +920,8 @@ strat(
 	size_t actualSampleCount = static_cast<size_t>(p_layer->GetFeatureCount());
 	return {{xCoords, yCoords}, p_vector, actualSampleCount};
 }
-	
-/**
- * This function is called by the Python side of the application
- * if the user provided access information. Depending on the
- * method ("random", or "Queinnec"), and depending on the max
- * potential index required, call either strat_queinnec() or 
- * strat_random(), with provided arguments and required template
- * parameters.
- */
-std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
-strat_cpp_access(
-	GDALRasterWrapper *p_raster,
-	int band,
-	size_t numSamples,
-	size_t numStrata,
-	int wrow,
-	int wcol,
-	std::string allocation,
-	std::string method,
-	std::vector<double> weights,
-	double mindist,
-	GDALVectorWrapper *p_access,
-	std::string layerName,
-	double buffInner,
-	double buffOuter,
-	bool plot,
-	std::string filename,
-	bool largeRaster,
-	std::string tempFolder)
-{
-	return strat(
-		p_raster,
-		band,
-		numSamples,
-		numStrata,
-		allocation,
-		weights,
-		method,
-		wrow,
-		wcol,
-		mindist,
-		p_access,
-		layerName,
-		buffInner,
-		buffOuter,
-		plot,
-		filename,
-		largeRaster,
-		tempFolder
-	);
-}
 
-/**
- * This function is called by the Python side of the application
- * if the user did not provided access information. Depending on the
- * method ("random", or "Queinnec"), and depending on the max
- * potential index required, call either strat_queinnec() or 
- * strat_random(), with provided arguments and required template
- * parameters.
- */
-std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
-strat_cpp(
-	GDALRasterWrapper *p_raster,
-	int band,
-	size_t numSamples,
-	size_t numStrata,
-	int wrow,
-	int wcol,
-	std::string allocation,
-	std::string method,
-	std::vector<double> weights,
-	double mindist,
-	bool plot,
-	std::string filename,
-	bool largeRaster,
-	std::string tempFolder)
-{
-	return strat(
-		p_raster, 
-		band,
-		numSamples,
-		numStrata, 
-		allocation, 
-		weights,
-		method,
-	       	wrow,			
-		wcol,	
-		mindist, 
-		nullptr, 
-		"", 
-		0, 
-		0,
-		plot,	
-		filename,
-		largeRaster,
-		tempFolder
-	);
-}
-
+//TODO add pyargs
 PYBIND11_MODULE(strat, m) {
 	m.def("strat_cpp", &strat_cpp);
-	m.def("strat_cpp_access", &strat_cpp_access);
 }
