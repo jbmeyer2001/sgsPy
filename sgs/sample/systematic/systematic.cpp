@@ -108,7 +108,7 @@ checkNotNan(GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoo
 			double val;
 			p_band->RasterIO(GF_Read, x, y, 1, 1, &val, 1, 1, GDT_Float64, 0, 0);
 	
-			if (val == p_band->GetNoDataValue()) {
+			if (val == p_band->GetNoDataValue() || std::isnan(val)) {
 				return false;
 			}	
 		}	
@@ -318,8 +318,9 @@ systematic(
 				double yDiffEnv = yMaxEnv - yMinEnv;
 
 				int tries = 0;
+				bool found = false;
 
-				while (tries < 10) {
+				while (tries < 10 && !found) {
 					point.setX(xMinEnv + rng() / (rngMax / xDiffEnv));
 					point.setY(yMinEnv + rng() / (rngMax / yDiffEnv));
 					while (!p_polygon->Contains(&point)) {
@@ -334,6 +335,7 @@ systematic(
 				    	    checkExisting(x, y, existing) &&
 					    checkNotNan(p_raster, IGT, x, y, force)) 
 					{
+						found = true;
 						addPoint(&point, p_sampleLayer);
 
 						if (plot) {
