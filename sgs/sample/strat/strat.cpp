@@ -11,6 +11,7 @@
 #include <random>
 
 #include "access.h"
+#include "existing.h"
 #include "helper.h"
 #include "raster.h"
 #include "vector.h"
@@ -118,16 +119,16 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
  */
 class IndexStorageVectors {
 private:
-	std::vector<uint64_t> strataCounts;
+	std::vector<int64_t> strataCounts;
 
-	std::vector<uint64_t> indexCountPerStrata;
-	std::vector<<std::vector<Index>> indexesPerStrata;
+	std::vector<int64_t> indexCountPerStrata;
+	std::vector<std::vector<Index>> indexesPerStrata;
 	
-	std::vector<uint64_t> firstXIndexCountPerStrata;
+	std::vector<int64_t> firstXIndexCountPerStrata;
 	std::vector<std::vector<Index>> firstXIndexesPerStrata;
 
-	uint64_t numStrata;
-	uint64_t x;
+	int64_t numStrata;
+	int64_t x;
 
 public:
 	/**
@@ -168,7 +169,7 @@ public:
 	 */
 	inline void
 	updateFirstXIndexesVector(int val, Index& index) {
-		int i = firstXIndexCountPerStrata[val];
+		int64_t i = firstXIndexCountPerStrata[val];
 		if (i < this->x) {
 			firstXIndexesPerStrata[val][i] = index;
 			firstXIndexCountPerStrata[val]++;	
@@ -183,18 +184,18 @@ public:
 	 *
 	 */
 	inline std::vector<std::vector<Index> *>
-	getStrataIndexVectors(std::vector<int64_t> existing, xso::xoshiro_4x64_plus& rng) {
+	getStrataIndexVectors(std::vector<int64_t> existing, std::vector<int64_t> strataSampleCounts, xso::xoshiro_4x64_plus& rng) {
 		std::vector<std::vector<Index> *> retval(numStrata);
 
-		for (uint64_t i = 0; i < numStrata; i++) {
-			int64_t totalPixels = this->strataCounts[i];
+		for (int64_t i = 0; i < numStrata; i++) {
 			int64_t existingSamples = existing[i];
-			int64_t desiredSamples = this->strataSampleCounts[i] - existingSamples;
+			int64_t desiredSamples = strataSampleCounts[i];
+			int64_t remainingSamples = desiredSamples - existingSamples;
 
 			int64_t probIndexesCount = indexCountPerStrata[i];
 			int64_t firstXIndexesCount = firstXIndexCountPerStrata[i];
 
-			if (probIndexesCount >= desiredSamples || firstXIndexesCount > x) {
+			if (probIndexesCount >= remainingSamples || firstXIndexesCount > x) {
 				auto begin = this->indexesPerStrata[i].begin();
 				auto end = this->indexesPerStrata[i].end();
 				std::shuffle(begin, end, rng);
@@ -211,7 +212,29 @@ public:
 
 		return retval;
 	}
-}
+
+	/**
+	 *
+	 */
+	inline std::vector<int64_t>
+	getStrataCounts(void) {
+		return this->strataCounts;
+	}
+
+	/**
+	 *
+	 */
+	inline int64_t
+	getNumDataPixels(void) {
+		int64_t retval = 0;
+
+		for (const int64_t& count : this->strataCounts) {
+			retval += count;
+		}
+
+		return retval;
+	}
+};
 
 /**
  *
@@ -220,14 +243,14 @@ class RandValController {
 private:
 	std::vector<bool> randVals;
 	size_t randValIndex = 0;
-	double multiplier = 0;
+	uint64_t multiplier = 0;
 	xso::xoshiro_4x64_plus *p_rng = nullptr;
 
 public:
 	/**
 	 *
 	 */
-	RandValController(int xBlockSize, int yBlockSize, double multiplier, xso::xoshiro_4_x64_plus *p_rng) {
+	RandValController(int xBlockSize, int yBlockSize, uint64_t multiplier, xso::xoshiro_4x64_plus *p_rng) {
 		this->randVals.resize(xBlockSize * yBlockSize);
 		this->randValIndex = static_cast<size_t>(xBlockSize * yBlockSize);
 		this->multiplier = multiplier;
@@ -240,7 +263,8 @@ public:
 	inline void 
 	calculateRandValues(void) {
 		for (size_t i = 0; i < randValIndex; i++) {
-			randVals[i] = (((*p_rng)() >> 11) & multiplier) == multiplier;
+			xso::xoshiro_4x64_plus rng = *p_rng;
+			randVals[i] = ((rng() >> 11) & multiplier) == multiplier;
 		}
 		randValIndex = 0;
 	}
@@ -254,7 +278,7 @@ public:
 		randValIndex++;
 		return retval;
 	}
-}
+};
 
 /**
  *
@@ -268,16 +292,16 @@ private:
 	int64_t fwyStart, fwyMidStart, fwyEnd, fwyMidEnd;
 	int64_t fwxStart, fwxMidStart, fwxEnd, fwxMidEnd;
 	bool blockTopPad, blockBotPad, blockLeftPad, blockRightPad;
-	void *p_fwScanline;
 
 public:
 	bool scanlines;
 	int64_t fwx, fwy;
 	int horizontalPad, verticalPad;
-	int wrow, int wcol;
+	int wrow, wcol;
 	int xOff, yOff;
 	bool addSelf;
 	bool addFw;
+	void *p_fwScanline;
 
 	/**
 	 *
@@ -290,7 +314,7 @@ public:
 		this->fwHeight = wrow;
 		this->fwWidth = xBlockSize - wcol + 1;
 		this->matrix.resize(fwWidth * fwHeight, true);
-		this->prevVertame.resize(xBlockSize, true);
+		this->prevVertSame.resize(xBlockSize, true);
 		this->prevHoriSame = true;
 		this->fwy = -wrow + 1;
 		this->p_fwScanline = this->scanlines ? VSIMalloc2(width, bandPixelSize) : nullptr;
@@ -302,7 +326,7 @@ public:
 	 *
 	 */
 	inline void
-	readNewBlock(RasterBandMetaData& band, int width, int xBlock, int yBlock, int xBlockSize, int yBlockSize, int& xValid, int& yValid) {
+	readNewBlock(RasterBandMetaData& band, int width, int height, int xBlock, int yBlock, int xBlocks, int yBlocks, int xBlockSize, int yBlockSize, int& xValid, int& yValid) {
 		if (!this->scanlines) {
 			throw std::runtime_error("SHOULD NOT BE HERE.");
 		}
@@ -339,7 +363,7 @@ public:
 	updateValsForNewBlock(int xValid) {
 		this->fwHeight = this->wrow;
 		this->fwWidth = xValid - this->wcol + 1;
-		this->focalWindowMatrix.resize(this->fwHeight * fwWidth, true);
+		this->matrix.resize(this->fwHeight * fwWidth, true);
 		this->prevVertSame.resize(xValid, true);
 		this->fwy = -this->wrow + 1;
 	}
@@ -370,7 +394,7 @@ public:
 	inline void
 	resetOldFocalWindowMatrixSections(void) {
 		for (int64_t fwxi = 0; fwxi < this->fwWidth; fwxi++) {
-			this->focalWindowMatrix[((fwy + wrow - 1) % wrow) * fwWidth + fwxi] = true;
+			this->matrix[((fwy + wrow - 1) % wrow) * fwWidth + fwxi] = true;
 		}
 	}
 
@@ -402,16 +426,13 @@ public:
 	 */
 	inline void
 	setAddSelf(int xValid, int yValid, int x, int y) {
-		this->addSelf = (this->fwy + this->verticalPad < 0) ||
-			  	(y >= yValid - this->verticalPad) ||
-			  	(this->fwx + this->horizontalPad < 0) ||
-			  	(x >= xValid - this->horizontalPad);
+		this->addSelf = true; 
 
 		if (!this->scanlines) {
-			this->addSelf &= !(this->blockLeftPad && x == 0) &&
-				   	 !(this->blockRightPad && x == xValid - 1) &&
-				   	 !(this->blockTopPad && y == 0) &&
-				   	 !(this->blockBotPad && y == yValid - 1);
+			this->addSelf &= !(this->blockLeftPad && x < horizontalPad) &&
+				   	 !(this->blockRightPad && x >= xValid - horizontalPad) &&
+				   	 !(this->blockTopPad && y < verticalPad) &&
+				   	 !(this->blockBotPad && y >= yValid - verticalPad);
 
 		}
 	}
@@ -419,6 +440,7 @@ public:
 	/**
 	 *
 	 */
+	inline void
 	setAddFw(void) {
 		this->addFw = this->fwy >= 0 && this->fwx >= 0;
 	}
@@ -426,6 +448,7 @@ public:
 	/**
 	 *
 	 */
+	inline void
 	resetFocalWindowXVals(int height, int yBlock, int yBlockSize, int yValid, int x, int y) {
 		this->fwxStart = std::max(this->fwx, static_cast<int64_t>(0));
 		this->fwxMidStart = std::max(this->fwx + 1, static_cast<int64_t>(0));
@@ -438,7 +461,8 @@ public:
 	/**
 	 *
 	 */
-	updateFocalWindowMatrix(int x, bool nextHoriSame, bool nextVertSame, bool isNan, bool accessible, bool alreadySampled) {
+	inline void
+	updateFocalWindowMatrix(int x, int y, int yBlock, int yBlockSize, bool nextHoriSame, bool nextVertSame, bool isNan, bool accessible, bool alreadySampled) {
 		int64_t fwi;
 		//set the portion of the focal window matrix to false which is impacted
 		//only when the next horizontal pixel value is different than the 
@@ -446,7 +470,7 @@ public:
 		if (!nextHoriSame) {
 			for (int64_t fwyi = fwyStart; fwyi <= fwyMidEnd; fwyi++) {
 				fwi = (fwyi % wrow) * fwWidth + fwxEnd;
-				focalWindowMatrix[fwi] = false;
+				matrix[fwi] = false;
 			}
 		}
 
@@ -456,7 +480,7 @@ public:
 		if (!nextVertSame) {
 			for (int64_t fwxi = fwxStart; fwxi <= fwxMidEnd; fwxi++) {
 		 		fwi = (fwyEnd % wrow) * fwWidth + fwxi;
-				focalWindowMatrix[fwi] = false;
+				matrix[fwi] = false;
 			}
 		}
 
@@ -465,7 +489,7 @@ public:
 		//than the current one.
 		if (!nextHoriSame || !nextVertSame) {
 			fwi = (fwyEnd % wrow) * fwWidth + fwxEnd;
-			focalWindowMatrix[fwi] = false;
+			matrix[fwi] = false;
 		}
 
 		//set the portion of the focal window matrix to false which must be
@@ -474,7 +498,7 @@ public:
 		if (!nextHoriSame && prevHoriSame) {
 	  		for (int64_t fwxi = fwxMidStart; fwxi <= fwxMidEnd; fwxi++) {
 				fwi = (fwyStart % wrow) * fwWidth + fwxi;
-				focalWindowMatrix[fwi] = false;
+				matrix[fwi] = false;
 			}
 		}
 
@@ -484,7 +508,7 @@ public:
 		if (!nextVertSame && prevVertSame[x]) {
 			for (int64_t fwyi = fwyMidStart; fwyi <= fwyMidEnd; fwyi++) {
 				fwi = (fwyi % wrow) * fwWidth + fwxStart;
-				focalWindowMatrix[fwi] = false;
+				matrix[fwi] = false;
 			}
 		}
 
@@ -496,7 +520,7 @@ public:
 			for (int64_t fwyi = fwyMidStart; fwyi <= fwyMidEnd; fwyi++) {
 				for (int64_t fwxi = fwxMidStart; fwxi <= fwxMidEnd; fwxi++) {
 					fwi = (fwyi % wrow) * fwWidth + fwxi;
-					focalWindowMatrix[fwi] = false;
+					matrix[fwi] = false;
 				}
 			}
 		}
@@ -507,7 +531,7 @@ public:
 		if ((isNan || !accessible || alreadySampled) && x - horizontalPad >= 0 && y - verticalPad >= 0) {
 			int64_t fwyi = ((scanlines ? y + yBlock * yBlockSize : y) - verticalPad) % wrow;
 			int64_t fwxi = x - horizontalPad;
-			focalWindowMatrix[fwyi * fwWidth + fwxi] = false;
+			matrix[fwyi * fwWidth + fwxi] = false;
 		}
 
 		this->prevHoriSame = nextHoriSame;
@@ -520,9 +544,9 @@ public:
 	inline bool
 	checkFocalWindowMatrix(void) {
 		int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;	
-		return focalWindowMatrix[fwIndex];
+		return matrix[fwIndex];
 	}
-}
+};
 
 /**
  *
@@ -622,7 +646,9 @@ void processBlocksStratQueinnec(
 	FocalWindow& focalWindow,
 	std::vector<int64_t>& existingSampleStrata,
 	int width,
-	int height) 
+	int height,
+	int wrow,
+	int wcol) 
 {
 	int nanInt = static_cast<int>(band.nan);
 	int xBlockSize = band.xBlockSize;
@@ -633,7 +659,7 @@ void processBlocksStratQueinnec(
 
 	//allocate buffers
 	int8_t *p_access = nullptr;
-	if (!focalWindow.scanlines()) {
+	if (!focalWindow.scanlines) {
 		band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, band.size);
 		if (access.used) {
 			access.band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, access.band.size);
@@ -652,7 +678,7 @@ void processBlocksStratQueinnec(
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
-			int xValid, int xValid;
+			int xValid, yValid;
 
 			//read new block
 			if (focalWindow.scanlines) {
@@ -660,7 +686,7 @@ void processBlocksStratQueinnec(
 				rasterBandIO(band, band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 			}
 			else {
-				focalWindow.readNewBlock(band, width, xBlock, yBlock, xBlockSize, yBlockSize, &xValid, &yValid);
+				focalWindow.readNewBlock(band, width, height, xBlock, yBlock, xBlocks, yBlocks, xBlockSize, yBlockSize, xValid, yValid);
 			}
 
 			//read access block if necessary
@@ -719,14 +745,14 @@ void processBlocksStratQueinnec(
 					bool alreadySampled = existing.used && existing.containsIndex(index.x, index.y);
 					 
 					bool nextVertSame = !isNan && ((y == yValid - 1) || 
-						val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + (scanlines ? xBlockSize : xValid)));
+						val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + (focalWindow.scanlines ? xBlockSize : xValid)));
 					bool nextHoriSame = !isNan && ((x == xValid - 1) ||
 						val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + 1));
 
 					//UPDATE FOCAL WINDOW MATRIX
-					focalWindow.updateFocalWindowMatrix(x, nextHoriSame, nextVertSame, isNan, accessible, alreadySampled);
+					focalWindow.updateFocalWindowMatrix(x, y, yBlock, yBlockSize, nextHoriSame, nextVertSame, isNan, accessible, alreadySampled);
 						
-					if (addSelf && !isNan) {
+					if (focalWindow.addSelf && !isNan) {
 						indices.updateStrataCounts(val);
 
 						if (alreadySampled) {
@@ -743,7 +769,7 @@ void processBlocksStratQueinnec(
 					}
 
 					//ADD NEXT FOCAL WINDOW PIXEL
-					if (addFw && focalWindow.checkFocalWindowMatrix()) {
+					if (focalWindow.addFw && focalWindow.checkFocalWindowMatrix()) {
 						int val = focalWindow.scanlines ?
 								getPixelValueDependingOnType<int>(band.type, focalWindow.p_fwScanline, x + xBlock * xBlockSize - wcol) :
 								getPixelValueDependingOnType<int>(band.type, band.p_buffer, (y - wrow) * xValid + (x - wcol));
@@ -827,7 +853,7 @@ strat(
 	bool useMindist = mindist != 0;
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
-	double GT[6] = p_raster->getGeotransform();
+	double *GT = p_raster->getGeotransform();
 
 	std::mutex bandMutex;
 	std::mutex rngMutex;
@@ -900,12 +926,9 @@ strat(
 	IndexStorageVectors queinnecIndices(numStrata, 10000);	
 
 	FocalWindow focalWindow;
-	if (queinnec) {
+	if (method == "Queinnec") {
 		focalWindow.init(width, band.xBlockSize, band.yBlockSize, wrow, wcol, band.size);
 	}
-
-	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
-	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
 
 	if (method == "random") {
 		processBlocksStratRandom(
@@ -931,11 +954,15 @@ strat(
 			focalWindow,
 			existingSampleStrata,
 			width,
-			height
+			height,
+			wrow,
+			wcol
 		);
 	}
 
-	std::vector<uint64_t> strataSampleCounts = calculateAllocation<uint64_t>(
+	std::vector<int64_t> strataCounts = indices.getStrataCounts();
+	int64_t numDataPixels = indices.getNumDataPixels();
+	std::vector<int64_t> strataSampleCounts = calculateAllocation<int64_t>(
 		numSamples,
 		allocation,
 		strataCounts,
@@ -949,17 +976,17 @@ strat(
 	std::vector<bool> completedStrata(numStrata, false);
 	std::vector<bool> completedStrataQueinnec(numStrata, false);
 	std::vector<int64_t> samplesAddedPerStrata = existingSampleStrata;
-	size_t numCompletedStrata = 0;
-	size_t numCompletedStrataQueinnec = 0;
-	double *GT = p_raster->getGeotransform();
+ 	int64_t numCompletedStrata = 0;
+	int64_t numCompletedStrataQueinnec = 0;
+	int64_t curStrata = 0;
 	int64_t addedSamples = 0;
 
 	for (const int64_t& samples : existingSampleStrata) {
 		addedSamples += samples;
 	}
 	
-	if (queinnec) {
-		strataIndexVectors = queinnecIndices.getStrataIndexVectors(samplesAddedPerStrata, rng)	
+	if (method == "Queinnec") {
+		strataIndexVectors = queinnecIndices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);	
 
 		size_t curStrata = 0;
 		while (numCompletedStrataQueinnec < numStrata && addedSamples < numSamples) {
@@ -1014,6 +1041,7 @@ strat(
 
 			addPoint(&newPoint, p_layer);
 			addedSamples++;
+			samplesAddedPerStrata[curStrata]++;
 
 			if (plot) {
 				xCoords.push_back(x);
@@ -1023,16 +1051,15 @@ strat(
 			curStrata++;
 		}
 	}
-
 		
-	strataIndexVectors = indices.getStrataIndexVectors(samplesAddedPerStrata, rng)	
+	strataIndexVectors = indices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);	
 	for (size_t i = 0; i < numStrata; i++) {
 		//set next indexes to 0 because the vectors are different than the queinnec vectors
 		nextIndexes[i] = 0;
 	}
+	curStrata = 0;
 	
 	//step 8: generate coordinate points for each sample index.
-	size_t curStrata = 0;
 	while (numCompletedStrata < numStrata && addedSamples < numSamples) {
 		if (completedStrata[curStrata]) {
 			curStrata++;
@@ -1083,6 +1110,7 @@ strat(
 
 		addPoint(&newPoint, p_layer);
 		addedSamples++;
+		samplesAddedPerStrata[curStrata]++;
 
 		if (plot) {
 			xCoords.push_back(x);
