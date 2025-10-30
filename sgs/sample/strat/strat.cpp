@@ -845,7 +845,6 @@ strat(
 	double buffOuter,
 	bool plot,
 	std::string filename,
-	bool largeRaster,
 	std::string tempFolder)
 {
 	GDALAllRegister();
@@ -893,7 +892,7 @@ strat(
 		layerName, 
 		buffInner, 
 		buffOuter, 
-		largeRaster, 
+		true, 
 		tempFolder, 
 		band.xBlockSize,
 		band.yBlockSize
@@ -1140,7 +1139,6 @@ strat(
 	return {{xCoords, yCoords}, p_vector, actualSampleCount};
 }
 
-//TODO add pyargs
 PYBIND11_MODULE(strat, m) {
 	m.def("strat_cpp", &strat,
 		pybind11::arg("p_raster"),
@@ -1160,6 +1158,5 @@ PYBIND11_MODULE(strat, m) {
 		pybind11::arg("buffOuter"),
 		pybind11::arg("plot"),
 		pybind11::arg("filename"),
-		pybind11::arg("largeRaster"),
 		pybind11::arg("tempFolder"));
 }

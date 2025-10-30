@@ -19,12 +19,7 @@ from sgs.utils import(
     plot,
 )
 
-from strat import (
-    strat_cpp,
-    strat_cpp_access,
-)
-
-GIGABYTE = 1073741824
+from strat import strat_cpp
 
 def strat(
     strat_rast: SpatialRaster, #TODO add band name for strat rast
@@ -37,6 +32,7 @@ def strat(
     method: str = "Queinnec",
     weights: Optional[list[float]] = None,
     mindist: Optional[float] = None,
+    existing: Optional[SpatialVector] = None,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
     buff_inner: Optional[float] = None,
@@ -93,37 +89,8 @@ def strat(
         whether or not to plot the output samples
     filename : str
         the output filename to write to if desired
-
-    Raises
-    --------------------
-    ValueError
-        if bands parameter is not a valid band in the raster given
-    ValueError
-        if num_samples is less than 1
-    ValueError
-        if method is not either 'random' or 'Queinnec'
-    ValueError
-        if allocation is not one of 'prop', 'optim', 'equal', or 'manual'
-    NotImplementedError
-        if 'optim' allocation is selected
-    ValueError
-        if 'manual' allocation is selected and 'weights' parameter is not a list
-        of length num_strata which sums to 1
-    ValueError
-        if either wrow or wcol are less than 1 or even
-    ValueError
-        if an access vector is given which has more than 1 layer and layer_name parameter is not given
-    ValueError
-        if layer_name is not the name of a layer in the access vector
-    ValueError
-        if an access vector is given, and buff_outer is zero or less
-    ValueError
-        if an access vector is given, and buff_inner is greater than buff_outer
-    ValueError
-        if mindist is less than 0
-    RuntimeError (C++)
-        if strat_raster pixel type is not Float32
     """
+    
     if type(band) is str:
         if band not in strat_rast.bands:
             msg = "band " + str(band) + " not in given raster."
@@ -181,6 +148,18 @@ def strat(
         if buff_inner >= buff_outer:
             raise ValueError("buff_outer must be greater than buff_inner")
 
+        access_vector = access.cpp_vector
+    else:
+        access_vector = None
+        layer_name = ""
+        buff_inner = -1
+        buff_outer = -1
+
+    if (existing):
+        existing_vector = existing.cpp_vector
+    else:
+        existing_vector = None
+
     if allocation != "manual":
         weights = []
 
@@ -193,55 +172,31 @@ def strat(
     if strat_rast.band_count != 1:
         raise ValueError("strat_raster must have a single band.")
 
-    height = strat_rast.height
-    width = strat_rast.width
-    pixel_size = strat_rast.cpp_raster.get_raster_band_type_size(band);
-    large_raster = height * width * pixel_size < GIGABYTE * 4
-
     if not strat_rast.have_temp_dir:
         strat_rast.temp_dir = tempfile.mkdtemp()
         strat_rast.have_temp_dir = True
 
-    if access:
-        [sample_coordinates, samples, num_points] = strat_cpp_access(
-            strat_rast.cpp_raster,
-            band,
-            num_samples,
-            num_strata,
-            wrow,
-            wcol,
-            allocation,
-            method,
-            weights,
-            mindist,
-            access.cpp_vector,
-            layer_name,
-            buff_inner,
-            buff_outer,
-            plot,
-            filename,
-            large_raster,
-            strat_rast.temp_dir
-        )
-
-    else:
-        [sample_coordinates, samples, num_points] = strat_cpp(
-            strat_rast.cpp_raster,
-            band,
-            num_samples,
-            num_strata,
-            wrow,
-            wcol,
-            allocation,
-            method,
-            weights,
-            mindist,
-            plot,
-            filename,
-            large_raster,
-            strat_rast.temp_dir
-        )
-
+    [sample_coordinates, samples, num_points] = strat_cpp(
+        strat_rast.cpp_raster,
+        band,
+        num_samples,
+        num_strata,
+        allocation,
+        weights,
+        method,
+        wrow,
+        wcol,
+        mindist,
+        existing_vector,
+        access_vector,
+        layer_name,
+        buff_inner,
+        buff_outer,
+        plot,
+        filename,
+        strat_rast.temp_dir
+    )
+ 
     if num_points < num_samples:
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, num_points))
     
