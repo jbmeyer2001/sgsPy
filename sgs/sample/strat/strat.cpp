@@ -140,11 +140,14 @@ public:
 
 		this->strataCounts.resize(numStrata);
 		
-		this->indexCountPerStrata.resize(numStrata);
+		this->indexCountPerStrata.resize(numStrata, 0);
 		this->indexesPerStrata.resize(numStrata);
 		
-		this->firstXIndexCountPerStrata.resize(numStrata);
+		this->firstXIndexCountPerStrata.resize(numStrata, 0);
 		this->firstXIndexesPerStrata.resize(numStrata);
+		for (int64_t i = 0; i < numStrata; i++) {
+			this->firstXIndexesPerStrata[i].resize(x);
+		}
 	}
 
 	/**
@@ -175,7 +178,7 @@ public:
 			firstXIndexCountPerStrata[val]++;	
 		}
 		else if (i == this->x) {
-			std::vector<Index>().swap(firstXIndexesPerStrata[i]);
+			std::vector<Index>().swap(firstXIndexesPerStrata[val]);
 			firstXIndexCountPerStrata[val]++;
 		}
 	}
@@ -263,8 +266,7 @@ public:
 	inline void 
 	calculateRandValues(void) {
 		for (size_t i = 0; i < randValIndex; i++) {
-			xso::xoshiro_4x64_plus rng = *p_rng;
-			randVals[i] = ((rng() >> 11) & multiplier) == multiplier;
+			randVals[i] = (((*p_rng)() >> 11) & multiplier) == multiplier;
 		}
 		randValIndex = 0;
 	}
@@ -574,7 +576,6 @@ void processBlocksStratRandom(
 		access.band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, access.band.size);
 		p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
 	}
-
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
@@ -604,7 +605,7 @@ void processBlocksStratRandom(
 					blockIndex++;
 
 					//check nan
-					if (!isNan) {
+					if (isNan) {
 						continue;
 					}
 
@@ -885,7 +886,9 @@ strat(
 	if (!p_layer) {
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
-	
+
+	std::cout << "HERE 1" << std::endl;
+
 	Access access(
 		p_access, 
 		p_raster, 
@@ -898,6 +901,7 @@ strat(
 		band.yBlockSize
 	);
 
+	std::cout << "HERE 2" << std::endl;
 	std::vector<double> xCoords, yCoords;
 	std::vector<int64_t> existingSampleStrata(numStrata, 0);	
 	Existing existing(
@@ -910,26 +914,32 @@ strat(
 		yCoords	
 	);
 
+	std::cout << "HERE 3" << std::endl;
 	//fast random number generator using xoshiro256+
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng; 
 	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area, false);
 	uint64_t queinnecMultiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area, true);
 
+	std::cout << "HERE 4" << std::endl;
 	//normal rand used with both methods, queinnec rand used with only queinnec method
 	RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
 	RandValController queinnecRand(band.xBlockSize, band.yBlockSize, queinnecMultiplier, &rng);
 
+	std::cout << "HERE 5" << std::endl;
 	//normal indices used with both methods, queinnec indices used only with queinnec method
 	IndexStorageVectors indices(numStrata, 10000);
 	IndexStorageVectors queinnecIndices(numStrata, 10000);	
 
+	std::cout << "HERE 6" << std::endl;
 	FocalWindow focalWindow;
 	if (method == "Queinnec") {
 		focalWindow.init(width, band.xBlockSize, band.yBlockSize, wrow, wcol, band.size);
 	}
 
+	std::cout << "HERE 7" << std::endl;
 	if (method == "random") {
+		std::cout << "HERE 8" << std::endl;
 		processBlocksStratRandom(
 			band,
 			access,
@@ -942,6 +952,7 @@ strat(
 		);
 	}
 	else { //method == queinnec
+	     	std::cout << "HERE 9" << std::endl;
 		processBlocksStratQueinnec(
 			band,
 			access,
@@ -959,8 +970,15 @@ strat(
 		);
 	}
 
+	std::cout << "HERE 10" << std::endl;
 	std::vector<int64_t> strataCounts = indices.getStrataCounts();
 	int64_t numDataPixels = indices.getNumDataPixels();
+
+	for (size_t i = 0; i < strataCounts.size(); i++) {
+		std::cout << "strata " << i << " has " << strataCounts[i] << " values." << std::endl;
+	}
+	std::cout << "numDataPixels: " << numDataPixels << std::endl;
+
 	std::vector<int64_t> strataSampleCounts = calculateAllocation<int64_t>(
 		numSamples,
 		allocation,
@@ -969,6 +987,7 @@ strat(
 		numDataPixels
 	);
 
+	std::cout << "HERE 11" << std::endl;
 	std::vector<std::vector<Index> *> strataIndexVectors;
 	std::vector<size_t> nextIndexes(numStrata, 0);
 
@@ -980,6 +999,7 @@ strat(
 	int64_t curStrata = 0;
 	int64_t addedSamples = 0;
 
+	std::cout << "HERE 12" << std::endl;
 	for (const int64_t& samples : existingSampleStrata) {
 		addedSamples += samples;
 	}
@@ -989,6 +1009,9 @@ strat(
 
 		size_t curStrata = 0;
 		while (numCompletedStrataQueinnec < numStrata && addedSamples < numSamples) {
+			if (curStrata == numStrata) {
+				curStrata = 0;
+			}
 			if (completedStrataQueinnec[curStrata]) {
 				curStrata++;
 				continue;
@@ -1051,6 +1074,7 @@ strat(
 		}
 	}
 		
+	std::cout << "HERE 13" << std::endl;
 	strataIndexVectors = indices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);	
 	for (size_t i = 0; i < numStrata; i++) {
 		//set next indexes to 0 because the vectors are different than the queinnec vectors
@@ -1058,13 +1082,22 @@ strat(
 	}
 	curStrata = 0;
 	
+	std::cout << "numCompletedStrata: " << numCompletedStrata << std::endl;
+	std::cout << "numStrata: " << numStrata << std::endl;
+	std::cout << "addedSamples: " << addedSamples << std::endl;
+	std::cout << "numSampels: " << numSamples << std::endl;
 	//step 8: generate coordinate points for each sample index.
 	while (numCompletedStrata < numStrata && addedSamples < numSamples) {
+		if (curStrata == numStrata) {
+			curStrata = 0;
+		}
+		std::cout << "HERE 13.1" << std::endl;
 		if (completedStrata[curStrata]) {
 			curStrata++;
 			continue;
 		}
 
+		std::cout << "HERE 13.2" << std::endl;
 		size_t sampleCount = strataSampleCounts[curStrata];
 		size_t samplesAdded = samplesAddedPerStrata[curStrata];
 		if (samplesAdded == sampleCount) {
@@ -1074,7 +1107,9 @@ strat(
 			continue;
 		}
 
+		std::cout << "HERE 13.3" << std::endl;
 		std::vector<Index> *strataIndexes = strataIndexVectors[curStrata];
+		std::cout << "strataIndexes->size(): " << strataIndexes->size() << std::endl;
 		size_t nextIndex = nextIndexes[curStrata];
 		if (strataIndexes->size() == nextIndex) {
 			numCompletedStrata++;
@@ -1090,6 +1125,7 @@ strat(
 		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
 		OGRPoint newPoint = OGRPoint(x, y);
 
+		std::cout << "HERE 13.4" << std::endl;
 		if (mindist != 0.0 && p_layer->GetFeatureCount() != 0) {
 			bool add = true;
 			for (const auto &p_feature : *p_layer) {
@@ -1107,6 +1143,7 @@ strat(
 
 		}
 
+		std::cout << "HERE 13.5" << std::endl;
 		addPoint(&newPoint, p_layer);
 		addedSamples++;
 		samplesAddedPerStrata[curStrata]++;
@@ -1119,6 +1156,7 @@ strat(
 		curStrata++;
 	}
 	
+	std::cout << "HERE 14" << std::endl;
 	//step 9: create GDALVectorWrapper to store dataset of sample points
 	GDALVectorWrapper *p_vector = new GDALVectorWrapper(p_samples);
 
