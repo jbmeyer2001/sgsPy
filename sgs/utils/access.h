@@ -165,6 +165,9 @@ struct Access {
 			throw std::runtime_error("taking the intersection of polygons somehow resulted in something not a polygon! This is a bug.");
 		}
 
+		//invert polygon mask
+		p_polygonMask = extent.Difference(p_polygonMask);
+
 		//step 4: create new GDAL dataset to rasterize as access mask
 		GDALDataset *p_accessPolygonDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
 			"",
@@ -178,7 +181,7 @@ struct Access {
 		OGRLayer *p_layer = p_accessPolygonDataset->CreateLayer(
 			"access", 
 			p_vector->getLayer(layerName.c_str())->GetSpatialRef(), 
-			wkbPolygon, 
+			p_polygonMask->getGeometryType(), 
 			nullptr
 		);
 		OGRFieldDefn field("index", OFTInteger);
@@ -196,7 +199,10 @@ struct Access {
 
 		//step 9: generate options list for rasterization	
 		char **argv = nullptr;
-	
+
+		//specify 'all touched'
+		argv = CSLAddString(argv, "-at");
+
 		//specify the burn value for the polygon
 		argv = CSLAddString(argv, "-burn");
 		argv = CSLAddString(argv, std::to_string(1).c_str());

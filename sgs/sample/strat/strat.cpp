@@ -380,7 +380,7 @@ public:
 		band.p_band->RasterIO(
 			GF_Read,
 			0,
-			yBlock * yBlockSize + y - wrow,
+			yBlock * yBlockSize + y - verticalPad,
 			width,
 			1,
 			this->p_fwScanline,
@@ -532,7 +532,10 @@ public:
 		//if the current pixel is nan, or not accessible, or is already a pre-existing
 		//sample, mark it's location in the focal window matrix as false so we know not 
 		//to add it in the future without checking for nan or accessibility or existing again.
-		if ((isNan || !accessible || alreadySampled) && x - horizontalPad >= 0 && y - verticalPad >= 0) {
+		if ((isNan || !accessible || alreadySampled) && 
+		    (x - horizontalPad) >= 0 && 
+		    ((scanlines ? yBlock * yBlockSize + y : y) - verticalPad >= 0)) 
+		{
 			int64_t fwyi = ((scanlines ? y + yBlock * yBlockSize : y) - verticalPad) % wrow;
 			int64_t fwxi = x - horizontalPad;
 			matrix[fwyi * fwWidth + fwxi] = false;
@@ -547,7 +550,7 @@ public:
 	 */
 	inline bool
 	checkFocalWindowMatrix(void) {
-		int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;	
+		int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;
 		return matrix[fwIndex];
 	}
 };
@@ -602,7 +605,7 @@ void processBlocksStratRandom(
 					Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
 
 					bool isNan = val == nanInt;
-					bool accessible = !access.used || p_access[blockIndex] == 1;
+					bool accessible = !access.used || p_access[blockIndex] != 1;
 					bool alreadySampled = existing.used && existing.containsIndex(index.x, index.y);
 					blockIndex++;
 
@@ -646,7 +649,7 @@ void processBlocksStratQueinnec(
 	IndexStorageVectors& indices,
 	RandValController& queinnecRand,
 	IndexStorageVectors& queinnecIndices,
-	FocalWindow& focalWindow,
+	FocalWindow& fw,
 	std::vector<int64_t>& existingSampleStrata,
 	int width,
 	int height,
@@ -662,7 +665,7 @@ void processBlocksStratQueinnec(
 
 	//allocate buffers
 	int8_t *p_access = nullptr;
-	if (!focalWindow.scanlines) {
+	if (!fw.scanlines) {
 		band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, band.size);
 		if (access.used) {
 			access.band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, access.band.size);
@@ -670,8 +673,8 @@ void processBlocksStratQueinnec(
 		}	
 	}
 	else {
-		int newXDimSize = xBlockSize + focalWindow.horizontalPad * 2;
-		int newYDimSize = yBlockSize + focalWindow.verticalPad * 2;
+		int newXDimSize = xBlockSize + fw.horizontalPad * 2;
+		int newYDimSize = yBlockSize + fw.verticalPad * 2;
 		band.p_buffer = VSIMalloc3(newXDimSize, newYDimSize, band.size);
 		if (access.used) {
 			access.band.p_buffer = VSIMalloc3(newXDimSize, newYDimSize, access.band.size);
@@ -679,29 +682,32 @@ void processBlocksStratQueinnec(
 		}
 	}
 
+	//FOR TESTING PUPOSES, DELETE LATER
+	std::unordered_set<int> inaccessible;
+
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
 
 			//read new block
-			if (focalWindow.scanlines) {
+			if (fw.scanlines) {
 				band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 				rasterBandIO(band, band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 			}
 			else {
-				focalWindow.readNewBlock(band, width, height, xBlock, yBlock, xBlocks, yBlocks, xBlockSize, yBlockSize, xValid, yValid);
+				fw.readNewBlock(band, width, height, xBlock, yBlock, xBlocks, yBlocks, xBlockSize, yBlockSize, xValid, yValid);
 			}
 
 			//read access block if necessary
 			if (access.used) {
-				if (focalWindow.scanlines) {
+				if (fw.scanlines) {
 					rasterBandIO(access.band, access.band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 				}
 				else {
 					access.band.p_band->RasterIO(
 						GF_Read,
-						focalWindow.xOff,
-						focalWindow.yOff,
+						fw.xOff,
+						fw.yOff,
 						xValid,
 						yValid,
 						access.band.p_buffer,
@@ -718,44 +724,49 @@ void processBlocksStratQueinnec(
 			rand.calculateRandValues();
 			queinnecRand.calculateRandValues();
 
-			if (!focalWindow.scanlines) {
-				focalWindow.updateValsForNewBlock(xValid);
+			if (!fw.scanlines) {
+				fw.updateValsForNewBlock(xValid);
 			}
 
 			for (int y = 0; y < yValid; y++) {
-				if (focalWindow.scanlines && (yBlock * yBlockSize + y - wrow) >= 0) {
-					focalWindow.readInFocalWindowScanline(band, width, yBlock, yBlockSize, y);
+				if (fw.scanlines && (yBlock * yBlockSize + y - fw.verticalPad) >= 0) {
+					fw.readInFocalWindowScanline(band, width, yBlock, yBlockSize, y);
 				}
 
-				size_t blockIndex = focalWindow.scanlines ?
+				size_t blockIndex = fw.scanlines ?
 					static_cast<size_t>(y * xBlockSize) :
 					static_cast<size_t>(y * yValid);
 
-				focalWindow.resetOldFocalWindowMatrixSections();
-				focalWindow.resetFocalWindowYVals(height, yBlock, yBlockSize, yValid, y);
-				focalWindow.resetfwx();	
+				fw.resetOldFocalWindowMatrixSections();
+				fw.resetFocalWindowYVals(height, yBlock, yBlockSize, yValid, y);
+				fw.resetfwx();	
 
 				for (int x = 0; x < xValid; x++) {
-					focalWindow.setAddSelf(xValid, yValid, x, y);
-					focalWindow.setAddFw();
-					focalWindow.resetFocalWindowXVals(height, yBlock, yBlockSize, yValid, x, y);
+					fw.setAddSelf(xValid, yValid, x, y);
+					fw.setAddFw();
+					fw.resetFocalWindowXVals(height, yBlock, yBlockSize, yValid, x, y);
 
 					int val = getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex);
-					Index index = {x + xBlock + xBlockSize, y + yBlock + yBlockSize};
+					Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
 
 					bool isNan = val == nanInt;
-					bool accessible = !access.used || (access.used && p_access[blockIndex] == 1);
+					bool accessible = !access.used || p_access[blockIndex] != 1;
 					bool alreadySampled = existing.used && existing.containsIndex(index.x, index.y);
-					 
+
+					if (!accessible) {
+						inaccessible.insert(index.y * width + index.x);
+					}
+
 					bool nextVertSame = !isNan && ((y == yValid - 1) || 
-						val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + (focalWindow.scanlines ? xBlockSize : xValid)));
+						val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + (fw.scanlines ? xBlockSize : xValid)));
 					bool nextHoriSame = !isNan && ((x == xValid - 1) ||
 						val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + 1));
+					blockIndex++;
 
 					//UPDATE FOCAL WINDOW MATRIX
-					focalWindow.updateFocalWindowMatrix(x, y, yBlock, yBlockSize, nextHoriSame, nextVertSame, isNan, accessible, alreadySampled);
-						
-					if (focalWindow.addSelf && !isNan) {
+					fw.updateFocalWindowMatrix(x, y, yBlock, yBlockSize, nextHoriSame, nextVertSame, isNan, accessible, alreadySampled);
+				
+					if (fw.addSelf && !isNan) {
 						indices.updateStrataCounts(val);
 
 						if (alreadySampled) {
@@ -772,26 +783,31 @@ void processBlocksStratQueinnec(
 					}
 
 					//ADD NEXT FOCAL WINDOW PIXEL
-					if (focalWindow.addFw && focalWindow.checkFocalWindowMatrix()) {
-						int val = focalWindow.scanlines ?
-								getPixelValueDependingOnType<int>(band.type, focalWindow.p_fwScanline, x + xBlock * xBlockSize - wcol) :
-								getPixelValueDependingOnType<int>(band.type, band.p_buffer, (y - wrow) * xValid + (x - wcol));
-						index = {x + xBlock * xBlockSize - wcol, y + yBlock * yBlockSize -wrow};
-						
+					if (fw.addFw && fw.checkFocalWindowMatrix()) {
+						int val = fw.scanlines ?
+								getPixelValueDependingOnType<int>(band.type, fw.p_fwScanline, x + xBlock * xBlockSize - fw.horizontalPad) :
+								getPixelValueDependingOnType<int>(band.type, band.p_buffer, (y - fw.verticalPad) * xValid + (x - fw.horizontalPad));
+						index = {x + xBlock * xBlockSize - fw.horizontalPad, y + yBlock * yBlockSize - fw.verticalPad};
+					
+						if (inaccessible.find(index.y * width + index.x) != inaccessible.end()) {
+							std::string errMsg = "index [" + std::to_string(index.x) + "][" + std::to_string(index.y) + "] should be inaccessbile but it is being added!";
+							throw std::runtime_error(errMsg); 
+						}
+
 						queinnecIndices.updateStrataCounts(val);
 						queinnecIndices.updateFirstXIndexesVector(val, index);
 						if (queinnecRand.next()) {
 							queinnecIndices.updateIndexesVector(val, index);
 						}
 					}
-
-					focalWindow.fwx++;
+					fw.fwx++;
 				}
-				focalWindow.fwy++;
+				fw.fwy++;
 			}
 		}
 	}
 
+	std::cout << "HERE 9.18" << std::endl;
 	VSIFree(band.p_buffer);
 	if (access.used) {
 		VSIFree(access.band.p_buffer);
@@ -934,9 +950,9 @@ strat(
 	IndexStorageVectors queinnecIndices(numStrata, 10000);	
 
 	std::cout << "HERE 6" << std::endl;
-	FocalWindow focalWindow;
+	FocalWindow fw;
 	if (method == "Queinnec") {
-		focalWindow.init(width, band.xBlockSize, band.yBlockSize, wrow, wcol, band.size);
+		fw.init(width, band.xBlockSize, band.yBlockSize, wrow, wcol, band.size);
 	}
 
 	std::cout << "HERE 7" << std::endl;
@@ -963,7 +979,7 @@ strat(
 			indices,
 			queinnecRand,
 			queinnecIndices,
-			focalWindow,
+			fw,
 			existingSampleStrata,
 			width,
 			height,

@@ -69,7 +69,7 @@ processBlock(
 			}
 
 			//CHECK ACCESS
-			if (access.used && p_access[blockIndex] != 1) {
+			if (access.used && p_access[blockIndex] == 1) {
 				blockIndex++;
 				continue;
 			}
