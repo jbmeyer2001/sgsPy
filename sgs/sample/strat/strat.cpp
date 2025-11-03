@@ -211,6 +211,8 @@ public:
 				std::shuffle(begin, end, rng);
 				retval[i] = &this->firstXIndexesPerStrata[i];
 			}
+
+			std::cout << "strata " << i << " sample count: " << retval[i]->size() << std::endl;
 		}
 
 		return retval;
@@ -1082,22 +1084,16 @@ strat(
 	}
 	curStrata = 0;
 	
-	std::cout << "numCompletedStrata: " << numCompletedStrata << std::endl;
-	std::cout << "numStrata: " << numStrata << std::endl;
-	std::cout << "addedSamples: " << addedSamples << std::endl;
-	std::cout << "numSampels: " << numSamples << std::endl;
 	//step 8: generate coordinate points for each sample index.
 	while (numCompletedStrata < numStrata && addedSamples < numSamples) {
 		if (curStrata == numStrata) {
 			curStrata = 0;
 		}
-		std::cout << "HERE 13.1" << std::endl;
 		if (completedStrata[curStrata]) {
 			curStrata++;
 			continue;
 		}
 
-		std::cout << "HERE 13.2" << std::endl;
 		size_t sampleCount = strataSampleCounts[curStrata];
 		size_t samplesAdded = samplesAddedPerStrata[curStrata];
 		if (samplesAdded == sampleCount) {
@@ -1107,9 +1103,7 @@ strat(
 			continue;
 		}
 
-		std::cout << "HERE 13.3" << std::endl;
 		std::vector<Index> *strataIndexes = strataIndexVectors[curStrata];
-		std::cout << "strataIndexes->size(): " << strataIndexes->size() << std::endl;
 		size_t nextIndex = nextIndexes[curStrata];
 		if (strataIndexes->size() == nextIndex) {
 			numCompletedStrata++;
@@ -1125,7 +1119,6 @@ strat(
 		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
 		OGRPoint newPoint = OGRPoint(x, y);
 
-		std::cout << "HERE 13.4" << std::endl;
 		if (mindist != 0.0 && p_layer->GetFeatureCount() != 0) {
 			bool add = true;
 			for (const auto &p_feature : *p_layer) {
@@ -1143,7 +1136,6 @@ strat(
 
 		}
 
-		std::cout << "HERE 13.5" << std::endl;
 		addPoint(&newPoint, p_layer);
 		addedSamples++;
 		samplesAddedPerStrata[curStrata]++;
