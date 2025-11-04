@@ -10,17 +10,17 @@ access = sgs.SpatialVector('/home/jbmeyer/extdata/access.shp')
 #srast = sgs.stratify.quantiles(rast, num_strata=5, filename="out/DEM_quantiles.tif")
 #print("DEM_quantiles.tif created")
 #srast = sgs.SpatialRaster("out/DEM_quantiles.tif")
-srast = sgs.stratify.quantiles(rast, num_strata={'pzabove2': 5})
+srast = sgs.stratify.quantiles(rast, num_strata={'pzabove2': 5}, filename="queinnec_mraster.tif")
 
 #samples =sgs.sample.strat(srast, 0, num_samples=500, num_strata = 5, allocation="equal", method="Queinnec", filename="out/samples.shp")
 samples =sgs.sample.strat(srast, 0, num_samples=500, num_strata = 5, allocation="equal", method="Queinnec", plot=True)
 print("finished sampling no access no existing")
 
 #samples = sgs.sample.strat(srast, 0, num_samples=500, num_strata = 5, access=access, layer_name="RMF_Roads_clip", buff_outer=1000, allocation="equal", method="Queinnec", filename="out/samples_access.shp")
-samples = sgs.sample.strat(srast, 0, num_samples=500, num_strata = 5, access=access, layer_name="access", buff_outer=120, allocation="equal", method="Queinnec", plot=True)
-print("finished sampling access")
+#samples = sgs.sample.strat(srast, 0, num_samples=500, num_strata = 5, access=access, layer_name="access", buff_outer=120, allocation="equal", method="Queinnec", plot=True)
+#print("finished sampling access")
 
 #samples = sgs.sample.strat(srast, 0, num_samples=500, num_strata=5, existing=existing, allocation="equal", method="Queinnec", filename="out/samples_existing.shp")
-samples = sgs.sample.strat(srast, 0, num_samples=500, num_strata=5, existing=existing, allocation="equal", method="Queinnec", plot=True)
-print("finished sampling existing")
+#samples = sgs.sample.strat(srast, 0, num_samples=500, num_strata=5, existing=existing, allocation="equal", method="Queinnec", plot=True)
+#print("finished sampling existing")
 

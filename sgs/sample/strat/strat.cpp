@@ -306,6 +306,7 @@ public:
 	bool addSelf;
 	bool addFw;
 	void *p_fwScanline;
+	void *p_nextLine;
 
 	/**
 	 *
@@ -322,6 +323,7 @@ public:
 		this->prevHoriSame = true;
 		this->fwy = -wrow + 1;
 		this->p_fwScanline = this->scanlines ? VSIMalloc2(width, bandPixelSize) : nullptr;
+		this->p_nextLine = this->scanlines ? VSIMalloc2(width, bandPixelSize) : nullptr;
 		this->wrow = wrow;
 		this->wcol = wcol;
 	}
@@ -385,6 +387,26 @@ public:
 			1,
 			this->p_fwScanline,
 			width, 
+			1,
+			band.type,
+			0,
+			0
+		);
+	}
+
+	/**
+	 *
+	 */
+	inline void
+	readInNextLineScanline(RasterBandMetaData& band, int width, int yBlock, int yBlockSize, int y) {
+		band.p_band->RasterIO(
+			GF_Read,
+			0,
+			yBlock * yBlockSize + y + 1,
+			width,
+			1,
+			this->p_nextLine,
+			width,
 			1,
 			band.type,
 			0,
@@ -492,7 +514,7 @@ public:
 		//when either the next vertical or the next horizontal pixel is different
 		//than the current one.
 		if (!nextHoriSame || !nextVertSame) {
-			fwi = (fwyEnd % wrow) * fwWidth + fwxEnd;
+			fwi = (fwyEnd % wrow) * fwWidth + fwxEnd;	
 			matrix[fwi] = false;
 		}
 
@@ -551,6 +573,9 @@ public:
 	inline bool
 	checkFocalWindowMatrix(void) {
 		int64_t fwIndex = (fwy % wrow) * fwWidth + fwx;
+		if (fwy == 0 && fwx == 47) {
+			std::cout << "fwy == 0 and fwx == 47, check value of " << matrix[fwIndex] << std::endl;
+		}
 		return matrix[fwIndex];
 	}
 };
@@ -682,9 +707,6 @@ void processBlocksStratQueinnec(
 		}
 	}
 
-	//FOR TESTING PUPOSES, DELETE LATER
-	std::unordered_set<int> inaccessible;
-
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
@@ -732,6 +754,9 @@ void processBlocksStratQueinnec(
 				if (fw.scanlines && (yBlock * yBlockSize + y - fw.verticalPad) >= 0) {
 					fw.readInFocalWindowScanline(band, width, yBlock, yBlockSize, y);
 				}
+				if (fw.scanlines && (yBlock * yBlockSize + y + 1) < height) {
+					fw.readInNextLineScanline(band, width, yBlock, yBlockSize, y);
+				}
 
 				size_t blockIndex = fw.scanlines ?
 					static_cast<size_t>(y * xBlockSize) :
@@ -753,12 +778,10 @@ void processBlocksStratQueinnec(
 					bool accessible = !access.used || p_access[blockIndex] != 1;
 					bool alreadySampled = existing.used && existing.containsIndex(index.x, index.y);
 
-					if (!accessible) {
-						inaccessible.insert(index.y * width + index.x);
-					}
+					bool nextVertSame = !isNan && (fw.scanlines ?
+						(y == height - 1) || val == getPixelValueDependingOnType<int>(band.type, fw.p_nextLine, x) :
+						(y == yValid - 1) || val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + xValid));
 
-					bool nextVertSame = !isNan && ((y == yValid - 1) || 
-						val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + (fw.scanlines ? xBlockSize : xValid)));
 					bool nextHoriSame = !isNan && ((x == xValid - 1) ||
 						val == getPixelValueDependingOnType<int>(band.type, band.p_buffer, blockIndex + 1));
 					blockIndex++;
@@ -788,11 +811,28 @@ void processBlocksStratQueinnec(
 								getPixelValueDependingOnType<int>(band.type, fw.p_fwScanline, x + xBlock * xBlockSize - fw.horizontalPad) :
 								getPixelValueDependingOnType<int>(band.type, band.p_buffer, (y - fw.verticalPad) * xValid + (x - fw.horizontalPad));
 						index = {x + xBlock * xBlockSize - fw.horizontalPad, y + yBlock * yBlockSize - fw.verticalPad};
-					
-						if (inaccessible.find(index.y * width + index.x) != inaccessible.end()) {
-							std::string errMsg = "index [" + std::to_string(index.x) + "][" + std::to_string(index.y) + "] should be inaccessbile but it is being added!";
-							throw std::runtime_error(errMsg); 
+				
+						int checkYStart = index.y - (fw.wrow / 2);
+						int checkXStart = index.x - (fw.wcol / 2);
+						int checkYEnd = checkYStart + fw.wrow;
+						int checkXEnd = checkXStart + fw.wcol;
+						bool passed = true;
+						for (int y = checkYStart; y < checkYEnd; y++) {
+							for (int x = checkXStart; x< checkXEnd; x++) {
+								int checkVal;
+								band.p_band->RasterIO(GF_Read, x, y, 1, 1, &checkVal, 1, 1, GDT_Int32, 0, 0);
+								if (val != checkVal) {
+									std::cout << "[" << index.x << "][" << index.y << "] = " << val << std::endl;
+									std::cout << "[" << x << "][" << y << "] = " << checkVal << std::endl;
+									std::cout << std::endl;
+									passed = false;
+								}
+							}
+						}	
+						if (!passed) {
+							throw std::runtime_error("debugging stop.");
 						}
+						
 
 						queinnecIndices.updateStrataCounts(val);
 						queinnecIndices.updateFirstXIndexesVector(val, index);
