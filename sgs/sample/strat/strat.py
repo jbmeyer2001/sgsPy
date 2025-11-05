@@ -124,11 +124,11 @@ def strat(
         if len(weights) != num_strata:
             raise ValueError("length of 'weights' must be the same as the number of strata.")
 
-    if wrow % 2 == 0 or wrow < 1:
-        raise ValueError("wrow must be odd, and greater than 0.")
+    if wrow not in [3, 5, 7]:
+        raise ValueError("wrow must be one of 3, 5, 7.")
 
-    if wcol % 2 == 0 or wcol < 1:
-        raise ValueError("wcol must be odd, and greater then 0.")
+    if wcol not in [3, 5, 7]:
+        raise ValueError("wcol must be one of 3, 5, 7.")
 
     if (access):
         if layer_name is None:
