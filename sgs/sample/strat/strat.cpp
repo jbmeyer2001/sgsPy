@@ -572,18 +572,6 @@ void processBlocksStratQueinnec(
 					continue;
 				}
 
-				int check;
-				band.p_band->RasterIO(GF_Read, index.x, index.y, 1, 1, &check, 1, 1, GDT_Int32, 0, 0);
-				if (check == nanInt) {
-					std::cout << "index.x: " << index.x << std::endl;
-					std::cout << "index.y: " << index.y << std::endl;
-					std::cout << "check val: " << check << std::endl;
-					std::cout << "val: " << static_cast<int>(val) << std::endl;
-					std::cout << "newBlockStart: " << newBlockStart << std::endl;
-					std::cout << "block index: " << newBlockStart + y * width + x << std::endl;
-					throw std::runtime_error("BEEG PROBLEMO");
-				}
-
 				//update strata counts
 				indices.updateStrataCounts(val);
 
@@ -655,16 +643,6 @@ void processBlocksStratQueinnec(
 					}
 
 					if (add) {
-						int check;
-						band.p_band->RasterIO(GF_Read, fwIndex.x, fwIndex.y, 1, 1, &check, 1, 1, GDT_Int32, 0, 0);
-						if (check == nanInt) {
-							std::cout << "fwIndex.x: " << index.x << std::endl;
-							std::cout << "fwIndex.y: " << index.y << std::endl;
-							std::cout << "check val: " << check << std::endl;
-							std::cout << "val: " << static_cast<int>(val) << std::endl;
-							throw std::runtime_error("BEEG PROBLEMO");
-						}
-
 						//(we know if we've made it here that val is the same for both the fw add and the current index)
 						queinnecIndices.updateFirstXIndexesVector(val, fwIndex);
 
@@ -712,8 +690,9 @@ void processBlocksStratQueinnec(
 			if (fwyi == width * fw.wrow) {
 				fwyi = 0;
 			}
-
 		}
+
+		std::cout << "completed yBlock = " << yBlock << "/" << yBlocks << std::endl;
 	}
 
 	VSIFree(band.p_buffer);
@@ -813,8 +792,6 @@ strat(
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
 
-	std::cout << "HERE 1" << std::endl;
-
 	Access access(
 		p_access, 
 		p_raster, 
@@ -827,7 +804,6 @@ strat(
 		band.yBlockSize
 	);
 
-	std::cout << "HERE 2" << std::endl;
 	std::vector<double> xCoords, yCoords;
 	std::vector<int64_t> existingSampleStrata(numStrata, 0);	
 	Existing existing(
@@ -840,24 +816,19 @@ strat(
 		yCoords	
 	);
 
-	std::cout << "HERE 3" << std::endl;
 	//fast random number generator using xoshiro256+
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng; 
 	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area, false);
 	uint64_t queinnecMultiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area, true);
 
-	std::cout << "HERE 5" << std::endl;
 	//normal indices used with both methods, queinnec indices used only with queinnec method
 	IndexStorageVectors indices(numStrata, 10000);
 	IndexStorageVectors queinnecIndices(numStrata, 10000);	
 
-	std::cout << "HERE 6" << std::endl;
 	FocalWindow fw(wrow, wcol, width);
 
-	std::cout << "HERE 7" << std::endl;
 	if (method == "random") {
-		std::cout << "HERE 8" << std::endl;
 		switch (band.type) {
 			case GDT_Int8:
 				processBlocksStratRandom<int8_t>(band, access, existing,
@@ -877,7 +848,6 @@ strat(
 		}
 			}
 	else { //method == queinnec
-	     	std::cout << "HERE 9" << std::endl;
 		switch (band.type) {
 			case GDT_Int8:
 				processBlocksStratQueinnec<int8_t>(band, access, existing, indices,
@@ -897,14 +867,8 @@ strat(
 		}
 	}
 
-	std::cout << "HERE 10" << std::endl;
 	std::vector<int64_t> strataCounts = indices.getStrataCounts();
 	int64_t numDataPixels = indices.getNumDataPixels();
-
-	for (size_t i = 0; i < strataCounts.size(); i++) {
-		std::cout << "strata " << i << " has " << strataCounts[i] << " values." << std::endl;
-	}
-	std::cout << "numDataPixels: " << numDataPixels << std::endl;
 
 	std::vector<int64_t> strataSampleCounts = calculateAllocation<int64_t>(
 		numSamples,
@@ -914,7 +878,6 @@ strat(
 		numDataPixels
 	);
 
-	std::cout << "HERE 11" << std::endl;
 	std::vector<std::vector<Index> *> strataIndexVectors;
 	std::vector<size_t> nextIndexes(numStrata, 0);
 
@@ -926,7 +889,6 @@ strat(
 	int64_t curStrata = 0;
 	int64_t addedSamples = 0;
 
-	std::cout << "HERE 12" << std::endl;
 	for (const int64_t& samples : existingSampleStrata) {
 		addedSamples += samples;
 	}
@@ -1001,7 +963,6 @@ strat(
 		}
 	}
 		
-	std::cout << "HERE 13" << std::endl;
 	strataIndexVectors = indices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);	
 	for (size_t i = 0; i < numStrata; i++) {
 		//set next indexes to 0 because the vectors are different than the queinnec vectors
@@ -1073,7 +1034,6 @@ strat(
 		curStrata++;
 	}
 	
-	std::cout << "HERE 14" << std::endl;
 	//step 9: create GDALVectorWrapper to store dataset of sample points
 	GDALVectorWrapper *p_vector = new GDALVectorWrapper(p_samples);
 
