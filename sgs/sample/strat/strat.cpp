@@ -292,9 +292,10 @@ void processBlocksStratRandom(
 	RasterBandMetaData& band,
 	Access& access,
 	Existing& existing,
-	RandValController& rand,
 	IndexStorageVectors& indices,
 	std::vector<int64_t>& existingSampleStrata,
+	uint64_t multiplier,
+	xso::xoshiro_4x64_plus& rng,
 	int width,
 	int height) 
 {
@@ -312,6 +313,9 @@ void processBlocksStratRandom(
 		access.band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, access.band.size);
 		p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
 	}
+
+	RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
+
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
@@ -404,6 +408,7 @@ struct FocalWindow {
 
 	inline bool
 	check(int x, int y) {
+		y = y % wrow;
 		switch (wrow) {
 			case 3:
 				return this->m[x] && 
@@ -440,16 +445,18 @@ void processBlocksStratQueinnec(
 	RasterBandMetaData &band,
 	Access& access,
 	Existing& existing,
-	RandValController& rand,
 	IndexStorageVectors& indices,
-	RandValController& queinnecRand,
 	IndexStorageVectors& queinnecIndices,
 	FocalWindow& fw,
 	std::vector<int64_t>& existingSampleStrata,
+	uint64_t multiplier,
+	uint64_t queinnecMultiplier,
+	xso::xoshiro_4x64_plus& rng,
 	int width,
 	int height) 
 {
 	T nanInt = static_cast<T>(band.nan);
+	std::cout << "nanInt: " << static_cast<int>(nanInt) << std::endl;
 
 	//adjust blocks to be a large chunk of scanlines
 	int xBlockSize = band.xBlockSize;
@@ -462,28 +469,40 @@ void processBlocksStratQueinnec(
 	}
 
 	//allocate required memory
-	band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize + fw.vpad, band.size);
+	band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize + fw.vpad * 2, band.size);
 	T *p_buffer = reinterpret_cast<T *>(band.p_buffer);
 	int8_t *p_access = nullptr;
 	if (access.used) {
-		access.band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize + fw.vpad * 2, access.band.size);
+		access.band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, access.band.size);
 		p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
 	}
 
+	RandValController rand(xBlockSize, yBlockSize, multiplier, &rng);
+	RandValController queinnecRand(xBlockSize, yBlockSize, queinnecMultiplier, &rng);
+
 	//get number of blocks
 	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
-	
+
+	//TO REMOVE LATER
+	int wrow = fw.wrow;
+	int wcol = fw.wcol;
+
 	int fwyi = 0;
-	for (int yBlock = 0; yBlock < yBlockSize; yBlock++) {
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		//read block
 		int xOff = 0;
-		int yOff = yBlock == 0 ? 0 : yBlock * yBlockSize - fw.vpad * 2;
+		int yOff = yBlock * yBlockSize;
 		int xValid = width;
-		int yValid = yBlock == 0 ? yBlockSize : yBlockSize + fw.vpad * 2;
-		if (yOff + yValid > height) {
-			yValid = height - yOff;
+		int yValid = std::min(yBlockSize, height - yBlock * yBlockSize);
+
+		if (yBlock == 0) { 
+			band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, band.p_buffer, xValid, yValid, band.type, 0, 0);
 		}
-		band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, band.p_buffer, xValid, yValid, band.type, 0, 0);
+		else {
+			int yOffRead = yOff - fw.vpad * 2;
+			int yValidRead = yValid + fw.vpad * 2;
+			band.p_band->RasterIO(GF_Read, xOff, yOffRead, xValid, yValidRead, band.p_buffer, xValid, yValidRead, band.type, 0, 0);
+		}
 
 		//read access block
 		if (access.used) {
@@ -498,33 +517,24 @@ void processBlocksStratQueinnec(
 		rand.calculateRandValues();
 		queinnecRand.calculateRandValues();
 
+		//calculate the within-block index. In the case where there is a padding at the top of the block,
+		//adjust for that.
+		int newBlockStart = (yBlock == 0) ? 0 : width * fw.vpad * 2;
+
 		//iterate through block and update vectors
-		for (int y = 0; y < yBlockSize; y++) {
+		for (int y = 0; y < yValid; y++) {
 			//reset upcomming row in focal window matrix
 			fw.reset(yBlock * yBlockSize + y);	
-
-			//calculate the within-block index. In the case where there is a padding at the top of the block,
-			//adjust for that.
-			size_t blockIndex = 0;
-			size_t accessBlockIndex = static_cast<size_t>(y * yBlockSize);
-			if (yBlock == 0) {
-				blockIndex = static_cast<size_t>(y * yBlockSize);
-			}
-			else {
-				blockIndex = static_cast<size_t>(y * yBlockSize + width * fw.vpad * 2);
-			}
 			
 			//the indexes from 0 to the horizontal pad cannot be a queinnec index
 			//because they are too close to the edges of the raster	
 			for (int x = 0; x < fw.hpad; x++) {
-				T val = p_buffer[blockIndex];
+				T val = p_buffer[newBlockStart + y * width + x];
 				Index index = {x, y + yBlock * yBlockSize};
 
 				bool isNan = val == nanInt;
-				bool accessible = !access.used || p_access[accessBlockIndex] != 1;
+				bool accessible = !access.used || p_access[y * width + x] != 1;
 				bool alreadySampled = existing.used && existing.containsIndex(index.x, index.y);
-				blockIndex++;
-				accessBlockIndex++;
 
 				//check nan
 				if (isNan) {
@@ -548,38 +558,30 @@ void processBlocksStratQueinnec(
 					}
 				}
 			}
-
-
-			//block index horizontal minus 1, 2, 3	
-			size_t bihm1 = blockIndex - 1;
-			size_t bihm2 = blockIndex - 2;
-			size_t bihm3 = blockIndex - 3;
-
-			//block index vertical minus 2, 4, 6
-			size_t st_width = static_cast<size_t>(width);
-			size_t bivm2 = blockIndex - st_width * 2;
-			size_t bivm4 = blockIndex - st_width * 4;
-			size_t bivm6 = blockIndex - st_width * 6;
-
+	
 			for (int x = fw.hpad; x < width - fw.hpad; x++) {
-				T val = p_buffer[blockIndex];
+				T val = p_buffer[newBlockStart + y * width + x];
 				Index index = {x, y + yBlock * yBlockSize};
 
 				bool isNan = val == nanInt;
-				bool accessible = !access.used || p_access[accessBlockIndex] != 1;
+				bool accessible = !access.used || p_access[y * width + x] != 1;
 				bool alreadySampled = existing.used && existing.containsIndex(index.x, index.y);
 				
 				//check nan
 				if (isNan) {
-					blockIndex++;
-					accessBlockIndex++;
-					bihm1++;
-					bihm2++;
-					bihm3++;
-					bivm2++;
-					bivm4++;
-					bivm6++;
 					continue;
+				}
+
+				int check;
+				band.p_band->RasterIO(GF_Read, index.x, index.y, 1, 1, &check, 1, 1, GDT_Int32, 0, 0);
+				if (check == nanInt) {
+					std::cout << "index.x: " << index.x << std::endl;
+					std::cout << "index.y: " << index.y << std::endl;
+					std::cout << "check val: " << check << std::endl;
+					std::cout << "val: " << static_cast<int>(val) << std::endl;
+					std::cout << "newBlockStart: " << newBlockStart << std::endl;
+					std::cout << "block index: " << newBlockStart + y * width + x << std::endl;
+					throw std::runtime_error("BEEG PROBLEMO");
 				}
 
 				//update strata counts
@@ -591,29 +593,30 @@ void processBlocksStratQueinnec(
 				};
 
 				//set focal window matrix value by checking horizontal indices within focal window
+				int start = newBlockStart + y * width + x - fw.hpad;
 				switch (fw.wcol) {
 					case 3:
-						fw.m[fwyi + x] = p_buffer[bihm1] == p_buffer[bihm1 + 1] &&
-								 p_buffer[bihm1] == p_buffer[bihm1 + 2];
+						fw.m[fwyi + x] = p_buffer[start] == p_buffer[start + 1] &&
+								 p_buffer[start] == p_buffer[start + 2];
 						break;
 					case 5: 
-						fw.m[fwyi + x] = p_buffer[bihm2] == p_buffer[bihm2 + 1] &&
-								 p_buffer[bihm2] == p_buffer[bihm2 + 2] &&
-								 p_buffer[bihm2] == p_buffer[bihm2 + 3] &&
-								 p_buffer[bihm2] == p_buffer[bihm2 + 4];
+						fw.m[fwyi + x] = p_buffer[start] == p_buffer[start + 1] &&
+								 p_buffer[start] == p_buffer[start + 2] &&
+								 p_buffer[start] == p_buffer[start + 3] &&
+								 p_buffer[start] == p_buffer[start + 4];
 						break;
 					case 7: 
-						fw.m[fwyi + x] = p_buffer[bihm3] == p_buffer[bihm3 + 1] &&
-								 p_buffer[bihm3] == p_buffer[bihm3 + 2] &&
-								 p_buffer[bihm3] == p_buffer[bihm3 + 3] &&
-								 p_buffer[bihm3] == p_buffer[bihm3 + 4] &&
-								 p_buffer[bihm3] == p_buffer[bihm3 + 5] &&
-								 p_buffer[bihm3] == p_buffer[bihm3 + 6];
+						fw.m[fwyi + x] = p_buffer[start] == p_buffer[start + 1] &&
+								 p_buffer[start] == p_buffer[start + 2] &&
+								 p_buffer[start] == p_buffer[start + 3] &&
+								 p_buffer[start] == p_buffer[start + 4] &&
+								 p_buffer[start] == p_buffer[start + 5] &&
+								 p_buffer[start] == p_buffer[start + 6];
 						break;
 					default:
 						throw std::runtime_error("wcol must be one of 3, 5, 6.");
 				}
-			
+				
 				//add val to stored indices and update focal window validity	
 				if (accessible && !alreadySampled) {
 					indices.updateFirstXIndexesVector(val, index);
@@ -621,36 +624,47 @@ void processBlocksStratQueinnec(
 					if (rand.next()) {
 						indices.updateIndexesVector(val, index);
 					}
-
+					
 					fw.valid[fwyi + x] = true;
 				}
-				
+
 				//add index to queinnec indices if surrounding focal window is all the same
 				Index fwIndex = {x, index.y - fw.vpad};
 				if (fw.check(fwIndex.x, fwIndex.y)) {
 					bool add = false;
+					int start = newBlockStart + y * width + x - 2 * width * fw.vpad;
 					switch (fw.wrow) {
 						case 3:
-							add = p_buffer[bivm2] == p_buffer[bivm2 + st_width * 1] &&
-							      p_buffer[bivm2] == p_buffer[bivm2 + st_width * 2];
+							add = p_buffer[start] == p_buffer[start + width * 1] &&
+							      p_buffer[start] == p_buffer[start + width * 2];
 							break;
 						case 5:
-							add = p_buffer[bivm4] == p_buffer[bivm4 + st_width * 1] &&
-							      p_buffer[bivm4] == p_buffer[bivm4 + st_width * 2] &&
-							      p_buffer[bivm4] == p_buffer[bivm4 + st_width * 3] &&
-							      p_buffer[bivm4] == p_buffer[bivm4 + st_width * 4];
+							add = p_buffer[start] == p_buffer[start + width * 1] &&
+							      p_buffer[start] == p_buffer[start + width * 2] &&
+							      p_buffer[start] == p_buffer[start + width * 3] &&
+							      p_buffer[start] == p_buffer[start + width * 4];
 							break;
 						case 7:
-							add = p_buffer[bivm6] == p_buffer[bivm6 + st_width * 1] &&
-							      p_buffer[bivm6] == p_buffer[bivm6 + st_width * 2] &&
-							      p_buffer[bivm6] == p_buffer[bivm6 + st_width * 3] &&
-							      p_buffer[bivm6] == p_buffer[bivm6 + st_width * 4] &&
-							      p_buffer[bivm6] == p_buffer[bivm6 + st_width * 5] &&
-							      p_buffer[bivm6] == p_buffer[bivm6 + st_width * 6];
+							add = p_buffer[start] == p_buffer[start + width * 1] &&
+							      p_buffer[start] == p_buffer[start + width * 2] &&
+							      p_buffer[start] == p_buffer[start + width * 3] &&
+							      p_buffer[start] == p_buffer[start + width * 4] &&
+							      p_buffer[start] == p_buffer[start + width * 5] &&
+							      p_buffer[start] == p_buffer[start + width * 6];
 							break;
 					}
 
 					if (add) {
+						int check;
+						band.p_band->RasterIO(GF_Read, fwIndex.x, fwIndex.y, 1, 1, &check, 1, 1, GDT_Int32, 0, 0);
+						if (check == nanInt) {
+							std::cout << "fwIndex.x: " << index.x << std::endl;
+							std::cout << "fwIndex.y: " << index.y << std::endl;
+							std::cout << "check val: " << check << std::endl;
+							std::cout << "val: " << static_cast<int>(val) << std::endl;
+							throw std::runtime_error("BEEG PROBLEMO");
+						}
+
 						//(we know if we've made it here that val is the same for both the fw add and the current index)
 						queinnecIndices.updateFirstXIndexesVector(val, fwIndex);
 
@@ -659,28 +673,17 @@ void processBlocksStratQueinnec(
 						}
 					}
 				}
-
-				blockIndex++;
-				accessBlockIndex++;
-				bihm1++;
-				bihm2++;
-				bihm3++;
-				bivm2++;
-				bivm4++;
-				bivm6++;
 			}
 
 			//the indexes from width - horizontal pad to width cannot be a queinnec index
 			//because they are too close to the edges of the raster	
 			for (int x = width - fw.hpad; x < width; x++) {
-				T val = p_buffer[blockIndex];
+				T val = p_buffer[newBlockStart + y * width + x];
 				Index index = {x, y + yBlock * yBlockSize};
 
 				bool isNan = val == nanInt;
-				bool accessible = !access.used || p_access[accessBlockIndex] != 1;
+				bool accessible = !access.used || p_access[y * width + x] != 1;
 				bool alreadySampled = existing.used && existing.containsIndex(index.x, index.y);
-				blockIndex++;
-				accessBlockIndex++;
 
 				//check nan
 				if (isNan) {
@@ -711,6 +714,11 @@ void processBlocksStratQueinnec(
 			}
 
 		}
+	}
+
+	VSIFree(band.p_buffer);
+	if (access.used) {
+		VSIFree(access.band.p_buffer);
 	}	
 }
 
@@ -839,11 +847,6 @@ strat(
 	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area, false);
 	uint64_t queinnecMultiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area, true);
 
-	std::cout << "HERE 4" << std::endl;
-	//normal rand used with both methods, queinnec rand used with only queinnec method
-	RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
-	RandValController queinnecRand(band.xBlockSize, band.yBlockSize, queinnecMultiplier, &rng);
-
 	std::cout << "HERE 5" << std::endl;
 	//normal indices used with both methods, queinnec indices used only with queinnec method
 	IndexStorageVectors indices(numStrata, 10000);
@@ -857,19 +860,19 @@ strat(
 		std::cout << "HERE 8" << std::endl;
 		switch (band.type) {
 			case GDT_Int8:
-				processBlocksStratRandom<int8_t>(band, access, existing, rand,
+				processBlocksStratRandom<int8_t>(band, access, existing,
 							 indices, existingSampleStrata,
-							 width, height);
+							 multiplier, rng, width, height);
 				break;
 			case GDT_Int16:
-				processBlocksStratRandom<int16_t>(band, access, existing, rand,
+				processBlocksStratRandom<int16_t>(band, access, existing,
 							 indices, existingSampleStrata,
-							 width, height);
+							 multiplier, rng, width, height);
 				break;
 			default:
-				processBlocksStratRandom<int32_t>(band, access, existing, rand,
+				processBlocksStratRandom<int32_t>(band, access, existing,
 							 indices, existingSampleStrata,
-							 width, height);
+							 multiplier, rng, width, height);
 				break;
 		}
 			}
@@ -877,19 +880,19 @@ strat(
 	     	std::cout << "HERE 9" << std::endl;
 		switch (band.type) {
 			case GDT_Int8:
-				processBlocksStratQueinnec<int8_t>(band, access, existing, rand, indices,
-							   queinnecRand, queinnecIndices, fw,
-							   existingSampleStrata, width, height);
+				processBlocksStratQueinnec<int8_t>(band, access, existing, indices,
+							   queinnecIndices, fw, existingSampleStrata,
+							   multiplier, queinnecMultiplier, rng, width, height);
 				break;
 			case GDT_Int16:
-				processBlocksStratQueinnec<int16_t>(band, access, existing, rand, indices,
-							   queinnecRand, queinnecIndices, fw,
-							   existingSampleStrata, width, height);
+				processBlocksStratQueinnec<int16_t>(band, access, existing, indices,
+							   queinnecIndices, fw, existingSampleStrata,
+							   multiplier, queinnecMultiplier, rng, width, height);
 				break;
 			default:
-				processBlocksStratQueinnec<int32_t>(band, access, existing, rand, indices,
-							   queinnecRand, queinnecIndices, fw,
-							   existingSampleStrata, width, height);
+				processBlocksStratQueinnec<int32_t>(band, access, existing, indices,
+							   queinnecIndices, fw, existingSampleStrata,
+							   multiplier, queinnecMultiplier, rng, width, height);
 				break;
 		}
 	}

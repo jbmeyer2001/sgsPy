@@ -196,7 +196,7 @@ def strat(
         filename,
         strat_rast.temp_dir
     )
- 
+
     if num_points < num_samples:
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, num_points))
     

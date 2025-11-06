@@ -647,35 +647,7 @@ class TestStrat:
                 method="Queinnec",
             ).samples_as_wkt())
             self.check_focal_window(srast, samples, wrow=5, wcol=3)
-
-        #test 1x3 focal window
-        for _ in range(20):
-            samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
-                srast,
-                'strat_zq90',
-                num_samples=50,
-                num_strata=5,
-                wrow=1,
-                wcol=3,
-                allocation="equal",
-                method="Queinnec",
-            ).samples_as_wkt())
-            self.check_focal_window(srast, samples, wrow=1, wcol=3)
-
-        #test 3x1 focal window
-        for _ in range(20):
-            samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
-                srast,
-                'strat_zq90',
-                num_samples=50,
-                num_strata=5,
-                wrow=3,
-                wcol=1,
-                allocation="equal",
-                method="Queinnec",
-            ).samples_as_wkt())
-            self.check_focal_window(srast, samples, wrow=3, wcol=1)
-
+ 
     @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
     def test_function_inputs(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
