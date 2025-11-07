@@ -143,7 +143,7 @@ struct OptimAllocationDataManager {
 	inline void
 	update(int index, int strata) {
 		double val = getPixelValueDependingOnType<double>(this->band.type, this->band.p_buffer, index);
-	       	variances[strata].update(val);	
+		variances[strata].update(val);	
 	}
 
 	/**
@@ -154,14 +154,23 @@ struct OptimAllocationDataManager {
 		std::vector<double> retval(variances.size());
 
 		double total = 0;
+		std::cout << "optim allocation percentage calculations:" << std::endl;
 		for (size_t i = 0; i < variances.size(); i++) {
 			double stdev = variances[i].getStdev();
 			double count = static_cast<double>(variances[i].getCount());
-			double product = stdev * count;
+			double product = count == 0 ? 0 : stdev * count; //if count == 0 stdev will be nan, this stops the nan from spreading
 			retval[i] = product;
 			total += product;
+
+			std::cout << "strata " << i << std::endl;
+			std::cout << "stdev: " << stdev << std::endl; 
+			std::cout << "count: " << count << std::endl;
+			std::cout << "product: " << product << std::endl;
+			std::cout << "total: " << total << std::endl;
+			std::cout << std::endl;
 		}
 
+		std::cout << std::endl;
 		for (size_t i = 0; i < variances.size(); i++) {
 			retval[i] = retval[i] / total;
 		}
@@ -435,10 +444,10 @@ processBlocksStratRandom(
 					bool isNan = val == nanInt;
 					bool accessible = !access.used || p_access[blockIndex] != 1;
 					bool alreadySampled = existing.used && existing.containsIndex(index.x, index.y);
-					blockIndex++;
 
 					//check nan
 					if (isNan) {
+						blockIndex++;
 						continue;
 					}
 
@@ -463,6 +472,9 @@ processBlocksStratRandom(
 							indices.updateIndexesVector(val, index);
 						}					
 					}
+
+					//increment block index
+					blockIndex++;
 				}
 			}
 		}
@@ -618,20 +630,19 @@ processBlocksStratQueinnec(
 			band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, band.p_buffer, xValid, yValid, band.type, 0, 0);
 		}
 		else {
-			int yOffRead = yOff - fw.vpad * 2;
-			int yValidRead = yValid + fw.vpad * 2;
-			band.p_band->RasterIO(GF_Read, xOff, yOffRead, xValid, yValidRead, band.p_buffer, xValid, yValidRead, band.type, 0, 0);
+			int stratYOff = yOff - fw.vpad * 2;
+			int stratYValid = yValid + fw.vpad * 2;
+			band.p_band->RasterIO(GF_Read, xOff, stratYOff, xValid, stratYValid, band.p_buffer, xValid, stratYValid, band.type, 0, 0);
 		}
 
 		//read access block
 		if (access.used) {
-			int ayValid = std::min(yBlockSize, height - yBlock * yBlockSize);
-			rasterBandIO(access.band, access.band.p_buffer, xBlockSize, yBlockSize, 0, yBlock, width, ayValid, true, false); 
+			access.band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, access.band.p_buffer, xValid, yValid, GDT_Int8, 0, 0);
 		}
 
 		//read mraster block for optim
 		if (optim.used) {
-			optim.readNewBlock(xBlockSize, yBlockSize, 0, yBlock, xValid, yValid);
+			optim.band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, optim.band.p_buffer, xValid, yValid, optim.band.type, 0, 0);
 		}
 
 
@@ -1025,6 +1036,13 @@ strat(
 							   				multiplier, queinnecMultiplier, rng, allocation, 
 											optim, weights, width, height);
 				break;
+		}
+	}
+
+	if (allocation == "optim") {
+		std::cout << "allocation is optim, strata sample counts: " << std::endl;
+		for (size_t i = 0; i < strataSampleCounts.size(); i++) {
+			std::cout << "strata " << i << ": " << strataSampleCounts[i] << std::endl;
 		}
 	}
 

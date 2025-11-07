@@ -29,8 +29,10 @@ def strat(
     wrow: int = 3,
     wcol: int = 3,
     allocation: str = "prop",
-    method: str = "Queinnec",
     weights: Optional[list[float]] = None,
+    mrast: Optional[SpatialRaster] = None,
+    mrast_band: Optional[int | str] = None,
+    method: str = "Queinnec",
     mindist: Optional[float] = None,
     existing: Optional[SpatialVector] = None,
     access: Optional[SpatialVector] = None,
@@ -99,7 +101,7 @@ def strat(
         band = strat_rast.get_band_index(band) #get band as 0-indexed integer
     else: #type(band) is int
         if band >= len(strat_rast.bands):
-            msg = "0-indexed band of " + str(band) + " given but raster only has " + str(len(raster.bands)) + " bands."
+            msg = "0-indexed band of " + str(band) + " given, but raster only has " + str(len(raster.bands)) + " bands."
             raise ValueError(msg)
 
     if num_samples < 1:
@@ -111,9 +113,6 @@ def strat(
     if allocation not in ["prop", "optim", "equal", "manual"]:
         raise ValueError("method must be one of 'prop', 'optim', 'equal', or 'manual'.")
 
-    if allocation == "optim":
-        raise NotImplementedError("optim has not been implemented yet.")
-
     if allocation == "manual":
         if weights is None:
             raise ValueError("for manual allocation, weights must be given.")
@@ -123,6 +122,31 @@ def strat(
 
         if len(weights) != num_strata:
             raise ValueError("length of 'weights' must be the same as the number of strata.")
+
+    if allocation == "optim":
+        if not mrast:
+            raise ValueError("the 'mrast' parameter must be provided if a SpatialRaster if allocation is 'optim'.")
+
+        if mrast_band is None:
+            if len(mrast.bands) != 1:
+                raise ValueError("the 'mrast_band' parameter must be given if the 'mrast' SpatialRaster contains more than 1 band.")
+
+            mrast_band = 1
+        elif type(mrast_band) is str:
+            if band not in mrast.bands:
+                msg = "band " + str(band) + " not in mraster."
+                raise ValueError(msg)
+
+            mrast_band = mrast.get_band_index(mrast_band)
+        else: #type(band) is int
+            if (mrast_band >= len(strat_rast.bands)):
+                msg = "0-indexed band of " + str(band) + "given, but raster only has " + str(lend(raster.bands)) + " bands."
+                raise ValueError(msg)
+
+        mrast_cpp_raster = mrast.cpp_raster
+    else:
+        mrast_cpp_raster = None
+        mrast_band = -1
 
     if wrow not in [3, 5, 7]:
         raise ValueError("wrow must be one of 3, 5, 7.")
@@ -183,6 +207,8 @@ def strat(
         num_strata,
         allocation,
         weights,
+        mrast_cpp_raster,
+        mrast_band,
         method,
         wrow,
         wcol,
