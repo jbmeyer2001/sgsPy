@@ -32,8 +32,8 @@ std::vector<int64_t>
 calculateAllocation(
 	int64_t numSamples,
 	std::string allocation, 
-	std::vector<int64_t>& strataCounts, 
-	std::vector<double>& weights,
+	std::vector<int64_t> strataCounts, 
+	std::vector<double> weights,
 	int64_t numPixels)
 {
 	std::vector<int64_t> retval;
@@ -41,13 +41,13 @@ calculateAllocation(
 	int64_t numStrata = strataCounts.size();
 	if (allocation == "prop") {
 		//allocate the samples per stratum according to stratum size
-		int64_t = pixelsPerSample = numPixels / numSamples;
+		int64_t pixelsPerSample = numPixels / numSamples;
 
 		//add 1 if pixelsPerSample was truncated down, to avoid adding too many samples
-		pixelsPerSample += static_cast<T>(pixelsPerSample * numSamples < numPixels);
+		pixelsPerSample += static_cast<int64_t>(pixelsPerSample * numSamples < numPixels);
 
 		for (int64_t i = 0; i < numStrata; i++) {
-			T count = strataCounts[i] / pixelsPerSample;
+			int64_t count = strataCounts[i] / pixelsPerSample;
 			retval.push_back(count);
 			remainder -= count;
 		}
@@ -65,7 +65,7 @@ calculateAllocation(
 		//allocate samples accordign to weights. 
 		//Optim allocation calculates these weights whereas when using manual the weights are given by the user
 		for (int64_t i = 0; i < numStrata; i++) {
-			T count = static_cast<T>(static_cast<double>(numSamples) * weights[i]);
+			int64_t count = static_cast<int64_t>(static_cast<double>(numSamples) * weights[i]);
 			retval.push_back(count);
 			remainder -= count;
 		}
@@ -92,23 +92,13 @@ calculateAllocation(
 /**
  *
  */
-class OptimAllocationDataManager {
-private:
+struct OptimAllocationDataManager {
 	RasterBandMetaData band;
 	std::vector<Variance> variances;
 	bool used = false;
 
-	/**
-	 *
-	 */
-	~OptimAllocationDataManager() {
-		if (this->used) {
-			VSIFree(this->band.p_buffer);
-		}
-	}
-public:
-	OptimAllocationDataManager(GDALRasterWrapper *p_raster, int bandNum) {
-		if (!p_raster) {
+	OptimAllocationDataManager(GDALRasterWrapper *p_raster, int bandNum, std::string allocation) {
+		if (!p_raster || allocation != "optim") {
 			return;
 		}
 
@@ -117,10 +107,19 @@ public:
 		this->band.size = p_raster->getRasterBandTypeSize(bandNum);
 		this->band.p_buffer = nullptr; //allocated later
 		this->band.nan = this->band.p_band->GetNoDataValue();
-		this->p_band->getBlockSize(&this->band.xBlockSize, &this->band.yBlockSize);
+		this->band.p_band->GetBlockSize(&this->band.xBlockSize, &this->band.yBlockSize);
 		this->used = true;
 	}
 	
+	/**
+	 *
+	 */
+	~OptimAllocationDataManager() {
+		if (this->used) {
+			VSIFree(this->band.p_buffer);
+		}
+	}
+
 	/**
 	 *
 	 */
@@ -128,14 +127,6 @@ public:
 	init(int numStrata, int xBlockSize, int yBlockSize) {
 		this->variances.resize(numStrata);
 		this->band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, band.size);
-	}
-
-	/**
-	 *
-	 */
-	inline bool
-	used(void) {
-		return this->used;
 	}
 
 	/**
@@ -151,7 +142,7 @@ public:
 	 */
 	inline void
 	update(int index, int strata) {
-		double val = getPixelValueDependingOnType<double>(this->band.type, this->band.p_buffer, int index);
+		double val = getPixelValueDependingOnType<double>(this->band.type, this->band.p_buffer, index);
 	       	variances[strata].update(val);	
 	}
 
@@ -177,7 +168,7 @@ public:
 
 		return retval;
 	}
-}
+};
 
 inline uint64_t
 getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMindist, double accessibleArea, bool queinnec) {
@@ -377,6 +368,8 @@ public:
 template <typename T>
 std::vector<int64_t>
 processBlocksStratRandom(
+	int numSamples,
+	int numStrata,
 	RasterBandMetaData& band,
 	Access& access,
 	Existing& existing,
@@ -385,7 +378,7 @@ processBlocksStratRandom(
 	uint64_t multiplier,
 	xso::xoshiro_4x64_plus& rng,
 	std::string allocation,
-	int numStrata,
+	OptimAllocationDataManager& optim,
 	std::vector<double> weights,
 	int width,
 	int height) 
@@ -407,9 +400,8 @@ processBlocksStratRandom(
 
 	RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
 
-	OptimAllocationDataManager optim;
-	if (allocation == "optim") {
-		optim.init(numStrata, band, xBlockSize, yBlockSize);
+	if (optim.used) {
+		optim.init(numStrata, xBlockSize, yBlockSize);
 	}
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
@@ -426,7 +418,7 @@ processBlocksStratRandom(
 			}
 
 			//read mraster block for optim
-			if (optim.used()) {
+			if (optim.used) {
 				optim.readNewBlock(xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid);
 			}
 
@@ -451,7 +443,7 @@ processBlocksStratRandom(
 					}
 
 					//update optim allocation variance calculations
-					if (optim.used()) {
+					if (optim.used) {
 						optim.update(blockIndex, val);
 					}
 
@@ -481,9 +473,10 @@ processBlocksStratRandom(
 		VSIFree(access.band.p_buffer);
 	}	
 
-	if (optim.used()) {
+	if (optim.used) {
 		weights = optim.getAllocationPercentages();
 	}
+
 	std::vector<int64_t> strataSampleCounts = calculateAllocation(
 		numSamples,
 		allocation,
@@ -562,6 +555,8 @@ struct FocalWindow {
 template <typename T>
 std::vector<int64_t>
 processBlocksStratQueinnec(
+	int numSamples,
+	int numStrata,
 	RasterBandMetaData &band,
 	Access& access,
 	Existing& existing,
@@ -573,7 +568,7 @@ processBlocksStratQueinnec(
 	uint64_t queinnecMultiplier,
 	xso::xoshiro_4x64_plus& rng,
 	std::string allocation,
-	int numStrata,
+	OptimAllocationDataManager& optim,
 	std::vector<double> weights,
 	int width,
 	int height) 
@@ -603,9 +598,8 @@ processBlocksStratQueinnec(
 	RandValController rand(xBlockSize, yBlockSize, multiplier, &rng);
 	RandValController queinnecRand(xBlockSize, yBlockSize, queinnecMultiplier, &rng);
 
-	OptimAllocationDataManager optim;
-	if (allocation == "optim") {
-		optim.init(numStrata, band, xBlockSize, yBlockSize);
+	if (optim.used) {
+		optim.init(numStrata, xBlockSize, yBlockSize);
 	}
 
 	//get number of blocks
@@ -619,6 +613,7 @@ processBlocksStratQueinnec(
 		int xValid = width;
 		int yValid = std::min(yBlockSize, height - yBlock * yBlockSize);
 
+		//read block
 		if (yBlock == 0) { 
 			band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, band.p_buffer, xValid, yValid, band.type, 0, 0);
 		}
@@ -631,11 +626,11 @@ processBlocksStratQueinnec(
 		//read access block
 		if (access.used) {
 			int ayValid = std::min(yBlockSize, height - yBlock * yBlockSize);
-			rasterBandIO(access.band, xBlockSize, yBlockSize, 0, yBlock, width, ayValid, true, false); 
+			rasterBandIO(access.band, access.band.p_buffer, xBlockSize, yBlockSize, 0, yBlock, width, ayValid, true, false); 
 		}
 
 		//read mraster block for optim
-		if (optim.used()) {
+		if (optim.used) {
 			optim.readNewBlock(xBlockSize, yBlockSize, 0, yBlock, xValid, yValid);
 		}
 
@@ -669,7 +664,7 @@ processBlocksStratQueinnec(
 				}
 
 				//update optim allocation variance calculations
-				if (optim.used()) {
+				if (optim.used) {
 					optim.update(y * width + x, val);
 				}
 
@@ -705,7 +700,7 @@ processBlocksStratQueinnec(
 				}
 
 				//update optim allocation variance calculations
-				if (optim.used()) {
+				if (optim.used) {
 					optim.update(y * width + x, val);
 				}
 
@@ -806,7 +801,7 @@ processBlocksStratQueinnec(
 				}
 
 				//update optim allocation variance calculations
-				if (optim.used()) {
+				if (optim.used) {
 					optim.update(y * width + x, val);
 				}
 
@@ -842,7 +837,7 @@ processBlocksStratQueinnec(
 		VSIFree(access.band.p_buffer);
 	}
 
-	if (optim.used()) {
+	if (optim.used) {
 		weights = optim.getAllocationPercentages();
 	}
 	std::vector<int64_t> strataSampleCounts = calculateAllocation(
@@ -895,6 +890,8 @@ strat(
 	int64_t numStrata,
 	std::string allocation,
 	std::vector<double> weights,
+	GDALRasterWrapper *p_mraster,
+	int mrastBandNum,
 	std::string method,
 	int wrow,
 	int wcol,
@@ -904,8 +901,6 @@ strat(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
-	GDALRasterWrapper *p_mraster,
-	std::string bandName,
 	bool plot,
 	std::string filename,
 	std::string tempFolder)
@@ -985,48 +980,50 @@ strat(
 
 	FocalWindow fw(wrow, wcol, width);
 
-	std::vector<int64_t> strataSampleCounts 
+	OptimAllocationDataManager optim(p_mraster, mrastBandNum, allocation);
+
+	std::vector<int64_t> strataSampleCounts; 
 	if (method == "random") {
 		switch (band.type) {
 			case GDT_Int8:
-				strataSampleCounts = processBlocksStratRandom<int8_t>(band, access, existing,
-							 			      indices, existingSampleStrata,
-							 			      multiplier, rng, allocation,
-										      numStrata, weights, width, height);
+				strataSampleCounts = processBlocksStratRandom<int8_t>(numSamples, numStrata, band, access, 
+										      existing, indices, existingSampleStrata,
+							 			      multiplier, rng, allocation, optim,
+										      weights, width, height);
 				break;
 			case GDT_Int16:
-				strataSampleCounts = processBlocksStratRandom<int16_t>(band, access, existing,
-							 			      indices, existingSampleStrata,
-							 			      multiplier, rng, allocation,
-										      numStrata, weights, width, height);
+				strataSampleCounts = processBlocksStratRandom<int16_t>(numSamples, numStrata, band, access, 
+										      existing, indices, existingSampleStrata,
+							 			      multiplier, rng, allocation, optim,
+										      weights, width, height);
 				break;
 			default:
-				strataSampleCounts = processBlocksStratRandom<int32_t>(band, access, existing,
-							 			      indices, existingSampleStrata,
-							 			      multiplier, rng, allocation,
-										      numStrata, weights, width, height);
+				strataSampleCounts = processBlocksStratRandom<int32_t>(numSamples, numStrata, band, access, 
+										      existing, indices, existingSampleStrata,
+							 			      multiplier, rng, allocation, optim,
+										      weights, width, height);
 				break;
 		}
-			}
+	}
 	else { //method == queinnec
 		switch (band.type) {
 			case GDT_Int8:
-				strataSampleCounts = processBlocksStratQueinnec<int8_t>(band, access, existing, indices,
-									   	        queinnecIndices, fw, existingSampleStrata,
-							   				multiplier, queinnecMultiplier, rng, 
-							   				allocation, numStrata, weights, width, height);
+				strataSampleCounts = processBlocksStratQueinnec<int8_t>(numSamples, numStrata, band, access, existing, 
+											indices, queinnecIndices, fw, existingSampleStrata,
+							   				multiplier, queinnecMultiplier, rng, allocation, 
+											optim, weights, width, height);
 				break;
 			case GDT_Int16:
-				strataSampleCounts = processBlocksStratQueinnec<int16_t>(band, access, existing, indices,
-									   	        queinnecIndices, fw, existingSampleStrata,
-							   				multiplier, queinnecMultiplier, rng, 
-							   				allocation, numStrata, weights, width, height);
+				strataSampleCounts = processBlocksStratQueinnec<int16_t>(numSamples, numStrata, band, access, existing, 
+											indices, queinnecIndices, fw, existingSampleStrata,
+							   				multiplier, queinnecMultiplier, rng, allocation, 
+											optim, weights, width, height);
 				break;
 			default:
-				strataSampleCounts = processBlocksStratQueinnec<int32_t>(band, access, existing, indices,
-									   	        queinnecIndices, fw, existingSampleStrata,
-							   				multiplier, queinnecMultiplier, rng, 
-							   				allocation, numStrata, weights, width, height);
+				strataSampleCounts = processBlocksStratQueinnec<int32_t>(numSamples, numStrata, band, access, existing, 
+											indices, queinnecIndices, fw, existingSampleStrata,
+							   				multiplier, queinnecMultiplier, rng, allocation, 
+											optim, weights, width, height);
 				break;
 		}
 	}
@@ -1049,7 +1046,7 @@ strat(
 	if (method == "Queinnec") {
 		strataIndexVectors = queinnecIndices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);	
 
-		size_t curStrata = 0;
+		int64_t curStrata = 0;
 		while (numCompletedStrataQueinnec < numStrata && addedSamples < numSamples) {
 			if (curStrata == numStrata) {
 				curStrata = 0;
@@ -1059,8 +1056,8 @@ strat(
 				continue;
 			}
 
-			size_t sampleCount = strataSampleCounts[curStrata];
-			size_t samplesAdded = samplesAddedPerStrata[curStrata];
+			int64_t sampleCount = strataSampleCounts[curStrata];
+			int64_t samplesAdded = samplesAddedPerStrata[curStrata];
 			if (samplesAdded == sampleCount) {
 				numCompletedStrataQueinnec++;
 				completedStrataQueinnec[curStrata] = true;
@@ -1117,7 +1114,7 @@ strat(
 	}
 		
 	strataIndexVectors = indices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);	
-	for (size_t i = 0; i < numStrata; i++) {
+	for (int64_t i = 0; i < numStrata; i++) {
 		//set next indexes to 0 because the vectors are different than the queinnec vectors
 		nextIndexes[i] = 0;
 	}
@@ -1133,8 +1130,8 @@ strat(
 			continue;
 		}
 
-		size_t sampleCount = strataSampleCounts[curStrata];
-		size_t samplesAdded = samplesAddedPerStrata[curStrata];
+		int64_t sampleCount = strataSampleCounts[curStrata];
+		int64_t samplesAdded = samplesAddedPerStrata[curStrata];
 		if (samplesAdded == sampleCount) {
 			numCompletedStrata++;
 			completedStrata[curStrata] = true;
@@ -1215,6 +1212,8 @@ PYBIND11_MODULE(strat, m) {
 		pybind11::arg("numStrata"),
 		pybind11::arg("allocation"),
 		pybind11::arg("weights"),
+		pybind11::arg("p_mraster").none(true),
+		pybind11::arg("mrastBandNum"),
 		pybind11::arg("method"),
 		pybind11::arg("wrow"),
 		pybind11::arg("wcol"),
