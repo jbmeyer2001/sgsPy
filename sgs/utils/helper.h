@@ -713,3 +713,50 @@ point2index(double xCoord, double yCoord, double *IGT, T width) {
 	return index;
 }
 
+/**
+ * This struct contains the intermediate values, as well as functions
+ * for updating the intermediate values of the variance of a raster
+ * band using Welfords method. The mean and standard deviation of
+ * a raster band can be calculated afterwards without requiring the
+ * whole raster to be in memory.
+ *
+ * Double precision is always used for higher precision of potentially small values.
+ *
+ * https://jonisalonen.com/2013/deriving-welfords-method-for-computing-variance/
+ */
+class Variance {
+	private:
+	int64_t k = 0;	//count
+	double M = 0;	//running mean
+	double S = 0;	//sum of squares
+	double oldM = 0;
+	
+	public:
+	inline void
+	update(double x) {
+		k++;
+		oldM = M;
+
+		//update running mean
+		M = M + (x - M) / static_cast<double>(k);
+
+		//update sum of squares
+		S = S + (x - M) * (x - oldM);
+	}
+
+	inline double 
+	getMean() {
+		return M;
+	}
+
+	inline double 
+	getStdev() {
+		double variance = S / static_cast<double>(k);
+		return std::sqrt(variance);
+	}
+
+	inline int64_t
+	getCount() {
+		return this->k;
+	}
+};
