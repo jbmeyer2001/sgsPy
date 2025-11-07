@@ -211,8 +211,6 @@ public:
 				std::shuffle(begin, end, rng);
 				retval[i] = &this->firstXIndexesPerStrata[i];
 			}
-
-			std::cout << "strata " << i << " sample count: " << retval[i]->size() << std::endl;
 		}
 
 		return retval;
