@@ -16,6 +16,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "helper.h"
+
 //used as cutoff for max band allowed in memory
 #define GIGABYTE 1073741824
 
@@ -535,6 +537,23 @@ class GDALRasterWrapper {
 	GDALDataType getRasterBandType(int band) {
 		GDALRasterBand *p_band = this->p_dataset->GetRasterBand(band + 1);
 		return p_band->GetRasterDataType();	
+	}
+
+	/**
+	 * Getter method for a RasterbandMetaData object for the zero-indexed
+	 * band indicated by the bandNum parameter. band.p_buffer is not set
+	 * by this function. p_mutex is also not set by this function.
+	 *
+	 * @param int bandNum
+	 */
+	RasterBandMetaData getRasterBandMetaData(int bandNum) {
+		RasterBandMetaData band;
+		band.p_band = this->getRasterBand(bandNum);
+		band.type = this->getRasterBandType(bandNum);
+		band.size = this->getRasterBandTypeSize(bandNum);
+		band.p_buffer = nullptr;
+		band.nan = band.p_band->GetNoDataValue();
+		band.p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 	}
 
 	/**

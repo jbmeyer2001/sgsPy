@@ -42,6 +42,7 @@ def strat(
     buff_outer: Optional[float] = None,
     plot: bool = False,
     filename: str = "",
+    int max_threads = 0,
     ):
     """
     This function conducts stratified sampling using the stratified
@@ -222,7 +223,8 @@ def strat(
         buff_outer,
         plot,
         filename,
-        strat_rast.temp_dir
+        strat_rast.temp_dir,
+        max_threads
     )
 
     if num_points < num_samples:
