@@ -140,8 +140,8 @@ def strat(
 
             mrast_band = mrast.get_band_index(mrast_band)
         else: #type(band) is int
-            if (mrast_band >= len(strat_rast.bands)):
-                msg = "0-indexed band of " + str(band) + "given, but raster only has " + str(lend(raster.bands)) + " bands."
+            if (mrast_band >= len(mrast.bands)):
+                msg = "0-indexed band of " + str(band) + "given, but raster only has " + str(len(mrast.bands)) + " bands."
                 raise ValueError(msg)
 
         mrast_cpp_raster = mrast.cpp_raster

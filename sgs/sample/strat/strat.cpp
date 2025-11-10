@@ -161,18 +161,6 @@ struct OptimAllocationDataManager {
 			double product = count == 0 ? 0 : stdev * count; //if count == 0 stdev will be nan, this stops the nan from spreading
 			retval[i] = product;
 			total += product;
-
-			std::cout << "strata " << i << std::endl;
-			std::cout << "stdev: " << stdev << std::endl; 
-			std::cout << "count: " << count << std::endl;
-			std::cout << "product: " << product << std::endl;
-			std::cout << "total: " << total << std::endl;
-			std::cout << std::endl;
-		}
-
-		std::cout << std::endl;
-		for (size_t i = 0; i < variances.size(); i++) {
-			retval[i] = retval[i] / total;
 		}
 
 		return retval;
@@ -383,7 +371,7 @@ processBlocksStratRandom(
 	Access& access,
 	Existing& existing,
 	IndexStorageVectors& indices,
-	std::vector<std::vector<Index>>& existingSamples,
+	std::vector<std::vector<OGRPoint>>& existingSamples,
 	uint64_t multiplier,
 	xso::xoshiro_4x64_plus& rng,
 	std::string allocation,
@@ -461,7 +449,7 @@ processBlocksStratRandom(
 					
 					//update existing sampled strata
 					if (alreadySampled) {
-						existingSamples[val].push_back(index);
+						existingSamples[val].push_back(existing.getPoint(index.x, index.y));
 					}
 
 					//add val to stored indices
@@ -575,7 +563,7 @@ processBlocksStratQueinnec(
 	IndexStorageVectors& indices,
 	IndexStorageVectors& queinnecIndices,
 	FocalWindow& fw,
-	std::vector<std::vector<Index>>& existingSamples,
+	std::vector<std::vector<OGRPoint>>& existingSamples,
 	uint64_t multiplier,
 	uint64_t queinnecMultiplier,
 	xso::xoshiro_4x64_plus& rng,
@@ -684,7 +672,7 @@ processBlocksStratQueinnec(
 
 				//update existing samled strata
 				if (alreadySampled) {
-					existingSamples[val].push_back(index);
+					existingSamples[val].push_back(existing.getPoint(index.x, index.y));
 				}
 
 				//add val to stored indices
@@ -720,7 +708,7 @@ processBlocksStratQueinnec(
 
 				//update exisitng sampled strata
 				if (alreadySampled) {
-					existingSamples[val].push_back(index);
+					existingSamples[val].push_back(existing.getPoint(index.x, index.y));
 				};
 
 				//set focal window matrix value by checking horizontal indices within focal window
@@ -821,7 +809,7 @@ processBlocksStratQueinnec(
 
 				//update existing sampled strata
 				if (alreadySampled) {
-					existingSamples[val].push_back(index);
+					existingSamples[val].push_back(existing.getPoint(index.x, index.y));
 				}
 
 				//add val to stored indices
@@ -870,8 +858,7 @@ processBlocksStratQueinnec(
  * are inaccessible are ignored. The remaining accessable data pixel indexes
  * are placed into vectors corresponding to their strata. After this iteration,
  * there will be a a number of vectors equivalent to the number of strata,
- * and they will contain the indexes of the pixels which are their
- * corresponding strata.
+ * correspondin strata.
  *
  *
  * Nextl the calculate_allocation function is used to determine the the total
@@ -969,13 +956,13 @@ strat(
 	);
 
 	std::vector<double> xCoords, yCoords;
-	std::vector<std::vector<Index>> existingSamples(numStrata);	
+	std::vector<std::vector<OGRPoint>> existingSamples(numStrata);	
 	Existing existing(
 		p_existing,
 		GT,
 		width,
 		nullptr,
-		plot,
+		false,
 		xCoords,
 		yCoords	
 	);
@@ -1040,13 +1027,6 @@ strat(
 		}
 	}
 
-	if (allocation == "optim") {
-		std::cout << "allocation is optim, strata sample counts: " << std::endl;
-		for (size_t i = 0; i < strataSampleCounts.size(); i++) {
-			std::cout << "strata " << i << ": " << strataSampleCounts[i] << std::endl;
-		}
-	}
-
 	std::vector<std::vector<Index> *> strataIndexVectors;
 	std::vector<size_t> nextIndexes(numStrata, 0);
 
@@ -1063,20 +1043,16 @@ strat(
 		if (force) {
 			//if force is used, add all samples no matter what
 			for (size_t i = 0; i < existingSamples.size(); i++) {
-				std::vector<Index> samples = existingSamples[i];
-			       	for (const Index& index : samples) {
-					double x = GT[0] + index.x * GT[1] + index.y * GT[2];
-					double y = GT[3] + index.x * GT[4] + index.y * GT[5];
-					
-					OGRPoint newPoint(x, y);
-					addPoint(&newPoint, p_layer);
+				std::vector<OGRPoint> samples = existingSamples[i];
+			       	for (const OGRPoint& point : samples) {
+					addPoint(&point, p_layer);
 
 					addedSamples++;
 					samplesAddedPerStrata[i]++;
 
 					if (plot) {
-						xCoords.push_back(x);
-						yCoords.push_back(y);
+						xCoords.push_back(point.getX());
+						yCoords.push_back(point.getY());
 					}
 				}	
 
@@ -1090,21 +1066,18 @@ strat(
 		}
 		else { //force == false
 			for (size_t i = 0; i < existingSamples.size(); i++) {
-				std::vector<Index> samples = existingSamples[i];
+				std::vector<OGRPoint> samples = existingSamples[i];
 				std::shuffle(samples.begin(), samples.end(), rng);
 				
 				size_t j = 0;
 				while (samplesAddedPerStrata[i] < strataSampleCounts[i] && j < samples.size()) {
-					Index index = samples[j];
-					double x = GT[0] + index.x * GT[1] + index.y * GT[2];
-					double y = GT[3] + index.x * GT[4] + index.y * GT[5];
-					OGRPoint newPoint(x, y);
+					OGRPoint point = samples[j];
 
 					if (mindist != 0 && p_layer->GetFeatureCount() != 0) {
 						bool add = true;
 						for (const auto &p_feature : *p_layer) {
 							OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
-							if (newPoint.Distance(p_point) < mindist) {
+							if (point.Distance(p_point) < mindist) {
 								add = false;
 								break;
 							}
@@ -1116,15 +1089,15 @@ strat(
 						}
 					}
 
-					addPoint(&newPoint, p_layer);
+					addPoint(&point, p_layer);
 					
 					addedSamples++;
 					samplesAddedPerStrata[i]++;
 					j++;
 
 					if (plot) {
-						xCoords.push_back(x);
-						yCoords.push_back(y);
+						xCoords.push_back(point.getX());
+						yCoords.push_back(point.getY());
 					}
 				}
 

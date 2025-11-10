@@ -21,12 +21,12 @@
  * which takes a GDALVectorWrapper, geotransform, and width of the raster
  * as parameters. 
  *
- * The points are stored as single values within an unordered set. This
+ * The points are stored within an unordered map. This
  * map can then be checked to see if it contains particular index values.
  */
 struct Existing {
 	bool used;
-	std::unordered_set<int64_t> samples;
+	std::unordered_map<int64_t, OGRPoint> samples;
 	double IGT[6];
 	int64_t width;
 
@@ -84,26 +84,26 @@ struct Existing {
 				case OGRwkbGeometryType::wkbPoint: {
 					OGRPoint *p_point = p_geometry->toPoint();
 					int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
-					this->samples.insert(index);
+					this->samples.emplace(index, *p_point);
 					if (p_samples) {
 						addPoint(p_point, p_samples);
-					}
-					if (plot) {
-						xCoords.push_back(p_point->getX());
-						yCoords.push_back(p_point->getY());
+						if (plot) {
+							xCoords.push_back(p_point->getX());
+							yCoords.push_back(p_point->getY());
+						}
 					}
 					break;
 				}
 				case OGRwkbGeometryType::wkbMultiPoint: {
 					for (const auto& p_point : *p_geometry->toMultiPoint()) {
 						int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
-						this->samples.insert(index);
+						this->samples.emplace(index, *p_point);
 						if (p_samples) {
 							addPoint(p_point, p_samples);
-						}
-						if (plot) {
-							xCoords.push_back(p_point->getX());
-							yCoords.push_back(p_point->getY());
+							if (plot) {
+								xCoords.push_back(p_point->getX());
+								yCoords.push_back(p_point->getY());
+							}
 						}
 					}
 					break;
@@ -129,6 +129,16 @@ struct Existing {
 	containsIndex(int64_t x, int64_t y) {
 		int64_t index = y * this->width + x;
 		return this->samples.find(index) != this->samples.end();	
+	}
+
+	/**
+	 * if the map has already been checked, gets the OGRPoint which
+	 * is associated with a particular value.
+	 */
+	inline OGRPoint
+	getPoint(int64_t x, int64_t y) {
+		int64_t index = y * this->width + x;
+		return this->samples.find(index)->second;
 	}
 
 	/**
