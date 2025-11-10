@@ -85,7 +85,9 @@ struct Existing {
 					OGRPoint *p_point = p_geometry->toPoint();
 					int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 					this->samples.insert(index);
-					addPoint(p_point, p_samples);
+					if (p_samples) {
+						addPoint(p_point, p_samples);
+					}
 					if (plot) {
 						xCoords.push_back(p_point->getX());
 						yCoords.push_back(p_point->getY());
@@ -96,7 +98,9 @@ struct Existing {
 					for (const auto& p_point : *p_geometry->toMultiPoint()) {
 						int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 						this->samples.insert(index);
-						addPoint(p_point, p_samples);
+						if (p_samples) {
+							addPoint(p_point, p_samples);
+						}
 						if (plot) {
 							xCoords.push_back(p_point->getX());
 							yCoords.push_back(p_point->getY());

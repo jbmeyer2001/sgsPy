@@ -383,7 +383,7 @@ processBlocksStratRandom(
 	Access& access,
 	Existing& existing,
 	IndexStorageVectors& indices,
-	std::vector<int64_t>& existingSampleStrata,
+	std::vector<std::vector<Index>>& existingSamples,
 	uint64_t multiplier,
 	xso::xoshiro_4x64_plus& rng,
 	std::string allocation,
@@ -461,7 +461,7 @@ processBlocksStratRandom(
 					
 					//update existing sampled strata
 					if (alreadySampled) {
-						existingSampleStrata[val]++;
+						existingSamples[val].push_back(index);
 					}
 
 					//add val to stored indices
@@ -575,7 +575,7 @@ processBlocksStratQueinnec(
 	IndexStorageVectors& indices,
 	IndexStorageVectors& queinnecIndices,
 	FocalWindow& fw,
-	std::vector<int64_t>& existingSampleStrata,
+	std::vector<std::vector<Index>>& existingSamples,
 	uint64_t multiplier,
 	uint64_t queinnecMultiplier,
 	xso::xoshiro_4x64_plus& rng,
@@ -684,7 +684,7 @@ processBlocksStratQueinnec(
 
 				//update existing samled strata
 				if (alreadySampled) {
-					existingSampleStrata[val]++;
+					existingSamples[val].push_back(index);
 				}
 
 				//add val to stored indices
@@ -720,7 +720,7 @@ processBlocksStratQueinnec(
 
 				//update exisitng sampled strata
 				if (alreadySampled) {
-					existingSampleStrata[val]++;
+					existingSamples[val].push_back(index);
 				};
 
 				//set focal window matrix value by checking horizontal indices within focal window
@@ -819,9 +819,9 @@ processBlocksStratQueinnec(
 				//update strata counts
 				indices.updateStrataCounts(val);
 
-				//update existing samled strata
+				//update existing sampled strata
 				if (alreadySampled) {
-					existingSampleStrata[val]++;
+					existingSamples[val].push_back(index);
 				}
 
 				//add val to stored indices
@@ -908,6 +908,7 @@ strat(
 	int wcol,
 	double mindist,
 	GDALVectorWrapper *p_existing,
+	bool force,
 	GDALVectorWrapper *p_access,
 	std::string layerName,
 	double buffInner,
@@ -968,12 +969,12 @@ strat(
 	);
 
 	std::vector<double> xCoords, yCoords;
-	std::vector<int64_t> existingSampleStrata(numStrata, 0);	
+	std::vector<std::vector<Index>> existingSamples(numStrata);	
 	Existing existing(
 		p_existing,
 		GT,
 		width,
-		p_layer,
+		nullptr,
 		plot,
 		xCoords,
 		yCoords	
@@ -998,19 +999,19 @@ strat(
 		switch (band.type) {
 			case GDT_Int8:
 				strataSampleCounts = processBlocksStratRandom<int8_t>(numSamples, numStrata, band, access, 
-										      existing, indices, existingSampleStrata,
+										      existing, indices, existingSamples,
 							 			      multiplier, rng, allocation, optim,
 										      weights, width, height);
 				break;
 			case GDT_Int16:
 				strataSampleCounts = processBlocksStratRandom<int16_t>(numSamples, numStrata, band, access, 
-										      existing, indices, existingSampleStrata,
+										      existing, indices, existingSamples,
 							 			      multiplier, rng, allocation, optim,
 										      weights, width, height);
 				break;
 			default:
 				strataSampleCounts = processBlocksStratRandom<int32_t>(numSamples, numStrata, band, access, 
-										      existing, indices, existingSampleStrata,
+										      existing, indices, existingSamples,
 							 			      multiplier, rng, allocation, optim,
 										      weights, width, height);
 				break;
@@ -1020,19 +1021,19 @@ strat(
 		switch (band.type) {
 			case GDT_Int8:
 				strataSampleCounts = processBlocksStratQueinnec<int8_t>(numSamples, numStrata, band, access, existing, 
-											indices, queinnecIndices, fw, existingSampleStrata,
+											indices, queinnecIndices, fw, existingSamples,
 							   				multiplier, queinnecMultiplier, rng, allocation, 
 											optim, weights, width, height);
 				break;
 			case GDT_Int16:
 				strataSampleCounts = processBlocksStratQueinnec<int16_t>(numSamples, numStrata, band, access, existing, 
-											indices, queinnecIndices, fw, existingSampleStrata,
+											indices, queinnecIndices, fw, existingSamples,
 							   				multiplier, queinnecMultiplier, rng, allocation, 
 											optim, weights, width, height);
 				break;
 			default:
 				strataSampleCounts = processBlocksStratQueinnec<int32_t>(numSamples, numStrata, band, access, existing, 
-											indices, queinnecIndices, fw, existingSampleStrata,
+											indices, queinnecIndices, fw, existingSamples,
 							   				multiplier, queinnecMultiplier, rng, allocation, 
 											optim, weights, width, height);
 				break;
@@ -1051,16 +1052,92 @@ strat(
 
 	std::vector<bool> completedStrata(numStrata, false);
 	std::vector<bool> completedStrataQueinnec(numStrata, false);
-	std::vector<int64_t> samplesAddedPerStrata = existingSampleStrata;
+	std::vector<int64_t> samplesAddedPerStrata(numStrata, 0);
  	int64_t numCompletedStrata = 0;
 	int64_t numCompletedStrataQueinnec = 0;
 	int64_t curStrata = 0;
 	int64_t addedSamples = 0;
 
-	for (const int64_t& samples : existingSampleStrata) {
-		addedSamples += samples;
-	}
-	
+	//add existing sample plots
+	if (existing.used) {
+		if (force) {
+			//if force is used, add all samples no matter what
+			for (size_t i = 0; i < existingSamples.size(); i++) {
+				std::vector<Index> samples = existingSamples[i];
+			       	for (const Index& index : samples) {
+					double x = GT[0] + index.x * GT[1] + index.y * GT[2];
+					double y = GT[3] + index.x * GT[4] + index.y * GT[5];
+					
+					OGRPoint newPoint(x, y);
+					addPoint(&newPoint, p_layer);
+
+					addedSamples++;
+					samplesAddedPerStrata[i]++;
+
+					if (plot) {
+						xCoords.push_back(x);
+						yCoords.push_back(y);
+					}
+				}	
+
+				if (samplesAddedPerStrata[i] >= strataSampleCounts[i]) {
+					numCompletedStrata++;
+					numCompletedStrataQueinnec++;
+					completedStrata[i] = true;
+					completedStrataQueinnec[i] = true;
+				}
+			}
+		}
+		else { //force == false
+			for (size_t i = 0; i < existingSamples.size(); i++) {
+				std::vector<Index> samples = existingSamples[i];
+				std::shuffle(samples.begin(), samples.end(), rng);
+				
+				size_t j = 0;
+				while (samplesAddedPerStrata[i] < strataSampleCounts[i] && j < samples.size()) {
+					Index index = samples[j];
+					double x = GT[0] + index.x * GT[1] + index.y * GT[2];
+					double y = GT[3] + index.x * GT[4] + index.y * GT[5];
+					OGRPoint newPoint(x, y);
+
+					if (mindist != 0 && p_layer->GetFeatureCount() != 0) {
+						bool add = true;
+						for (const auto &p_feature : *p_layer) {
+							OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
+							if (newPoint.Distance(p_point) < mindist) {
+								add = false;
+								break;
+							}
+						}
+
+						if (!add) {
+							j++;
+							continue;
+						}
+					}
+
+					addPoint(&newPoint, p_layer);
+					
+					addedSamples++;
+					samplesAddedPerStrata[i]++;
+					j++;
+
+					if (plot) {
+						xCoords.push_back(x);
+						yCoords.push_back(y);
+					}
+				}
+
+				if (samplesAddedPerStrata[i] == strataSampleCounts[i]) {
+					numCompletedStrata++;
+					numCompletedStrataQueinnec++;
+					completedStrata[i] = true;
+					completedStrataQueinnec[i] = true;
+				}
+			}
+		}
+	}	
+
 	if (method == "Queinnec") {
 		strataIndexVectors = queinnecIndices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);	
 
@@ -1237,6 +1314,7 @@ PYBIND11_MODULE(strat, m) {
 		pybind11::arg("wcol"),
 		pybind11::arg("mindist"),
 		pybind11::arg("p_existing").none(true),
+		pybind11::arg("force"),
 		pybind11::arg("p_access").none(true),
 		pybind11::arg("layerName"),
 		pybind11::arg("buffInner"),
