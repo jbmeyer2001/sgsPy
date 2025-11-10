@@ -154,13 +154,16 @@ struct OptimAllocationDataManager {
 		std::vector<double> retval(variances.size());
 
 		double total = 0;
-		std::cout << "optim allocation percentage calculations:" << std::endl;
 		for (size_t i = 0; i < variances.size(); i++) {
 			double stdev = variances[i].getStdev();
 			double count = static_cast<double>(variances[i].getCount());
 			double product = count == 0 ? 0 : stdev * count; //if count == 0 stdev will be nan, this stops the nan from spreading
 			retval[i] = product;
 			total += product;
+		}
+
+		for (size_t i = 0; i < variances.size(); i++) {
+			retval[i] = retval[i] / total;
 		}
 
 		return retval;
@@ -574,7 +577,6 @@ processBlocksStratQueinnec(
 	int height) 
 {
 	T nanInt = static_cast<T>(band.nan);
-	std::cout << "nanInt: " << static_cast<int>(nanInt) << std::endl;
 
 	//adjust blocks to be a large chunk of scanlines
 	int xBlockSize = band.xBlockSize;
@@ -827,8 +829,6 @@ processBlocksStratQueinnec(
 				fwyi = 0;
 			}
 		}
-
-		std::cout << "completed yBlock = " << yBlock << "/" << yBlocks << std::endl;
 	}
 
 	VSIFree(band.p_buffer);

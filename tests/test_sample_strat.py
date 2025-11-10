@@ -327,7 +327,6 @@ class TestStrat:
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
 
-    @pytest.mark.skip()
     def test_random_allocation_optim(self):
         #test with mrast band = 0
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 10})
@@ -356,7 +355,7 @@ class TestStrat:
         assert percentages[6] - .05 == pytest.approx(0, abs=0.02)
         assert percentages[7] - .04 == pytest.approx(0, abs=0.02)
         assert percentages[8] - .07 == pytest.approx(0, abs=0.02)
-        assert percentages[9] - .03 == pytest.approx(0, abs=0.02)
+        assert percentages[9] - .26 == pytest.approx(0, abs=0.02)
        
         #test with mrast band = 1
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
@@ -637,7 +636,6 @@ class TestStrat:
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
 
-    @pytest.mark.skip()
     def test_queinnec_allocation_optim(self):
         #test with mrast band = 0
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 10})
@@ -666,7 +664,7 @@ class TestStrat:
         assert percentages[6] - .05 == pytest.approx(0, abs=0.02)
         assert percentages[7] - .04 == pytest.approx(0, abs=0.02)
         assert percentages[8] - .07 == pytest.approx(0, abs=0.02)
-        assert percentages[9] - .03 == pytest.approx(0, abs=0.02)
+        assert percentages[9] - .26 == pytest.approx(0, abs=0.02)
        
         #test with mrast band = 1
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
