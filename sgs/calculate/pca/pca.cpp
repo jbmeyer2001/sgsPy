@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 #include <iostream>
+#include <numeric>
 
 #include "helper.h"
 #include "raster.h"
@@ -255,7 +256,7 @@ calculatePCA(
 			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 		
 			//read bands into memory	
-			for (size_t i = 0; i < bandCount; i++) {
+			for (int i = 0; i < bandCount; i++) {
 				bands[i].p_band->RasterIO(
 					GF_Read,
 					xBlock * xBlockSize,
@@ -382,7 +383,7 @@ writePCA(
 	T resultNan = std::nan("");
 	
 	//set no data values and read input bands
-	T *p_data = reinterpret_cast<T *>(VSIMalloc3(bandCount, height * width, size);
+	T *p_data = reinterpret_cast<T *>(VSIMalloc3(bandCount, height * width, size));
 	for (int b = 0; b < bandCount; b++) {
 		noDataVals[b] = static_cast<T>(bands[b].nan);
 
@@ -414,17 +415,16 @@ writePCA(
 		adders[c].resize(bandCount);
 
 		for (int b = 0; b < bandCount; b++) {
-			T mean = static_cast<T> result.means[b];
-			T stdev = static_cast<T> result.means[b];
+			T mean = static_cast<T>(result.means[b]);
+			T stdev = static_cast<T>(result.means[b]);
 			multipliers[c][b] = eigBuffers[c][b] / stdev;
 			adders[c][b] = -1 * multipliers[c][b] * mean;
 		}
 	}
 
+	int bi = 0;
+	int ci = 0;
 	for (int i = 0; i < height * width; i++) {
-		int bi = i * bandCount;
-		int ci = i * nComp;
-
 		for (int c = 0; c < nComp; c++) {
 			bool isNan;
 			for (int b = 0; b < bandCount; b++) {
@@ -434,36 +434,10 @@ writePCA(
 
 			p_comp[ci + c] = isNan ? resultNan : std::accumulate(prod.begin(), prod.end(), 0);
 		}
-	}
 
-	/*
-	for (int b = 0; b < bandCount; b++) {
-		T mean = static_cast<T> result.means[b];
-		T stdev = static_cast<T> result.stdevs[b];
-		T *buffIn = inputBuffers[b];
-		for (int c = 0; c < nComp; c++) {
-			T eig = eigBuffers[c][b];
-			T mult = eig / stdev;
-			T add = -1 * mean * mult;
-			buffOut = PCABandBuffers[c];
-
-			for (int i = 0; i < height * width; i++) {
-				buffOut[i] += buffIn[i] * mult + add;
-				//equivalent to:
-				//buffOut[i] += ((buffIn[i] - mean) / stdev) * 	eig
-				//
-				//which can be decomposed to
-				//buffOut[i] += (buffIn[i] - mean) * (eig / stdev)
-				//
-				//then
-				//buffOut[i] += (buffIn[i]) * (eig / stdev) + (-mean * (eig / stdev))
-				//
-				//setting (eig / stdev) as 'mult' and (-mean * (eig / stdev)) as 'add'
-				//limits the number of instructions, and especially division instructions
-			}
-		}
+		bi += bandCount;
+		ci += bandCount;
 	}
-	*/
 
 	for (int c = 0; c < nComp; c++) {
 		PCABands[c].p_band->RasterIO(
@@ -524,19 +498,33 @@ writePCA(
 {
 	int bandCount = static_cast<int>(bands.size());
 	int nComp = static_cast<int>(PCABands.size());
-	std::vector<T *> PCABandBuffers(nComp);
 	std::vector<T *> eigBuffers(nComp);
 	std::vector<T> noDataVals(bandCount); 
-	T resultNan = std::nan("");
 	for (int i = 0; i < bandCount; i++) {
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
-	for (int i = 0; i < nComp; i++) {
-		PCABandBuffers[i] = VSIMalloc3(xBlockSize, yBlockSize, size);
-		eigBuffers[i] = reinterpret_cast<void *>(result.eigenvectors[i].data());
+
+	T *p_data = reinterpret_cast<T *>(VSIMalloc3(xBlockSize * yBlockSize, size, bandCount));
+	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(xBlockSize * yBlockSize, size, nComp));
+
+	std::vector<std::vector<T>> multipliers(nComp);
+	std::vector<std::vector<T>> adders(nComp);
+	std::vector<T> prod(bandCount);
+	T resultNan = std::nan("");
+
+	for (int c = 0; c < nComp; c++) {
+		eigBuffers[c] = result.eigenvectors[c].data();
+		multipliers[c].resize(bandCount);
+		adders[c].resize(bandCount);
+
+		for (int b = 0; b < bandCount; b++) {
+			T mean = static_cast<T>(result.means[b]);
+			T stdev = static_cast<T>(result.means[b]);
+			multipliers[c][b] = eigBuffers[c][b] / stdev;
+			adders[c][b] = -1 * multipliers[c][b] * mean;
+		}
 	}
 
-	void *p_data = VSIMalloc3(xBlockSize * yBlockSize, size, bandCount);
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
@@ -544,14 +532,14 @@ writePCA(
 			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 		
 			//read bands into memory	
-			for (int i = 0; i < bandCount; i++) {
-				bands[i].p_band->RasterIO(
+			for (int b = 0; b < bandCount; b++) {
+				bands[b].p_band->RasterIO(
 					GF_Read,
 					xBlock * xBlockSize,
 					yBlock * yBlockSize,
 					xValid,
 					yValid,
-					(void *)((size_t)p_data + i * size),
+					(void *)((size_t)p_data + b * size),
 					xValid,
 					yValid,
 					type,
@@ -560,50 +548,38 @@ writePCA(
 				);				
 			}
 
-			for (int y = 0; y < yValid; y++) {
-				int i = y * xBlockSize;
-				for (int x = 0; x < xValid; x++) {
-					bool isNan = false;
-					for (int  b = 0; b < bandCount; b++) {
-						T val = reinterpret_cast<T *>(p_data)[i * bandCount + b];
-						isNan = val == noDataVals[b] || std::isnan(val);
-						if (isNan) {
-							break;
-						}
+			int bi = 0;
+			int ci = 0;
+			for (int i = 0; i < xValid * yValid; i++) {
+				for (int c = 0; c < nComp; c++) {
+					bool isNan;
+					for (int b = 0; b < bandCount; b++) {
+						prod[b] = p_data[bi + b] * multipliers[c][b] + adders[c][b];
+						isNan |= p_data[bi + b] == noDataVals[b];
 					}
 
-					if (isNan) {
-						for (void *& p_buffer : PCABandBuffers) {
-							reinterpret_cast<T *>(p_buffer)[i] = resultNan;
-						}
-					}
-					else {
-						//depending on type, call single or double precision floating point
-						//processing functions which use cblas_sdot and cblas_ddot respectively
-						type == GDT_Float32 ?
-							processSPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy) :
-							processDPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy);
-					}
-
-					i++;
+					p_comp[ci + c] = isNan ? resultNan : std::accumulate(prod.begin(), prod.end(), 0);
 				}
-			}
-			
-			//write bands to disk
-			for (int b = 0; b < nComp; b++) {
-				rasterBandIO(
-					PCABands[b],
-					PCABandBuffers[b],
-					xBlockSize,
-					yBlockSize,
-					xBlock,
-					yBlock,
+
+				bi += bandCount;
+				ci += bandCount;
+			}				
+
+			for (int c = 0; c < nComp; c++) {
+				PCABands[c].p_band->RasterIO(
+					GF_Write,
+					xBlock * xBlockSize,
+					yBlock * yBlockSize,
 					xValid,
 					yValid,
-					false, //read = false
-					false //threaded = false
+					(void *)((size_t)p_comp + c * size),
+					xValid,
+					yValid,
+					type,
+					size * nComp,
+					size * nComp * xBlockSize
 				);
-			}		
+			}
 		}
 
 		if (yBlock % 1000 == 0) {
@@ -612,9 +588,7 @@ writePCA(
 	}
 
 	VSIFree(p_data);
-	for (int i = 0; i < nComp; i++) {
-		VSIFree(PCABandBuffers[i]);
-	}
+	VSIFree(p_comp);
 }
 
 /**
