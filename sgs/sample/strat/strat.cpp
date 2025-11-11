@@ -155,7 +155,7 @@ struct OptimAllocationDataManager {
 	 */
 	inline void
 	update(const OptimAllocationDataManager &other) {
-		for (int i = 0; i < variances.size(); i++) {
+		for (size_t i = 0; i < variances.size(); i++) {
 			this->variances[i].update(other.variances[i]);
 		}
 	}
@@ -481,7 +481,7 @@ processBlocksStratRandom(
 	int chunkSize = yBlocks / threads;
 
 	if (chunkSize == 0) {
-		chunkSize = yBlocks:
+		chunkSize = yBlocks;
 	}
 
 	//create thread pool and acquire Python's global interpreter lock (GIL)
@@ -498,12 +498,12 @@ processBlocksStratRandom(
 			yBlockEnd,
 			xBlocks,
 			multiplier,
+			nanInt,
 			&band,
 			&access,
 			&existing,
 			&existingSamples,
 			&indices,
-			&existingSamples,
 			&rng,
 			&optim,
 			&mutexes
@@ -528,7 +528,7 @@ processBlocksStratRandom(
 			//of these objects during execution, which would have significant overhead.
 			OptimAllocationDataManager threadOptim(optim);
 			IndexStorageVectors threadIndices(indices);
-			std::vector<std::vector<Indices>> threadExistingSamples(existingSamples.size());
+			std::vector<std::vector<OGRPoint>> threadExistingSamples(existingSamples.size());
 
 			for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
 				for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
@@ -769,11 +769,15 @@ processBlocksStratQueinnec(
 		boost::asio::post(pool, [
 			wrow,
 			wcol,
+			height,
+			width,
 			xBlockSize,
 			yBlockSize,
 			yBlockStart,
 			yBlockEnd,
 			multiplier,
+			queinnecMultiplier,
+			nanInt,
 			&band,
 			&access,
 			&existing,
@@ -805,7 +809,7 @@ processBlocksStratQueinnec(
 			//of these objects during execution, which would have significant overhead.
 			OptimAllocationDataManager threadOptim(optim);
 			IndexStorageVectors threadIndices(indices);
-			std::vector<std::vector<Indices>> threadExistingSamples(existingSamples.size());
+			std::vector<std::vector<OGRPoint>> threadExistingSamples(existingSamples.size());
 
 			FocalWindow fw(wrow, wcol, width);
 
