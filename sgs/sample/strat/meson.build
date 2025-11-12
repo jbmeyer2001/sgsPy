@@ -10,6 +10,7 @@ py.extension_module(
   include_directories: [
     inc_dir,
     utils_inc_dir,
+    xoshiro_inc_dir
   ],
   install: true,
 )

@@ -3,10 +3,11 @@
 #  Project: sgs
 #  Purpose: stratified random sampling (srs)
 #  Author: Joseph Meyer
-#  Date: July, 2025
+#  Date: September, 2025
 #
 # ******************************************************************************
 
+import tempfile
 from typing import Optional
 
 import numpy as np
@@ -18,22 +19,23 @@ from sgs.utils import(
     plot,
 )
 
-from strat import (
-    strat_cpp,
-    strat_cpp_access,
-)
+from strat import strat_cpp
 
 def strat(
-    strat_rast: SpatialRaster, #TODO add band name for strat rast
+    strat_rast: SpatialRaster,
     band: int | str,
     num_samples: int,
     num_strata: int,
     wrow: int = 3,
     wcol: int = 3,
     allocation: str = "prop",
-    method: str = "Queinnec",
     weights: Optional[list[float]] = None,
+    mrast: Optional[SpatialRaster] = None,
+    mrast_band: Optional[int | str] = None,
+    method: str = "Queinnec",
     mindist: Optional[float] = None,
+    existing: Optional[SpatialVector] = None,
+    force: bool = False,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
     buff_inner: Optional[float] = None,
@@ -55,6 +57,25 @@ def strat(
     of samples per strata is calculated given the distribution of pixels
     in each strata, and the allocation method specified by the allocation parameter.
 
+    In the case where 'optim' allocation is used, an additional raster must be passed
+    to the mrast parameter, and if that raster contains more than 1 band the mrast_band
+    parameter must be given specifying which band. The optim method is specified
+    by Gregoire and Valentine https://doi.org/10.1201/9780203498880 Section 5.4.4.
+
+    The 'existing' parameter, if passed, must be a SpatialVector of type Point or MultiPoint. 
+    These points specify samples within an already-existing network. The SpatialVector may
+    only have one layer. If the force parameter is set to True, every pixel in the existing
+    sample will be added no matter what. if the force parameter is false, then the existing
+    samples will be prioritized over other pixels in the same strata.
+
+    The 'access' parameter, if passed, must be a SpatialVector of type LineString or MultiLineString.
+    buff_outer specifies the buffer distance around the geometry which
+    is allowed to be included in the sampling, buff_inner specifies the
+    geometry which is not allowed to be included in the sampling. buff_outer
+    must be larger than buff_inner. For a multi-layer vector, layer_name
+    must be specified.
+
+
     Parameters
     --------------------
     strat_rast : SpatialRaster
@@ -63,7 +84,7 @@ def strat(
         the band within the strat_rast to use, either a 0-indexed int value or the name of the band
     num_samples : int
         the desired number of samples
-    num_strata : Int
+    num_strata : int
         the number of strata in the strat_rast. If this number is incorrect it may 
         undefined behavior in the C++ code which determines sample locations.
     wrow : int
@@ -72,12 +93,20 @@ def strat(
         the number of columns to be considered in the focal window for the 'Queinnec' method
     allocation : str
         the allocation method to determine the number of samples per strata. One of 'prop', 'equal', 'optim', or 'manual'
-    method: str
-        the sampling method, either 'random', or 'Queinnec'
     weights : list[float]
         the allocation percentages of each strata if the allocation method is 'manual'
+    mrast : SpatialRaster
+        the raster used to calculate 'optim' allocation if 'optim' allocation is used
+    mrast_band : str | int
+        specifies the band within mrast to use
+    method : str
+        the sampling method, either 'random', or 'Queinnec'
     mindist : float
         the minimum distance allowed between sample points
+    existing : SpatialVector
+        a vector of Point or Multipoint which are part of a pre-existing sample network
+    force : bool
+        whether to automatically include all points in the existing network or not
     access : SpatialVector
         a vector of LineString or MultiLineString geometries to sample near to
     layer_name : str
@@ -90,37 +119,8 @@ def strat(
         whether or not to plot the output samples
     filename : str
         the output filename to write to if desired
-
-    Raises
-    --------------------
-    ValueError
-        if bands parameter is not a valid band in the raster given
-    ValueError
-        if num_samples is less than 1
-    ValueError
-        if method is not either 'random' or 'Queinnec'
-    ValueError
-        if allocation is not one of 'prop', 'optim', 'equal', or 'manual'
-    NotImplementedError
-        if 'optim' allocation is selected
-    ValueError
-        if 'manual' allocation is selected and 'weights' parameter is not a list
-        of length num_strata which sums to 1
-    ValueError
-        if either wrow or wcol are less than 1 or even
-    ValueError
-        if an access vector is given which has more than 1 layer and layer_name parameter is not given
-    ValueError
-        if layer_name is not the name of a layer in the access vector
-    ValueError
-        if an access vector is given, and buff_outer is zero or less
-    ValueError
-        if an access vector is given, and buff_inner is greater than buff_outer
-    ValueError
-        if mindist is less than 0
-    RuntimeError (C++)
-        if strat_raster pixel type is not Float32
     """
+    
     if type(band) is str:
         if band not in strat_rast.bands:
             msg = "band " + str(band) + " not in given raster."
@@ -129,7 +129,7 @@ def strat(
         band = strat_rast.get_band_index(band) #get band as 0-indexed integer
     else: #type(band) is int
         if band >= len(strat_rast.bands):
-            msg = "0-indexed band of " + str(band) + " given but raster only has " + str(len(raster.bands)) + " bands."
+            msg = "0-indexed band of " + str(band) + " given, but raster only has " + str(len(raster.bands)) + " bands."
             raise ValueError(msg)
 
     if num_samples < 1:
@@ -141,9 +141,6 @@ def strat(
     if allocation not in ["prop", "optim", "equal", "manual"]:
         raise ValueError("method must be one of 'prop', 'optim', 'equal', or 'manual'.")
 
-    if allocation == "optim":
-        raise NotImplementedError("optim has not been implemented yet.")
-
     if allocation == "manual":
         if weights is None:
             raise ValueError("for manual allocation, weights must be given.")
@@ -154,11 +151,36 @@ def strat(
         if len(weights) != num_strata:
             raise ValueError("length of 'weights' must be the same as the number of strata.")
 
-    if wrow % 2 == 0 or wrow < 1:
-        raise ValueError("wrow must be odd, and greater than 0.")
+    if allocation == "optim":
+        if not mrast:
+            raise ValueError("the 'mrast' parameter must be provided if a SpatialRaster if allocation is 'optim'.")
 
-    if wcol % 2 == 0 or wcol < 1:
-        raise ValueError("wcol must be odd, and greater then 0.")
+        if mrast_band is None:
+            if len(mrast.bands) != 1:
+                raise ValueError("the 'mrast_band' parameter must be given if the 'mrast' SpatialRaster contains more than 1 band.")
+
+            mrast_band = 1
+        elif type(mrast_band) is str:
+            if band not in mrast.bands:
+                msg = "band " + str(band) + " not in mraster."
+                raise ValueError(msg)
+
+            mrast_band = mrast.get_band_index(mrast_band)
+        else: #type(band) is int
+            if (mrast_band >= len(mrast.bands)):
+                msg = "0-indexed band of " + str(band) + "given, but raster only has " + str(len(mrast.bands)) + " bands."
+                raise ValueError(msg)
+
+        mrast_cpp_raster = mrast.cpp_raster
+    else:
+        mrast_cpp_raster = None
+        mrast_band = -1
+
+    if wrow not in [3, 5, 7]:
+        raise ValueError("wrow must be one of 3, 5, 7.")
+
+    if wcol not in [3, 5, 7]:
+        raise ValueError("wcol must be one of 3, 5, 7.")
 
     if (access):
         if layer_name is None:
@@ -178,6 +200,18 @@ def strat(
         if buff_inner >= buff_outer:
             raise ValueError("buff_outer must be greater than buff_inner")
 
+        access_vector = access.cpp_vector
+    else:
+        access_vector = None
+        layer_name = ""
+        buff_inner = -1
+        buff_outer = -1
+
+    if (existing):
+        existing_vector = existing.cpp_vector
+    else:
+        existing_vector = None
+
     if allocation != "manual":
         weights = []
 
@@ -190,41 +224,33 @@ def strat(
     if strat_rast.band_count != 1:
         raise ValueError("strat_raster must have a single band.")
 
-    if access:
-        [sample_coordinates, samples, num_points] = strat_cpp_access(
-            strat_rast.cpp_raster,
-            band,
-            num_samples,
-            num_strata,
-            wrow,
-            wcol,
-            allocation,
-            method,
-            weights,
-            mindist,
-            access.cpp_vector,
-            layer_name,
-            buff_inner,
-            buff_outer,
-            plot,
-            filename,
-        )
+    if not strat_rast.have_temp_dir:
+        strat_rast.temp_dir = tempfile.mkdtemp()
+        strat_rast.have_temp_dir = True
 
-    else:
-        [sample_coordinates, samples, num_points] = strat_cpp(
-            strat_rast.cpp_raster,
-            band,
-            num_samples,
-            num_strata,
-            wrow,
-            wcol,
-            allocation,
-            method,
-            weights,
-            mindist,
-            plot,
-            filename,
-        )
+    [sample_coordinates, samples, num_points] = strat_cpp(
+        strat_rast.cpp_raster,
+        band,
+        num_samples,
+        num_strata,
+        allocation,
+        weights,
+        mrast_cpp_raster,
+        mrast_band,
+        method,
+        wrow,
+        wcol,
+        mindist,
+        existing_vector,
+        force,
+        access_vector,
+        layer_name,
+        buff_inner,
+        buff_outer,
+        plot,
+        filename,
+        strat_rast.temp_dir
+    )
 
     if num_points < num_samples:
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, num_points))

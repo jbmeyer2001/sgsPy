@@ -679,13 +679,28 @@ rasterBandIO(
 }
 
 /**
- * Helper function to Add a point to a layer.
+ * Helper function to add a point to a layer.
  *
  * @param OGRPoint *p_point
  * @param OGRLayer *p_layer
  */
 inline void
 addPoint(OGRPoint *p_point, OGRLayer *p_layer) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * Helper function to add a point to a layer. This is the version
+ * which will be claled when there is a const OGRPoint *.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ */
+inline void
+addPoint(const OGRPoint *p_point, OGRLayer *p_layer) {
 	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
 	p_feature->SetGeometry(p_point);
 	p_layer->CreateFeature(p_feature);
@@ -713,3 +728,66 @@ point2index(double xCoord, double yCoord, double *IGT, T width) {
 	return index;
 }
 
+/**
+ * This struct contains the intermediate values, as well as functions
+ * for updating the intermediate values of the variance of a raster
+ * band using Welfords method. The mean and standard deviation of
+ * a raster band can be calculated afterwards without requiring the
+ * whole raster to be in memory.
+ *
+ * Double precision is always used for higher precision of potentially small values.
+ *
+ * https://jonisalonen.com/2013/deriving-welfords-method-for-computing-variance/
+ */
+class Variance {
+	private:
+	int64_t k = 0;	//count
+	double M = 0;	//running mean
+	double S = 0;	//sum of squares
+	double oldM = 0;
+	
+	public:
+	inline void
+	update(double x) {
+		k++;
+		oldM = M;
+
+		//update running mean
+		M = M + (x - M) / static_cast<double>(k);
+
+		//update sum of squares
+		S = S + (x - M) * (x - oldM);
+	}
+
+	/**
+	 * getter function for running mean value.
+	 *
+	 * @returns double
+	 */
+	inline double 
+	getMean() {
+		return M;
+	}
+
+	/**
+	 * calculate the standard deviation using the running
+	 * variance calculation.
+	 *
+	 * @returns double
+	 */
+	inline double 
+	getStdev() {
+		double variance = S / static_cast<double>(k);
+		return std::sqrt(variance);
+	}
+
+	/**
+	 * calculate the total number of pixels.
+	 *
+	 * @returns itn64_t
+	 */
+	inline int64_t
+	getCount() {
+		return this->k;
+	}
+};
