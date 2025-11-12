@@ -2,7 +2,7 @@ project(
   'sgs',
   'cpp',
   default_options: [
-    'cpp_std=c++17'
+    'cpp_std=c++20'
   ],
 )
 
@@ -77,9 +77,10 @@ else #linux
   intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib/intel64'
 endif
 utils_inc_dir = include_directories('sgs/utils')
-root_dir = meson.current_source_dir()
+xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
 
 #add to link args if necessary
+win_link_args = []
 if WIN
   win_link_args = [
     '-lws2_32',   #ws2_32.lib from Windows SDK 
@@ -248,6 +249,54 @@ else #linux
   foreach lib : oneDAL_libs
     oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
   endforeach
+
+
+  #oneDAL_libs_TEST = [
+    #static_library('libonedal.a', pip_lib_dir + '/libonedal.a', implicit_include_directories: false),
+    #static_library('libonedal_core.a', pip_lib_dir + '/libonedal_core.a'),
+    #static_library('libonedal_parameters.a', pip_lib_dir + '/libonedal_parameters.a'),
+    #static_library('libonedal_thread.a', pip_lib_dir + '/libonedal_thread.a'),
+    #shared_library('libhwloc.so', pip_lib_dir + '/libhwloc.so'),
+    #shared_library('libhwloc.so.15', pip_lib_dir + '/libhwloc.so.15'),
+    #shared_library('libhwloc.so.15.8.1', pip_lib_dir + '/libhwloc.so.15.8.1'),
+    #shared_library('libtbb.so', pip_lib_dir + '/libtbb.so'),
+    #shared_library('libtbb.so.12', pip_lib_dir + '/libtbb.so.12'),
+    #shared_library('libtbb.so.12.16', pip_lib_dir + '/libtbb.so.12.16'),
+    #shared_library('libtbbbind_2_5.so', pip_lib_dir + '/libtbbbind_2_5.so'),
+    #shared_library('libtbbbind_2_5.so.3', pip_lib_dir + '/libtbbbind_2_5.so.3'),
+    #shared_library('libtbbbind_2_5.so.3.16', pip_lib_dir + '/libtbbbind_2_5.so.3.16'),
+    #shared_library('libtbbmalloc.so', pip_lib_dir + '/libtbbmalloc.so'),
+    #shared_library('libtbbmalloc.so.2', pip_lib_dir + '/libtbbmalloc.so.2'),
+    #shared_library('libtbbmalloc.so.2.16', pip_lib_dir + '/libtbbmalloc.so.2.16'),
+    #shared_library('libtbbmalloc_proxy.so', pip_lib_dir + '/libtbbmalloc_proxy.so'),
+    #shared_library('libtbbmalloc_proxy.so.2', pip_lib_dir + '/libtbbmalloc_proxy.so.2'),
+    #shared_library('libtbbmalloc_proxy.so.2.16', pip_lib_dir + '/libtbbmalloc_proxy.so.2.16'),
+    #shared_library('liblibtcm.so', pip_lib_dir + '/libtcm.so'),
+    #shared_library('libtcm.so.1', pip_lib_dir + '/libtcm.so.1'),
+    #shared_library('libtcm.so.1.4.0', pip_lib_dir + '/libtcm.so.1.4.0')
+    #]
+
+  oneDAL_libs = [
+    'onedal',
+    'onedal_core',
+    'onedal_parameters',
+    'onedal_thread'
+  ]
+
+  #message('py install dir:')
+  #message(py.get_install_dir())
+  
+  foreach lib : oneDAL_libs
+    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
+  endforeach
+  
+  #install_data(pip_lib_dir + '/libtbb.so.12', install_dir: py.get_install_dir())
+  
+  #oneDAL_dep = declare_dependency(
+  #  include_directories: pip_inc_dir,
+  #  link_with: oneDAL_libs
+  #)
+
 endif
 
 pybind11_dep = dependency('pybind11')

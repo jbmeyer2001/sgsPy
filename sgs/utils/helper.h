@@ -12,10 +12,21 @@
 #include <iostream>
 #include <filesystem>
 #include <mutex>
+
 #include <gdal_priv.h>
+#include <ogrsf_frmts.h>
+#include <ogr_core.h>
 
 #define MAXINT8		127
 #define MAXINT16	32767
+
+/**
+ * This struct represents an index in a raster.
+ */
+struct Index {
+	int x = -1;
+	int y = -1;
+};
 
 /**
  * The RasterBandMetaData struct stores information
@@ -666,3 +677,117 @@ rasterBandIO(
 			std::runtime_error("unable to write block to raster.");
 	}
 }
+
+/**
+ * Helper function to add a point to a layer.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ */
+inline void
+addPoint(OGRPoint *p_point, OGRLayer *p_layer) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * Helper function to add a point to a layer. This is the version
+ * which will be claled when there is a const OGRPoint *.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ */
+inline void
+addPoint(const OGRPoint *p_point, OGRLayer *p_layer) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * Helper function for calculating the index of a point in a raster.
+ * The inverse geotransform is used to calculate the x index and y index.
+ * The width is used to calculate a single index assuming row-major.
+ *
+ * @param double xCoord
+ * @param double yCoord
+ * @param double *IGT
+ * @param T width
+ * @returns int64_t index
+ */
+template <typename T>
+inline T
+point2index(double xCoord, double yCoord, double *IGT, T width) {
+	T x = static_cast<T>(IGT[0] + xCoord * IGT[1] + yCoord * IGT[2]);
+	T y = static_cast<T>(IGT[3] + xCoord * IGT[4] + yCoord * IGT[5]);
+
+	T index = y * width + x;
+	return index;
+}
+
+/**
+ * This struct contains the intermediate values, as well as functions
+ * for updating the intermediate values of the variance of a raster
+ * band using Welfords method. The mean and standard deviation of
+ * a raster band can be calculated afterwards without requiring the
+ * whole raster to be in memory.
+ *
+ * Double precision is always used for higher precision of potentially small values.
+ *
+ * https://jonisalonen.com/2013/deriving-welfords-method-for-computing-variance/
+ */
+class Variance {
+	private:
+	int64_t k = 0;	//count
+	double M = 0;	//running mean
+	double S = 0;	//sum of squares
+	double oldM = 0;
+	
+	public:
+	inline void
+	update(double x) {
+		k++;
+		oldM = M;
+
+		//update running mean
+		M = M + (x - M) / static_cast<double>(k);
+
+		//update sum of squares
+		S = S + (x - M) * (x - oldM);
+	}
+
+	/**
+	 * getter function for running mean value.
+	 *
+	 * @returns double
+	 */
+	inline double 
+	getMean() {
+		return M;
+	}
+
+	/**
+	 * calculate the standard deviation using the running
+	 * variance calculation.
+	 *
+	 * @returns double
+	 */
+	inline double 
+	getStdev() {
+		double variance = S / static_cast<double>(k);
+		return std::sqrt(variance);
+	}
+
+	/**
+	 * calculate the total number of pixels.
+	 *
+	 * @returns itn64_t
+	 */
+	inline int64_t
+	getCount() {
+		return this->k;
+	}
+};

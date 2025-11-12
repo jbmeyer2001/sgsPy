@@ -11,280 +11,410 @@
 #include <iostream>
 #include <random>
 
-//sgs/utils cpp code
+#include <xoshiro.h>
+
 #include "access.h"
+#include "existing.h"
+#include "helper.h"
 #include "raster.h"
 #include "vector.h"
 
 /**
+ * This is a helper function for processing a block of the raster. For each
+ * pixel in the block: 
+ * The value is checked, and not added if it is a nanvalue. 
+ * The pixel is checked to ensure it is within an accessible area.
+ * The pixel is checked to ensure it hasn't already been added as a pre-existing sample point.
+ * The next rng value is checked to see whether it is one of the chosen pixels to be added.
+ *
+ * @param RasterBandMetaData& band
+ * @param Access& access
+ * @param Existing& existing
+ * @param std::vector<Index>& indices
+ * @param std::vector<Index>& randVals,
+ * @param int& randValIndex
+ * @param int xBlock
+ * @param int yBlock
+ * @param int xValid
+ * @param int yValid 
+ */
+template <typename T>
+inline void
+processBlock(
+	RasterBandMetaData& band,
+	Access& access,
+	Existing& existing,
+	std::vector<Index>& indices,
+	std::vector<bool>& randVals,
+	int& randValIndex,
+	int xBlock,
+	int yBlock,
+	int xValid,
+	int yValid)
+{
+	T nan = static_cast<T>(band.nan);
+	int8_t *p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
+
+	for (int y = 0; y < yValid; y++) {
+		size_t blockIndex = static_cast<size_t>(y * band.xBlockSize);
+		for (int x = 0; x < xValid; x++) {
+			//GET VAL
+			T val = getPixelValueDependingOnType<T>(band.type, band.p_buffer, blockIndex);
+
+			//CHECK NAN
+			bool isNan = val == nan || std::isnan(val);
+			if (isNan) {
+				blockIndex++;
+				continue;
+			}
+
+			//CHECK ACCESS
+			if (access.used && p_access[blockIndex] == 1) {
+				blockIndex++;
+				continue;
+			}
+
+			Index index = {x + xBlock * band.xBlockSize, y + yBlock * band.yBlockSize};
+			
+			//CHECK EXISTING
+			if (existing.used && existing.containsIndex(index.x, index.y)) {
+				blockIndex++;
+				continue;
+			}
+
+			//CHECK RNG
+			if (!randVals[randValIndex]) {
+				randValIndex++;
+				blockIndex++;
+				continue;
+			}
+			randValIndex++;
+
+			//ADD TO INDICES
+			indices.push_back(index);
+
+			//INCREMENT WITHIN-BLOCK INDEX
+			blockIndex++;
+		}
+	}
+}
+
+/**
+ * This is a helper function used for determine the probability multiplier for a given raster.
+ * The probability of any given function being added is the number of samples divided by the
+ * number of total pixels. 
+ *
+ * Rather than storing the indexes of all possible (accessible, not nan) pixels, which is potentially
+ * encredibly memory-inefficient for large rasters, it is much better to only store the indexes
+ * of roughly the number of total pixels we need to sample. A random number generator is used 
+ * for each pixel which is a candidate for being added as a sample. The sample is retained if 
+ * the random number generator creates a series of 1's for the first n bits. This value n determines 
+ * the probability a sample is added. For example, if n were three then 1/8 or 1/(2^n) pixels would
+ * be sampled.
+ *
+ * It can be seen that setting up an n value which is close to the probability samples/pixels but
+ * an over estimation would result in an adequte number of indexes stored WITHOUT storing a
+ * rediculous number of values.
+ *
+ * The way this number n is enforced, is by determining a multiplier that takes the form of the first
+ * n bits are 1 and the remaining are 0. For example:
+ * 1 	-> 00000001 	-> 50%
+ * 3 	-> 00000011 	-> 25%
+ * 7 	-> 00000111 	-> 12.5%
+ * 63 	-> 00111111	-> 1.56%
+ *
+ * The AND of this multiplier is taken with the rng value, and the result of that and is compared against
+ * the multiplier. The 0's from the and remove the unimportant bits, and the 1's enforce the first n
+ * values at the beginning.
+ *
+ * The multiplier is determined by determining the numerator and denominator of this probability (samples/pixels),
+ * with extra multipliers for an unknonwn amount of nan values, and multiplying by extra if the mindist parameter
+ * is passed as it may cause samples to be thrown out. Further, if an access vector is given and all samples 
+ * must fall within the accessible area, the probability is increased by the ratio of the total area in the raster
+ * to the accessible area. The probability would then simply be numerator/denominator, but we want a multiplier
+ * with a specific number of bits not a small floating point value. The log base 2 is used to transform this division
+ * int a subtraction problem, resulting in the number of bits. The value 1 is then left shifted by the number of bits,
+ * and subtracted by 1 to give the multiplier.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param int numSamples
+ * @param bool useMindist
+ * @param double accessibleArea
+ */
+inline uint64_t
+getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMindist, double accessibleArea) {
+	double height = static_cast<double>(p_raster->getHeight());
+	double width = static_cast<double>(p_raster->getWidth());
+	double samples = static_cast<double>(numSamples);
+
+	double numer = samples * 4 * (useMindist ? 3 : 1);
+	double denom = height * width;
+
+	if (accessibleArea != -1) {
+		double pixelHeight = static_cast<double>(p_raster->getPixelHeight());
+		double pixelWidth = static_cast<double>(p_raster->getPixelWidth());
+		double totalArea = width * pixelWidth * height * pixelHeight;
+
+		numer *= (totalArea / accessibleArea);
+	}
+
+	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer)));
+	return (bits <= 0) ? 0 : (1 << bits) - 1;
+}
+
+/**
  * This function uses random sampling to determine the location
- * of sample plots given a raster image which may contain nodata
- * pixels.
+ * of sample plots given a raster image.
  *
- * A single raster band is read from the raster, and each pixel
- * is checked to ensure a sample is not located on a nodata
- * pixel, and the pixel is accessable if access information is provided. 
- * The indeces of the data pixels are saved in a vector. 
- * When all pixels have been read, the indexes are randomly 
- * drawn from the data pixels, converted to geographic coordinates 
- * using the geotransform, and returned as a new GDALVectorWrapper object.
+ * First, metadata is acquired on the first raster band, which is 
+ * to be read to check and ensure samples don't occur over nodata pixels.
  *
- * The function is a template function which contains the data
- * type of the raster (T), as well as the type of the 
- * index matrix (U). The use of U as a template argument is
- * to ensure the index matrix data type can represent every
- * index in the raster without overflow, and do it with
- * the most efficient use of memory.
+ * Next, and output vector dataset is created as an in-memory dataset.
+ * If the user specifies a filename, this in-memory dataset will be 
+ * written to disk in a different format after all points have been added.
  *
- * @param GDALRasterWrapper * a pointer to the raster image we're sampling
- * @param GDALRasterVector * a pointer to an access vector image if it exists
- * @param U <unsigned short, unsigned, unsigned long, unsigned long long> the number of samples
- * @returns std::pair<std::vector<std::vector<double>>, GDALVectorWrapper *>
- * 	coordinate and dataset representation of samples
+ * An Access struct is created, which creates a raster dataset containing
+ * a rasterized version of access buffers. This raster will be 1 over
+ * accessible areas. In the case where there is no access vector given,
+ * the structs 'used' member will be false and no processing or rasterization
+ * will be done.
+ *
+ * An Existing struct is created, which retains information on already existing
+ * sample points passed in the form of a vector dataset. The points are iterated
+ * through and added to the output dataset. The points are also added to a set,
+ * and during iteration the indexes of every pixel will be checked against this set
+ * to ensure there are no duplicate pixels. In the case whre there is no existing
+ * vector given, the structs 'used' member will be false and no processing
+ * will be done.
+ *
+ * Next, a rng() function is created usign the xoshiro library, the specific
+ * randm number generator is the xoshrio256++
+ * https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
+ *
+ * The impetus behind usign the rng() function to determine which pixels
+ * should be added DURING iteration, rather than afterwards, is it removes the
+ * necessity of storing every available pixel, which quickly becomes extrordinarily
+ * inefficient for large rasters. Rather, for pixels which are accessible, not nan,
+ * and not already existing, there is a pre-determined percentage chance to be stored
+ * which uses this random number generator. An over-estimation for the percentage
+ * chance is made, because it is better to have too many than not enough possible options
+ * to sample from. This over-estimation might result in the storage of 2x-3x extra pixels
+ * rather than the many orders of magnitude extra storage of adding all pixels. The
+ * calculation for this percentage is done and explained in detail in the
+ * getProbabilityMultiplier() function.
+ *
+ * The raster is then processed in blocks, each block is read into memory,
+ * and potentially the block of the access raster is read into memory as well.
+ * The processBlock() funciton is called depending on the data type of the 
+ * raster, to add the available / chosen pixel indices.
+ *
+ * Once the entire raster has been iterated through, there may be extra
+ * indices in the indicies vector. Because simply sampling the first
+ * few we need would NOT be random, the indices are first shuffled.
+ * After being shuffled, the indexes are added to the output dataset
+ * as samples if they don't occur within mindist if an already existing pixel.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param size_t numSamples
+ * @param double mindist
+ * @param GDALVectorWrapper *p_existing
+ * @param GDALVectorWrapper *p_access
+ * @param std::string layerName
+ * @param double buffInner
+ * @param double buffOuter
+ * @param bool plot
+ * @param std::string tempFolder
+ * @param std::string filename
  */
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t> 
 srs(
 	GDALRasterWrapper *p_raster,
 	size_t numSamples,
 	double mindist,
+	GDALVectorWrapper *p_existing,
 	GDALVectorWrapper *p_access,
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
 	bool plot,
+	std::string tempFolder,
 	std::string filename)
 {
-	//Step 1: get dataset and geotransform
-	GDALDataset *p_dataset = p_raster->getDataset();
-	double *GT = p_raster->getGeotransform();
-
-	//step 2: allocate index array which maps the adjusted index to the orignial index
-	std::vector<size_t> indexes;
-	size_t noDataPixelCount = 0;
-	
-	//step 3: get first raster band
-	GDALRasterBand *p_band = p_raster->getRasterBand(0);
-	double noDataValue = p_band->GetNoDataValue();
-	GDALDataType type = p_raster->getRasterBandType(0);
-	void *p_data = VSIMalloc3(
-		p_raster->getHeight(),
-		p_raster->getWidth(),
-		p_raster->getRasterBandTypeSize(0) //per pixel size of band 1
-	);
-	CPLErr err = p_band->RasterIO(
-		GF_Read,		//GDALRWFlat eRWFlag
-		0,			//int nXOff
-		0,			//int nYOff
-		p_raster->getWidth(),	//int nXSize
-		p_raster->getHeight(),	//int nYSize
-		p_data,			//void *pData
-		p_raster->getWidth(),	//int nBufXSize
-		p_raster->getHeight(),	//int nBufYSize
-		type,			//GDALDataType eBufType
-		0,			//int nPixelSpace
-		0			//int nLineSpace
-	);
-	if (err) {
-		throw std::runtime_error("error reading raster band from dataset.");
-	}
-
-	//step 4: get access mask if access is defined
-	GDALDataset *p_accessMaskDataset = nullptr;
-	void *p_mask = nullptr;
-	if (p_access) {
-		std::pair<GDALDataset *, void *> maskInfo = getAccessMask(p_access, p_raster, layerName, buffInner, buffOuter);
- 		p_accessMaskDataset = maskInfo.first; //GDALDataset to free after using band
-		p_mask = maskInfo.second; //pointer to mask
-	}
-
-	//Step 5: iterate through raster band
-	for (size_t i = 0; i < (size_t)p_raster->getWidth() * (size_t)p_raster->getHeight(); i++) {
-		if (p_access && ((uint8_t *)p_mask)[i] == 0) {
-			//step 5.1: if the current pixel is not accessable, mark it as nodata and don't read it
-			noDataPixelCount++;
-			continue;
-		}
-
-		bool isNan = false;
-		switch(type) {
-			case GDT_Int8: {
-				int8_t val = ((int8_t *)p_data)[i];
-				isNan = std::isnan(val) || (double)val == noDataValue;
-				break;
-			}
-			case GDT_UInt16: {
-				uint16_t val = ((uint16_t *)p_data)[i];
-				isNan = std::isnan(val) || (double)val == noDataValue;
-				break;
-			}
-			case GDT_Int16: {
-				int16_t val = ((int16_t *)p_data)[i];
-				isNan = std::isnan(val) || (double)val == noDataValue;
-				break;
-			}
-			case GDT_UInt32: {
-				uint32_t val = ((uint32_t *)p_data)[i];
-				isNan = std::isnan(val) || (double)val == noDataValue;
-				break;
-			}
-			case GDT_Int32: {
-				int32_t val = ((int32_t *)p_data)[i];
-				isNan = std::isnan(val) || (double)val == noDataValue;
-				break;
-			}
-			case GDT_Float32: {
-				float val = ((float *)p_data)[i];
-				isNan = std::isnan(val) || (double)val == noDataValue;
-				break;
-			}
-			case GDT_Float64: {
-				double val = ((double *)p_data)[i];
-				isNan = std::isnan(val) || val == noDataValue;
-				break;
-			}
-			default:
-				throw std::runtime_error("raster pixel data type not supported.");
-		}
-
-		if (isNan) {
-			//Step 5.2: increment noDataPixelCount if encountered noData
-			noDataPixelCount++;
-		}
-		else {
-			//Step 5.3: add data index to indexArray
-			indexes.push_back(i);
-		}
-	}
-	if (p_access) {
-		free(p_accessMaskDataset);
-	}
-
-	size_t numDataPixels = (size_t)p_raster->getWidth() * (size_t)p_raster->getHeight() - noDataPixelCount;
-
-	//Step 6: generate random number generator using mt19937	
-	std::mt19937::result_type seed = time(nullptr);
-	auto rng = std::bind(
-		std::uniform_int_distribution<size_t>(0, numDataPixels - 1),
-		std::mt19937(seed)
-	);
-
-	//Step 7: generate numSamples random numbers of data pixels, and backup sample pixels if mindist > 0
-	//use std::set because we want to iterate in-order because it will be faster
-	std::unordered_set<size_t> samplePixels = {};
-	std::unordered_set<size_t> dontSamplePixels = {};	
-	size_t samplePixelsSize = std::min((mindist == 0.0) ? numSamples : numSamples * 3, (size_t)numDataPixels);
-
-	if (samplePixelsSize > numDataPixels / 2) {
-		while (dontSamplePixels.size() < numDataPixels - samplePixelsSize) {
-			dontSamplePixels.insert(rng());
-		}
-		std::shuffle(indexes.begin(), indexes.end(), std::mt19937(seed));
-	}
-	else {
-		while (samplePixels.size() < samplePixelsSize) {
-			samplePixels.insert(rng());
-		}
-	}
-	
-	//step 8: create new in-memory dataset to store sample points
-	//TODO error check this?
 	GDALAllRegister();
-	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
-	OGRLayer *p_layer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);
 
-	//Step 9: generate coordinate points for each sample index, and only add if they're outside of mindist
+	int width = p_raster->getWidth();
+	int height = p_raster->getHeight();
+	double *GT = p_raster->getGeotransform();
+	bool useMindist = mindist != 0;
+	std::mutex mutex;
+
 	std::vector<double> xCoords, yCoords;
-	size_t pointsAdded = 0;
+	std::vector<size_t> indexes;
 
-	if (dontSamplePixels.size() == 0) {
-		for( auto samplePixel : samplePixels ) {
-			size_t index = indexes[samplePixel];	
-			double yIndex = index / p_raster->getWidth();
-			double xIndex = index - (yIndex * p_raster->getWidth());
-			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
-			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
-			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-		
-			if (mindist != 0.0 && pointsAdded != 0) {
-				bool add = true;
-				for (const auto &p_feature : *p_layer) {
-					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
-					if (newPoint.Distance(p_point) < mindist) {
-						add = false;
-						break;
-					}
-				}
-				if (!add) {
-					continue;
-				}
-			}
-			
-			OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
-			p_feature->SetGeometry(&newPoint);
-			p_layer->CreateFeature(p_feature);
-			OGRFeature::DestroyFeature(p_feature);
+	//step 3: get first raster band
+	RasterBandMetaData band;
+	band.p_band = p_raster->getRasterBand(0);
+	band.type = p_raster->getRasterBandType(0);
+	band.size = p_raster->getRasterBandTypeSize(0);
+	band.nan = band.p_band->GetNoDataValue();
+	band.p_mutex = &mutex;
+	band.p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
+	band.p_buffer = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
 
-			pointsAdded++;
-			
-			if (plot) {
-				xCoords.push_back(xCoord);
-				yCoords.push_back(yCoord);
-			}
+	//create output dataset before doing anything which will take a long time in case of failure.
+	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
+	if (!p_driver) {
+		throw std::runtime_error("unable to create output sample dataset driver.");
+	}
+	GDALDataset *p_samples = p_driver->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	if (!p_samples) {
+		throw std::runtime_error("unable to create output dataset with driver.");
+	}
+	OGRLayer *p_layer = p_samples->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+	if (!p_layer) {
+		throw std::runtime_error("unable to create output dataset layer.");
+	}
+
+	//generate access structure
+	Access access(
+		p_access,
+		p_raster,
+		layerName,
+		buffInner,
+		buffOuter,
+		true,
+		tempFolder,
+		band.xBlockSize,
+		band.yBlockSize
+	);
+
+	if (access.used) {
+		access.band.p_buffer = VSIMalloc3(band.xBlockSize, band.yBlockSize, access.band.size);
+	}
+
+	//generate existing structure
+	Existing existing(
+		p_existing,
+		GT,
+		p_raster->getWidth(),
+		p_layer,
+		plot,
+		xCoords,
+		yCoords
+	);
+
+	int xBlocks = (width + band.xBlockSize - 1) / band.xBlockSize;
+	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
+
+	std::vector<bool> randVals(band.xBlockSize * band.yBlockSize);
+	int randValIndex = band.xBlockSize * band.yBlockSize;
+
+	//fast random number generator using xoshiro256++
+	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
+	xso::xoshiro_4x64_plus rng;
 	
-			if (pointsAdded == numSamples) {
-				break;
+	//the multiplier which will be multiplied by the 53 most significant bits of the output of the
+	//random number generator to see whether a pixel should be added or not. The multiplier is
+	//a uint64_t number where the least significant n bits are 1 and the remaining are 0. The pixel
+	//is added when the least significant n bits (of the bit shifted 53 bits) within the rng match
+	//those of the multiplier. The probability a pixel is add is then (1/2^n). Using this method,
+	//knowing the amount of pixels, estimating the number of nan pixels, taking into account mindist
+	//and accessible area, we can estimate a percentage chance for each pixel and set up a multiplier
+	//to make that percentage happen. Doing this enables retaining only a small portion of pixel data
+	//and reducing memory footprint significantly, otherwise the index of every pixel
+	//would have to be stored, which would not be feasible for large rasters.
+	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area);
+
+	std::vector<Index> indices;
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+			int xValid, yValid;
+
+			//READ BLOCK
+			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+			rasterBandIO(band, band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
+															  //read = true
+			//READ ACCESS BLOCK IF NECESSARY
+			if (access.used) {
+				rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false); 
+			}
+
+			//CALCULATE RAND VALUES
+			for (int i = 0; i < randValIndex; i++) {
+				randVals[i] = ((rng() >> 11) & multiplier) == multiplier;
+			}
+			randValIndex = 0;
+
+			//PROCESS BLOCK
+			switch (band.type) {
+				case GDT_Int8:
+					processBlock<int8_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_UInt16:
+					processBlock<uint16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_Int16:
+					processBlock<int16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_UInt32:
+					processBlock<uint32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_Int32:
+					processBlock<int32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_Float32:
+					processBlock<float>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				case GDT_Float64:
+					processBlock<double>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					break;
+				default:
+					throw std::runtime_error("raster pixel data type is not supported.");
 			}
 		}
 	}
-	else {
-		for (size_t i = 0; i < indexes.size(); i++) {
-			if (dontSamplePixels.find(i) != dontSamplePixels.end()) {
+
+	std::shuffle(indices.begin(), indices.end(), rng);
+
+	size_t samplesAdded = existing.used ? existing.count() : 0;
+	size_t i = 0;
+	while (samplesAdded < numSamples && i < indices.size()) {
+		Index index = indices[i];
+		i++;
+
+		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
+		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
+		OGRPoint point = OGRPoint(x, y);
+
+		if (mindist != 0.0 && p_layer->GetFeatureCount() != 0) {
+			bool add = true;
+			for (const auto &p_feature : *p_layer) {
+				OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
+				if (point.Distance(p_point) < mindist) {
+					add = false;
+					break;
+				}
+			}
+
+			if (!add) {
 				continue;
-			}	
-
-			size_t index = indexes[i];
-			double yIndex = index / p_raster->getWidth();
-			double xIndex = index - (yIndex * p_raster->getWidth());
-			double yCoord = GT[3] + xIndex * GT[4] + yIndex * GT[5];
-			double xCoord = GT[0] + xIndex * GT[1] + yIndex * GT[2];
-			OGRPoint newPoint = OGRPoint(xCoord, yCoord);
-		
-			if (mindist != 0.0 && pointsAdded != 0) {
-				bool add = true;
-				for (const auto &p_feature : *p_layer) {
-					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
-					if (newPoint.Distance(p_point) < mindist) {
-						add = false;
-						break;
-					}
-				}
-				if (!add) {
-					continue;
-				}
 			}
-				
-			OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
-			p_feature->SetGeometry(&newPoint);
-			p_layer->CreateFeature(p_feature);
-			OGRFeature::DestroyFeature(p_feature);
-			
-			pointsAdded++;
-
-			if (plot) {
-				xCoords.push_back(xCoord);
-				yCoords.push_back(yCoord);
-			}
-
-			if (pointsAdded == numSamples) {
-				break;
-			}		
 		}
+
+		addPoint(&point, p_layer);
+		samplesAdded++;
+
+		if (plot) {
+			xCoords.push_back(x);
+			yCoords.push_back(y);
+		}	
 	}
 
 	//step 10: create GDALVectorWrapper with dataset containing points
-	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
+	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_samples);
 
-	//Step 11: write vector of points if given filename
+	//TODO rather than first making an in-memory dataset then writing to a file afterwards,
+	//just make the correct type of dataset from the get go
 	if (filename != "") {
 		try {
 			p_sampleVectorWrapper->write(filename);
@@ -294,35 +424,21 @@ srs(
 		}
 	}
 
-	return {{xCoords, yCoords}, p_sampleVectorWrapper, pointsAdded};
-}
-
-/*
- * srs function for when access has not been specified. 
- * Calls srsTypeSpecifier() which calls srs().
- */
-std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t> 
-srs_cpp(
-	GDALRasterWrapper *p_raster,
-	size_t numSamples,
-	double mindist,
-	bool plot,
-	std::string filename) 
-{
-	return srs(
-		p_raster, 
-		numSamples,
-		mindist, 
-		nullptr, 
-		"",
-		0, 
-		0,
-	       	plot,	
-		filename
-	);
+	return {{xCoords, yCoords}, p_sampleVectorWrapper, samplesAdded};
 }
 
 PYBIND11_MODULE(srs, m) {
-	m.def("srs_cpp", &srs_cpp);
-	m.def("srs_cpp_access", &srs);
+	m.def("srs_cpp", &srs, 
+		pybind11::arg("p_raster"),
+		pybind11::arg("numSamples"),
+		pybind11::arg("mindist"),
+		pybind11::arg("p_existing").none(true),
+		pybind11::arg("p_access").none(true),
+		pybind11::arg("layerName"),
+		pybind11::arg("buffInner"),
+		pybind11::arg("buffOuter"),
+		pybind11::arg("plot"),
+		pybind11::arg("tempFolder"),
+		pybind11::arg("filename"));
+
 }

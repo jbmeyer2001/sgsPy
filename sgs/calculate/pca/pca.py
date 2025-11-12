@@ -109,4 +109,3 @@ def pca(
     pcomp_rast.temp_dir = temp_dir
 
     return pcomp_rast
-

@@ -3,9 +3,6 @@ if WIN
   py.extension_module(
     'pca', 'pca.cpp',
     #input_files,
-    link_with: [
-      raster_lib,
-    ],
     link_args: win_link_args,
     dependencies: [lib_deps, tbb_lib_deps, oneDAL_lib_deps, pybind11_dep],
     include_directories: [
@@ -26,9 +23,6 @@ else
       utils_inc_dir,
       pip_inc_dir,
     ],
-    objects: [
-      raster_obj,
-    ],
-   install: true,
+    install: true,
   )
 endif

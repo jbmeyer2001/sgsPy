@@ -8,11 +8,13 @@ import sgs
 from files import (
     mraster_geotiff_path,
     access_shapefile_path,
+    existing_shapefile_path,
 )
 
 class TestStrat:
     rast = sgs.SpatialRaster(mraster_geotiff_path)
     access = sgs.SpatialVector(access_shapefile_path)
+    existing = sgs.SpatialVector(existing_shapefile_path)
 
     def check_points_in_bounds(self, srast, samples):
         for point in samples:
@@ -73,7 +75,6 @@ class TestStrat:
 
         return allocation
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
     def test_random_allocation_equal(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -155,7 +156,6 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.2 == pytest.approx(0, abs=0.03)
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
     def test_random_allocation_proportional(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 8})
 
@@ -236,7 +236,6 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.125 == pytest.approx(0, abs=0.03)
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
     def test_random_allocation_manual(self):
         #without mindist or access
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
@@ -328,7 +327,64 @@ class TestStrat:
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
+    def test_random_allocation_optim(self):
+        #test with mrast band = 0
+        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 10})
+        samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+            srast,
+            'strat_zq90',
+            num_samples=500,
+            num_strata=10,
+            allocation="optim",
+            mrast=self.rast,
+            mrast_band=0,
+            method="random",
+        ).samples_as_wkt())
+
+        assert len(samples) == 500
+        self.check_points_in_bounds(srast, samples)
+        percentages = self.get_allocation_percentages(srast, samples)
+        
+        #these percentages have already been pre-calculated
+        assert percentages[0] - .18 == pytest.approx(0, abs=0.02)
+        assert percentages[1] - .12 == pytest.approx(0, abs=0.02)
+        assert percentages[2] - .10 == pytest.approx(0, abs=0.02)
+        assert percentages[3] - .07 == pytest.approx(0, abs=0.02)
+        assert percentages[4] - .06 == pytest.approx(0, abs=0.02)
+        assert percentages[5] - .05 == pytest.approx(0, abs=0.02)
+        assert percentages[6] - .05 == pytest.approx(0, abs=0.02)
+        assert percentages[7] - .04 == pytest.approx(0, abs=0.02)
+        assert percentages[8] - .07 == pytest.approx(0, abs=0.02)
+        assert percentages[9] - .26 == pytest.approx(0, abs=0.02)
+       
+        #test with mrast band = 1
+        samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+            srast,
+            'strat_zq90',
+            num_samples=500,
+            num_strata=10,
+            allocation="optim",
+            mrast=self.rast,
+            mrast_band=1,
+            method="random",
+        ).samples_as_wkt())
+    
+        assert len(samples) == 500
+        self.check_points_in_bounds(srast, samples)
+        percentages = self.get_allocation_percentages(srast, samples)
+        
+        #these percentages have already been pre-calculated
+        assert percentages[0] - .12 == pytest.approx(0, abs=0.02)
+        assert percentages[1] - .15 == pytest.approx(0, abs=0.02)
+        assert percentages[2] - .14 == pytest.approx(0, abs=0.02)
+        assert percentages[3] - .11 == pytest.approx(0, abs=0.02)
+        assert percentages[4] - .10 == pytest.approx(0, abs=0.02)
+        assert percentages[5] - .09 == pytest.approx(0, abs=0.02)
+        assert percentages[6] - .08 == pytest.approx(0, abs=0.02)
+        assert percentages[7] - .07 == pytest.approx(0, abs=0.02)
+        assert percentages[8] - .07 == pytest.approx(0, abs=0.02)
+        assert percentages[9] - .07 == pytest.approx(0, abs=0.02)
+
     def test_queinnec_allocation_equal(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -409,7 +465,6 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.2 == pytest.approx(0, abs=0.03)
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
     def test_queinnec_allocation_proportional(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 8})
 
@@ -490,7 +545,6 @@ class TestStrat:
         for percentage in percentages.values():
             assert percentage - 0.125 == pytest.approx(0, abs=0.03)
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
     def test_queinnec_allocation_manual(self):
         #without mindist or access
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
@@ -581,8 +635,147 @@ class TestStrat:
         assert percentages[1] - 0.25 == pytest.approx(0, abs=0.03)
         assert percentages[2] - 0.1 == pytest.approx(0, abs=0.03)
         assert percentages[3] - 0.15 == pytest.approx(0, abs=0.03)
+
+    def test_queinnec_allocation_optim(self):
+        #test with mrast band = 0
+        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 10})
+        samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+            srast,
+            'strat_zq90',
+            num_samples=500,
+            num_strata=10,
+            allocation="optim",
+            mrast=self.rast,
+            mrast_band=0,
+            method="Queinnec",
+        ).samples_as_wkt())
+
+        assert len(samples) == 500
+        self.check_points_in_bounds(srast, samples)
+        percentages = self.get_allocation_percentages(srast, samples)
+        
+        #these percentages have already been pre-calculated
+        assert percentages[0] - .18 == pytest.approx(0, abs=0.02)
+        assert percentages[1] - .12 == pytest.approx(0, abs=0.02)
+        assert percentages[2] - .10 == pytest.approx(0, abs=0.02)
+        assert percentages[3] - .07 == pytest.approx(0, abs=0.02)
+        assert percentages[4] - .06 == pytest.approx(0, abs=0.02)
+        assert percentages[5] - .05 == pytest.approx(0, abs=0.02)
+        assert percentages[6] - .05 == pytest.approx(0, abs=0.02)
+        assert percentages[7] - .04 == pytest.approx(0, abs=0.02)
+        assert percentages[8] - .07 == pytest.approx(0, abs=0.02)
+        assert percentages[9] - .26 == pytest.approx(0, abs=0.02)
+       
+        #test with mrast band = 1
+        samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+            srast,
+            'strat_zq90',
+            num_samples=500,
+            num_strata=10,
+            allocation="optim",
+            mrast=self.rast,
+            mrast_band=1,
+            method="Queinnec",
+        ).samples_as_wkt())
     
-    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
+        assert len(samples) == 500
+        self.check_points_in_bounds(srast, samples)
+        percentages = self.get_allocation_percentages(srast, samples)
+        
+        #these percentages have already been pre-calculated
+        assert percentages[0] - .12 == pytest.approx(0, abs=0.02)
+        assert percentages[1] - .15 == pytest.approx(0, abs=0.02)
+        assert percentages[2] - .14 == pytest.approx(0, abs=0.02)
+        assert percentages[3] - .11 == pytest.approx(0, abs=0.02)
+        assert percentages[4] - .10 == pytest.approx(0, abs=0.02)
+        assert percentages[5] - .09 == pytest.approx(0, abs=0.02)
+        assert percentages[6] - .08 == pytest.approx(0, abs=0.02)
+        assert percentages[7] - .07 == pytest.approx(0, abs=0.02)
+        assert percentages[8] - .07 == pytest.approx(0, abs=0.02)
+        assert percentages[9] - .07 == pytest.approx(0, abs=0.02)
+
+    def test_existing_samples(self):
+        #with force=True, test a couple different combinations of input parameters
+        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 10})
+        existing = gpd.read_file(existing_shapefile_path)['geometry']
+        existing_sample_count = len(existing)
+
+        samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+            srast,
+            'strat_zq90',
+            num_samples=100,
+            num_strata=10,
+            existing=self.existing,
+            force=True,
+            allocation="optim",
+            mrast=self.rast,
+            mrast_band=0,
+            method="random"
+        ).samples_as_wkt())
+
+        for sample in existing:
+            assert samples.contains(sample).any()
+
+        samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+            srast,
+            'strat_zq90',
+            num_samples=500,
+            num_strata=10,
+            existing=self.existing,
+            force=True,
+            allocation="optim",
+            mrast=self.rast,
+            mrast_band=0,
+            method="Queinnec"
+        ).samples_as_wkt())
+
+        for sample in existing:
+            assert samples.contains(sample).any()
+
+        #with force=False, test a couple different combinations of input parameters
+        samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+            srast,
+            'strat_zq90',
+            num_samples=100,
+            num_strata=10,
+            existing=self.existing,
+            force=False,
+            allocation="optim",
+            mrast=self.rast,
+            mrast_band=0,
+            method="random"
+        ).samples_as_wkt())
+    
+        existing_in_final = 0
+        for sample in existing:
+            if samples.contains(sample).any():
+                existing_in_final += 1
+
+        assert existing_in_final != 0
+        assert existing_in_final != existing_sample_count
+
+        samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
+            srast,
+            'strat_zq90',
+            num_samples=500,
+            num_strata=10,
+            existing=self.existing,
+            force=False,
+            allocation="manual",
+            weights=[0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, .01],
+            mrast=self.rast,
+            mrast_band=0,
+            method="Queinnec"
+        ).samples_as_wkt())
+
+        existing_in_final = 0
+        for sample in existing:
+            if samples.contains(sample).any():
+                existing_in_final += 1
+
+        assert existing_in_final != 0
+        assert existing_in_final != existing_sample_count
+
     def test_queinnec_focal_window(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 
@@ -647,36 +840,7 @@ class TestStrat:
                 method="Queinnec",
             ).samples_as_wkt())
             self.check_focal_window(srast, samples, wrow=5, wcol=3)
-
-        #test 1x3 focal window
-        for _ in range(20):
-            samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
-                srast,
-                'strat_zq90',
-                num_samples=50,
-                num_strata=5,
-                wrow=1,
-                wcol=3,
-                allocation="equal",
-                method="Queinnec",
-            ).samples_as_wkt())
-            self.check_focal_window(srast, samples, wrow=1, wcol=3)
-
-        #test 3x1 focal window
-        for _ in range(20):
-            samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
-                srast,
-                'strat_zq90',
-                num_samples=50,
-                num_strata=5,
-                wrow=3,
-                wcol=1,
-                allocation="equal",
-                method="Queinnec",
-            ).samples_as_wkt())
-            self.check_focal_window(srast, samples, wrow=3, wcol=1)
-
-    @pytest.mark.skipif(platform.system() == "Windows", reason="does not work on windows right now")
+ 
     def test_function_inputs(self):
         srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
 

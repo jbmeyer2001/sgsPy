@@ -35,47 +35,6 @@ struct PCAResult {
 };
 
 /**
- * This struct contains the intermediate values, as well as functions
- * for updating the intermediate values of the variance of a raster
- * band using Welfords method. The mean and standard deviation of
- * a raster band can be calculated afterwards without requiring the
- * whole raster to be in memory.
- *
- * Double precision is always used for higher precision of potentially small values.
- *
- * https://jonisalonen.com/2013/deriving-welfords-method-for-computing-variance/
- */
-struct Variance {
-	int64_t k;	//count
-	double M = 0;	//running mean
-	double S = 0;	//sum of squares
-	double oldM = 0;
-	
-	inline void
-	update(double x) {
-		k++;
-		oldM = M;
-
-		//update running mean
-		M = M + (x - M) / static_cast<double>(k);
-
-		//update sum of squares
-		S = S + (x - M) * (x - oldM);
-	}
-
-	inline double 
-	getMean() {
-		return M;
-	}
-
-	inline double 
-	getStdev() {
-		double variance = S / static_cast<double>(k);
-		return std::sqrt(variance);
-	}
-};
-
-/**
  * This function is used by the pca() function to calculate the principal component
  * eigenvectors and eigenvalues, along with the mean and standard deviation of each
  * input raster band. This function is used in the case where the input raster is
@@ -342,7 +301,6 @@ calculatePCA(
 	return retval;	
 }
 
-
 /**
  * This function is used to write the output principal components to a
  * raster dataset, after the eigenvectors and eigenvalues have already
@@ -524,7 +482,6 @@ writePCA(
 			adders[c][b] = -1 * multipliers[c][b] * mean;
 		}
 	}
-
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
