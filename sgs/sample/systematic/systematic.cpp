@@ -294,6 +294,14 @@ systematic(
 	//get access polygon if access is given
 	OGRGeometry *access = nullptr;
 	if (p_access) {
+		//occasionally, samples end up being placed just outside the accessible area,
+		//typically when the buffer sizes are multiples of the pixel size. 
+		//
+		//Adjusting the buffers minorly fixes this problem.
+		double pixelSize = std::min(p_raster->getPixelHeight(), p_raster->getPixelWidth());
+		buffOuter = buffOuter - pixelSize / 50;
+		buffInner = buffInner == 0 ? 0 : buffInner + pixelSize / 50;
+
 		access = getAccessPolygon(p_access, layerName, buffInner, buffOuter);
 	}
 
