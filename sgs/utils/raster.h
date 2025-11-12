@@ -554,7 +554,6 @@ class GDALRasterWrapper {
 		band.p_buffer = nullptr;
 		band.nan = band.p_band->GetNoDataValue();
 		band.p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
-		return band;
 	}
 
 	/**

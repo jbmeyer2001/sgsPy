@@ -764,8 +764,8 @@ class Variance {
 		double thisPercentage = static_cast<double>(this->k) / static_cast<double>(total);
 		double otherPercentage = 1 - thisPercentage;
 		this->k = total;
-		this->M = this->M * thisPercentage + other.M * otherPercentage;
-		this->S = this->S * thisPercentage + other.S * otherPercentage;
+		this->M = this->M * thisPercentage + other->M * otherPercentage;
+		this->S = this->S * thisPercentage + other->S * otherPercentage;
 
 	}
 
