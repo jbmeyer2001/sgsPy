@@ -42,7 +42,7 @@ def strat(
     buff_outer: Optional[float] = None,
     plot: bool = False,
     filename: str = "",
-    int max_threads = 0,
+    max_threads: int = 8,
     ):
     """
     This function conducts stratified sampling using the stratified

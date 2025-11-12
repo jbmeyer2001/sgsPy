@@ -269,14 +269,13 @@ public:
 				size_t thisSize = this->indexesPerStrata[i].size();
 				size_t otherSize = other.indexesPerStrata[i].size();
 				size_t totalSize = thisSize + otherSize;
-
-				//use memcpy to copy the values from the other vector to this one
 				this->indexesPerStrata[i].resize(totalSize);
-				void *dest = (void *)(this->indexesPerStrata[i].data() + thisSize * sizeof(Index));
-				void *src = (void *)other.indexesPerStrata[i].data();
-				size_t count = otherSize * sizeof(Index);
-				std::memcpy(dest, src, count);
-
+				
+				//copy values from other indices to this indices
+				for (size_t j = 0; j < otherSize; j++) {
+					this->indexesPerStrata[i][thisSize + j] = other.indexesPerStrata[i][j];
+				}
+				
 				this->indexCountPerStrata[i] += other.indexCountPerStrata[i];
 			}
 
@@ -289,14 +288,10 @@ public:
 					this->firstXIndexCountPerStrata[i] = this->x + 1;
 				}
 				else {
-					size_t thisSize = static_cast<size_t>(thisCount);
-					size_t otherSize = static_cast<size_t>(otherCount);
-
-					//use memcpy to copy the values from the other vector to this one
-					void *dest = (void *)(this->firstXIndexesPerStrata[i].data() + thisSize * sizeof(Index));
-					void *src = (void *)other.firstXIndexesPerStrata[i].data();
-					size_t count = otherSize * sizeof(Index);
-					std::memcpy(dest, src, count);	
+					//copy values from other indices to this indices
+					for (int64_t j = 0; j < otherCount; j++) {
+						this->firstXIndexesPerStrata[i][thisCount + j] = other.firstXIndexesPerStrata[i][j];
+					}
 
 					this->firstXIndexCountPerStrata[i] = total;
 				}
@@ -478,12 +473,15 @@ processBlocksStratRandom(
 
 	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
-	int chunkSize = yBlocks / threads;
+
+	//TODO CHANGE THIS BACK
+	//int chunkSize = yBlocks / threads;
+	int chunkSize = yBlocks / 8;
 
 	if (chunkSize == 0) {
 		chunkSize = yBlocks;
 	}
-
+	
 	//create thread pool and acquire Python's global interpreter lock (GIL)
 	pybind11::gil_scoped_acquire acquire;
 	boost::asio::thread_pool pool(threads);
@@ -533,7 +531,7 @@ processBlocksStratRandom(
 			for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
 				for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 					int xValid, yValid;
-	
+		
 					//read block
 					band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 					rasterBandIO(band, reinterpret_cast<void *>(p_buffer), xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true);
