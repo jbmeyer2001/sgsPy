@@ -759,17 +759,33 @@ class Variance {
 		S = S + (x - M) * (x - oldM);
 	}
 
+	/**
+	 * getter function for running mean value.
+	 *
+	 * @returns double
+	 */
 	inline double 
 	getMean() {
 		return M;
 	}
 
+	/**
+	 * calculate the standard deviation using the running
+	 * variance calculation.
+	 *
+	 * @returns double
+	 */
 	inline double 
 	getStdev() {
 		double variance = S / static_cast<double>(k);
 		return std::sqrt(variance);
 	}
 
+	/**
+	 * calculate the total number of pixels.
+	 *
+	 * @returns itn64_t
+	 */
 	inline int64_t
 	getCount() {
 		return this->k;

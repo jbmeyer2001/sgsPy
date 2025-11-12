@@ -90,13 +90,26 @@ calculateAllocation(
 }
 
 /**
- *
+ * This struct deals with the 'optim' allocation method. The optim allocation
+ * method requires that the within-strata variance be calculated based on
+ * a seperate raster band. This struct stores band information for the
+ * raster band which is used to calculate the variance, the variance per
+ * strata, as well as whether the optim method is used.
  */
 struct OptimAllocationDataManager {
 	RasterBandMetaData band;
 	std::vector<Variance> variances;
 	bool used = false;
 
+	/**
+	 * Constructor, creates an instance of OptimAllocationDataManager given a pointer to the
+	 * raster containing the band to use, as well as the integer band number. The allocation
+	 * method is also passed, and if the allocation is not 'optim', this struct remains unused.
+	 *
+	 * @param GDALRasterWrapper *p_raster
+	 * @param int bandNum
+	 * @param std::string allocation
+	 */
 	OptimAllocationDataManager(GDALRasterWrapper *p_raster, int bandNum, std::string allocation) {
 		if (!p_raster || allocation != "optim") {
 			return;
@@ -112,7 +125,8 @@ struct OptimAllocationDataManager {
 	}
 	
 	/**
-	 *
+	 * Deconstructor, this method frees memory which would be allocated if this object
+	 * was used.
 	 */
 	~OptimAllocationDataManager() {
 		if (this->used) {
@@ -121,7 +135,13 @@ struct OptimAllocationDataManager {
 	}
 
 	/**
+	 * Initializes some of the data within the struct, setting the size of the vector
+	 * which contains Variance information, as well as allocating the memory which
+	 * will be used to store the raster band.
 	 *
+	 * @param int numStrata
+	 * @param int xBlockSize
+	 * @param int yBlockSize
 	 */
 	inline void
 	init(int numStrata, int xBlockSize, int yBlockSize) {
@@ -130,7 +150,15 @@ struct OptimAllocationDataManager {
 	}
 
 	/**
+	 * This function reads a new block of data in from the raster band which this
+	 * struct controls.
 	 *
+	 * @param int xBlockSize
+	 * @param int yBlockSize
+	 * @param int xBlock
+	 * @param int yBlock
+	 * @param int xValid
+	 * @param int yValid
 	 */
 	inline void
 	readNewBlock(int xBlockSize, int yBlockSize, int xBlock, int yBlock, int xValid, int yValid) {
@@ -138,7 +166,12 @@ struct OptimAllocationDataManager {
 	}
 
 	/**
+	 * This function updates the Variance calculation for a particular pixel. The index of the pixel within
+	 * the block is given, to get the pixel value. The strata is also given to indicate which strata's variance
+	 * to update. This function should not be called if the pixel is nan.
 	 *
+	 * @param int index
+	 * @param int strata
 	 */
 	inline void
 	update(int index, int strata) {
@@ -147,7 +180,16 @@ struct OptimAllocationDataManager {
 	}
 
 	/**
+	 * This function gets the allocation percentages per strata using the variances. The optim
+	 * allocation method is specified by Gregoire and Valentine https://doi.org/10.1201/9780203498880
+	 * Section 5.4.4. The method requires that the count and standard deviation of a particular strata
+	 * be multiplied, and the proportion of samples to go to the particular strata strata is this 
+	 * product divided by the sum of the product of standard deviation and count for every strata.
 	 *
+	 * The proportions are calculated using the vector of Variance calculations which have been updated
+	 * throughout the iteration if the raster, and returned as a vector of double.
+	 *
+	 * @returns std::vector<double>
 	 */
 	inline std::vector<double>
 	getAllocationPercentages(void) {
@@ -170,12 +212,56 @@ struct OptimAllocationDataManager {
 	}
 };
 
+/**
+ * This is a helper function used for determining the probability multiplier for a given raster.
+ * The probability of any given pixel being added is the number of samples divided by the
+ * number of total pixels. 
+ *
+ * Rather than storing the indexes of all possible (accessible, not nan) pixels, which is potentially
+ * encredibly memory-inefficient for large rasters, it is much better to only store the indexes
+ * of roughly the number of total pixels we need to sample. A random number generator is used 
+ * for each pixel which is a candidate for being added as a sample. The sample is retained if 
+ * the random number generator creates a series of  all 1's for the first n bits. This value n determines 
+ * the probability a sample is added. For example, if n were three then 1/8 or 1/(2^n) proportoin of pixels 
+ * would be sampled.
+ *
+ * It can be seen that setting up an n value which is close to the probability samples/pixels but
+ * an over estimation would result in an adequte number of indexes stored WITHOUT storing a
+ * rediculous number of values.
+ *
+ * The way this number n is enforced, is by determining a multiplier that takes the form of the first
+ * n bits are 1 and the remaining are 0. For example:
+ * 1 	-> 00000001 	-> 50%
+ * 3 	-> 00000011 	-> 25%
+ * 7 	-> 00000111 	-> 12.5%
+ * 63 	-> 00111111	-> 1.56%
+ *
+ * The AND of this multiplier is taken with the rng value, and the result of that and is compared against
+ * the multiplier. The 0's from the and remove the unimportant bits, and the 1's enforce the first n
+ * values at the beginning.
+ *
+ * The multiplier is determined by determining the numerator and denominator of this probability (samples/pixels),
+ * with extra multipliers for an unknonwn amount of nan values, and multiplying by extra if the mindist parameter
+ * is passed as it may cause samples to be thrown out. Further, if an access vector is given and all samples 
+ * must fall within the accessible area, the probability is increased by the ratio of the total area in the raster
+ * to the accessible area. The probability would then simply be numerator/denominator, but we want a multiplier
+ * with a specific number of bits not a small floating point value. The log base 2 is used to transform this division
+ * int a subtraction problem, resulting in the number of bits. The value 1 is then left shifted by the number of bits,
+ * and subtracted by 1 to give the multiplier.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param int numSamples
+ * @param bool useMindist
+ * @param double accessibleArea
+ * @param bool queinnec
+ *
+ * @returns uint64_t
+ */
 inline uint64_t
 getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMindist, double accessibleArea, bool queinnec) {
 	double height = static_cast<double>(p_raster->getHeight());
 	double width = static_cast<double>(p_raster->getWidth());
 	double samples = static_cast<double>(numSamples);
-
 	
 	double numer = !queinnec ? 
 		samples * 4 * (useMindist ? 3 : 1) :
@@ -195,7 +281,20 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMi
 }
 
 /**
+ * This struct is responsible for storing the indices saved while iterating through the raster. 
  *
+ * The strataCounts vector strores the total count of each strata within the stratified raster. 
+ * The indexCountPerStrata vector stores the total number of indices saved for each strata.
+ * The indexesPerStrata vector stores the indices saved of each strata.
+ * 
+ * Since the pixels are probabilistically added, and this probability is calculated before
+ * knowing the total proportion of strata within the strat raster, there is a potential problem
+ * if one strata does not appear as much as the others, as this could mean less than the
+ * total number of required pixels for that strata are actually saved. This is where the
+ * 'first x' vectors come in. They always store the first x number of pixels in a particular
+ * strata, meaning that if there are less than x (10,000) pixels of a particular strata,
+ * all pixels within that strata will be saved and there is not a worry of missing out on
+ * a particular strata due to having a lower proportion. 
  */
 class IndexStorageVectors {
 private:
@@ -212,7 +311,11 @@ private:
 
 public:
 	/**
+	 * Constructor. Set the numStrata and x variables.
+	 * Also, resize the vectors so that their size is numStrata.
 	 *
+	 * @param int64_t numStrata
+	 * @param int64_t x
 	 */
 	IndexStorageVectors(int64_t numStrata, int64_t x) {
 		this->numStrata = numStrata;
@@ -231,40 +334,65 @@ public:
 	}
 
 	/**
+	 * update the total count by 1 of a particular strata.
 	 *
+	 * @param int strata
 	 */
 	inline void
-	updateStrataCounts(int val) {
-		this->strataCounts[val]++;
+	updateStrataCounts(int strata) {
+		this->strataCounts[strata]++;
 	}
 
 	/**
+	 * update the indexes vector with a new index of a particular
+	 * strata.
 	 *
+	 * @param int strata
+	 * @param Index& index
 	 */
 	inline void
-	updateIndexesVector(int val, Index& index) {
-		this->indexesPerStrata[val].push_back(index);
-		this->indexCountPerStrata[val]++;
+	updateIndexesVector(int strata, Index& index) {
+		this->indexesPerStrata[strata].push_back(index);
+		this->indexCountPerStrata[strata]++;
 	}
 
 	/**
+	 * update the first x indexes vector with a new index
+	 * of a particular strata.
 	 *
+	 * @param int strata
+	 * @param Index& index
 	 */
 	inline void
-	updateFirstXIndexesVector(int val, Index& index) {
-		int64_t i = firstXIndexCountPerStrata[val];
+	updateFirstXIndexesVector(int strata, Index& index) {
+		int64_t i = firstXIndexCountPerStrata[strata];
 		if (i < this->x) {
-			firstXIndexesPerStrata[val][i] = index;
-			firstXIndexCountPerStrata[val]++;	
+			firstXIndexesPerStrata[strata][i] = index;
+			firstXIndexCountPerStrata[strata]++;	
 		}
 		else if (i == this->x) {
-			std::vector<Index>().swap(firstXIndexesPerStrata[val]);
-			firstXIndexCountPerStrata[val]++;
+			std::vector<Index>().swap(firstXIndexesPerStrata[strata]);
+			firstXIndexCountPerStrata[strata]++;
 		}
 	}
 
 	/**
+	 * get references to shuffled strata index vectors. This method is called after the 
+	 * whole raster has been iterated through, and potential sample pixels are saved.
 	 *
+	 * If there are not enough values in the normal saved strata, but the first X samples
+	 * have been saved (and there hasn't been too many pixels), then the first X samples
+	 * are used. Otherwise, the normal saved samples are used.
+	 *
+	 * A reference is saved for a shuffled version of the vector chosen. The reason a shuffled
+	 * version is returned is because the raster is iterated through in an ordered manor (by blocks).
+	 * If it wasn't shuffled, the samples selected would be the ones closes to the beginning.
+	 *
+	 * @param std::vector<int64_t> existing
+	 * @param std::vector<int64_t> strataSampleCounts
+	 * @param xso::xoshiro_4x64_plus& rng
+	 *
+	 * @returns std::vector<std::vector<Index> *>
 	 */
 	inline std::vector<std::vector<Index> *>
 	getStrataIndexVectors(std::vector<int64_t> existing, std::vector<int64_t> strataSampleCounts, xso::xoshiro_4x64_plus& rng) {
@@ -297,7 +425,9 @@ public:
 	}
 
 	/**
+	 * get the pixel counts per strata.
 	 *
+	 * @returns std::vector<int64_t>
 	 */
 	inline std::vector<int64_t>
 	getStrataCounts(void) {
@@ -305,7 +435,9 @@ public:
 	}
 
 	/**
+	 * get the total number of data (not nan) pixels.
 	 *
+	 * @returns int64_t
 	 */
 	inline int64_t
 	getNumDataPixels(void) {
@@ -320,7 +452,22 @@ public:
 };
 
 /**
+ * This struct controls the calculation and usage of random values during the
+ * iteration through the raster. A random number must be generated for
+ * each pixel to see if it will be saved for potential sampling.
  *
+ * The xoshiro random number generator is used because it is efficient and 
+ * statistically sound. The specific generator used (xso::xoshrio_4x64_plus) is used
+ * because it is very fast. However, it's lowest 11 bits have low linear complexity (Blackman & Vigna).
+ * 
+ * We have no need for these lower 11 bits, instead using only the upper 53 bits of the uint64_t value.
+ * Proof of this is that, supposing we require the use of all 53 bits, this means a probability of 
+ * 1/(2^(56)), or roughly 1 sample per 10^16 pixels. If there were 10^16 pixels to process than a minimum of
+ * multiple years would likely pass before execution finished.
+ *
+ * Rather than calling the generator on every iteration, the generator is repeatedly called at the 
+ * beginning of a block for the remaining required pixels, and the true/false values for whether
+ * to save a pixel or not are stored in a vector of type boolean.
  */
 class RandValController {
 private:
@@ -331,7 +478,13 @@ private:
 
 public:
 	/**
+	 * Constructor, sets the size of the boolean vector, and assigns the randValIndex, multiplier, and p_rng
+	 * member variables.
 	 *
+	 * @param int xBlockSize
+	 * @param int yBlockSize
+	 * @param uint64_t multiplier
+	 * @param xso::xoshiro_4x64_plus *p_rng
 	 */
 	RandValController(int xBlockSize, int yBlockSize, uint64_t multiplier, xso::xoshiro_4x64_plus *p_rng) {
 		this->randVals.resize(xBlockSize * yBlockSize);
@@ -341,7 +494,16 @@ public:
 	}
 
 	/**
+	 * Calculates the true/false values from rand values, a number of times equal to the
+	 * number of used random values from the previous block. The return value of the
+	 * random number generator is bit shifted by 11 to ignore the lower 11 bits, which
+	 * have low linear complexity.
 	 *
+	 * Next, the bit shifted random value is masked with the multiplier, and if the random
+	 * value contains a 1 in every bit which the multiplier does, true is added to the rand
+	 * val vector.
+	 *
+	 * This function is called before iterating through a new block.
 	 */
 	inline void 
 	calculateRandValues(void) {
@@ -352,7 +514,8 @@ public:
 	}
 
 	/**
-	 *
+	 * get the next boolean value from the storage vector, and iterate the index to this
+	 * vector.
 	 */
 	inline bool 
 	next(void) {
@@ -363,7 +526,27 @@ public:
 };
 
 /**
+ * This function processes the strat raster in blocks using the 'random' method. In the random
+ * method, every pixel in a particular strata has the same priority of being added as any
+ * other pixel in that strata.
  *
+ * First, memory is allocated and structures are initialized for random value calculation and
+ * optim allocation.
+ *
+ * Next, iterate through the blocks within the raster. For each block:
+ *  - read the strat raster (and potentially access & optim rasters) into memory
+ *  - calculate rand values for the new block
+ *  - iterate through the pixels in the block
+ *
+ * For each pixel:
+ *  - ignore the pixel if it is a nan value
+ *  - update the optim variances if optim allocation used
+ *  - update total sample counts
+ *  - add index to existing vector if the pixel is part of an existing sample network
+ *  - If the pixel is both accessible and not already sampled, update the index storage vectors
+ *
+ * Once all blocks have been processed, free any allocated memory and calculate the sample
+ * allocation per strata, and return this allocation.
  */
 template <typename T>
 std::vector<int64_t>
@@ -492,7 +675,34 @@ processBlocksStratRandom(
 }
 
 /**
+ * The focal window is a method used by Queinnec sampling to ensure that
+ * pixels which are surrounded by other pixels of the same strata are prioritized
+ * over pixels which aren't.
  *
+ * This struct is used to control the storage of values to keep track of which
+ * pixels are eligible as 'queinnec' values i.e. surrounded by pixels of the
+ * same strata.
+ *
+ * the m vector is a vector of bool which keeps track whether a particular pixels
+ * is eligible considering it's horizontal pixels. The values are initialized to false,
+ * and when iterating through the raster, the m vector is set if it is horizontally 
+ * surrounded by the same pixels. These saved values will then be used later to determine
+ * if a whole pixel is eligible. The logic is used that if all vertical values within the
+ * horizontal range of the focal window are the same, AND this stored horizontal value
+ * is true for all of the pixels, then the pixel in the middle must be surrounded by
+ * whole pixels of the same type.
+ *
+ * the valid vector is a vector of bool which keeps track whether a particular pixel is
+ * available for sampling. Specifically, it isn't nan, is accessible, and isn't an 
+ * existing sample. The reason why this data needs to be saved, rather than used for
+ * the current pixel, is that in order to check the vertical focal window we must have
+ * iterated past a particular pixel before we know whether it is fully eligible. 
+ * Rather than checking if it is available for sampling twice, the second time
+ * for the focal window's purpose, this value is saved in the valid vector.
+ *
+ * Both the m and the valid vectors have the same width of the raster, but significantly
+ * less height. They only need to have the height of the focal window, and when an
+ * old row becomes unused it is reset to false and used for another row in the raster.
  */
 struct FocalWindow {
 	int wrow, wcol;
@@ -501,6 +711,15 @@ struct FocalWindow {
 	std::vector<bool> m;
 	std::vector<bool> valid;
 
+	/**
+	 * Constructor, uses wrow, wcol, and width values to set corrosponding
+	 * values. Also calculate vertical pad (vpad), horizontal pad (hpad),
+	 * and resize the m and valid vectors.
+	 *
+	 * @param int wrow
+	 * @param int wcol
+	 * @param int width
+	 */
 	FocalWindow(int wrow, int wcol, int width) {
 		this->wrow = wrow;
 		this->vpad = wrow / 2;
@@ -511,6 +730,14 @@ struct FocalWindow {
 		this->valid.resize(wrow * width, false);
 	}
 
+	/**
+	 * this function is used to reset the values to fales for a no longer
+	 * used row, so that it can be used for the next row.
+	 *
+	 * This function is called at the beginning of each scanline/row.
+	 *
+	 * @param int row
+	 */
 	inline void
 	reset(int row) {
 		int start = (row % wrow) * this->width;
@@ -521,6 +748,28 @@ struct FocalWindow {
 		}
 	}
 
+	/**
+	 * This function checks whether a particular index is eligible
+	 * to be added as a queinnec pixel, i.e. is surrounded by pixels
+	 * of the same strata. 
+	 *
+	 * Both the m and the valid vectors are checked in this function,
+	 * although both the m and valid vectors are set outside of the
+	 * functions of this struct. They are set directly during
+	 * the iteration through the raster.
+	 *
+	 * This function only checks whether the pixel is valid (not nan,
+	 * accessible, not part of an existing sampling network), and
+	 * whether all of the pixels vertically within the focal window 
+	 * are horizontally surrounded by the same values. If this
+	 * function returns true, those vertical pixels will then be
+	 * checked to ensure they are equivalent.
+	 *
+	 * @param int x
+	 * @param int y
+	 *
+	 * @returns bool
+	 */
 	inline bool
 	check(int x, int y) {
 		y = y % wrow;
@@ -553,7 +802,55 @@ struct FocalWindow {
 };
 
 /**
+ * This function processes the strat raster in blocks using the 'Queinnec' method. In the Queinnec
+ * method, pixels which are surrounded by pixels of the same strata are prioritized for sampling 
+ * over pixels which aren't.
  *
+ * First, the block size is adjusted to be scanlines with a height of either the original y block size,
+ * or 128. This is done because the raster needs to be read as scanlines for the FocalWindow struct
+ * to work well and not get any more complicated than it already is. However, we want the raster IO
+ * to still be as efficient as possible, so chunks of the raster are still read on block boundaries,
+ * just containing a lot more than just 1 block.  
+ *
+ * Next, memory is allocated and structs are created for random value calculation and optim allocation.
+ * More memory is allocated than just 1 of the chunks (xBlockSize * yBlockSize), this is because
+ * usign the focal window struct method, we may have to read in some of the final few pixels of the
+ * previous chunk, to the start of the new chunk.
+ *
+ * Next, iterate thorugh the blocks within the raster. For each block:
+ *  - read block from the strat raster
+ *  - calculate rand values (both normal and queinnec) for the new block
+ *  - iterate through the pixels in the block
+ *
+ * The newBlockStart value is used due to the aforementioned padding which may be placed on the top
+ * of the new block. This newBlockStart value is the index of the block which is the start of the
+ * new block. This value will be 0 in the case of the first block, but different otherwise.
+ *
+ * Rather than using a typical nested for loop, one for the vertical and one for the horizontal,
+ * we use one for the vertical and three for the horizontal. This is because there are areas on the
+ * left and right of the raster which will never be eligible as queinnec pixels because their focal window
+ * includes pixels which go off the edge of the raster. And, critically, trying to calculate whether they
+ * are horizontally eligible as a queinnec pixel would result in checking a pixel which either doesn't exist
+ * or is on the opposite side of the raster.
+ *
+ * For each pixel horizontally not eligible to be a queinnec pixel:
+ *  - ignore the pixel if it is a nan value
+ *  - update the optim variances if optim allocation is used
+ *  - update total sample counts
+ *  - add index to existing vector if the pixel is part of an existing sample network
+ *  - if the pixel is both accessible and not already sampled, update the index storage vectors.
+ *
+ * For pixel which is horizontally eligible to be a queinnec pixel:
+ *  - do all of the same as those non-eligible pixels in addition to...
+ *  - set focal window valid vector for the current pixel
+ *  - set focal window matrix vector for the current pixel by checking horizontally adjacent pixels
+ *  - check the focal window matrix for the pixel which will have just had all of it's vertical pixels horizontally checked.
+ *    Calling this check on a pixel which would have a negative y will always result in a false due to the focal window
+ *    matrix being automatically set to false. If this check succeeds -- check vertical pixels to see if they are the same 
+ *    and if so update the queinnec index storage vectors.
+ *
+ * Once all blocks have been processed, free any allocated memory and calculate the sample allocation per strata,
+ * and return this allocation.
  */
 template <typename T>
 std::vector<int64_t>
@@ -585,7 +882,7 @@ processBlocksStratQueinnec(
 		xBlockSize = width;
 	}
 	else {
-		yBlockSize = 128;
+		yBlockSize = std::min(128, height);
 	}
 
 	//allocate required memory
@@ -853,32 +1150,73 @@ processBlocksStratQueinnec(
 /**
  * This function conducts stratified random sampling on the provided stratified raster.
  *
+ * First, metadata is acquired in the strat raster band, which is to be read to determine
+ * sample strata and to ensure samples don't occur on nan values.
  *
- * First, the raster is iterated over, the no data pixels, and the pixels which
- * are inaccessible are ignored. The remaining accessable data pixel indexes
- * are placed into vectors corresponding to their strata. After this iteration,
- * there will be a a number of vectors equivalent to the number of strata,
- * correspondin strata.
+ * Next, the output vector dataset is creates as an in-memory dataset. If the user
+ * specifies a filename, this in-memory dataset will be written to disk in a different
+ * format after all points have been added.
  *
+ * An Access struct is created, which creates a raster dataset containing
+ * a rasterized version of access buffers. This raster will be 1 over
+ * accessible areas. In the case where there is no access vector given,
+ * the structs 'used' member will be false and no processing or rasterization
+ * will be done.
  *
- * Nextl the calculate_allocation function is used to determine the the total
- * number of samples which should be allocated to each strata, depending on the
- * number of pixels in each strata and the allocation method specified by the
- * user.
+ * An Existing struct is created, which retains information on already existing
+ * sample points passed in the form of a vector dataset. The points are iterated
+ * through and added to the output dataset. The points are also added to a set,
+ * and during iteration the indexes of every pixel will be checked against this set
+ * to ensure there are no duplicate pixels. In the case whre there is no existing
+ * vector given, the structs 'used' member will be false and no processing
+ * will be done.
  *
+ * Next, a rng() function is created usign the xoshiro library, the specific
+ * randm number generator is the xoshrio256++
+ * https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
  *
- * Finally, random indexes in the strata vectors are selected, and using
- * their index value in the stratified raster and geotransform, a point
- * geometry is calculated.
+ * The impetus behind usign the rng() function to determine which pixels
+ * should be added DURING iteration, rather than afterwards, is it removes the
+ * necessity of storing every available pixel, which quickly becomes extrordinarily
+ * inefficient for large rasters. Rather, for pixels which are accessible, not nan,
+ * and not already existing, there is a pre-determined percentage chance to be stored
+ * which uses this random number generator. An over-estimation for the percentage
+ * chance is made, because it is better to have too many than not enough possible options
+ * to sample from. This over-estimation might result in the storage of 2x-3x extra pixels
+ * rather than the many orders of magnitude extra storage of adding all pixels. The
+ * calculation for this percentage is done and explained in detail in the
+ * getProbabilityMultiplier() function.
  *
- * When a stratum is allocated more than half the number of total pixels the 
- * strata vector contains, random indexes in the strat vectors are selected 
- * which WONT be included, and the remaining are iterated over in a random order.
+ * Next, the raster is processed in blocks either using the 'random' or 'Queinnec' 
+ * methods, and the return of those functions contains the allocation of samples
+ * per strata.
  *
- * When mindist is inequal to zero, three times the number of samples are 
- * randomly selected in order to ensure a number of samples as close to the 
- * desired number are selected, as having a large mindist may mean some samples
- * can't be included due to their proximity to other already-selected pixels. 
+ * Strata are iterated through, with samples being added according to their total allocation.
+ * First, existing pixels are added, all of which are added in the case where the force
+ * parameter is true. Next, queinnec pixels are added if the queinnec method is used. Finally,
+ * remaining random pixels are added.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param int bandNum
+ * @param int64_t numSamples
+ * @param int64_t numStrata
+ * @param std::string allocation
+ * @param std::vector<double> weights
+ * @param GDALRasterWrapper *p_mraster
+ * @param int mrasterBandNum
+ * @param std::string method
+ * @param int wrow
+ * @param int wcol
+ * @param double mindist
+ * @param GDALVectorWrapper *p_existing
+ * @param bool force
+ * @param GDALVectorWrapper *p_access
+ * @param std::string layerName
+ * @param double buffInner
+ * @param double buffOuter
+ * @param bool plot
+ * @param std::string filename
+ * @param std::string tempFolder
  */
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
 strat(
