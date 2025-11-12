@@ -22,7 +22,7 @@ from sgs.utils import(
 from strat import strat_cpp
 
 def strat(
-    strat_rast: SpatialRaster, #TODO add band name for strat rast
+    strat_rast: SpatialRaster,
     band: int | str,
     num_samples: int,
     num_strata: int,
@@ -57,6 +57,25 @@ def strat(
     of samples per strata is calculated given the distribution of pixels
     in each strata, and the allocation method specified by the allocation parameter.
 
+    In the case where 'optim' allocation is used, an additional raster must be passed
+    to the mrast parameter, and if that raster contains more than 1 band the mrast_band
+    parameter must be given specifying which band. The optim method is specified
+    by Gregoire and Valentine https://doi.org/10.1201/9780203498880 Section 5.4.4.
+
+    The 'existing' parameter, if passed, must be a SpatialVector of type Point or MultiPoint. 
+    These points specify samples within an already-existing network. The SpatialVector may
+    only have one layer. If the force parameter is set to True, every pixel in the existing
+    sample will be added no matter what. if the force parameter is false, then the existing
+    samples will be prioritized over other pixels in the same strata.
+
+    The 'access' parameter, if passed, must be a SpatialVector of type LineString or MultiLineString.
+    buff_outer specifies the buffer distance around the geometry which
+    is allowed to be included in the sampling, buff_inner specifies the
+    geometry which is not allowed to be included in the sampling. buff_outer
+    must be larger than buff_inner. For a multi-layer vector, layer_name
+    must be specified.
+
+
     Parameters
     --------------------
     strat_rast : SpatialRaster
@@ -65,7 +84,7 @@ def strat(
         the band within the strat_rast to use, either a 0-indexed int value or the name of the band
     num_samples : int
         the desired number of samples
-    num_strata : Int
+    num_strata : int
         the number of strata in the strat_rast. If this number is incorrect it may 
         undefined behavior in the C++ code which determines sample locations.
     wrow : int
@@ -74,12 +93,20 @@ def strat(
         the number of columns to be considered in the focal window for the 'Queinnec' method
     allocation : str
         the allocation method to determine the number of samples per strata. One of 'prop', 'equal', 'optim', or 'manual'
-    method: str
-        the sampling method, either 'random', or 'Queinnec'
     weights : list[float]
         the allocation percentages of each strata if the allocation method is 'manual'
+    mrast : SpatialRaster
+        the raster used to calculate 'optim' allocation if 'optim' allocation is used
+    mrast_band : str | int
+        specifies the band within mrast to use
+    method : str
+        the sampling method, either 'random', or 'Queinnec'
     mindist : float
         the minimum distance allowed between sample points
+    existing : SpatialVector
+        a vector of Point or Multipoint which are part of a pre-existing sample network
+    force : bool
+        whether to automatically include all points in the existing network or not
     access : SpatialVector
         a vector of LineString or MultiLineString geometries to sample near to
     layer_name : str
