@@ -7,17 +7,11 @@
 #
 # ******************************************************************************
 
-import platform
-
 import tempfile
 from sgs.utils import SpatialRaster
-
-#c++ portion of this function does not build on windows right now
-if platform.system() != 'Windows': 
-    from pca import pca_cpp
+from pca import pca_cpp
 
 GIGABYTE = 1073741824
-
 
 def pca(
     rast: SpatialRaster,
@@ -60,58 +54,58 @@ def pca(
     --------------------
     a SpatialRaster object containing principal component output bands.
     """
-    if platform.system() != 'Windows': #c++ portion of this function does not build on windows right now
-        large_raster = False
+    breaks_dict = {}
+    large_raster = False
+    temp_folder = ""
 
-        #ensure number of components is acceptabe
-        if num_comp <= 0 or num_comp > len(rast.bands):
-            msg = f"the number of components must be greater than zero and less than or equal to the total number of raster bands ({len(rast.bands)})."
-            raise ValueError(msg)
+    #ensure number of components is acceptabe
+    if num_comp <= 0 or num_comp > len(rast.bands):
+        msg = f"the number of components must be greater than zero and less than or equal to the total number of raster bands ({len(rast.bands)})."
+        raise ValueError(msg)
 
-        #ensure driver options keys are string, and convert driver options vals to string
-        driver_options_str = {}
-        if driver_options:
-            for (key, val) in driver_options.items():
-                if type(key) is not str:
-                    raise ValueError("the key for all key/value pairs in the driver_options dict must be a string.")
-                driver_options_str[key] = str(val)
+    #ensure driver options keys are string, and convert driver options vals to string
+    driver_options_str = {}
+    if driver_options:
+        for (key, val) in driver_options.items():
+            if type(key) is not str:
+                raise ValueError("the key for all key/value pairs in the driver_options dict must be a string.")
+            driver_options_str[key] = str(val)
 
-   #    determine whether the raster should be categorized as 'large' and thus be processed in blocks
-        raster_size_bytes = 0
-        height = rast.height
-        width = rast.width
-        for i in range(len(rast.bands)):
-            pixel_size = rast.cpp_raster.get_raster_band_type_size(i)
-            band_size = height * width * pixel_size
-            raster_size_bytes += band_size
-            if band_size >= GIGABYTE:
-                large_raster = True
-                break
+   #determine whether the raster should be categorized as 'large' and thus be processed in blocks
+    raster_size_bytes = 0
+    height = rast.height
+    width = rast.width
+    for i in range(len(rast.bands)):
+        pixel_size = rast.cpp_raster.get_raster_band_type_size(i)
+        band_size = height * width * pixel_size
+        raster_size_bytes += band_size
+        if band_size >= GIGABYTE:
+            large_raster = True
+            break
 
-        large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
+    large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
 
-        temp_dir = tempfile.mkdtemp()
+    temp_dir = tempfile.mkdtemp()
 
-        [pcomp, eigenvectors, eigenvalues] = pca_cpp(
-            rast.cpp_raster,
-            num_comp,
-            large_raster,
-            temp_dir,
-            filename,
-            driver_options_str
-        )
+    [pcomp, eigenvectors, eigenvalues] = pca_cpp(
+        rast.cpp_raster,
+        num_comp,
+        large_raster,
+        temp_dir,
+        filename,
+        driver_options_str
+    )
 
-        if display_info:
-            print('eigenvectors:')
-            print(eigenvectors)
-            print()
-            print('eigenvalues:')
-            print(eigenvalues)
-            print()
+    if display_info:
+        print('eigenvectors:')
+        print(eigenvectors)
+        print()
+        print('eigenvalues:')
+        print(eigenvalues)
+        print()
 
-        pcomp_rast = SpatialRaster(pcomp)
-        pcomp_rast.have_temp_dir = True
-        pcomp_rast.temp_dir = temp_dir
+    pcomp_rast = SpatialRaster(pcomp)
+    pcomp_rast.have_temp_dir = True
+    pcomp_rast.temp_dir = temp_dir
 
-        return pcomp_rast
-
+    return pcomp_rast

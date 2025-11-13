@@ -8,14 +8,15 @@
  ******************************************************************************/
 
 #include <iostream>
+#include <numeric>
 
 #include "helper.h"
 #include "raster.h"
 
 #include "oneapi/dal.hpp"
-#include <mkl.h>
 
-typedef oneapi::dal::homogen_table	DALHomogenTable;
+typedef oneapi::dal::homogen_table				DALHomogenTable;
+
 
 /**
  * This struct contains the output eigenvectors and eigenvalues for
@@ -215,7 +216,7 @@ calculatePCA(
 			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 		
 			//read bands into memory	
-			for (size_t i = 0; i < bandCount; i++) {
+			for (int i = 0; i < bandCount; i++) {
 				bands[i].p_band->RasterIO(
 					GF_Read,
 					xBlock * xBlockSize,
@@ -276,10 +277,10 @@ calculatePCA(
 	int64_t eigRows = eigenvectors.get_row_count();
 	int64_t eigCols = eigenvectors.get_column_count();
 
-	oneapi::dal::row_accessor<const float> eigVecAcc {eigenvectors};
+	oneapi::dal::row_accessor<const T> eigVecAcc {eigenvectors};
 	auto eigVecBlock = eigVecAcc.pull({0, eigRows});
 
-	oneapi::dal::row_accessor<const float> eigValAcc {eigenvalues};
+	oneapi::dal::row_accessor<const T> eigValAcc {eigenvalues};
 	auto eigValBlock = eigValAcc.pull({0, 1});
 
 	retval.eigenvectors.resize(eigRows);
@@ -302,100 +303,6 @@ calculatePCA(
 }
 
 /**
- * This function is used to process and write a pixel to the output principal
- * component bands, using a single precision data type (float).
- *
- * First, a pointer to the feature array of the specific pixel being processed
- * is determined. Then, the values in this feature array are first centered
- * then scaled depending on the mean and standard deviation of that specific
- * band.
- *
- * The result for each principal component output band is then the dot product
- * of the centered and scaled feature array, with the corresponding eigenvector.
- * The cblas_sdot() function is used to take the dot product.
- */
-inline void 
-processSPPixel(
-	int i,
-	int bandCount,
-	int nComp,
-	void *p_data,
-	std::vector<void *>& PCABandBuffers,
-	std::vector<void *>& eigBuffers,
-	std::vector<double>& means,
-	std::vector<double>& stdevs,
-	MKL_INT n,
-	MKL_INT incx,
-	MKL_INT incy)
-{
-	//get features array
-	float *p_features = reinterpret_cast<float *>(p_data) + i * bandCount;
-	
-	//scale and center features
-	for (int b = 0; b < bandCount; b++) {
-		p_features[b] = (p_features[b] - static_cast<float>(means[b])) / static_cast<float>(stdevs[b]);
-	}
-
-	//use blas to calculate projection (dot product) for output raster
-	for (int b = 0; b < nComp; b++) {
-		reinterpret_cast<float *>(PCABandBuffers[b])[i] = cblas_sdot(
-			n,
-			p_features,
-			incx,
-			reinterpret_cast<float *>(eigBuffers[b]),
-			incy
-		);
-	}
-}
-
-/**
- * This function is used to process and write a pixel to the output principal
- * component bands, using a double precision data type (double).
- *
- * First, a pointer to the feature array of the specific pixel being processed
- * is determined. Then, the values in this feature array are first centered
- * then scaled depending on the mean and standard deviation of that specific
- * band.
- *
- * The result for each principal component output band is then the dot product
- * of the centered and scaled feature array, with the corresponding eigenvector.
- * The cblas_ddot() function is used to take the dot product.
- */
-inline void 
-processDPPixel(
-	int i,
-	int bandCount,
-	int nComp,
-	void *p_data,
-	std::vector<void *>& PCABandBuffers,
-	std::vector<void *>& eigBuffers,
-	std::vector<double>& means,
-	std::vector<double>& stdevs,
-	MKL_INT n,
-	MKL_INT incx,
-	MKL_INT incy)
-{
-	//get features array
-	double *p_features = reinterpret_cast<double *>(p_data) + i * bandCount;
-	
-	//scale and center features
-	for (int b = 0; b < bandCount; b++) {
-		p_features[b] = (p_features[b] - means[b]) / stdevs[b];
-	}
-
-	//use blas to calculate projection (dot product) for output raster
-	for (int b = 0; b < nComp; b++) {
-		reinterpret_cast<double *>(PCABandBuffers[b])[i] = cblas_ddot(
-			n,
-			p_features,
-			incx,
-			reinterpret_cast<double *>(eigBuffers[b]),
-			incy
-		);
-	}
-}
-
-/**
  * This function is used to write the output principal components to a
  * raster dataset, after the eigenvectors and eigenvalues have already
  * been calculated for the input raster. This function is used in the
@@ -407,14 +314,18 @@ processDPPixel(
  * such that a row indicates a single pixel, and a column indicates a raster band.
  * This means that in between each pixel and the next, a gap must be left for the
  * remaining band values for that pixel index to be written to. This is done
- * using the nPixelSpace, and nLineSpace arguments of RasterIO.
+ * using the nPixelSpace, and nLineSpace arguments of RasterIO. The data pixels 
+ * are iterated over: scaled, shifted, and set to nan if at a no data pixel.
  *
- * Second, the pixels are iterated over. If any value in any band is a no-data
- * value, then nan is written. If none of the values for any band are nodata,
- * then the output pca value is calculated. A different function is called
- * depending on whether the data type is float (single precision), or double 
- * (double precision). The function centers, scales, then calculates the dot
- * product of the pixel with the eigenvector for each output component.
+ * Next, a matrix of pca eigenvectors are allocated and read into a new location.
+ *
+ * Both the data matrix and the pca matrix are turned into oneDAL homogen tables,
+ * and the result of a linear kernel calculation is written to the output.
+ *
+ * The reason a linear kernel is used, is because the result is essentially just
+ * a bunch of dot products. It's possible to do these dot products one at a time
+ * for each output pixel and component. However, the linear kernel, which is
+ * originally meant for fast machine learning use, does exactly what we need.
  */
 template <typename T>
 void 
@@ -429,66 +340,90 @@ writePCA(
 {
 	int bandCount = static_cast<int>(bands.size());
 	int nComp = static_cast<int>(PCABands.size());
-	void *p_data = VSIMalloc3(width * height, bandCount, size);
-	std::vector<void *> PCABandBuffers(nComp);
-	std::vector<void *> eigBuffers(nComp);
 	std::vector<T> noDataVals(bandCount); 
 	T resultNan = std::nan("");
-	for (int i = 0; i < bandCount; i++) {
-		noDataVals[i] = static_cast<T>(bands[i].nan);
-	}
-	for (int i = 0; i < nComp; i++) {
-		PCABandBuffers[i] = reinterpret_cast<void *>(PCABands[i].p_buffer);
-		eigBuffers[i] = reinterpret_cast<void *>(result.eigenvectors[i].data());
-	}
+	
+	//set no data values and read input bands
+	T *p_data = reinterpret_cast<T *>(VSIMalloc3(bandCount, height * width, size));
+	for (int b = 0; b < bandCount; b++) {
+		noDataVals[b] = static_cast<T>(bands[b].nan);
 
-	//read full bands into p_data
-	for (size_t i = 0; i < bands.size(); i++) {
-		bands[i].p_band->RasterIO(
+		bands[b].p_band->RasterIO(
 			GF_Read,
 			0,
 			0,
 			width,
 			height,
-			(void *)((size_t)p_data + i * size),	
+			(void *)((size_t)p_data + b * size),	
 			width,
 			height,
 			type,
-			size * bands.size(),
-			size * bands.size() * width
+			size * bandCount,
+			size * bandCount * width
 		);	
 	}
 
-	MKL_INT n = result.eigenvectors.size();
-	MKL_INT incx = 1;
-	MKL_INT incy = 1;
-
-	//process chunk of data
+	//scale and shift data pixels, set no data pixels to nan
 	for (int i = 0; i < height * width; i++) {
-		bool isNan;
-		for (int  b = 0; b < bandCount; b++) {
-			T val = reinterpret_cast<T *>(p_data)[i * bandCount + b];
-			isNan = val == noDataVals[b] || std::isnan(val);
-			if (isNan) {
-				break;
-			}
-		}
+		int bi = i * bandCount;
 
-		if (isNan) {
-			for (void *& p_buffer : PCABandBuffers) {
-				reinterpret_cast<T *>(p_buffer)[i] = resultNan;
-			}
-		}
-		else {
-			//depending on type, call single or double precision floating point
-			//processing functions which use cblas_sdot and cblas_ddot respectively
-			type == GDT_Float32 ?
-				processSPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy) :
-				processDPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy);
+		for (int b = 0; b < bandCount; b++) {
+			T val = p_data[bi + b];
+			p_data[bi + b] = (val == noDataVals[b]) ?
+				resultNan :
+				(val - result.means[b]) / result.stdevs[b];
 		}
 	}
 
+	//read result eigenvectors into matrix format
+	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(nComp, bandCount, size));
+	for (int c = 0; c < nComp; c++) {
+		int ci = c * bandCount;
+		for (int b = 0; b < bandCount; b++) {
+			p_comp[ci + b] = result.eigenvectors[c][b];
+		}
+	}
+
+	/**
+	 * the result for each output principal component pixel is just the dot product of that pixel's data values
+	 * with the corresponding principal component eigenvector.
+	 * 
+	 * oneDAL has a fast way to calculate dot products which is originally meant to be used for
+	 * machine learning (as I understand it) but it does exactly what we need -- multiply large matrices.
+	 */
+
+	//create DAL homogen table wrappers for input data	
+	const auto dataTable = DALHomogenTable(p_data, height * width, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
+	const auto compTable = DALHomogenTable(p_comp, nComp, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major); 
+	
+	//create DAL descriptor and compute the result
+	const auto kernel_desc = oneapi::dal::linear_kernel::descriptor{}.set_scale(1.0).set_shift(0.0);
+	const auto compute_result = oneapi::dal::compute(kernel_desc, dataTable, compTable); 	
+
+	//get the raw data from the result
+	const auto values = compute_result.get_values();
+	oneapi::dal::row_accessor<const T> valAcc {values};
+	const T *p_result = valAcc.pull({0, height * width}).get_data();
+
+	//write the raw result to the output
+	for (int c = 0; c < nComp; c++) {
+		PCABands[c].p_band->RasterIO(
+			GF_Write,
+			0,
+			0,
+			width,
+			height,
+			(void *)((size_t)p_result + c * size),
+			width,
+			height,
+			type,
+			size * nComp,
+			size * nComp * width
+		);
+	}
+
 	VSIFree(p_data);
+	VSIFree(p_comp);
 }
 
 /**
@@ -499,21 +434,23 @@ writePCA(
  *
  * For each block:
  *
- * First, the input raster band blockss are read into memory using the GDALRasterBand 
+ * First, the input raster bands are read into memory using the GDALRasterBand 
  * RasterIO function. Bands are read into memory in a row-wise manor 
  * such that a row indicates a single pixel, and a column indicates a raster band.
  * This means that in between each pixel and the next, a gap must be left for the
  * remaining band values for that pixel index to be written to. This is done
- * using the nPixelSpace, and nLineSpace arguments of RasterIO.
+ * using the nPixelSpace, and nLineSpace arguments of RasterIO. The data pixels 
+ * are iterated over: scaled, shifted, and set to nan if at a no data pixel.
  *
- * Second, the pixels are iterated over. If any value in any band is a no-data
- * value, then nan is written. If none of the values for any band are nodata,
- * then the output pca value is calculated. A different function is called
- * depending on whether the data type is float (single precision), or double 
- * (double precision). The function centers, scales, then calculates the dot
- * product of the pixel with the eigenvector for each output component.
+ * Next, a matrix of pca eigenvectors are allocated and read into a new location.
  *
- * Lastly, the output values are written to the output dataset.
+ * Both the data matrix and the pca matrix are turned into oneDAL homogen tables,
+ * and the result of a linear kernel calculation is written to the output.
+ *
+ * The reason a linear kernel is used, is because the result is essentially just
+ * a bunch of dot products. It's possible to do these dot products one at a time
+ * for each output pixel and component. However, the linear kernel, which is
+ * originally meant for fast machine learning use, does exactly what we need.
  */
 template <typename T>
 void 
@@ -530,38 +467,33 @@ writePCA(
 {
 	int bandCount = static_cast<int>(bands.size());
 	int nComp = static_cast<int>(PCABands.size());
-	std::vector<void *> PCABandBuffers(nComp);
-	std::vector<void *> eigBuffers(nComp);
-	std::vector<T> noDataVals(bandCount); 
+	std::vector<T> noDataVals(bandCount);
 	T resultNan = std::nan("");
 	for (int i = 0; i < bandCount; i++) {
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
-	for (int i = 0; i < nComp; i++) {
-		PCABandBuffers[i] = VSIMalloc3(xBlockSize, yBlockSize, size);
-		eigBuffers[i] = reinterpret_cast<void *>(result.eigenvectors[i].data());
-	}
 
-	void *p_data = VSIMalloc3(xBlockSize * yBlockSize, size, bandCount);
+	T *p_data = reinterpret_cast<T *>(VSIMalloc3(xBlockSize * yBlockSize, size, bandCount));
+	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(nComp, bandCount, size));
 
-	MKL_INT n = result.eigenvectors.size();
-	MKL_INT incx = 1;
-	MKL_INT incy = 1;
+	//create DAL homogen table wrappers for input data
+	const auto dataTable = DALHomogenTable(p_data, xBlockSize * yBlockSize, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
+	const auto compTable = DALHomogenTable(p_comp, nComp, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
 			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 		
-			//read bands into memory	
-			for (int i = 0; i < bandCount; i++) {
-				bands[i].p_band->RasterIO(
+			//read bands into memory, specifically into the memory location of the dal data homogen table
+			for (int b = 0; b < bandCount; b++) {
+				bands[b].p_band->RasterIO(
 					GF_Read,
 					xBlock * xBlockSize,
 					yBlock * yBlockSize,
 					xValid,
 					yValid,
-					(void *)((size_t)p_data + i * size),
+					(void *)((size_t)p_data + b * size),
 					xValid,
 					yValid,
 					type,
@@ -570,61 +502,56 @@ writePCA(
 				);				
 			}
 
-			for (int y = 0; y < yValid; y++) {
-				int i = y * xBlockSize;
-				for (int x = 0; x < xValid; x++) {
-					bool isNan = false;
-					for (int  b = 0; b < bandCount; b++) {
-						T val = reinterpret_cast<T *>(p_data)[i * bandCount + b];
-						isNan = val == noDataVals[b] || std::isnan(val);
-						if (isNan) {
-							break;
-						}
-					}
+			//scale and shift data pixels, set no data pixels to nan
+			for (int i = 0; i < xBlockSize * yBlockSize; i++) {
+				int bi = i * bandCount;
 
-					if (isNan) {
-						for (void *& p_buffer : PCABandBuffers) {
-							reinterpret_cast<T *>(p_buffer)[i] = resultNan;
-						}
-					}
-					else {
-						//depending on type, call single or double precision floating point
-						//processing functions which use cblas_sdot and cblas_ddot respectively
-						type == GDT_Float32 ?
-							processSPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy) :
-							processDPPixel(i, bandCount, nComp, p_data, PCABandBuffers, eigBuffers, result.means, result.stdevs, n, incx, incy);
-					}
-
-					i++;
+				for (int b = 0; b < bandCount; b++) {
+					T val = p_data[bi + b];
+					p_data[bi + b] = (val == noDataVals[b]) ?
+						resultNan :
+						(val - result.means[b]) / result.stdevs[b];
 				}
 			}
-			
-			//write bands to disk
-			for (int b = 0; b < nComp; b++) {
-				rasterBandIO(
-					PCABands[b],
-					PCABandBuffers[b],
-					xBlockSize,
-					yBlockSize,
-					xBlock,
-					yBlock,
+
+			/**
+	 		 * the result for each output principal component pixel is just the dot product of that pixel's data values
+	 		 * with the corresponding principal component eigenvector.
+	 		 * 
+	 		 * oneDAL has a fast way to calculate dot products which is originally meant to be used for
+			 * machine learning (as I understand it) but it does exactly what we need -- multiply large matrices.
+			 */
+
+			//create DAL descriptor and compute the result
+			const auto kernel_desc = oneapi::dal::linear_kernel::descriptor{}.set_scale(1.0).set_shift(0.0);
+			const auto compute_result = oneapi::dal::compute(kernel_desc, dataTable, compTable);
+
+			//get the raw data from the result
+			const auto values = compute_result.get_values();
+			oneapi::dal::row_accessor<const T> valAcc {values};
+			const T *p_result = valAcc.pull({0, xBlockSize * yBlockSize}).get_data();
+
+			//write the raw result to the output
+			for (int c = 0; c < nComp; c++) {
+				PCABands[c].p_band->RasterIO(
+					GF_Write,
+					xBlock * xBlockSize,
+					yBlock * yBlockSize,
 					xValid,
 					yValid,
-					false, //read = false
-					false //threaded = false
+					(void *)((size_t)p_comp + c * size),
+					xValid,
+					yValid,
+					type,
+					size * nComp,
+					size * nComp * xBlockSize
 				);
-			}		
-		}
-
-		if (yBlock % 1000 == 0) {
-			std::cout << "completed y block " << yBlock << "/" << yBlocks << std::endl;
+			}
 		}
 	}
 
 	VSIFree(p_data);
-	for (int i = 0; i < nComp; i++) {
-		VSIFree(PCABandBuffers[i]);
-	}
+	VSIFree(p_comp);
 }
 
 /**
@@ -736,7 +663,6 @@ pca(
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			pcaBands[i].nan = std::nan("");
-			pcaBands[i].p_buffer = !largeRaster ? VSIMalloc3(height, width, size) : nullptr;
 		
 			if (useTiles) {
 				pcaBands[i].xBlockSize = xBlockSize;
@@ -814,29 +740,6 @@ pca(
 			throw std::runtime_error("should not be here! GDALDataType should be one of Float32/Float64!");
 	}
 	
-	//write to file if data is still in memory (the case where largeRaster is false)
-	if (!largeRaster && filename != "") {
-		CPLErr err;
-		for (int b = 0; b < nComp; b++) {
-			err = pcaBands[b].p_band->RasterIO(
-				GF_Write,
-				0,
-				0,
-				width,
-				height, 
-				pcaBands[b].p_buffer,
-				width,
-				height,
-				pcaBands[b].type,
-				0,
-				0
-			);
-			if (err) {
-				throw std::runtime_error("error writing band to file.");
-			}
-		}
-	}
-
 	if (isVRTDataset) {
 		for (int b = 0; b < bandCount; b++) {
 			GDALClose(VRTBandInfo[b].p_dataset);
@@ -845,13 +748,13 @@ pca(
 	}
 
 	std::vector<void *> buffers(bandCount);
-	if (!largeRaster) {
+	if (isMEMDataset) {
 		for (int b = 0; b < bandCount; b++) {
 			buffers[b] = pcaBands[b].p_buffer;
 		}
 	}
 
-	GDALRasterWrapper *p_outrast = largeRaster ?
+	GDALRasterWrapper *p_outrast = !isMEMDataset ?
 		new GDALRasterWrapper(p_dataset) :
 		new GDALRasterWrapper(p_dataset, buffers);
 

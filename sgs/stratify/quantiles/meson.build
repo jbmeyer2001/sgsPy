@@ -6,15 +6,10 @@ if WIN
     link_args: [
       win_link_args, 
     ],
-    dependencies: [
+   dependencies: [
       lib_deps,
+      mkl_lib_deps,
       pybind11_dep
-    ],
-    link_args: [
-      win_link_args, 
-    ],
-    dependencies: [
-      lib_deps
     ],
     include_directories: [
       inc_dir,

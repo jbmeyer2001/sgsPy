@@ -29,11 +29,22 @@ py = import('python').find_installation(pure: false)
 #meson doesn't have direct access to this variable (probably for good reason...) so the way
 #to actually get access to it is by running a quick python script which prints the PATH
 #variable, and parsing the printed string in meson...
-pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
-pip_inc_dir = pip_build_dir + 'include'
-#oneapi_inc_dir = pip_build_dir + 'include/oneapi'
-#dal_inc_dir = pip_build_dir + 'include/dal'
-pip_lib_dir = pip_build_dir + 'lib'
+if WIN
+  path_entries = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(';')
+  message('PATH')
+  foreach entry : path_entries
+    if entry.contains('Temp') and entry.contains('pip-build-env') and entry.contains('overlay') and entry.contains('Scripts')
+      pip_build_dir = entry.split('Scripts').get(0)
+      pip_inc_dir = pip_build_dir + join_paths('Library', 'include')
+      pip_lib_dir = pip_build_dir + join_paths('Library', 'lib')
+      pip_bin_dir = pip_build_dir + join_paths('Library', 'bin')
+    endif
+  endforeach
+else
+  pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
+  pip_inc_dir = pip_build_dir + 'include'
+  pip_lib_dir = pip_build_dir + 'lib'
+endif
 
 run_command('git', 'submodule', 'update', '--init', '--recursive')
 
@@ -57,11 +68,9 @@ endif
 #define directories
 if WIN
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
-  mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
+  mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
   mkl_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib/intel64'
-  tbb_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib'
-  mkl_tbb_bin = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/bin' 
 else #linux
   inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
   lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
@@ -121,31 +130,21 @@ if WIN
     'mkl_intel_thread_dll',
     'mkl_lapack95_ilp64',
   ]
-
-  #tbb_libs = [
-  #    ]
-
-  #dlls = [
-  #  'mkl_core.2',
-  #  'mkl_tbb_threadd.2',
-  #  'tbb12',
-  #  'tbbbind_2_5',
-  #  'tbbmalloc',
-  #  'tbbmalloc_proxy',
-  #]
-
+ 
   foreach lib : mkl_libs
-    lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir], static:true)
+    mkl_lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir], static:true)
   endforeach
 
-  #foreach lib : tbb_libs
-  #  lib_deps += cxx.find_library(lib, dirs : [tbb_lib_dir])
-  #endforeach
+  oneDAL_libs = [
+    'onedal',
+    'onedal_core',
+    'onedal_thread'
+  ]
 
-  #foreach dll : dlls
-  #  lib_deps += cxx.find_library(lib, dirs : [mkl_tbb_bin])
-  #endforeach
-
+  foreach lib : oneDAL_libs
+    oneDAL_lib_deps += cxx.find_library(lib, dirs : [pip_lib_dir], static:true)
+  endforeach
+ 
 else #linux
   #in linux list all of the libs rather than programatically finding them
   #because of multiple definition errors. 
@@ -238,6 +237,17 @@ else #linux
 
   foreach lib : tbb_libs
     tbb_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
+  endforeach
+
+  oneDAL_libs = [
+    'onedal',
+    'onedal_core',
+    'onedal_parameters',
+    'onedal_thread'
+  ]
+ 
+  foreach lib : oneDAL_libs
+    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
   endforeach
 
 
