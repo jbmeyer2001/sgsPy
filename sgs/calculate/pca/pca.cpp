@@ -314,14 +314,18 @@ calculatePCA(
  * such that a row indicates a single pixel, and a column indicates a raster band.
  * This means that in between each pixel and the next, a gap must be left for the
  * remaining band values for that pixel index to be written to. This is done
- * using the nPixelSpace, and nLineSpace arguments of RasterIO.
+ * using the nPixelSpace, and nLineSpace arguments of RasterIO. The data pixels 
+ * are iterated over: scaled, shifted, and set to nan if at a no data pixel.
  *
- * Second, the pixels are iterated over. If any value in any band is a no-data
- * value, then nan is written. If none of the values for any band are nodata,
- * then the output pca value is calculated. A different function is called
- * depending on whether the data type is float (single precision), or double 
- * (double precision). The function centers, scales, then calculates the dot
- * product of the pixel with the eigenvector for each output component.
+ * Next, a matrix of pca eigenvectors are allocated and read into a new location.
+ *
+ * Both the data matrix and the pca matrix are turned into oneDAL homogen tables,
+ * and the result of a linear kernel calculation is written to the output.
+ *
+ * The reason a linear kernel is used, is because the result is essentially just
+ * a bunch of dot products. It's possible to do these dot products one at a time
+ * for each output pixel and component. However, the linear kernel, which is
+ * originally meant for fast machine learning use, does exactly what we need.
  */
 template <typename T>
 void 
@@ -430,21 +434,23 @@ writePCA(
  *
  * For each block:
  *
- * First, the input raster band blockss are read into memory using the GDALRasterBand 
+ * First, the input raster bands are read into memory using the GDALRasterBand 
  * RasterIO function. Bands are read into memory in a row-wise manor 
  * such that a row indicates a single pixel, and a column indicates a raster band.
  * This means that in between each pixel and the next, a gap must be left for the
  * remaining band values for that pixel index to be written to. This is done
- * using the nPixelSpace, and nLineSpace arguments of RasterIO.
+ * using the nPixelSpace, and nLineSpace arguments of RasterIO. The data pixels 
+ * are iterated over: scaled, shifted, and set to nan if at a no data pixel.
  *
- * Second, the pixels are iterated over. If any value in any band is a no-data
- * value, then nan is written. If none of the values for any band are nodata,
- * then the output pca value is calculated. A different function is called
- * depending on whether the data type is float (single precision), or double 
- * (double precision). The function centers, scales, then calculates the dot
- * product of the pixel with the eigenvector for each output component.
+ * Next, a matrix of pca eigenvectors are allocated and read into a new location.
  *
- * Lastly, the output values are written to the output dataset.
+ * Both the data matrix and the pca matrix are turned into oneDAL homogen tables,
+ * and the result of a linear kernel calculation is written to the output.
+ *
+ * The reason a linear kernel is used, is because the result is essentially just
+ * a bunch of dot products. It's possible to do these dot products one at a time
+ * for each output pixel and component. However, the linear kernel, which is
+ * originally meant for fast machine learning use, does exactly what we need.
  */
 template <typename T>
 void 
