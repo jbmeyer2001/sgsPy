@@ -37,7 +37,6 @@ if WIN
       pip_build_dir = entry.split('Scripts').get(0)
       pip_inc_dir = pip_build_dir + join_paths('Library', 'include')
       pip_lib_dir = pip_build_dir + join_paths('Library', 'lib')
-      pip_bin_dir = pip_build_dir + join_paths('Library', 'bin')
     endif
   endforeach
 else
