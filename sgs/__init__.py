@@ -9,19 +9,13 @@ from .utils import (
 )
 
 from .calculate import (
-    allocation,
-    coobs,
-    lhs_optimal,
-    pop,
     pca,
     representation,
-    sample_size,
 )
 
 from .sample import (
     ahels,
     clhs,
-    existing,
     nc,
     srs,
     strat,
