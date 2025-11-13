@@ -337,8 +337,6 @@ writePCA(
 	int bandCount = static_cast<int>(bands.size());
 	int nComp = static_cast<int>(PCABands.size());
 	std::vector<T> noDataVals(bandCount); 
-	std::vector<T *> inputBuffers(bandCount);
-	std::vector<T *> eigBuffers(nComp);
 	T resultNan = std::nan("");
 	
 	//set no data values and read input bands
@@ -463,39 +461,25 @@ writePCA(
 {
 	int bandCount = static_cast<int>(bands.size());
 	int nComp = static_cast<int>(PCABands.size());
-	std::vector<T *> eigBuffers(nComp);
-	std::vector<T> noDataVals(bandCount); 
+	std::vector<T> noDataVals(bandCount);
+	T resultNan = std::nan("");
 	for (int i = 0; i < bandCount; i++) {
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
 
 	T *p_data = reinterpret_cast<T *>(VSIMalloc3(xBlockSize * yBlockSize, size, bandCount));
-	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(xBlockSize * yBlockSize, size, nComp));
+	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(nComp, bandCount, size));
 
-	std::vector<std::vector<T>> multipliers(nComp);
-	std::vector<std::vector<T>> adders(nComp);
-	std::vector<T> prod(bandCount);
-	T resultNan = std::nan("");
-
-	for (int c = 0; c < nComp; c++) {
-		eigBuffers[c] = result.eigenvectors[c].data();
-		multipliers[c].resize(bandCount);
-		adders[c].resize(bandCount);
-
-		for (int b = 0; b < bandCount; b++) {
-			T mean = static_cast<T>(result.means[b]);
-			T stdev = static_cast<T>(result.means[b]);
-			multipliers[c][b] = eigBuffers[c][b] / stdev;
-			adders[c][b] = -1 * multipliers[c][b] * mean;
-		}
-	}
+	//create DAL homogen table wrappers for input data
+	const auto dataTable = DALHomogenTable(p_data, xBlockSize * yBlockSize, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
+	const auto compTable = DALHomogenTable(p_comp, nComp, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
 			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 		
-			//read bands into memory	
+			//read bands into memory, specifically into the memory location of the dal data homogen table
 			for (int b = 0; b < bandCount; b++) {
 				bands[b].p_band->RasterIO(
 					GF_Read,
@@ -512,23 +496,36 @@ writePCA(
 				);				
 			}
 
-			int bi = 0;
-			int ci = 0;
-			for (int i = 0; i < xValid * yValid; i++) {
-				for (int c = 0; c < nComp; c++) {
-					bool isNan;
-					for (int b = 0; b < bandCount; b++) {
-						prod[b] = p_data[bi + b] * multipliers[c][b] + adders[c][b];
-						isNan |= p_data[bi + b] == noDataVals[b];
-					}
+			//scale and shift data pixels, set no data pixels to nan
+			for (int i = 0; i < xBlockSize * yBlockSize; i++) {
+				int bi = i * bandCount;
 
-					p_comp[ci + c] = isNan ? resultNan : std::accumulate(prod.begin(), prod.end(), 0);
+				for (int b = 0; b < bandCount; b++) {
+					T val = p_data[bi + b];
+					p_data[bi + b] = (val == noDataVals[b]) ?
+						resultNan :
+						(val - result.means[b]) / result.stdevs[b];
 				}
+			}
 
-				bi += bandCount;
-				ci += bandCount;
-			}				
+			/**
+	 		 * the result for each output principal component pixel is just the dot product of that pixel's data values
+	 		 * with the corresponding principal component eigenvector.
+	 		 * 
+	 		 * oneDAL has a fast way to calculate dot products which is originally meant to be used for
+			 * machine learning (as I understand it) but it does exactly what we need -- multiply large matrices.
+			 */
 
+			//create DAL descriptor and compute the result
+			const auto kernel_desc = oneapi::dal::linear_kernel::descriptor{}.set_scale(1.0).set_shift(0.0);
+			const auto compute_result = oneapi::dal::compute(kernel_desc, dataTable, compTable);
+
+			//get the raw data from the result
+			const auto values = compute_result.get_values();
+			oneapi::dal::row_accessor<const T> valAcc {values};
+			const T *p_result = valAcc.pull({0, xBlockSize * yBlockSize}).get_data();
+
+			//write the raw result to the output
 			for (int c = 0; c < nComp; c++) {
 				PCABands[c].p_band->RasterIO(
 					GF_Write,
@@ -544,10 +541,6 @@ writePCA(
 					size * nComp * xBlockSize
 				);
 			}
-		}
-
-		if (yBlock % 1000 == 0) {
-			std::cout << "completed y block " << yBlock << "/" << yBlocks << std::endl;
 		}
 	}
 
@@ -664,7 +657,6 @@ pca(
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			pcaBands[i].nan = std::nan("");
-			pcaBands[i].p_buffer = !largeRaster ? VSIMalloc3(height, width, size) : nullptr;
 		
 			if (useTiles) {
 				pcaBands[i].xBlockSize = xBlockSize;
@@ -742,29 +734,6 @@ pca(
 			throw std::runtime_error("should not be here! GDALDataType should be one of Float32/Float64!");
 	}
 	
-	//write to file if data is still in memory (the case where largeRaster is false)
-	if (!largeRaster && filename != "") {
-		CPLErr err;
-		for (int b = 0; b < nComp; b++) {
-			err = pcaBands[b].p_band->RasterIO(
-				GF_Write,
-				0,
-				0,
-				width,
-				height, 
-				pcaBands[b].p_buffer,
-				width,
-				height,
-				pcaBands[b].type,
-				0,
-				0
-			);
-			if (err) {
-				throw std::runtime_error("error writing band to file.");
-			}
-		}
-	}
-
 	if (isVRTDataset) {
 		for (int b = 0; b < bandCount; b++) {
 			GDALClose(VRTBandInfo[b].p_dataset);
@@ -773,13 +742,13 @@ pca(
 	}
 
 	std::vector<void *> buffers(bandCount);
-	if (!largeRaster) {
+	if (isMEMDataset) {
 		for (int b = 0; b < bandCount; b++) {
 			buffers[b] = pcaBands[b].p_buffer;
 		}
 	}
 
-	GDALRasterWrapper *p_outrast = largeRaster ?
+	GDALRasterWrapper *p_outrast = !isMEMDataset ?
 		new GDALRasterWrapper(p_dataset) :
 		new GDALRasterWrapper(p_dataset, buffers);
 
