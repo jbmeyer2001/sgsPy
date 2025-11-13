@@ -50,24 +50,20 @@ run_command('git', 'submodule', 'update', '--init', '--recursive')
 #install required dependencies using vcpkg
 if WIN
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio:x64-windows-static', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-windows-static', '--recurse', check:true)
 else #linux
   run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
 endif
+run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
+run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check: true)
+run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
+run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
+run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
+
 
 #define directories
 if WIN
-  inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
-  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
+  inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
+  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib'
   mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
   mkl_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib/intel64'
 else #linux
@@ -102,7 +98,7 @@ tbb_lib_deps = []
 #the following is hacky meson build code to add all the external libraries required for the project from the vcpkg install folder
 if WIN
   #the 'tree' command *should* work with both PowerShell and CMD
-  libs = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows-static/lib', '/f', '/a', check: true).stdout().strip().split('|')
+  libs = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows/lib', '/f', '/a', check: true).stdout().strip().split('|')
   foreach lib : libs
     lib = lib.strip()
 
@@ -131,7 +127,7 @@ if WIN
   ]
  
   foreach lib : mkl_libs
-    mkl_lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir], static:true)
+    mkl_lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir])
   endforeach
 
   oneDAL_libs = [
@@ -141,7 +137,7 @@ if WIN
   ]
 
   foreach lib : oneDAL_libs
-    oneDAL_lib_deps += cxx.find_library(lib, dirs : [pip_lib_dir], static:true)
+    oneDAL_lib_deps += cxx.find_library(lib, dirs : [pip_lib_dir])
   endforeach
  
 else #linux
@@ -282,20 +278,9 @@ else #linux
     'onedal_thread'
   ]
 
-  #message('py install dir:')
-  #message(py.get_install_dir())
-  
   foreach lib : oneDAL_libs
     oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
   endforeach
-  
-  #install_data(pip_lib_dir + '/libtbb.so.12', install_dir: py.get_install_dir())
-  
-  #oneDAL_dep = declare_dependency(
-  #  include_directories: pip_inc_dir,
-  #  link_with: oneDAL_libs
-  #)
-
 endif
 
 pybind11_dep = dependency('pybind11')
