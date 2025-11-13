@@ -15,7 +15,8 @@
 
 #include "oneapi/dal.hpp"
 
-typedef oneapi::dal::homogen_table	DALHomogenTable;
+typedef oneapi::dal::homogen_table				DALHomogenTable;
+
 
 /**
  * This struct contains the output eigenvectors and eigenvalues for
@@ -276,10 +277,10 @@ calculatePCA(
 	int64_t eigRows = eigenvectors.get_row_count();
 	int64_t eigCols = eigenvectors.get_column_count();
 
-	oneapi::dal::row_accessor<const float> eigVecAcc {eigenvectors};
+	oneapi::dal::row_accessor<const T> eigVecAcc {eigenvectors};
 	auto eigVecBlock = eigVecAcc.pull({0, eigRows});
 
-	oneapi::dal::row_accessor<const float> eigValAcc {eigenvalues};
+	oneapi::dal::row_accessor<const T> eigValAcc {eigenvalues};
 	auto eigValBlock = eigValAcc.pull({0, 1});
 
 	retval.eigenvectors.resize(eigRows);
@@ -360,43 +361,49 @@ writePCA(
 		);	
 	}
 
-	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(nComp, height * width, size));
-
-	//calculate dot product of eigenvectors and values in a *hopefully* SIMD friendly way
-	std::vector<std::vector<T>> multipliers(nComp);
-	std::vector<std::vector<T>> adders(nComp);
-	std::vector<T> prod(bandCount);
-
-	for (int c = 0; c < nComp; c++) {
-		eigBuffers[c] = result.eigenvectors[c].data();
-		multipliers[c].resize(bandCount);
-		adders[c].resize(bandCount);
+	//scale and shift data pixels, set no data pixels to nan
+	for (int i = 0; i < height * width; i++) {
+		int bi = i * bandCount;
 
 		for (int b = 0; b < bandCount; b++) {
-			T mean = static_cast<T>(result.means[b]);
-			T stdev = static_cast<T>(result.means[b]);
-			multipliers[c][b] = eigBuffers[c][b] / stdev;
-			adders[c][b] = -1 * multipliers[c][b] * mean;
+			T val = p_data[bi + b];
+			p_data[bi + b] = (val == noDataVals[b]) ?
+				resultNan :
+				(val - result.means[b]) / result.stdevs[b];
 		}
 	}
 
-	int bi = 0;
-	int ci = 0;
-	for (int i = 0; i < height * width; i++) {
-		for (int c = 0; c < nComp; c++) {
-			bool isNan;
-			for (int b = 0; b < bandCount; b++) {
-				prod[b] = p_data[bi + b] * multipliers[c][b] + adders[c][b];
-				isNan |= p_data[bi + b] == noDataVals[b];
-			}
-
-			p_comp[ci + c] = isNan ? resultNan : std::accumulate(prod.begin(), prod.end(), 0);
+	//read result eigenvectors into matrix format
+	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(nComp, bandCount, size));
+	for (int c = 0; c < nComp; c++) {
+		int ci = c * bandCount;
+		for (int b = 0; b < bandCount; b++) {
+			p_comp[ci + b] = result.eigenvectors[c][b];
 		}
-
-		bi += bandCount;
-		ci += bandCount;
 	}
 
+	/**
+	 * the result for each output principal component pixel is just the dot product of that pixel's data values
+	 * with the corresponding principal component eigenvector.
+	 * 
+	 * oneDAL has a fast way to calculate dot products which is originally meant to be used for
+	 * machine learning (as I understand it) but it does exactly what we need -- multiply large matrices.
+	 */
+
+	//create DAL homogen table wrappers for input data	
+	const auto dataTable = DALHomogenTable(p_data, height * width, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
+	const auto compTable = DALHomogenTable(p_comp, nComp, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major); 
+	
+	//create DAL descriptor and compute the result
+	const auto kernel_desc = oneapi::dal::linear_kernel::descriptor{}.set_scale(1.0).set_shift(0.0);
+	const auto compute_result = oneapi::dal::compute(kernel_desc, dataTable, compTable); 	
+
+	//get the raw data from the result
+	const auto values = compute_result.get_values();
+	oneapi::dal::row_accessor<const T> valAcc {values};
+	const T *p_result = valAcc.pull({0, height * width}).get_data();
+
+	//write the raw result to the output
 	for (int c = 0; c < nComp; c++) {
 		PCABands[c].p_band->RasterIO(
 			GF_Write,
@@ -404,13 +411,13 @@ writePCA(
 			0,
 			width,
 			height,
-			(void *)((size_t)p_comp + c * size),	
+			(void *)((size_t)p_result + c * size),
 			width,
 			height,
 			type,
 			size * nComp,
 			size * nComp * width
-		);	
+		);
 	}
 
 	VSIFree(p_data);

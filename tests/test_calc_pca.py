@@ -13,7 +13,6 @@ class TestPCA:
     rast = sgs.SpatialRaster(mraster_geotiff_path)
     pca_result = sgs.SpatialRaster(pca_result_path)
 
-    @pytest.mark.skip()
     def test_result(self):
         pca = sgs.pca(self.rast, num_comp=3)
         test = pca.band(0)
