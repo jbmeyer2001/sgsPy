@@ -5,7 +5,7 @@ py.extension_module(
   #input_files,
   dependencies: [
     gdal_dep, 
-    oneDAL_lib_deps, 
+    oneDAL_dep, 
     pybind11_dep
   ],
   include_directories: [

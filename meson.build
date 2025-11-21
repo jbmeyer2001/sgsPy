@@ -183,17 +183,29 @@ endif
 
 #get gdal, tbb, mkl dependencies from vcpkg pkg-config
 gdal_dep = dependency('gdal', method: 'pkg-config')
-tbb_dep = dependency('tbb', method: 'pkg-config')
-mkl_dep = dependency('mkl', method: 'pkg-config')
 
 #get pybind11 dep from pyproject.toml build dependencies
 pybind11_dep = dependency('pybind11')
 
-#add libs from oneDAL build dependency
-oneDAL_deps = []
+#get compiler to add libs to
 cxx = meson.get_compiler('cpp')
+
+#add libs from oneDAL build dependency
+oneDAL_dep = []
 foreach lib : ['onedal_dll', 'onedal_core_dll']
-  oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
+  oneDAL_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+endforeach
+
+#add libs for tbb build dependency
+tbb_dep = []
+foreach lib : ['tbb12']
+  tbb_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+endforeach
+
+#add libs for mkl build dependency
+mkl_dep = []
+foreach lib : ['mkl_intel_ilp64_dll', 'mkl_tbb_thread_dll', 'mkl_core_dll']
+  mkl_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
 endforeach
 
 #add link args

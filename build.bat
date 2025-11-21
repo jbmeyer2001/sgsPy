@@ -5,8 +5,6 @@ git submodule update --init --recursive
 cd sgs\extern\vcpkg
 .\bootstrat-vcpkg
 .\vcpkg install boost-asio
-.\vcpkg install intel-mkl
-.\vcpkg install tbb
 .\vcpkg install gdal
 cd ../../..
 
