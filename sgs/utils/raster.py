@@ -7,6 +7,14 @@
 #
 # ******************************************************************************
 
+import os
+import sys
+import platform
+
+if (platform.system() == 'Windows'):
+    bin_path = os.path.join(sys.prefix, "sgs")
+    os.add_dll_directory(bin_path)
+
 import json
 import shutil
 from typing import Optional
