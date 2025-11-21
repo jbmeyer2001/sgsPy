@@ -286,9 +286,8 @@ dlls = [
   join_paths(pip_bin_dir, 'onedal.3.dll'),
   join_paths(pip_bin_dir, 'onedal_core.3.dll'),
   join_paths(pip_bin_dir, 'onedal_thread.3.dll'),
-
-  #tbb dlls
   join_paths(pip_bin_dir, 'tbb12.dll'),
+  join_paths(pip_bin_dir, 'tbbmalloc.dll'),
 
   #mkl dlls
   join_paths(pip_bin_dir, 'mkl_core.2.dll'),

@@ -7,6 +7,18 @@
 #
 # ******************************************************************************
 
+import os
+import sys
+import platform
+
+if (platform.system() == 'Windows'):
+    bin_path = os.path.join(sys.prefix, "sgs")
+    os.add_dll_directory(bin_path)
+    
+    if bin_path not in os.environ['PATH']:
+        os.environ['PATH'] = bin_path + os.pathsep + os.environ['PATH']
+    
+
 import tempfile
 from sgs.utils import SpatialRaster
 from pca import pca_cpp
