@@ -2,9 +2,9 @@
 py.extension_module(
   'raster',
   ['raster_pybind.cpp'],
-  link_args: win_link_args, 
+  link_args: link_args, 
   dependencies: [
-    lib_deps,
+    gdal_dep,
     pybind11_dep
   ],
   include_directories: [
@@ -18,9 +18,9 @@ py.extension_module(
 py.extension_module(
   'vector',
   ['vector_pybind.cpp'],
-  link_args: win_link_args,
+  link_args: link_args,
   dependencies: [
-    lib_deps, 
+    gdal_dep, 
     pybind11_dep
   ],
   include_directories: [

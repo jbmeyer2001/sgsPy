@@ -3,18 +3,16 @@ if WIN
   py.extension_module(
     'quantiles',
     'quantiles.cpp',
-    link_args: [
-      win_link_args, 
-    ],
-   dependencies: [
-      lib_deps,
-      mkl_lib_deps,
+    link_args: link_args,
+    dependencies: [
+      gdal_dep,
+      mkl_dep,
+      tbb_dep,
       pybind11_dep
     ],
     include_directories: [
       inc_dir,
       utils_inc_dir,
-      mkl_inc_dir,
     ],
     cpp_args: [
       '-DMKL_ILP64',

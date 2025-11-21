@@ -3,7 +3,7 @@ build-backend = "mesonpy"
 requires = [
 	"meson-python",
 	"pybind11",
-	"daal-static",
+	"daal-devel",
 ]
 
 [project]
@@ -23,8 +23,7 @@ test = [
 #license = {file = "LICENSE.txt"}
 
 [tool.meson-python.args]
-setup = ['-Db_vscrt=md ; sys_platform=win32',
-	 '-Db_vscrt=mt ; sys_platform=linux']
+setup = ['-Db_vscrt=md']
 
 [tool.pytest.ini_options]
 pythonpath = "."
