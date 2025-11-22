@@ -19,7 +19,6 @@ class TestQuantiles:
     zq90_output_rast = sgs.SpatialRaster(strat_quantiles_zq90_r_path)
     pz2_output_rast = sgs.SpatialRaster(strat_quantiles_pz2_r_path)
     
-    @pytest.mark.skip()
     def test_correct_stratifications_against_R_version(self):
         test_rast = sgs.quantiles(self.rast, num_strata={"zq90": 4})
         test = test_rast.band('strat_zq90')
@@ -31,7 +30,6 @@ class TestQuantiles:
         correct = np.nan_to_num(np.subtract(self.pz2_output_rast.band(0), 1), nan=-1)
         assert np.array_equal(test, correct, equal_nan=True)
 
-    @pytest.mark.skip()
     def test_mapping_outputs(self):
         #the python version maps variables differently than the R version
         #so rather than compare against the R version, I'm going to ensure
@@ -59,7 +57,6 @@ class TestQuantiles:
                     pz2_mapping[map_strat] = pz2_strat
                     zsd_mapping[map_strat] = zsd_strat
 
-    @pytest.mark.skip()
     def test_quantiles_inputs(self):
         test_rast = sgs.quantiles(self.single_band_rast, num_strata=10)
         test_rast = sgs.quantiles(self.single_band_rast, num_strata=[0.00001])
@@ -79,7 +76,6 @@ class TestQuantiles:
         with pytest.raises(ValueError):
             test_rast = sgs.quantiles(self.single_band_rast, num_strata=[])
     
-    @pytest.mark.skip()
     def test_write_functionality(self, tmp_path):
         temp_dir = tmp_path / "test_out"
         temp_dir.mkdir()

@@ -15,6 +15,10 @@ if (platform.system() == 'Windows'):
     bin_path = os.path.join(sys.prefix, "sgs")
     os.add_dll_directory(bin_path)
 
+    if bin_path not in os.environ['PATH']:
+        os.environ['PROJ_LIB'] = bin_path
+ 
+
 import json
 import shutil
 from typing import Optional

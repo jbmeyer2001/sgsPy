@@ -7,7 +7,6 @@ from files import mraster_geotiff_path
 class TestMap:
     rast = sgs.SpatialRaster(mraster_geotiff_path)
 
-    @pytest.mark.skip()
     def test_correct_outputs(self):
         zq90_mapping = {}
         pz2_mapping = {}
@@ -40,7 +39,6 @@ class TestMap:
                     zsd_mapping[map_strat] = zsd_strat
 
 
-    @pytest.mark.skip()
     def test_inputs(self):
         breaks = sgs.breaks(self.rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2': [20, 40, 60, 80]})
         quantiles = sgs.quantiles(self.rast, num_strata={'zsd': 25})
@@ -66,7 +64,6 @@ class TestMap:
         with pytest.raises(ValueError):
             mapped = sgs.map((breaks, [1, 2], [5, 5]))
 
-    @pytest.mark.skip()
     def test_write_functionality(self, tmp_path):
         zq90_mapping = {}
         pz2_mapping = {}

@@ -8,13 +8,13 @@
 # ******************************************************************************
 
 import os
+import sys
 import platform
 
 if (platform.system() == 'Windows'):
-    path_to_file = os.path.dirname(__file__)
-    bin_path = os.path.join(path_to_file, "..", "..", "extern", "vcpkg", "installed", "x64-windows", "bin")
+    bin_path = os.path.join(sys.prefix, "sgs")
     os.add_dll_directory(bin_path)
-
+ 
 import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
