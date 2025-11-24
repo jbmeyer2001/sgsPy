@@ -3,7 +3,7 @@ git submodule update --init --recursive
 
 :: run vcpkg initialization commands
 cd sgs\extern\vcpkg
-.\bootstrat-vcpkg
+Powershell -Command .\bootstrap-vcpkg
 .\vcpkg install boost-asio
 .\vcpkg install gdal
 cd ../../..
