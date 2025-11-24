@@ -147,7 +147,6 @@ class TestStrat:
             mindist=90,
         ).samples_as_wkt())
 
-
         assert len(samples) > 90 #mindist means we may not get the full 100
         self.check_points_in_bounds(srast, samples)
         self.check_access(samples, 0, 600)

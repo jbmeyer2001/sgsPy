@@ -59,6 +59,8 @@ class GDALRasterWrapper {
 	std::string crs = "";
 	char *p_proj = nullptr;
 
+	std::string tempDir = "";
+
 	/**
 	 * Internal function used to read raster band data.
 	 * 
@@ -241,6 +243,13 @@ class GDALRasterWrapper {
 
 		if (this->p_proj) {
 			free(this->p_proj);
+		}
+
+		GDALClose(GDALDataset::ToHandle(this->p_dataset.release()));
+
+		if (this->tempDir != "") {
+			std::filesystem::path temp = this->tempDir;
+			std::filesystem::remove_all(temp);
 		}	
 	}
 
@@ -579,5 +588,24 @@ class GDALRasterWrapper {
 		GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("GTiff");
 	
 		GDALClose(p_driver->CreateCopy(filename.c_str(), this->p_dataset.get(), (int)false, nullptr, nullptr, nullptr));
+	}
+
+	/**
+	 * Give the GDALRasterWrapper ownership of a temporary directory, for it to remove when
+	 * deconstructed.
+	 *
+	 * @param std::string tempDir
+	 */
+	void setTempDir(std::string tempDir) {
+		this->tempDir = tempDir;
+	}
+
+	/**
+	 * Getter function for the rasters temporary directory.
+	 *
+	 * @returns std::string
+	 */
+	std::string getTempDir() {
+		return this->tempDir;
 	}
 };
