@@ -3,7 +3,7 @@ build-backend = "mesonpy"
 requires = [
 	"meson-python",
 	"pybind11",
-	"daal-devel",
+	"daal-devel == 2025.9.0",
 ]
 
 [project]

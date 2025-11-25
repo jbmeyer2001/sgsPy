@@ -12,6 +12,9 @@ WIN = host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
 #get python installation
 py = import('python').find_installation(pure: false)
 
+#get compiler
+cxx = meson.get_compiler('cpp')
+
 #this is some very hacky build code... 
 #
 #The problem is that I have a build dependency (daal). Trying to compile daal
@@ -41,6 +44,7 @@ if WIN
   endforeach
 else
   pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
+
   pip_inc_dir = pip_build_dir + 'include'
   pip_lib_dir = pip_build_dir + 'lib'
   pip_bin_dir = pip_build_dir + 'bin'
@@ -58,156 +62,59 @@ bin_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet 
 utils_inc_dir = include_directories('sgs/utils')
 xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
 
-lib_deps = []
-mkl_lib_deps = []
-oneDAL_lib_deps = []
-tbb_lib_deps = []
-
-#add all libraries in the vcpkg lib directory to the project
-#the following is hacky meson build code to add all the external libraries required for the project from the vcpkg install folder
-if WIN
- else #linux
-  #in linux list all of the libs rather than programatically finding them
-  #because of multiple definition errors. 
-  libs = [
-    'aec',
-    'crypto',
-    'curl',
-    'ecpg',
-    'ecpg_compat',
-    'expat',
-    'freexl',
-    'gdal',
-    'geos',
-    'geos_c',
-    'geotiff',
-    'gif',
-    'hdf5',
-    'hdf5_cpp',
-    'hdf5_hl',
-    'hdf5_hl_cpp',
-    'jpeg',
-    'json-c',
-    'kmlbase',
-    'kmlconvenience',
-    'kmldom',
-    'kmlengine',
-    'kmlregionator',
-    'kmlxsd',
-    'Lerc',
-    'lz4',
-    'lzma',
-    'minizip',
-    'netcdf',
-    'openjp2',
-    'pcre2-8',
-    'pcre2-16',
-    'pcre2-32',
-    'pcre2-posix',
-    'pgcommon',
-    'pgport',
-    'pgtypes',
-    'pkgconf',
-    'png',
-    'png16',
-    'pq',
-    'proj',
-    'qhullcpp',
-    'qhullstatic_r',
-    'sharpyuv',
-    'spatialite',
-    'sqlite3',
-    'ssl',
-    'sz',
-    'tiff',
-    'turbojpeg',
-    'uriparser',
-    'webp',
-    'webpdecoder',
-    'webpdemux',
-    'webpmux',
-    'xml2',
-    'z',
-    'zstd',
-    'mod_spatialite',
-  ]
-
-  foreach lib : libs
-    lib_deps += cxx.find_library(lib, dirs : [lib_dir], static:true)
-  endforeach
-
-  mkl_libs = [
-    'mkl_blacs_intelmpi_lp64',
-    'mkl_blas95_lp64',
-    'mkl_cdft_core',
-    'mkl_core',
-    'mkl_intel_lp64',
-    'mkl_lapack95_lp64',
-    'mkl_scalapack_lp64',
-    'mkl_tbb_thread',
-  ]
-
-  foreach lib : mkl_libs
-    mkl_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
-  endforeach
-
-  tbb_libs = [
-    'tbb',
-    'tbbmalloc'
-  ]
-
-  foreach lib : tbb_libs
-    tbb_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
-  endforeach
-
-  oneDAL_libs = [
-    'onedal',
-    'onedal_core',
-    'onedal_parameters',
-    'onedal_thread'
-  ]
- 
-  foreach lib : oneDAL_libs
-    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
-  endforeach
-
-
-  oneDAL_libs = [
-    'onedal',
-    'onedal_core',
-    'onedal_parameters',
-    'onedal_thread'
-  ]
-
-  foreach lib : oneDAL_libs
-    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
-  endforeach
-endif
-
-#get gdal, tbb, mkl dependencies from vcpkg pkg-config
+#get gdal dependency from vcpkg pkg-config
 gdal_dep = dependency('gdal', method: 'pkg-config')
 
 #get pybind11 dep from pyproject.toml build dependencies
 pybind11_dep = dependency('pybind11')
 
-#get compiler to add libs to
-cxx = meson.get_compiler('cpp')
+#specify libs depending on os
+if WIN
+  onedal_libs = ['onedal_dll', 'onedal_core_dll']
+  tbb_libs = ['tbb12']
+  mkl_libs = ['mkl_intel_ilp64_dll', 'mkl_tbb_thread_dll', 'mkl_core_dll']
+else #linux
+  onedal_libs = ['onedal', 'onedal_core', 'onedal_parameters', 'onedal_thread']
+  tbb_libs = ['tbb']
+  mkl_libs = ['mkl_intel_ilp64', 'mkl_tbb_thread', 'mkl_core']
 
-#add libs from oneDAL build dependency
+  #some libs are missing their non-versioned simlinks. Create them for meson to find.
+  simlinks = [
+    ['onedal', '.3'], 
+    ['onedal_core', '.3'],
+    ['onedal_parameters', '.3'], 
+    ['onedal_thread', '.3'], 
+    ['mkl_intel_ilp64', '.2'],
+    ['mkl_tbb_thread', '.2'],
+    ['mkl_core', '.2'],
+  ]
+  foreach simlink : simlinks
+    #manually create simlink
+    lib = simlink.get(0)
+    version = simlink.get(1)
+    
+    simlink_src = pip_lib_dir + '/lib' + lib + '.so'
+    simlink_dst = pip_lib_dir + '/lib' + lib + '.so' + version #this is the file which actually exists
+    
+    run_command('ln', '-s', simlink_dst, simlink_src, check: true)
+  endforeach
+endif
+
+#add libs for oneDAL build dependency
 oneDAL_dep = []
-foreach lib : ['onedal_dll', 'onedal_core_dll']
+foreach lib : onedal_libs
   oneDAL_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
 endforeach
-
+ 
 #add libs for tbb build dependency
 tbb_dep = []
-foreach lib : ['tbb12']
+foreach lib : tbb_libs
   tbb_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
 endforeach
 
 #add libs for mkl build dependency
 mkl_dep = []
-foreach lib : ['mkl_intel_ilp64_dll', 'mkl_tbb_thread_dll', 'mkl_core_dll']
+foreach lib : mkl_libs
   mkl_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
 endforeach
 
@@ -215,7 +122,6 @@ endforeach
 link_args = []
 if WIN
   link_args = [
-    link_args,
     '-lws2_32',   #ws2_32.lib from Windows SDK 
     '-lcrypt32',  #crypt32.lib from Windows SDK
     '-lsecur32',  #secur32.lib from Windows SDK
@@ -303,8 +209,9 @@ dlls = [
   meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
 ]
 
-foreach dll : dlls
-  install_data(dll)
-endforeach
-
+if WIN
+  foreach dll : dlls
+    install_data(dll)
+  endforeach
+endif 
 subdir('sgs')
