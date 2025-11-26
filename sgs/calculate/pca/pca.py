@@ -27,14 +27,8 @@ else: #linux
         else:
             os.environ['LD_LIBRARY_PATH'] = lib_path + os.pathsep + os.environ.get('LD_LIBRARY_PATH', '')
 
-    print()
-    print("LD_LIBRARY_PATH:")
-    print(os.environ['LD_LIBRARY_PATH'])
-    print()
-
 import tempfile
 from sgs.utils import SpatialRaster
-from pca import pca_cpp
 
 GIGABYTE = 1073741824
 

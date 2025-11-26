@@ -56,11 +56,11 @@ if WIN
 else #linux
   triplet = 'x64-linux'
 endif
-inc_dir = include_directories('sgs/extern/vcpkg/installed/' + triplet + '/include')
+vcpkg_inc_dir = include_directories('sgs/extern/vcpkg/installed/' + triplet + '/include')
+xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
 lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/lib'
 bin_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/bin'
-utils_inc_dir = include_directories('sgs/utils')
-xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
+inc_dir = include_directories('sgs')
 
 #get gdal dependency from vcpkg pkg-config
 gdal_dep = dependency('gdal', method: 'pkg-config')
@@ -242,4 +242,26 @@ foreach file : required_files
   install_data(file)
 endforeach
 
-subdir('sgs')
+py.extension_module(
+  'sgs',
+  'sgs/pybind.cpp',
+  link_args: link_args,
+  dependencies: [
+    gdal_dep,
+    mkl_dep,
+    tbb_dep,
+    pybind11_dep
+  ],
+  include_directories: [
+    pip_inc_dir,
+    vcpkg_inc_dir,
+    xoshiro_inc_dir,
+    inc_dir
+  ],
+  cpp_args: [
+    '-DMKL_ILP64',
+    '-m64'
+  ],
+  install: true,
+)
+

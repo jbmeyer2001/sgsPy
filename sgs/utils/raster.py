@@ -27,8 +27,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib #for type checking matplotlib.axes.Axes
 
-from raster import GDALRasterWrapper
-
 from .import plot
 from .plot import plot_raster
 

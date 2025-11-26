@@ -12,8 +12,6 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import matplotlib #fpr type checking matplotlib.axes.Axes
 
-from vector import GDALVectorWrapper
-
 from.import plot
 from .plot import plot_vector
 

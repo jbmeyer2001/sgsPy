@@ -7,10 +7,13 @@
  *
  ******************************************************************************/
 
-#include "helper.h"
-#include "raster.h"
-#include "vector.h"
+#include "utils/helper.h"
+#include "utils/raster.h"
+#include "utils/vector.h"
+
 #include "gdal_utils.h"
+
+namespace poly {
 
 /**
  *
@@ -124,6 +127,4 @@ GDALRasterWrapper *poly(
 		new GDALRasterWrapper(p_dataset);
 }
 
-PYBIND11_MODULE(poly, m) {
-	m.def("poly_cpp", &poly);
-}
+} //namespace poly

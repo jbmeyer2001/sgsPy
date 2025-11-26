@@ -9,10 +9,11 @@
 
 import tempfile
 from sgs.utils import SpatialRaster
-from map_stratifications import map_stratifications_cpp
 
 GIGABYTE = 1073741824
 MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
+
+import _sgs.map_cpp as map_cpp
 
 def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         filename: str = '',
@@ -177,7 +178,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     args[0][0].temp_dir = temp_dir
 
     #call cpp map function
-    srast = SpatialRaster(map_stratifications_cpp(
+    srast = SpatialRaster(map_cpp(
         raster_list, 
         band_lists, 
         strata_lists, 
