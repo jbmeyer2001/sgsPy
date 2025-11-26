@@ -257,6 +257,10 @@ struct Access {
 	
 		this->used = true;
 	}
+
+	~Access() {
+		GDALClose(GDALDataset::ToHandle(this->p_dataset));
+	}
 };
 
 

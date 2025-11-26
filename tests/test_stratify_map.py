@@ -6,7 +6,7 @@ from files import mraster_geotiff_path
 
 class TestMap:
     rast = sgs.SpatialRaster(mraster_geotiff_path)
-  
+
     def test_correct_outputs(self):
         zq90_mapping = {}
         pz2_mapping = {}

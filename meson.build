@@ -12,6 +12,9 @@ WIN = host_machine.system() == 'windows' or host_machine.system() == 'cygwin'
 #get python installation
 py = import('python').find_installation(pure: false)
 
+#get compiler
+cxx = meson.get_compiler('cpp')
+
 #this is some very hacky build code... 
 #
 #The problem is that I have a build dependency (daal). Trying to compile daal
@@ -31,7 +34,6 @@ py = import('python').find_installation(pure: false)
 #variable, and parsing the printed string in meson...
 if WIN
   path_entries = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(';')
-  message('PATH')
   foreach entry : path_entries
     if entry.contains('Temp') and entry.contains('pip-build-env') and entry.contains('overlay') and entry.contains('Scripts')
       pip_build_dir = entry.split('Scripts').get(0)
@@ -42,47 +44,84 @@ if WIN
   endforeach
 else
   pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
+
   pip_inc_dir = pip_build_dir + 'include'
   pip_lib_dir = pip_build_dir + 'lib'
-endif
-
-run_command('git', 'submodule', 'update', '--init', '--recursive')
-
-#install required dependencies using vcpkg
-if WIN
-  run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.bat', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio:x64-windows-static', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal:x64-windows-static', '--recurse', check:true)
-else #linux
-  run_command('./sgs/extern/vcpkg/bootstrap-vcpkg.sh', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'integrate', 'install', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'boost-asio', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'intel-mkl', check:true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'tbb', check: true)
-  run_command('./sgs/extern/vcpkg/vcpkg', 'install', 'gdal', '--recurse', check:true)
+  pip_bin_dir = pip_build_dir + 'bin'
 endif
 
 #define directories
 if WIN
-  inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows-static/include')
-  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows-static/lib'
-  mkl_inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-windows/include')
-  mkl_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-windows/lib/intel64'
+  triplet = 'x64-windows'
 else #linux
-  inc_dir = include_directories('sgs/extern/vcpkg/installed/x64-linux/include')
-  lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib'
-  intel_lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/x64-linux/lib/intel64'
+  triplet = 'x64-linux'
 endif
+inc_dir = include_directories('sgs/extern/vcpkg/installed/' + triplet + '/include')
+lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/lib'
+bin_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/bin'
 utils_inc_dir = include_directories('sgs/utils')
 xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
 
-#add to link args if necessary
-win_link_args = []
+#get gdal dependency from vcpkg pkg-config
+gdal_dep = dependency('gdal', method: 'pkg-config')
+
+#get pybind11 dep from pyproject.toml build dependencies
+pybind11_dep = dependency('pybind11')
+
+#specify libs depending on os
 if WIN
-  win_link_args = [
+  onedal_libs = ['onedal_dll', 'onedal_core_dll']
+  tbb_libs = ['tbb12']
+  mkl_libs = ['mkl_intel_ilp64_dll', 'mkl_tbb_thread_dll', 'mkl_core_dll']
+else #linux
+  onedal_libs = ['onedal', 'onedal_core', 'onedal_parameters', 'onedal_thread']
+  tbb_libs = ['tbb']
+  mkl_libs = ['mkl_intel_ilp64', 'mkl_tbb_thread', 'mkl_core']
+
+  #some libs are missing their non-versioned simlinks. Create them for meson to find.
+  simlinks = [
+    ['onedal', '.3'], 
+    ['onedal_core', '.3'],
+    ['onedal_parameters', '.3'], 
+    ['onedal_thread', '.3'], 
+    ['mkl_intel_ilp64', '.2'],
+    ['mkl_tbb_thread', '.2'],
+    ['mkl_core', '.2'],
+  ]
+  foreach simlink : simlinks
+    #manually create simlink
+    lib = simlink.get(0)
+    version = simlink.get(1)
+    
+    simlink_src = pip_lib_dir + '/lib' + lib + '.so'
+    simlink_dst = pip_lib_dir + '/lib' + lib + '.so' + version #this is the file which actually exists
+    
+    run_command('ln', '-s', simlink_dst, simlink_src, check: true)
+  endforeach
+endif
+
+#add libs for oneDAL build dependency
+oneDAL_dep = []
+foreach lib : onedal_libs
+  oneDAL_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+endforeach
+ 
+#add libs for tbb build dependency
+tbb_dep = []
+foreach lib : tbb_libs
+  tbb_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+endforeach
+
+#add libs for mkl build dependency
+mkl_dep = []
+foreach lib : mkl_libs
+  mkl_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+endforeach
+
+#add link args
+link_args = []
+if WIN
+  link_args = [
     '-lws2_32',   #ws2_32.lib from Windows SDK 
     '-lcrypt32',  #crypt32.lib from Windows SDK
     '-lsecur32',  #secur32.lib from Windows SDK
@@ -90,215 +129,117 @@ if WIN
     '-lwbemuuid'  #wbemuuid.lib from Windows SDK
   ]
 endif
+add_global_link_arguments('-L' + lib_dir, language: 'cpp')
 
-#get compiler, and use to find lib files in lib directory
-cxx = meson.get_compiler('cpp')
-
-lib_deps = []
-mkl_lib_deps = []
-oneDAL_lib_deps = []
-tbb_lib_deps = []
-
-#add all libraries in the vcpkg lib directory to the project
-#the following is hacky meson build code to add all the external libraries required for the project from the vcpkg install folder
 if WIN
-  #the 'tree' command *should* work with both PowerShell and CMD
-  libs = run_command('tree', 'sgs/extern/vcpkg/installed/x64-windows-static/lib', '/f', '/a', check: true).stdout().strip().split('|')
-  foreach lib : libs
-    lib = lib.strip()
+  required_files = [
+    #vcpkg dlls
+    join_paths(bin_dir, 'aec.dll'),
+    join_paths(bin_dir, 'bz2.dll'),
+    join_paths(bin_dir, 'charset-1.dll'),
+    join_paths(bin_dir, 'ffi-8.dll'),
+    join_paths(bin_dir, 'freexl-1.dll'),
+    join_paths(bin_dir, 'gdal.dll'),
+    join_paths(bin_dir, 'geos.dll'),
+    join_paths(bin_dir, 'geos_c.dll'),
+    join_paths(bin_dir, 'geotiff.dll'),
+    join_paths(bin_dir, 'gif.dll'),
+    join_paths(bin_dir, 'hdf5.dll'),
+    join_paths(bin_dir, 'hdf5_cpp.dll'),
+    join_paths(bin_dir, 'hdf5_hl.dll'),
+    join_paths(bin_dir, 'hdf5_hl_cpp.dll'),
+    join_paths(bin_dir, 'iconv-2.dll'),
+    join_paths(bin_dir, 'jpeg62.dll'),
+    join_paths(bin_dir, 'json-c.dll'),
+    join_paths(bin_dir, 'legacy.dll'),
+    join_paths(bin_dir, 'Lerc.dll'),
+    join_paths(bin_dir, 'libcrypto-3-x64.dll'),
+    join_paths(bin_dir, 'libcurl.dll'),
+    join_paths(bin_dir, 'libecpg.dll'),
+    join_paths(bin_dir, 'libecpg_compat.dll'),
+    join_paths(bin_dir, 'libexpat.dll'),
+    join_paths(bin_dir, 'liblzma.dll'),
+    join_paths(bin_dir, 'libpgtypes.dll'),
+    join_paths(bin_dir, 'libpng16.dll'),
+    join_paths(bin_dir, 'libpq.dll'),
+    join_paths(bin_dir, 'libsharpyuv.dll'),
+    join_paths(bin_dir, 'libssl-3-x64.dll'),
+    join_paths(bin_dir, 'libwebp.dll'),
+    join_paths(bin_dir, 'libwebpdecoder.dll'),
+    join_paths(bin_dir, 'libwebpdemux.dll'),
+    join_paths(bin_dir, 'libwebpmux.dll'),
+    join_paths(bin_dir, 'libxml2.dll'),
+    join_paths(bin_dir, 'lz4.dll'),
+    join_paths(bin_dir, 'minizip.dll'),
+    join_paths(bin_dir, 'netcdf.dll'),
+    join_paths(bin_dir, 'openjp2.dll'),
+    join_paths(bin_dir, 'pcre2-16.dll'),
+    join_paths(bin_dir, 'pcre2-32.dll'),
+    join_paths(bin_dir, 'pcre2-8.dll'),
+    join_paths(bin_dir, 'pcre2-posix.dll'),
+    join_paths(bin_dir, 'pkgconf-7.dll'),
+    join_paths(bin_dir, 'proj_9.dll'),
+    join_paths(bin_dir, 'qhull_r.dll'),
+    join_paths(bin_dir, 'spatialite.dll'),
+    join_paths(bin_dir, 'sqlite3.dll'),
+    join_paths(bin_dir, 'szip.dll'),
+    join_paths(bin_dir, 'tiff.dll'),
+    join_paths(bin_dir, 'turbojpeg.dll'),
+    join_paths(bin_dir, 'uriparser.dll'),
+    join_paths(bin_dir, 'zlib1.dll'),
+    join_paths(bin_dir, 'zstd.dll'),
+  
+    #onedal dlls
+    join_paths(pip_bin_dir, 'onedal.3.dll'),
+    join_paths(pip_bin_dir, 'onedal_core.3.dll'),
+    join_paths(pip_bin_dir, 'onedal_thread.3.dll'),
+    join_paths(pip_bin_dir, 'tbb12.dll'),
+    join_paths(pip_bin_dir, 'tbbmalloc.dll'),
+  
+    #mkl dlls
+    join_paths(pip_bin_dir, 'mkl_core.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_tbb_thread.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_blacs_intelmpi_ilp64.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_def.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_avx2.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_avx512.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_cmpt.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_mc3.2.dll'),
 
-    #ensure the file is actually a library, since the tree command also searches subdirectories
-    #and there are often files of other types which we don't want
-    if lib.endswith('.lib')
-
-      #remove 'lib' at beginning of library if it exists
-      if lib.startswith('lib')
-        lib = lib.replace('lib', '')
-      endif
-
-      #get just the lib name and add it to the dependencies
-      lib = lib.split('.').get(0)
-      lib_deps += cxx.find_library(lib, dirs: lib_dir, static: true)
-   
-    endif
-  endforeach
-
-  mkl_libs = [
-    'mkl_blas95_ilp64',
-    'mkl_core_dll',
-    'mkl_intel_ilp64_dll',
-    'mkl_intel_thread_dll',
-    'mkl_lapack95_ilp64',
+    #proj
+    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
- 
-  foreach lib : mkl_libs
-    mkl_lib_deps += cxx.find_library(lib, dirs : [mkl_lib_dir], static:true)
-  endforeach
-
-  oneDAL_libs = [
-    'onedal',
-    'onedal_core',
-    'onedal_thread'
-  ]
-
-  foreach lib : oneDAL_libs
-    oneDAL_lib_deps += cxx.find_library(lib, dirs : [pip_lib_dir], static:true)
-  endforeach
- 
 else #linux
-  #in linux list all of the libs rather than programatically finding them
-  #because of multiple definition errors. 
-  libs = [
-    'aec',
-    'crypto',
-    'curl',
-    'ecpg',
-    'ecpg_compat',
-    'expat',
-    'freexl',
-    'gdal',
-    'geos',
-    'geos_c',
-    'geotiff',
-    'gif',
-    'hdf5',
-    'hdf5_cpp',
-    'hdf5_hl',
-    'hdf5_hl_cpp',
-    'jpeg',
-    'json-c',
-    'kmlbase',
-    'kmlconvenience',
-    'kmldom',
-    'kmlengine',
-    'kmlregionator',
-    'kmlxsd',
-    'Lerc',
-    'lz4',
-    'lzma',
-    'minizip',
-    'netcdf',
-    'openjp2',
-    'pcre2-8',
-    'pcre2-16',
-    'pcre2-32',
-    'pcre2-posix',
-    'pgcommon',
-    'pgport',
-    'pgtypes',
-    'pkgconf',
-    'png',
-    'png16',
-    'pq',
-    'proj',
-    'qhullcpp',
-    'qhullstatic_r',
-    'sharpyuv',
-    'spatialite',
-    'sqlite3',
-    'ssl',
-    'sz',
-    'tiff',
-    'turbojpeg',
-    'uriparser',
-    'webp',
-    'webpdecoder',
-    'webpdemux',
-    'webpmux',
-    'xml2',
-    'z',
-    'zstd',
-    'mod_spatialite',
-  ]
-
-  foreach lib : libs
-    lib_deps += cxx.find_library(lib, dirs : [lib_dir], static:true)
-  endforeach
-
-  mkl_libs = [
-    'mkl_blacs_intelmpi_lp64',
-    'mkl_blas95_lp64',
-    'mkl_cdft_core',
-    'mkl_core',
-    'mkl_intel_lp64',
-    'mkl_lapack95_lp64',
-    'mkl_scalapack_lp64',
-    'mkl_tbb_thread',
-  ]
-
-  foreach lib : mkl_libs
-    mkl_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
-  endforeach
-
-  tbb_libs = [
-    'tbb',
-    'tbbmalloc'
-  ]
-
-  foreach lib : tbb_libs
-    tbb_lib_deps += cxx.find_library(lib, dirs : [lib_dir, intel_lib_dir], static:true)
-  endforeach
-
-  oneDAL_libs = [
-    'onedal',
-    'onedal_core',
-    'onedal_parameters',
-    'onedal_thread'
-  ]
- 
-  foreach lib : oneDAL_libs
-    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
-  endforeach
-
-
-  #oneDAL_libs_TEST = [
-    #static_library('libonedal.a', pip_lib_dir + '/libonedal.a', implicit_include_directories: false),
-    #static_library('libonedal_core.a', pip_lib_dir + '/libonedal_core.a'),
-    #static_library('libonedal_parameters.a', pip_lib_dir + '/libonedal_parameters.a'),
-    #static_library('libonedal_thread.a', pip_lib_dir + '/libonedal_thread.a'),
-    #shared_library('libhwloc.so', pip_lib_dir + '/libhwloc.so'),
-    #shared_library('libhwloc.so.15', pip_lib_dir + '/libhwloc.so.15'),
-    #shared_library('libhwloc.so.15.8.1', pip_lib_dir + '/libhwloc.so.15.8.1'),
-    #shared_library('libtbb.so', pip_lib_dir + '/libtbb.so'),
-    #shared_library('libtbb.so.12', pip_lib_dir + '/libtbb.so.12'),
-    #shared_library('libtbb.so.12.16', pip_lib_dir + '/libtbb.so.12.16'),
-    #shared_library('libtbbbind_2_5.so', pip_lib_dir + '/libtbbbind_2_5.so'),
-    #shared_library('libtbbbind_2_5.so.3', pip_lib_dir + '/libtbbbind_2_5.so.3'),
-    #shared_library('libtbbbind_2_5.so.3.16', pip_lib_dir + '/libtbbbind_2_5.so.3.16'),
-    #shared_library('libtbbmalloc.so', pip_lib_dir + '/libtbbmalloc.so'),
-    #shared_library('libtbbmalloc.so.2', pip_lib_dir + '/libtbbmalloc.so.2'),
-    #shared_library('libtbbmalloc.so.2.16', pip_lib_dir + '/libtbbmalloc.so.2.16'),
-    #shared_library('libtbbmalloc_proxy.so', pip_lib_dir + '/libtbbmalloc_proxy.so'),
-    #shared_library('libtbbmalloc_proxy.so.2', pip_lib_dir + '/libtbbmalloc_proxy.so.2'),
-    #shared_library('libtbbmalloc_proxy.so.2.16', pip_lib_dir + '/libtbbmalloc_proxy.so.2.16'),
-    #shared_library('liblibtcm.so', pip_lib_dir + '/libtcm.so'),
-    #shared_library('libtcm.so.1', pip_lib_dir + '/libtcm.so.1'),
-    #shared_library('libtcm.so.1.4.0', pip_lib_dir + '/libtcm.so.1.4.0')
-    #]
-
-  oneDAL_libs = [
-    'onedal',
-    'onedal_core',
-    'onedal_parameters',
-    'onedal_thread'
-  ]
-
-  #message('py install dir:')
-  #message(py.get_install_dir())
+  required_files = [
+    #onedal libs
+    join_paths(pip_lib_dir, 'libonedal.so.3'),
+    join_paths(pip_lib_dir, 'libonedal_core.so.3'),
+    join_paths(pip_lib_dir, 'libonedal_parameters.so.3'),
+    join_paths(pip_lib_dir, 'libonedal_thread.so.3'),
+    join_paths(pip_lib_dir, 'libtbb.so'),
+    join_paths(pip_lib_dir, 'libtbbmalloc.so'),
+    join_paths(pip_lib_dir, 'libtbb.so.12'),
+    join_paths(pip_lib_dir, 'libtbbmalloc.so.2'),
+    join_paths(pip_lib_dir, 'libtbb.so.12.17'),
+    join_paths(pip_lib_dir, 'libtbbmalloc.so.2.17'),
   
-  foreach lib : oneDAL_libs
-    oneDAL_lib_deps += cxx.find_library(lib, dirs: [pip_lib_dir])
-  endforeach
-  
-  #install_data(pip_lib_dir + '/libtbb.so.12', install_dir: py.get_install_dir())
-  
-  #oneDAL_dep = declare_dependency(
-  #  include_directories: pip_inc_dir,
-  #  link_with: oneDAL_libs
-  #)
+    #mkl libs
+    join_paths(pip_lib_dir, 'libmkl_intel_ilp64.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_tbb_thread.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_core.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_def.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_avx2.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_avx512.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_cmpt.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_mc3.so.2'),
 
+    #proj
+    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+  ]
 endif
 
-pybind11_dep = dependency('pybind11')
+foreach file : required_files
+  install_data(file)
+endforeach
 
 subdir('sgs')

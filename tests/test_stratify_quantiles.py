@@ -75,7 +75,7 @@ class TestQuantiles:
         
         with pytest.raises(ValueError):
             test_rast = sgs.quantiles(self.single_band_rast, num_strata=[])
-
+    
     def test_write_functionality(self, tmp_path):
         temp_dir = tmp_path / "test_out"
         temp_dir.mkdir()

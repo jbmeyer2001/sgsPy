@@ -98,7 +98,11 @@ def poly(
             driver_options_str[key] = str(val)
 
     large_raster = raster.height * raster.width > GIGABYTE
+    
+    #make temp directory which will be deleted if there is any problem when calling the cpp function
     temp_dir = tempfile.mkdtemp()
+    raster.have_temp_dir = True
+    raster.temp_dir = temp_dir
 
     srast = SpatialRaster(poly_cpp(
         vector.cpp_vector,
@@ -112,9 +116,9 @@ def poly(
         driver_options_str
     ))
 
-    #give srast ownership of it's own temp directory
-    srast.have_temp_dir = True
-    srast.temp_dir = temp_dir
+    #now that it's created, give the cpp raster object ownership of the temporary directory
+    raster.have_temp_dir = False
+    srast.cpp_raster.set_temp_dir(temp_dir)
 
     return srast
 

@@ -31,5 +31,7 @@ PYBIND11_MODULE(raster, m) {
 		.def("get_bands", &GDALRasterWrapper::getBands)
 		.def("get_band_nodata_value", &GDALRasterWrapper::getBandNoDataValue)
 		.def("get_raster_as_memoryview", &GDALRasterWrapper::getRasterBandAsMemView)
-		.def("get_raster_band_type_size", &GDALRasterWrapper::getRasterBandTypeSize);
+		.def("get_raster_band_type_size", &GDALRasterWrapper::getRasterBandTypeSize)
+		.def("set_temp_dir", &GDALRasterWrapper::setTempDir)
+		.def("get_temp_dir", &GDALRasterWrapper::getTempDir);
 }

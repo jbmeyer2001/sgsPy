@@ -8,13 +8,13 @@
 # ******************************************************************************
 
 import os
+import sys
 import platform
 
 if (platform.system() == 'Windows'):
-    path_to_file = os.path.dirname(__file__)
-    bin_path = os.path.join(path_to_file, "..", "..", "extern", "vcpkg", "installed", "x64-windows", "bin")
+    bin_path = os.path.join(sys.prefix, "sgs")
     os.add_dll_directory(bin_path)
-
+ 
 import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
@@ -212,7 +212,10 @@ def quantiles(
     #if large_raster is true, the C++ function will process the raster in blocks
     large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
 
+    #make a temp directory which will be deleted if there is any problem when calling the cpp function
     temp_dir = tempfile.mkdtemp()
+    rast.have_temp_dir = True
+    rast.temp_dir = temp_dir
 
     #call stratify quantiles function
     srast = SpatialRaster(quantiles_cpp(
@@ -227,8 +230,8 @@ def quantiles(
         eps
     ))
 
-    #give srast ownership of it's own temp directory
-    srast.have_temp_dir = True
-    srast.temp_dir = temp_dir
+    #now that it's created, give the cpp raster object ownership of the temporary directory
+    rast.have_temp_dir = False
+    srast.cpp_raster.set_temp_dir(temp_dir)
 
     return srast

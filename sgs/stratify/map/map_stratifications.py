@@ -171,7 +171,10 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
                 raise ValueError("the key for all key/value pairs in teh driver_options dict must be a string")
             driver_options_str[key] = str(val)
 
+    #make a temp directory which will be deleted if there is any problem when calling the cpp function
     temp_dir = tempfile.mkdtemp()
+    args[0][0].have_temp_dir = True
+    args[0][0].temp_dir = temp_dir
 
     #call cpp map function
     srast = SpatialRaster(map_stratifications_cpp(
@@ -185,8 +188,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         driver_options_str
     ))
 
-    #give srast ownership of its own temp directory
-    srast.have_temp_dir = True
-    srast.temp_dir = temp_dir
+    #now that it's created, give the cpp raster object ownership of the temporary directory
+    args[0][0].have_temp_dir = False
+    srast.cpp_raster.set_temp_dir(temp_dir)
 
     return srast
