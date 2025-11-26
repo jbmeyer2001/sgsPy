@@ -1,13 +1,3 @@
-#define os-specific compile args
-if WIN
-  cpp_args = [
-      '-DMKL_ILP64',
-      '-m64'
-  ]
-else #linux
-  cpp_args = []
-endif
-  
 #create quantiles module
 py.extension_module(
   'quantiles',
@@ -24,6 +14,9 @@ py.extension_module(
     inc_dir,
     utils_inc_dir,
   ],
-  cpp_args: cpp_args,
+  cpp_args: [
+    '-DMKL_ILP64',
+    '-m64'
+  ],
   install: true,
 )
