@@ -131,87 +131,115 @@ if WIN
 endif
 add_global_link_arguments('-L' + lib_dir, language: 'cpp')
 
-dlls = [
-  #vcpkg dlls
-  join_paths(bin_dir, 'aec.dll'),
-  join_paths(bin_dir, 'bz2.dll'),
-  join_paths(bin_dir, 'charset-1.dll'),
-  join_paths(bin_dir, 'ffi-8.dll'),
-  join_paths(bin_dir, 'freexl-1.dll'),
-  join_paths(bin_dir, 'gdal.dll'),
-  join_paths(bin_dir, 'geos.dll'),
-  join_paths(bin_dir, 'geos_c.dll'),
-  join_paths(bin_dir, 'geotiff.dll'),
-  join_paths(bin_dir, 'gif.dll'),
-  join_paths(bin_dir, 'hdf5.dll'),
-  join_paths(bin_dir, 'hdf5_cpp.dll'),
-  join_paths(bin_dir, 'hdf5_hl.dll'),
-  join_paths(bin_dir, 'hdf5_hl_cpp.dll'),
-  join_paths(bin_dir, 'iconv-2.dll'),
-  join_paths(bin_dir, 'jpeg62.dll'),
-  join_paths(bin_dir, 'json-c.dll'),
-  join_paths(bin_dir, 'legacy.dll'),
-  join_paths(bin_dir, 'Lerc.dll'),
-  join_paths(bin_dir, 'libcrypto-3-x64.dll'),
-  join_paths(bin_dir, 'libcurl.dll'),
-  join_paths(bin_dir, 'libecpg.dll'),
-  join_paths(bin_dir, 'libecpg_compat.dll'),
-  join_paths(bin_dir, 'libexpat.dll'),
-  join_paths(bin_dir, 'liblzma.dll'),
-  join_paths(bin_dir, 'libpgtypes.dll'),
-  join_paths(bin_dir, 'libpng16.dll'),
-  join_paths(bin_dir, 'libpq.dll'),
-  join_paths(bin_dir, 'libsharpyuv.dll'),
-  join_paths(bin_dir, 'libssl-3-x64.dll'),
-  join_paths(bin_dir, 'libwebp.dll'),
-  join_paths(bin_dir, 'libwebpdecoder.dll'),
-  join_paths(bin_dir, 'libwebpdemux.dll'),
-  join_paths(bin_dir, 'libwebpmux.dll'),
-  join_paths(bin_dir, 'libxml2.dll'),
-  join_paths(bin_dir, 'lz4.dll'),
-  join_paths(bin_dir, 'minizip.dll'),
-  join_paths(bin_dir, 'netcdf.dll'),
-  join_paths(bin_dir, 'openjp2.dll'),
-  join_paths(bin_dir, 'pcre2-16.dll'),
-  join_paths(bin_dir, 'pcre2-32.dll'),
-  join_paths(bin_dir, 'pcre2-8.dll'),
-  join_paths(bin_dir, 'pcre2-posix.dll'),
-  join_paths(bin_dir, 'pkgconf-7.dll'),
-  join_paths(bin_dir, 'proj_9.dll'),
-  join_paths(bin_dir, 'qhull_r.dll'),
-  join_paths(bin_dir, 'spatialite.dll'),
-  join_paths(bin_dir, 'sqlite3.dll'),
-  join_paths(bin_dir, 'szip.dll'),
-  join_paths(bin_dir, 'tiff.dll'),
-  join_paths(bin_dir, 'turbojpeg.dll'),
-  join_paths(bin_dir, 'uriparser.dll'),
-  join_paths(bin_dir, 'zlib1.dll'),
-  join_paths(bin_dir, 'zstd.dll'),
-
-  #onedal dlls
-  join_paths(pip_bin_dir, 'onedal.3.dll'),
-  join_paths(pip_bin_dir, 'onedal_core.3.dll'),
-  join_paths(pip_bin_dir, 'onedal_thread.3.dll'),
-  join_paths(pip_bin_dir, 'tbb12.dll'),
-  join_paths(pip_bin_dir, 'tbbmalloc.dll'),
-
-  #mkl dlls
-  join_paths(pip_bin_dir, 'mkl_core.2.dll'),
-  join_paths(pip_bin_dir, 'mkl_tbb_thread.2.dll'),
-  join_paths(pip_bin_dir, 'mkl_blacs_intelmpi_ilp64.2.dll'),
-  join_paths(pip_bin_dir, 'mkl_vml_def.2.dll'),
-  join_paths(pip_bin_dir, 'mkl_vml_avx2.2.dll'),
-  join_paths(pip_bin_dir, 'mkl_vml_avx512.2.dll'),
-  join_paths(pip_bin_dir, 'mkl_vml_cmpt.2.dll'),
-  join_paths(pip_bin_dir, 'mkl_vml_mc3.2.dll'),
-
-  #proj
-  meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
-]
-
 if WIN
-  foreach dll : dlls
-    install_data(dll)
-  endforeach
-endif 
+  required_files = [
+    #vcpkg dlls
+    join_paths(bin_dir, 'aec.dll'),
+    join_paths(bin_dir, 'bz2.dll'),
+    join_paths(bin_dir, 'charset-1.dll'),
+    join_paths(bin_dir, 'ffi-8.dll'),
+    join_paths(bin_dir, 'freexl-1.dll'),
+    join_paths(bin_dir, 'gdal.dll'),
+    join_paths(bin_dir, 'geos.dll'),
+    join_paths(bin_dir, 'geos_c.dll'),
+    join_paths(bin_dir, 'geotiff.dll'),
+    join_paths(bin_dir, 'gif.dll'),
+    join_paths(bin_dir, 'hdf5.dll'),
+    join_paths(bin_dir, 'hdf5_cpp.dll'),
+    join_paths(bin_dir, 'hdf5_hl.dll'),
+    join_paths(bin_dir, 'hdf5_hl_cpp.dll'),
+    join_paths(bin_dir, 'iconv-2.dll'),
+    join_paths(bin_dir, 'jpeg62.dll'),
+    join_paths(bin_dir, 'json-c.dll'),
+    join_paths(bin_dir, 'legacy.dll'),
+    join_paths(bin_dir, 'Lerc.dll'),
+    join_paths(bin_dir, 'libcrypto-3-x64.dll'),
+    join_paths(bin_dir, 'libcurl.dll'),
+    join_paths(bin_dir, 'libecpg.dll'),
+    join_paths(bin_dir, 'libecpg_compat.dll'),
+    join_paths(bin_dir, 'libexpat.dll'),
+    join_paths(bin_dir, 'liblzma.dll'),
+    join_paths(bin_dir, 'libpgtypes.dll'),
+    join_paths(bin_dir, 'libpng16.dll'),
+    join_paths(bin_dir, 'libpq.dll'),
+    join_paths(bin_dir, 'libsharpyuv.dll'),
+    join_paths(bin_dir, 'libssl-3-x64.dll'),
+    join_paths(bin_dir, 'libwebp.dll'),
+    join_paths(bin_dir, 'libwebpdecoder.dll'),
+    join_paths(bin_dir, 'libwebpdemux.dll'),
+    join_paths(bin_dir, 'libwebpmux.dll'),
+    join_paths(bin_dir, 'libxml2.dll'),
+    join_paths(bin_dir, 'lz4.dll'),
+    join_paths(bin_dir, 'minizip.dll'),
+    join_paths(bin_dir, 'netcdf.dll'),
+    join_paths(bin_dir, 'openjp2.dll'),
+    join_paths(bin_dir, 'pcre2-16.dll'),
+    join_paths(bin_dir, 'pcre2-32.dll'),
+    join_paths(bin_dir, 'pcre2-8.dll'),
+    join_paths(bin_dir, 'pcre2-posix.dll'),
+    join_paths(bin_dir, 'pkgconf-7.dll'),
+    join_paths(bin_dir, 'proj_9.dll'),
+    join_paths(bin_dir, 'qhull_r.dll'),
+    join_paths(bin_dir, 'spatialite.dll'),
+    join_paths(bin_dir, 'sqlite3.dll'),
+    join_paths(bin_dir, 'szip.dll'),
+    join_paths(bin_dir, 'tiff.dll'),
+    join_paths(bin_dir, 'turbojpeg.dll'),
+    join_paths(bin_dir, 'uriparser.dll'),
+    join_paths(bin_dir, 'zlib1.dll'),
+    join_paths(bin_dir, 'zstd.dll'),
+  
+    #onedal dlls
+    join_paths(pip_bin_dir, 'onedal.3.dll'),
+    join_paths(pip_bin_dir, 'onedal_core.3.dll'),
+    join_paths(pip_bin_dir, 'onedal_thread.3.dll'),
+    join_paths(pip_bin_dir, 'tbb12.dll'),
+    join_paths(pip_bin_dir, 'tbbmalloc.dll'),
+  
+    #mkl dlls
+    join_paths(pip_bin_dir, 'mkl_core.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_tbb_thread.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_blacs_intelmpi_ilp64.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_def.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_avx2.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_avx512.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_cmpt.2.dll'),
+    join_paths(pip_bin_dir, 'mkl_vml_mc3.2.dll'),
+
+    #proj
+    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+  ]
+else #linux
+  required_files = [
+    #onedal libs
+    join_paths(pip_lib_dir, 'libonedal.so.3'),
+    join_paths(pip_lib_dir, 'libonedal_core.so.3'),
+    join_paths(pip_lib_dir, 'libonedal_parameters.so.3'),
+    join_paths(pip_lib_dir, 'libonedal_thread.so.3'),
+    join_paths(pip_lib_dir, 'libtbb.so'),
+    join_paths(pip_lib_dir, 'libtbbmalloc.so'),
+    join_paths(pip_lib_dir, 'libtbb.so.12'),
+    join_paths(pip_lib_dir, 'libtbbmalloc.so.2'),
+    join_paths(pip_lib_dir, 'libtbb.so.12.17'),
+    join_paths(pip_lib_dir, 'libtbbmalloc.so.2.17'),
+  
+    #mkl libs
+    join_paths(pip_lib_dir, 'libmkl_intel_ilp64.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_tbb_thread.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_core.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_def.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_avx2.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_avx512.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_cmpt.so.2'),
+    join_paths(pip_lib_dir, 'libmkl_vml_mc3.so.2'),
+
+    #proj
+    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+  ]
+endif
+
+foreach file : required_files
+  install_data(file)
+endforeach
+
 subdir('sgs')

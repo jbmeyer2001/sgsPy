@@ -17,7 +17,20 @@ if (platform.system() == 'Windows'):
     
     if bin_path not in os.environ['PATH']:
         os.environ['PATH'] = bin_path + os.pathsep + os.environ['PATH']
-    
+else: #linux
+    lib_path = os.path.join(sys.prefix, "sgs")
+    ld_library_path = os.environ.get('LD_LIBRARY_PATH', '')
+
+    if lib_path not in ld_library_path:
+        if ld_library_path == '':
+            os.environ['LD_LIBRARY_PATH'] = lib_path
+        else:
+            os.environ['LD_LIBRARY_PATH'] = lib_path + os.pathsep + os.environ.get('LD_LIBRARY_PATH', '')
+
+    print()
+    print("LD_LIBRARY_PATH:")
+    print(os.environ['LD_LIBRARY_PATH'])
+    print()
 
 import tempfile
 from sgs.utils import SpatialRaster

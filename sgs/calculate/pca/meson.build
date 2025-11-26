@@ -13,5 +13,6 @@ py.extension_module(
     utils_inc_dir,
     pip_inc_dir,
   ],
+  install_rpath: '$ORIGIN/../../../sgs',
   install: true,
 )

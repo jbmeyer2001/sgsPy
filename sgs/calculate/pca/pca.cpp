@@ -261,10 +261,6 @@ calculatePCA(
 			DALHomogenTable table = DALHomogenTable(p_data, nFeatures, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
 			partial_result = oneapi::dal::partial_train(desc, partial_result, table);
 		}
-		
-		if (yBlock % 1000 == 0) {
-			std::cout << "completed y block " << yBlock << "/" << yBlocks << std::endl;
-		}
 	}
 
 	auto result = oneapi::dal::finalize_train(desc, partial_result);
