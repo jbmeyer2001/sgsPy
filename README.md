@@ -12,10 +12,6 @@ larger updates, you may email me at jmeyer03 'at' mail.ubc.ca asking to join the
 #### How to contribute?
 The easiest way to contribute is by logging any errors, or posting any ideas as an issue on this github repository.
 
-#### known issues:
- - the implementation of sample.strat does not work on windows. A new method which is effective across large areas, and runs error-free on windows is under development.
- - occasionally, an access-related test will fail.
-
 ## Installation
 ### NOTE: when distributed, the package will be available through PyPI and thus a quick 'pip install sgs'. For now, the package can be installed and built as follows depending on operating system.
 
@@ -26,7 +22,7 @@ The easiest way to contribute is by logging any errors, or posting any ideas as 
 git clone https://github.com/jbmeyer2001/sgsPy.git
 ```
 
-3. create a python virtual environment (highly recommended)
+3. create a python virtual environment (required)
 ```
 python -m venv .venv
 ```
@@ -34,6 +30,11 @@ python -m venv .venv
 the virtual environment then resides in the .venv folder, and can be activated with the following command:
 ```
 source ./.venv/bin/activate
+```
+
+until the package is available on PyPi, external dynamic libraries will go missing at runtime unless the folder containing the .venv/sgs is added to the LD_LIBRARY_PATH variable.
+```
+export LD_LIBRARY_PATH=[PATH TO THIS FOLDER]/.venv/sgs:$LD_LIBRARY_PATH
 ```
 
 4. install dependency requirements. If you do not already have these, the dependency installation will fail.
@@ -53,24 +54,12 @@ sudo apt install bison
 sudo apt install flex
 ```
 
-5. Run the following commands to install dependencies from vcpkg (a C++ package manager). These commands will be automatically run any time the project is built, but the first time it is recommended to run them seperately to view the outputs. These commands may take a while (potentially a few hours), but once they are installed the build command will run much faster.
+5. Run the following command to install remaining dependencies and build the project.
 ```
-git submodule update --init --recursive #check out vcpkg submodule
-cd sgs/extern/vcpkg
-./bootstrap-vcpkg
-./vcpkg integrate install
-./vcpkg install gdal
-./vcpkg install boost-asio
-./vpckg install intel-mkl
-./vcpkg install tbb
+./build.sh
 ```
 
-6. build the package: run the following command from within the folder containing this file.
-```
-pip install .
-```
-
-7. If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow:
+6. If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow:
 ```
 pip install pytest
 pip install geopandas
@@ -97,21 +86,9 @@ if you are usign powershell, the activation command is shown below, the activati
 ./.venv/Scripts/activate
 ```
 
-5. Run the following commands to install dependencies from vcpkg (a C++ package manager). These commands will be automatically run any time the project is built, but the first time it is recommended to run them seperately to view the outputs. These commands may take a while (potentially a few hours), but once they are installed the build command will run much faster.
+5. Run the following commands to install remaining dependencies and build the project.
 ```
-git submodule update --init --recursive #check out vcpkg submodule
-cd sgs/extern/vcpkg
-./bootstrap-vcpkg
-./vcpkg integrate install
-./vcpkg install gdal
-./vcpkg install boost-asio
-./vpckg install intel-mkl
-./vcpkg install tbb
-```
-
-6. build the package: run the following command from within the folder containing this file.
-```
-pip install .
+./build
 ```
 
 7. If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow:
@@ -137,15 +114,16 @@ To run sgs on your own data, the best resource to look to is the tests, which ar
  - poly (including large raster processing)
 
 ### sampling:
- - stratified sampling (NOT including large raster processing)
- - simple random sampling (NOT including large raster processing)
- - systematic sampling (NOT including large raster processing)
+ - stratified sampling (including large raster processing)
+ - simple random sampling (including large raster processing)
+ - systematic sampling (including large raster processing)
+
+### calculating:
+ - principal component analysis (including large raster processing)
 
 ### Projected future development priorities:
- - upgrade sampling methods to process large rasters
- - implement principal component analysis for large rasters
- - add existing sample plots as parameter for sampling methods
- - debug occasionally failing access-related tests
+ - implement clhs sampling method
+ - publish on PyPi
  - implement kmeans stratification
 
 ## Licensing
