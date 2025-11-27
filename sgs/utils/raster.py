@@ -7,18 +7,6 @@
 #
 # ******************************************************************************
 
-import os
-import sys
-import platform
-
-if (platform.system() == 'Windows'):
-    bin_path = os.path.join(sys.prefix, "sgs")
-    os.add_dll_directory(bin_path)
-
-    if bin_path not in os.environ['PATH']:
-        os.environ['PROJ_LIB'] = bin_path
- 
-
 import json
 import shutil
 from typing import Optional
@@ -27,10 +15,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib #for type checking matplotlib.axes.Axes
 
-from raster import GDALRasterWrapper
-
 from .import plot
 from .plot import plot_raster
+
+from _sgs import GDALRasterWrapper
 
 class SpatialRaster:
     """

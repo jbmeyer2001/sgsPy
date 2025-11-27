@@ -4,18 +4,19 @@
  * Purpose: C++ implementation of systematic sampling
  * Author: Joseph Meyer
  * Date: July, 2025
-
  *
  ******************************************************************************/
 
 #include <iostream>
 #include <random>
 
-#include "access.h"
-#include "existing.h"
-#include "helper.h"
-#include "raster.h"
-#include "vector.h"
+#include "utils/access.h"
+#include "utils/existing.h"
+#include "utils/helper.h"
+#include "utils/raster.h"
+#include "utils/vector.h"
+
+namespace systematic {
 
 /**
  * Helper function for generating a vector geometry containing polygons of the accessible
@@ -249,11 +250,6 @@ systematic(
 		std::mt19937(seed)
 	);
 
-	//determine random origin location within extent polygon
-	//TODO these aren't used??? Should they be???
-	double yCoord = rng() / xDiff; //divide by xDiff because the result will then be between 0 and yDiff
-	double xCoord = rng() / yDiff; //divide by yDiff becausethe result will then be between 0 and xDiff
-
 	//determine random rotation angle within extent polygon
 	double rotation = rng() / (rngMax / 180);
 
@@ -444,19 +440,4 @@ systematic(
 	return {p_sampleVectorWrapper, {xCoords, yCoords}, grid};
 }
 
-PYBIND11_MODULE(systematic, m) {
-	m.def("systematic_cpp", &systematic,
-		pybind11::arg("p_raster"),
-		pybind11::arg("cellSize"),
-		pybind11::arg("shape"),
-		pybind11::arg("location"),
-		pybind11::arg("p_existing").none(true),
-		pybind11::arg("p_access").none(true),
-		pybind11::arg("layerName"),
-		pybind11::arg("buffInner"),
-		pybind11::arg("buffOuter"),
-		pybind11::arg("force"),
-		pybind11::arg("plot"),
-		pybind11::arg("filename"));
-}
-
+} //namespace systematic

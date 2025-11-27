@@ -10,8 +10,10 @@
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
 
-#include "raster.h"
-#include "helper.h"
+#include "utils/raster.h"
+#include "utils/helper.h"
+
+namespace map {
 
 /**
  * This function maps multiple already stratified rasters into a single 
@@ -116,7 +118,7 @@
  * driverOptions:
  * 	extra user-defined driver options such as compression.
  */
-GDALRasterWrapper *mapStratifications(
+GDALRasterWrapper *map(
 	std::vector<GDALRasterWrapper *> rasters,
 	std::vector<std::vector<int>> bands,
 	std::vector<std::vector<int>> strataCounts,
@@ -421,6 +423,4 @@ GDALRasterWrapper *mapStratifications(
 		new GDALRasterWrapper(p_dataset, {mapBand.p_buffer});
 }
 
-PYBIND11_MODULE(map_stratifications, m) {
-	m.def("map_stratifications_cpp", &mapStratifications);
-}
+} //namespace map

@@ -4,7 +4,6 @@
  * Purpose: C++ implementation of random sampling
  * Author: Joseph Meyer
  * Date: June, 2025
-
  *
  ******************************************************************************/
 
@@ -13,11 +12,13 @@
 
 #include <xoshiro.h>
 
-#include "access.h"
-#include "existing.h"
-#include "helper.h"
-#include "raster.h"
-#include "vector.h"
+#include "utils/access.h"
+#include "utils/existing.h"
+#include "utils/helper.h"
+#include "utils/raster.h"
+#include "utils/vector.h"
+
+namespace srs {
 
 /**
  * This is a helper function for processing a block of the raster. For each
@@ -427,18 +428,4 @@ srs(
 	return {{xCoords, yCoords}, p_sampleVectorWrapper, samplesAdded};
 }
 
-PYBIND11_MODULE(srs, m) {
-	m.def("srs_cpp", &srs, 
-		pybind11::arg("p_raster"),
-		pybind11::arg("numSamples"),
-		pybind11::arg("mindist"),
-		pybind11::arg("p_existing").none(true),
-		pybind11::arg("p_access").none(true),
-		pybind11::arg("layerName"),
-		pybind11::arg("buffInner"),
-		pybind11::arg("buffOuter"),
-		pybind11::arg("plot"),
-		pybind11::arg("tempFolder"),
-		pybind11::arg("filename"));
-
-}
+} //namespace srs

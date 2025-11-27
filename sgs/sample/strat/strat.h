@@ -10,13 +10,15 @@
 #include <iostream>
 #include <random>
 
-#include "access.h"
-#include "existing.h"
-#include "helper.h"
-#include "raster.h"
-#include "vector.h"
+#include "utils/access.h"
+#include "utils/existing.h"
+#include "utils/helper.h"
+#include "utils/raster.h"
+#include "utils/vector.h"
 
 #include <xoshiro.h>
+
+namespace strat {
 
 /**
  * Helper function which calculates the count of values for each strata
@@ -1610,27 +1612,4 @@ strat(
 	return {{xCoords, yCoords}, p_vector, actualSampleCount};
 }
 
-PYBIND11_MODULE(strat, m) {
-	m.def("strat_cpp", &strat,
-		pybind11::arg("p_raster"),
-		pybind11::arg("bandNum"),
-		pybind11::arg("numSamples"),
-		pybind11::arg("numStrata"),
-		pybind11::arg("allocation"),
-		pybind11::arg("weights"),
-		pybind11::arg("p_mraster").none(true),
-		pybind11::arg("mrastBandNum"),
-		pybind11::arg("method"),
-		pybind11::arg("wrow"),
-		pybind11::arg("wcol"),
-		pybind11::arg("mindist"),
-		pybind11::arg("p_existing").none(true),
-		pybind11::arg("force"),
-		pybind11::arg("p_access").none(true),
-		pybind11::arg("layerName"),
-		pybind11::arg("buffInner"),
-		pybind11::arg("buffOuter"),
-		pybind11::arg("plot"),
-		pybind11::arg("filename"),
-		pybind11::arg("tempFolder"));
-}
+} //namespace strat

@@ -1,3 +1,19 @@
+import os
+import sys
+import platform
+
+if (platform.system() == 'Windows'):
+    bin_path = os.path.join(sys.prefix, "sgs")
+    os.add_dll_directory(bin_path)
+
+    if bin_path not in os.environ.get('PROJ_LIB', ''):
+        os.environ['PROJ_LIB'] = bin_path
+
+    if bin_path not in os.environ['PATH']:
+        os.environ['PATH'] = bin_path + os.pathsep + os.environ['PATH']
+
+
+
 from . import utils
 from . import calculate
 from . import sample

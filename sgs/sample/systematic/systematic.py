@@ -18,7 +18,7 @@ from sgs.utils import (
     plot,
 )
 
-from systematic import systematic_cpp
+from _sgs import systematic_cpp
 
 def systematic(
     rast: SpatialRaster,
