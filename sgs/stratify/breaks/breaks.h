@@ -13,8 +13,10 @@
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
 
-#include "raster.h"
-#include "helper.h"
+#include "utils/raster.h"
+#include "utils/helper.h"
+
+namespace breaks {
 
 /**
  * This is a helper function for processing a pixel of data
@@ -664,6 +666,4 @@ GDALRasterWrapper *breaks(
 
 }
 
-PYBIND11_MODULE(breaks, m) {
-	m.def("breaks_cpp", &breaks);
-}
+} //namespace breaks

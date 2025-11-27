@@ -19,7 +19,7 @@ from sgs.utils import(
     plot,
 )
 
-from strat import strat_cpp
+from _sgs import strat_cpp
 
 def strat(
     strat_rast: SpatialRaster,

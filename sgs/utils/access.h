@@ -7,6 +7,8 @@
  *
  ******************************************************************************/
 
+#pragma once
+
 #include "helper.h"
 #include "raster.h"
 #include "vector.h"

@@ -7,13 +7,15 @@
  *
  ******************************************************************************/
 
-#include "raster.h"
-#include "helper.h"
+#include "utils/raster.h"
+#include "utils/helper.h"
 
 #include <condition_variable>
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
 #include <mkl.h>
+
+namespace quantiles {
 
 /* This helper function is used to calculate the quantiles of a
  * raster which is entirely in memory. This is the single
@@ -546,7 +548,6 @@ processPixel(
 
 	setStrataPixelDependingOnType(p_stratBand->type, p_strat, index, isNan, strat);
 }
-
 
 /**
  * This function stratifies a given raster using user-defined probabilities.
@@ -1219,6 +1220,4 @@ GDALRasterWrapper *quantiles(
 		new GDALRasterWrapper(p_dataset, buffers);
 }
 
-PYBIND11_MODULE(quantiles, m) {
-	m.def("quantiles_cpp", &quantiles);
-}
+} //namespace quantiles

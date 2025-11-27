@@ -10,13 +10,14 @@
 #include <iostream>
 #include <numeric>
 
-#include "helper.h"
-#include "raster.h"
+#include "utils/helper.h"
+#include "utils/raster.h"
 
 #include "oneapi/dal.hpp"
 
-typedef oneapi::dal::homogen_table				DALHomogenTable;
+namespace pca {
 
+typedef oneapi::dal::homogen_table				DALHomogenTable;
 
 /**
  * This struct contains the output eigenvectors and eigenvalues for
@@ -757,6 +758,4 @@ pca(
 	return {p_outrast, eigenvectors, eigenvalues};
 }
 
-PYBIND11_MODULE(pca, m) {
-	m.def("pca_cpp", &pca);
-}
+} //namespace pca
