@@ -142,8 +142,10 @@ def breaks(
     #if large_raster is true, the C++ function will process the raster in blocks
     large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
 
-    #if a VRT dataset will be used, make a temp directory to hold it's files
+    #make a temp directory which will be deleted if there is any problem when calling the cpp function
     temp_dir = tempfile.mkdtemp()
+    rast.have_temp_dir = True
+    rast.temp_dir = temp_dir
 
     #call stratify breaks function
     srast = SpatialRaster(breaks_cpp(
@@ -157,8 +159,8 @@ def breaks(
         driver_options_str
     ))
 
-    #give srast ownership of it's own temp directory
-    srast.have_temp_dir = True
-    srast.temp_dir = temp_dir
+    #now that it's created, give the cpp raster object ownership of the temporary directory
+    rast.have_temp_dir = False
+    srast.cpp_raster.set_temp_dir(temp_dir)
 
     return srast

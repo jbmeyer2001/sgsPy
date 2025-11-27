@@ -224,9 +224,10 @@ def strat(
     if strat_rast.band_count != 1:
         raise ValueError("strat_raster must have a single band.")
 
-    if not strat_rast.have_temp_dir:
-        strat_rast.temp_dir = tempfile.mkdtemp()
-        strat_rast.have_temp_dir = True
+    temp_dir = strat_rast.cpp_raster.get_temp_dir()
+    if temp_dir == "":
+        temp_dir = tempfile.mkdtemp()
+        strat_rast.cpp_raster.set_temp_dir(temp_dir)
 
     [sample_coordinates, samples, num_points] = strat_cpp(
         strat_rast.cpp_raster,
@@ -249,7 +250,7 @@ def strat(
         buff_outer,
         plot,
         filename,
-        strat_rast.temp_dir
+        temp_dir
     )
 
     if num_points < num_samples:

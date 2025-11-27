@@ -2,9 +2,9 @@
 py.extension_module(
   'strat',
   'strat.cpp',
-  link_args: win_link_args,
+  link_args: link_args,
   dependencies: [
-    lib_deps, 
+    gdal_dep, 
     pybind11_dep
   ],
   include_directories: [

@@ -115,9 +115,10 @@ def srs(
     else:
         existing_vector = None
 
-    if not rast.have_temp_dir:
-        rast.temp_dir = tempfile.mkdtemp()
-        rast.have_temp_dir = True
+    temp_dir = rast.cpp_raster.get_temp_dir()
+    if temp_dir == "":
+        temp_dir = tempfile.mkdtemp()
+        rast.cpp_raster.set_temp_dir(temp_dir)
 
     #call random sampling function
     [sample_coordinates, cpp_vector, num_points] = srs_cpp(
@@ -130,7 +131,7 @@ def srs(
         buff_inner,
         buff_outer,
         plot,
-        rast.temp_dir,
+        temp_dir,
         filename
     )
     
