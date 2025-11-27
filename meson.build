@@ -243,11 +243,12 @@ foreach file : required_files
 endforeach
 
 py.extension_module(
-  'sgs',
+  '_sgs',
   'sgs/pybind.cpp',
   link_args: link_args,
   dependencies: [
     gdal_dep,
+    oneDAL_dep,
     mkl_dep,
     tbb_dep,
     pybind11_dep

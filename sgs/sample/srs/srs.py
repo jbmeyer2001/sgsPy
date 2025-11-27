@@ -19,6 +19,8 @@ from sgs.utils import (
     plot,
 )
 
+from _sgs import srs_cpp
+
 def srs(
     rast: SpatialRaster,
     num_samples: int,

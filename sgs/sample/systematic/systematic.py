@@ -18,6 +18,8 @@ from sgs.utils import (
     plot,
 )
 
+from _sgs import systematic_cpp
+
 def systematic(
     rast: SpatialRaster,
     cellsize: float,

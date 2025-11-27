@@ -15,6 +15,8 @@ import matplotlib #fpr type checking matplotlib.axes.Axes
 from.import plot
 from .plot import plot_vector
 
+from _sgs import GDALVectorWrapper
+
 class SpatialVector:
     """
     A wrapper class of a GDAL vector dataset.

@@ -14,7 +14,7 @@ from sgs.utils import (
     SpatialVector,
 )
 
-import _sgs.poly_cpp as poly_cpp
+from _sgs import poly_cpp
 
 GIGABYTE = 1073741824
 MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow

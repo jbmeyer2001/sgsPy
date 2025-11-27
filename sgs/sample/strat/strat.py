@@ -19,6 +19,8 @@ from sgs.utils import(
     plot,
 )
 
+from _sgs import strat_cpp
+
 def strat(
     strat_rast: SpatialRaster,
     band: int | str,

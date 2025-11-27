@@ -13,7 +13,7 @@ from sgs.utils import SpatialRaster
 GIGABYTE = 1073741824
 MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
-import _sgs.map_cpp as map_cpp
+from _sgs import map_cpp
 
 def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         filename: str = '',

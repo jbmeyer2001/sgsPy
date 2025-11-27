@@ -11,6 +11,8 @@ import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
 
+from _sgs import breaks_cpp
+
 GIGABYTE = 1073741824
 MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
