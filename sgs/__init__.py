@@ -6,7 +6,7 @@ if (platform.system() == 'Windows'):
     bin_path = os.path.join(sys.prefix, "sgs")
     os.add_dll_directory(bin_path)
 
-    if bin_path not in os.environ['PROJ_LIB']:
+    if bin_path not in os.environ.get('PROJ_LIB', ''):
         os.environ['PROJ_LIB'] = bin_path
 
     if bin_path not in os.environ['PATH']:
