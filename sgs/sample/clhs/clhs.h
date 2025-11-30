@@ -66,6 +66,9 @@ class CLHSDataManager {
 	uint64_t mask = 0;
 
 	public:
+	/**
+	 *
+	 */
 	CLHSDataManager(int nFeat, xso::xoshiro_4x64_plus *p_rng) {
 		this->nFeat = nFeat;
 		this->points = 0;
@@ -78,6 +81,9 @@ class CLHSDataManager {
 		this->p_rng = p_rng;
 	}
 
+	/**
+	 *
+	 */
 	inline void
 	addPoint(T *p_features, int x, int y) {
 		for (int64_t f = 0; f < nFeat; f++) {
@@ -97,10 +103,12 @@ class CLHSDataManager {
 		}	
 	}
 
+	/**
+	 *
+	 */
 	inline void
-	finalize(std::vector<std::vector<T>> corr, std::vector<std::vector<T>> quantiles) {
+	finalize(std::vector<std::vector<T>> corr) {
 		this->corr = corr;
-		this->quantiles = quantiles
 
 		this->x.resize(this->size);
 		this->y.resize(this->size);
@@ -118,17 +126,60 @@ class CLHSDataManager {
 		this->mask |= this->mask >> 32;
 	}
 
-	inline void
-	randomPoint(Point& point) {
-		int64_t index = ((*p_rng)() >> 11) & mask;
+	/**
+	 *
+	 */
+	inline uint64_t
+	randomIndex() {
+		uint64_t index = ((*p_rng)() >> 11) & mask;
 
 		while (index > usize) {
 			index = ((*p_rng)() >> 11) & mask;
 		}
-	
+
+		return index;
+	}
+
+	/**
+	 *
+	 */
+	inline void
+	getPoint(Point& point, uint64_t index) {		
 		point.p_features = &points[index * nFeat];
 		point.x = x[index];
 		point.y = y[index];
+	}
+
+	/**
+	 *
+	 */
+	inline T
+	quantileObjectiveFunc(std::vector<std::vector<int>>& sampleCountPerQuantile) {
+		int retval = 0;
+
+		for (const std::vector<int>& quantiles : sampleCountPerQuantile) {
+			for (const int& count : quantiles) {
+				retval += std::abs(count - 1);
+			}
+		}
+
+		return static_cast<T>(retval);
+	}
+
+	/**
+	 *
+	 */
+	inline T
+	correlationObjectiveFunc(std::vector<std::vector<T>>& corr) {
+		T retval = 0;
+
+		for (size_t i = 0; i < this->corr.size(); i++) {
+			for (size_t j = 0; j < this->corr[i].size(); j++) {
+				retval += std::abs(corr[i][j] - this->corr[i][j]);
+			}
+		}
+	
+		return retval;
 	}
 };
 
@@ -140,6 +191,7 @@ readRaster(
 	Access& access,
 	RandValController& rand,
 	GDALDataType type,
+	std::vector<std::vector<T>>& quantiles;
 	size_t size,
 	int width,
 	int height,
@@ -147,7 +199,7 @@ readRaster(
 	int nSamp)
 {
 	std::vector<std::vector<T>> probabilities(count);
-	std::vector<std::vector<T>> quantiles(count);
+	quantiles.resize(count);
 
 	for (int i = 0; i < count; i++) {
 		probabilities[i].resize(nSamp);
@@ -333,7 +385,7 @@ readRaster(
 			}
 
 			//update correlation matrix calculations
-			DALHomogenTable table = DALHomogenTable(corrBuffer.data(), nFeatures, count, [](const double *){}, oneapi::dal::data_layout::row_major);
+			DALHomogenTable table = DALHomogenTable(corrBuffer.data(), nFeatures, count, [](const T *){}, oneapi::dal::data_layout::row_major);
 			partial_result = oneapi::dal::partial_train(cor_desc, partial_result, table); 
 		}
 	}
@@ -353,7 +405,7 @@ readRaster(
 	std::vector<std::vector<T>> correlation(count);
 	for (int i = 0; i < count; i++) {
 		correlation[i].resize(count);
-		row = acc.pull{i, i + 1};
+		row = acc.pull({i, i + 1});
 
 		for (int j = 0; j < count; j++) {
 			correlation[i][j] = row[j];
@@ -361,6 +413,76 @@ readRaster(
 	}
 
 	clhs.setCorrelation(correlation);
+}
+
+template <typename T>
+inline void
+selectSamples(std::vector<std::vector<T>>& quantiles,
+	      CLHSDataManager& clhs,
+	      int nSamp,
+	      int nFeat)
+{
+	std::unordered_map<uint64_t, Point> samples;
+
+	std::vector<std::vector<T>> corr(nFeat);
+	std::vector<std::vector<int>> sampleCountPerQuantile(nFeat);
+	std::vector<std::vector<std::unordered_set<uint64_t>>> samplesPerQuantile(nFeat);
+	for (int i = 0; i < nFeat; i++) {
+		sampleCountPerQuantile[i].resize(nSamp, 0);
+		samplesPerQuantile.resize(nSamp);
+		corr.resize(nFeat);
+	}
+
+	std::vector<T> features(nSamp * nFeat);
+	std::vector<int> x(nSamp);
+	std::vector<int> y(nSamp);
+
+	//get first random samples
+	int i = 0;
+	while (samples.size() < static_cast<size_t>(nSamp)) {
+		uint64_t index = clhs.randomIndex();
+		
+		if (!samples.find(index)) {
+			Point p;
+			clhs.getPoint(p, index);
+			samples.emplace(index, p);
+			
+			x[i] = p.x;
+			y[i] = p.y;
+			
+			int fi = i * nFeat;
+			for (int f = 0; f < nFeat; f++) {
+				T val = p.p_features[f];
+				features[fi + f] = val;
+
+				int q = getQuantile<T>(val, quantiles[f]);
+				sampleCountPerQuantile[f][q]++;
+				samplesPerQuantile[f][q].insert(index);
+			}
+
+			i++;
+		}
+	}
+
+	//define covariance calculation 
+	DALHomogenTable table = DALHomogenTable(features.data(), nFeat, nSamp, [](const T *){}, oneapi::dal::data_layout::row_major);
+	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(dal::covariance::result_options::cor_matrix);		
+
+	const auto result = oneapi::dal::compute(cor_desc, table);
+	oneapi::dal::row_accessor<const T> acc {result.get_cor_matrix()};
+	for (int i = 0; i < nFeat; i++) {
+		row = acc.pull({i, i + 1});
+
+		for (int j = 0; j < nFeat; j++) {
+			corr[i][j] = row[j];
+		}
+	}
+
+	T objective = 0;
+	objective += clhs.quantileObjectiveFunc(sampleCountPerQuantile);
+	objective += clhs.correlationObjectiveFunc(corr);
+
+	//update samples according to objective function
 }
 
 /**
@@ -439,18 +561,22 @@ clhs(
 	}
 
 	if (type == GDT_Float64) {	
+		std::vector<std::vector<double>> quantiles;
+		
 		//create instance of data management class
 		CLHSDataManager<double> clhs(numSamples, count);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
-		readRaster<double>(bands, clhs, access, rand, type, sizeof(double), width, height, count, numSamples);
+		readRaster<double>(bands, clhs, access, rand, quantiles, type, sizeof(double), width, height, count, numSamples);
 	}
 	else { //type == GDT_Float32		
+		std::vector<std::vector<float>> quantiles;
+
 		//create instance of data management class
 		CLHSDataManager<float> clhs(numSamples, count);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
-		readRasterSP<float>(bands, clhs, access, rand, type, sizeof(float), width, height, count, numSamples);
+		readRasterSP<float>(bands, clhs, access, rand, quantiles type, sizeof(float), width, height, count, numSamples);
 	}
 
 }
