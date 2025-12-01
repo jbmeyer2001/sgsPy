@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <mutex>
 
+#include <xoshiro.h>
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>

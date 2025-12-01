@@ -10,6 +10,7 @@
 #include "utils/raster.h"
 #include "utils/vector.h"
 #include "calculate/pca/pca.h"
+//#include "sample/clhs/clhs.h"
 #include "sample/srs/srs.h"
 #include "sample/strat/strat.h"
 #include "sample/systematic/systematic.h"
@@ -53,6 +54,7 @@ PYBIND11_MODULE(_sgs, m) {
 	// source code in sgs/calculate/pca/pca.h
 	m.def("pca_cpp", &pca::pca);
 
+	/*
 	// source code in sgs/sample/clhs/clhs.h
 	m.def("clhs_cpp", &clhs::clhs,
 		pybind11::arg("p_raster"),
@@ -65,6 +67,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("plot"),
 		pybind11::arg("tempFolder")
 		pybind11::arg("filename"));
+	*/
 
 	// source code in sgs/sample/srs/srs.h
 	m.def("srs_cpp", &srs::srs, 
@@ -97,6 +100,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("p_existing").none(true),
 		pybind11::arg("force"),
 		pybind11::arg("p_access").none(true),
+		pybind11::arg("layerName"),
 		pybind11::arg("layerName"),
 		pybind11::arg("buffInner"),
 		pybind11::arg("buffOuter"),
@@ -131,4 +135,3 @@ PYBIND11_MODULE(_sgs, m) {
 	// source code in sgs/stratify/quantiles/quantiles.h
 	m.def("quantiles_cpp", &quantiles::quantiles);
 }
-

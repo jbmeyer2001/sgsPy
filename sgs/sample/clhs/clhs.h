@@ -10,10 +10,10 @@
 #include <iostream>
 #include <random>
 
-#include "access.h"
-#include "helper.h"
-#include "raster.h"
-#include "vector.h"
+#include "utils/access.h"
+#include "utils/helper.h"
+#include "utils/raster.h"
+#include "utils/vector.h"
 
 #include <mkl.h>
 #include "oneapi/dal.hpp"
@@ -21,15 +21,16 @@
 
 #define MILLION 1000000
 
-typedef clhs {
+namespace clhs {
 
 typedef oneapi::dal::homogen_table				DALHomogenTable;
 
+template <typename T>
 struct Point {
-	void *p_features;
-	int x;
-	int y;
-}
+	T *p_features = nullptr;
+	int x = -1;
+	int y = -1;
+};
 
 /**
  *
@@ -52,8 +53,8 @@ class CLHSDataManager {
 	std::vector<T> features;
 	std::vector<int> x;
 	std::vector<int> y;
-	int64_t fi; //features index
-	int64_t points;
+	size_t fi; //features index
+	size_t count;
 	int64_t size;
 	uint64_t usize;
 
@@ -71,10 +72,10 @@ class CLHSDataManager {
 	 */
 	CLHSDataManager(int nFeat, xso::xoshiro_4x64_plus *p_rng) {
 		this->nFeat = nFeat;
-		this->points = 0;
+		this->count = 0;
 		this->fi = 0;
 		this->size = MILLION;
-		this->points.resize(MILLION * nFeat);
+		this->features.resize(MILLION * nFeat);
 		this->x.resize(MILLION);
 		this->y.resize(MILLION);
 
@@ -86,20 +87,20 @@ class CLHSDataManager {
 	 */
 	inline void
 	addPoint(T *p_features, int x, int y) {
-		for (int64_t f = 0; f < nFeat; f++) {
-			points[fi] = p_features[f];
+		for (int f = 0; f < nFeat; f++) {
+			features[fi] = p_features[f];
 			fi++;
 		}
 
-		x[points] = x;
-	       	y[points] = y;
-		points++;
+		this->x[this->count] = x;
+	       	this->y[this->count] = y;
+		this->count++;
 
-		if (points == size) {
-			points.resize(points.size + MILLION * nFeat);
-			x.resize(x.size() + MILLION);
-			y.resize(y.size() + MILLION);
-			size += MILLION;
+		if (this->count == this->size) {
+			this->points.resize(this->points.size + MILLION * this->nFeat);
+			this->x.resize(this->x.size() + MILLION);
+			this->y.resize(this->y.size() + MILLION);
+			this->size += MILLION;
 		}	
 	}
 
@@ -144,8 +145,8 @@ class CLHSDataManager {
 	 *
 	 */
 	inline void
-	getPoint(Point& point, uint64_t index) {		
-		point.p_features = points.data() + (index * nFeat);
+	getPoint(Point<T>& point, uint64_t index) {		
+		point.p_features = this->features.data() + (index * nFeat);
 		point.x = x[index];
 		point.y = y[index];
 	}
@@ -191,7 +192,7 @@ readRaster(
 	Access& access,
 	RandValController& rand,
 	GDALDataType type,
-	std::vector<std::vector<T>>& quantiles;
+	std::vector<std::vector<T>>& quantiles,
 	size_t size,
 	int width,
 	int height,
@@ -205,7 +206,7 @@ readRaster(
 		probabilities[i].resize(nSamp);
 		quantiles[i].resize(nSamp);
 
-		for (int j = 0; j < numSamples; j++) {
+		for (int j = 0; j < nSamp; j++) {
 			probabilities[i][j] = static_cast<T>(j + 1) / static_cast<T>(nSamp);
 		}
 	}
@@ -216,8 +217,9 @@ readRaster(
 	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 	int yBlocks = (width + yBlockSize - 1) / yBlockSize;
 
-	double eps = .001;
-	
+	double deps = .001;
+	float seps = .001;
+
 	std::vector<T> corrBuffer(count * xBlockSize * yBlockSize);
 	std::vector<std::vector<T>> quantileBuffers(count);
 	for (int i = 0; i < count; i++) {
@@ -229,7 +231,7 @@ readRaster(
 	}
 
 	//create descriptor for correlation matrix streaming calculation with oneDAL
-	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(dal::covariance::result_options::cor_matrix);
+	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(oneapi::dal::covariance::result_options::cor_matrix);
 	oneapi::dal::covariance::partial_compute_result<> partial_result;
 
 	//create tasks for quantile streaming calculation with MKL
@@ -278,7 +280,7 @@ readRaster(
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			//get block size
-			int Valid, yValid;
+			int xValid, yValid;
 			bands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
 
 			//read bands into memory
@@ -292,7 +294,7 @@ readRaster(
 					(void *)((size_t)p_data + i * size),
 					xValid,
 					yValid,
-					size,
+					type,
 					size * static_cast<size_t>(count),
 					size * static_cast<size_t>(count) * static_cast<size_t>(xBlockSize) 
 				);
@@ -307,14 +309,14 @@ readRaster(
 
 			//read access band into memory if used
 			if (access.used) {
-				rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
+				rasterBandIO(access.band, access.band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 			}
 
 			//iterate through pixels
-			nFeatures = 0;
+			n = 0;
 			for (int y = 0; y < yValid; y++) {
 				int index = y * xBlockSize;
-				for (int x = 0; x < xValid) {
+				for (int x = 0; x < xValid; x++) {
 					bool isNan = false;
 					for (int b = 0; b < count; b++) {
 						T val = corrBuffer[index * count + b];
@@ -324,16 +326,16 @@ readRaster(
 							break;
 						}	
 
-						quantileBuffers[b][nFeatures] = val;
-						corrBuffer[nFeatures * count + b] = val;
+						quantileBuffers[b][n] = val;
+						corrBuffer[n * count + b] = val;
 					}	
 
 					if (!isNan) {
-						nFeatures++;
+						n++;
 
 						if (access.used && p_access[index] == 1 && rand.next()) {
 							clhs.addPoint(
-								&corrBuffer[nFeatures * count],
+								&corrBuffer[n * count],
 								xBlock * xBlockSize + x,
 								yBlock * yBlockSize + y		
 							);
@@ -343,10 +345,9 @@ readRaster(
 				}
 			}
 
-			if (nFeatures == 0) {
+			if (n == 0) {
 				continue;
 			}
-			n = nFeatures; //tasks look to n for number of features
 
 			//MKL functions have different versions for single/double precision floating point data
 			if (type == GDT_Float64) {
@@ -359,7 +360,7 @@ readRaster(
 							reinterpret_cast<double *>(probabilities[i].data()),
 							reinterpret_cast<double *>(quantiles[i].data()),
 							&nparams,
-							&eps
+							&deps
 						);
 					}
 				}
@@ -381,7 +382,7 @@ readRaster(
 							reinterpret_cast<float *>(probabilities[i].data()),
 							reinterpret_cast<float *>(quantiles[i].data()),
 							&nparams,
-							&eps
+							&seps
 						);
 					}
 				}
@@ -396,8 +397,8 @@ readRaster(
 			}
 
 			//update correlation matrix calculations
-			DALHomogenTable table = DALHomogenTable(corrBuffer.data(), nFeatures, count, [](const T *){}, oneapi::dal::data_layout::row_major);
-			partial_result = oneapi::dal::partial_train(cor_desc, partial_result, table); 
+			DALHomogenTable table = DALHomogenTable(corrBuffer.data(), n, count, [](const T *){}, oneapi::dal::data_layout::row_major);
+			partial_result = oneapi::dal::partial_compute(cor_desc, partial_result, table); 
 		}
 	}
 
@@ -417,13 +418,13 @@ readRaster(
 
 	oneapi::dal::row_accessor<const T> acc {correlation};
 
-	std::vector<std::vector<T>> correlation(count);
+	std::vector<std::vector<T>> corr(count);
 	for (int i = 0; i < count; i++) {
-		correlation[i].resize(count);
-		row = acc.pull({i, i + 1});
+		corr[i].resize(count);
+		auto row = acc.pull({i, i + 1});
 
 		for (int j = 0; j < count; j++) {
-			correlation[i][j] = row[j];
+			corr[i][j] = row[j];
 		}
 	}
 
@@ -433,7 +434,7 @@ readRaster(
 template <typename T>
 inline void
 selectSamples(std::vector<std::vector<T>>& quantiles,
-	      CLHSDataManager& clhs,
+	      CLHSDataManager<T>& clhs,
 	      xso::xoshiro_4x64_plus& rng,
 	      int iterations,
 	      int nSamp,
@@ -445,17 +446,15 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	      std::vector<double>& yCoords)
 {
 	std::uniform_real_distribution<T> dist(0.0, 1.0);
-	std::unirofm_int_distribution<int> indexDist(0, nSamp);
+	std::uniform_int_distribution<int> indexDist(0, nSamp);
 
 	std::vector<std::vector<T>> corr(nFeat);
-	std::vector<std::vector<T>> newCorr(nFeat);
 	std::vector<std::vector<int>> sampleCountPerQuantile(nFeat);
 	std::vector<std::vector<std::unordered_set<uint64_t>>> samplesPerQuantile(nFeat);
 	for (int i = 0; i < nFeat; i++) {
 		sampleCountPerQuantile[i].resize(nSamp, 0);
 		samplesPerQuantile.resize(nSamp);
 		corr.resize(nFeat);
-		newCor.resize(nFeat);
 	}
 
 	std::vector<T> features(nSamp * nFeat);
@@ -473,10 +472,10 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	while (i < nSamp) {
 		uint64_t index = clhs.randomIndex();
 		
-		if (!indicesMap.find(index)) {
+		if (!indicesMap.contains(index)) {
 			indicesMap.emplace(index, i);
 			
-			Point p;
+			Point<T> p;
 			clhs.getPoint(p, index);
 		
 			indices[i] = index;
@@ -499,11 +498,11 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 	//define covariance calculation 
 	DALHomogenTable table = DALHomogenTable(features.data(), nFeat, nSamp, [](const T *){}, oneapi::dal::data_layout::row_major);
-	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(dal::covariance::result_options::cor_matrix);		
+	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(oneapi::dal::covariance::result_options::cor_matrix);		
 	const auto result = oneapi::dal::compute(cor_desc, table);
 	oneapi::dal::row_accessor<const T> acc {result.get_cor_matrix()};
 	for (int i = 0; i < nFeat; i++) {
-		row = acc.pull({i, i + 1});
+		auto row = acc.pull({i, i + 1});
 
 		for (int j = 0; j < nFeat; j++) {
 			corr[i][j] = row[j];
@@ -520,7 +519,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	obj = objQ + objC;
 
 	//begin annealing schedule. If we have a perfect latin hypercube -- or if we pass enough iterations -- stop iterating.
-	while (t > 0 && objQ != 0) {
+	while (temp > 0 && objQ != 0) {
 		uint64_t swpIndex; //the index of the sample
 		int i; //the index within the indices, x, y, and features vector so we know what to swap without searching
 		if (dist(rng) < 0.5) {
@@ -530,12 +529,12 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		}
 		else {
 			//50% of the time, choose the worst sample to replace
-			int feat = 0;
+			int f, q, max;
 
 			//get feature and quantile to remove
-			for (int f = 0; f < nFeat; f++) {	
-				int max = 0; 
-				int q = 0;
+			for (f = 0; f < nFeat; f++) {	
+				max = 0; 
+				q = 0;
 
 				for (int i = 0; i < nSamp; i++) {
 					int count = sampleCountPerQuantile[f][i];
@@ -547,7 +546,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 				}
 
 				if (max != 1) {
-					feat = f;
 					break;
 				}
 			}
@@ -563,9 +561,9 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			nFeat * sizeof(T)						//size bytes
 		);
 
-		Point p;
+		Point<T> p;
 		uint64_t newIndex = clhs.randomIndex();
-		clhs.getPoint(newPoint, newIndex);
+		clhs.getPoint(p, newIndex);
 		std::memcpy(
 			reinterpret_cast<void *>(features.data() + (i * nFeat)), 	//dst
 			reinterpret_cast<void *>(p.p_features), 			//src
@@ -592,7 +590,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		const auto result = oneapi::dal::compute(cor_desc, table); // we update the table in place
 		oneapi::dal::row_accessor<const T> acc {result.get_cor_matrix()};
 		for (int j = 0; j < nFeat; j++) {
-			row = acc.pull({j, j + 1});
+			auto row = acc.pull({j, j + 1});
 
 			for (int k = 0; k < nFeat; k++) {
 				corr[j][k] = row[k];
@@ -600,7 +598,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		}
 
 		//recalculate objective function from correlation matrix
-		T newObjC = clhs.correlationObjectiveFunc(newCorr);
+		T newObjC = clhs.correlationObjectiveFunc(corr);
 
 		T newObj = newObjQ + newObjC;
 		T delta = newObj - obj;
@@ -609,8 +607,8 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 		if (keep) {
 			//update the new changes
-			x[i] = point.x;
-			y[i] = point.y;
+			x[i] = p.x;
+			y[i] = p.y;
 			indicesMap.erase(indices[i]);
 			indicesMap.emplace(newIndex, i);
 				
@@ -629,13 +627,13 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			//revert anything already changed
 			for (int f = 0; f < nFeat; f++) {
 				sampleCountPerQuantile[f][newq[f]]--;
-				sampleCountPerquantile[f][oldq[f]]++;
+				sampleCountPerQuantile[f][oldq[f]]++;
 			}
 
 			std::memcpy(
 				reinterpret_cast<void *>(features.data() + (i * nFeat)),
 				reinterpret_cast<void *>(oldf.data()),
-				nFeat * sizeof(T),
+				nFeat * sizeof(T)
 			);
 		}
 
@@ -644,15 +642,15 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	}
 
 	//add samples to output layer
-	for (int i = 0 ; < nSamp; i++) {
-		double x = GT[0] + x[i] * GT[1] + y[i] * GT[2];
-		double y = GT[3] + x[i] * GT[4] + y[i] * GT[5];
-		OGRPoint point = OGRPoint(x, y);
+	for (int i = 0 ; i < nSamp; i++) {
+		double xCoord = GT[0] + x[i] * GT[1] + y[i] * GT[2];
+		double yCoord = GT[3] + x[i] * GT[4] + y[i] * GT[5];
+		OGRPoint point = OGRPoint(xCoord, yCoord);
 		addPoint(&point, p_layer);
 
 		if (plot) {
-			xCoords.push_back(x[i]);
-			yCoords.push_back(y[i]);
+			xCoords.push_back(xCoord);
+			yCoords.push_back(yCoord);
 		}
 	}
 }
@@ -771,5 +769,5 @@ clhs(
 
 	return {{sCoords, yCoords}, p_sampleVectorWrapper};
 }
-
-} // typedef clhs
+/******************************************************************************
+ *
