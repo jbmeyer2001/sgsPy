@@ -145,7 +145,7 @@ class CLHSDataManager {
 	 */
 	inline void
 	getPoint(Point& point, uint64_t index) {		
-		point.p_features = &points[index * nFeat];
+		point.p_features = points.data() + (index * nFeat);
 		point.x = x[index];
 		point.y = y[index];
 	}
@@ -224,6 +224,10 @@ readRaster(
 		quantileBuffers[i].resize(xBlockSize * yBlockSize);
 	}
 
+	if (access.used) {
+		access.band.p_buffer = VSIMalloc3(xBlockSize, yBlockSize, access.band.size); 
+	}
+
 	//create descriptor for correlation matrix streaming calculation with oneDAL
 	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(dal::covariance::result_options::cor_matrix);
 	oneapi::dal::covariance::partial_compute_result<> partial_result;
@@ -267,6 +271,8 @@ readRaster(
 		}
 	}
 
+	int8_t *p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
+
 	bool calledEditStreamQuantiles = false;
 	void *p_data = reinterpret_cast<void *>(corrBuffer.data());
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
@@ -299,6 +305,11 @@ readRaster(
 			//calculate rand vals
 			rand.calculateRandValues();
 
+			//read access band into memory if used
+			if (access.used) {
+				rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
+			}
+
 			//iterate through pixels
 			nFeatures = 0;
 			for (int y = 0; y < yValid; y++) {
@@ -320,7 +331,7 @@ readRaster(
 					if (!isNan) {
 						nFeatures++;
 
-						if (rand.next()) {
+						if (access.used && p_access[index] == 1 && rand.next()) {
 							clhs.addPoint(
 								&corrBuffer[nFeatures * count],
 								xBlock * xBlockSize + x,
@@ -390,6 +401,10 @@ readRaster(
 		}
 	}
 
+	if (access.used) {
+		VSIFree(access.band.p_buffer);
+	}
+
 	//update clhs data manager with quantiles
 	clhs.setQuantiles(quantiles);
 	
@@ -419,34 +434,52 @@ template <typename T>
 inline void
 selectSamples(std::vector<std::vector<T>>& quantiles,
 	      CLHSDataManager& clhs,
+	      xso::xoshiro_4x64_plus& rng,
+	      int iterations,
 	      int nSamp,
-	      int nFeat)
+	      int nFeat,
+	      OGRLayer *p_layer,
+	      double *GT,
+	      bool plot,
+	      std::vector<double>& xCoords,
+	      std::vector<double>& yCoords)
 {
-	std::unordered_map<uint64_t, Point> samples;
+	std::uniform_real_distribution<T> dist(0.0, 1.0);
+	std::unirofm_int_distribution<int> indexDist(0, nSamp);
 
 	std::vector<std::vector<T>> corr(nFeat);
+	std::vector<std::vector<T>> newCorr(nFeat);
 	std::vector<std::vector<int>> sampleCountPerQuantile(nFeat);
 	std::vector<std::vector<std::unordered_set<uint64_t>>> samplesPerQuantile(nFeat);
 	for (int i = 0; i < nFeat; i++) {
 		sampleCountPerQuantile[i].resize(nSamp, 0);
 		samplesPerQuantile.resize(nSamp);
 		corr.resize(nFeat);
+		newCor.resize(nFeat);
 	}
 
 	std::vector<T> features(nSamp * nFeat);
 	std::vector<int> x(nSamp);
 	std::vector<int> y(nSamp);
 
+	//indices vector used to get an index value in O(1) time after this vector is randomly indexed
+	std::vector<uint64_t> indices(nSamp); 
+	
+	//indices map used to check whether an index is already used in O(1) time, and to keep track of it's index in the 'indices' vector
+	std::unordered_map<uint64_t, int> indicesMap;
+
 	//get first random samples
 	int i = 0;
-	while (samples.size() < static_cast<size_t>(nSamp)) {
+	while (i < nSamp) {
 		uint64_t index = clhs.randomIndex();
 		
-		if (!samples.find(index)) {
+		if (!indicesMap.find(index)) {
+			indicesMap.emplace(index, i);
+			
 			Point p;
 			clhs.getPoint(p, index);
-			samples.emplace(index, p);
-			
+		
+			indices[i] = index;
 			x[i] = p.x;
 			y[i] = p.y;
 			
@@ -467,7 +500,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	//define covariance calculation 
 	DALHomogenTable table = DALHomogenTable(features.data(), nFeat, nSamp, [](const T *){}, oneapi::dal::data_layout::row_major);
 	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(dal::covariance::result_options::cor_matrix);		
-
 	const auto result = oneapi::dal::compute(cor_desc, table);
 	oneapi::dal::row_accessor<const T> acc {result.get_cor_matrix()};
 	for (int i = 0; i < nFeat; i++) {
@@ -478,20 +510,161 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		}
 	}
 
-	T objective = 0;
-	objective += clhs.quantileObjectiveFunc(sampleCountPerQuantile);
-	objective += clhs.correlationObjectiveFunc(corr);
+	double temp = 1;
+	double d = temp / static_cast<double>(iterations);
 
-	//update samples according to objective function
+	T obj = 0;
+	T objQ = clhs.quantileObjectiveFunc(sampleCountPerQuantile);
+	T objC = clhs.correlationObjectiveFunc(corr);
+
+	obj = objQ + objC;
+
+	//begin annealing schedule. If we have a perfect latin hypercube -- or if we pass enough iterations -- stop iterating.
+	while (t > 0 && objQ != 0) {
+		uint64_t swpIndex; //the index of the sample
+		int i; //the index within the indices, x, y, and features vector so we know what to swap without searching
+		if (dist(rng) < 0.5) {
+			//50% of the time, choose a random sample to replace
+			i = indexDist(rng);
+			swpIndex = indices[i];
+		}
+		else {
+			//50% of the time, choose the worst sample to replace
+			int feat = 0;
+
+			//get feature and quantile to remove
+			for (int f = 0; f < nFeat; f++) {	
+				int max = 0; 
+				int q = 0;
+
+				for (int i = 0; i < nSamp; i++) {
+					int count = sampleCountPerQuantile[f][i];
+
+					if (count > max) {
+						max = count;
+						q = i;
+					}
+				}
+
+				if (max != 1) {
+					feat = f;
+					break;
+				}
+			}
+
+			swpIndex = *samplesPerQuantile[f][q].begin();
+			i = indicesMap.find(swpIndex);
+		}
+
+		std::vector<T> oldf(nFeat);
+		std::memcpy(
+			reinterpret_cast<void *>(oldf.data()), 				//dst
+			reinterpret_cast<void *>(features.data() + (i * nFeat)), 	//src
+			nFeat * sizeof(T)						//size bytes
+		);
+
+		Point p;
+		uint64_t newIndex = clhs.randomIndex();
+		clhs.getPoint(newPoint, newIndex);
+		std::memcpy(
+			reinterpret_cast<void *>(features.data() + (i * nFeat)), 	//dst
+			reinterpret_cast<void *>(p.p_features), 			//src
+			nFeat * sizeof(T)						//size bytes
+		);
+			
+		//recalculate sample count per quantile
+		std::vector<int> oldq(nFeat);
+		std::vector<int> newq(nFeat);
+		for (int f = 0; f < nFeat; f++) {
+			int q = getQuantile(oldf[f]);
+			oldq[f] = q;
+			sampleCountPerQuantile[f][q]--;
+
+			q = getQuantile(p.p_features[f]);
+			newq[f] = q;
+			sampleCountPerQuantile[f][q]++;
+		}
+
+		//recalculate objective function from quantiles
+		T newObjQ = clhs.quantileObjectiveFunc(sampleCountPerQuantile);
+		
+		//recalculate correlation matrix
+		const auto result = oneapi::dal::compute(cor_desc, table); // we update the table in place
+		oneapi::dal::row_accessor<const T> acc {result.get_cor_matrix()};
+		for (int j = 0; j < nFeat; j++) {
+			row = acc.pull({j, j + 1});
+
+			for (int k = 0; k < nFeat; k++) {
+				corr[j][k] = row[k];
+			}
+		}
+
+		//recalculate objective function from correlation matrix
+		T newObjC = clhs.correlationObjectiveFunc(newCorr);
+
+		T newObj = newObjQ + newObjC;
+		T delta = newObj - obj;
+
+		bool keep = dist(rng) < std::exp(-1 * delta * temp);
+
+		if (keep) {
+			//update the new changes
+			x[i] = point.x;
+			y[i] = point.y;
+			indicesMap.erase(indices[i]);
+			indicesMap.emplace(newIndex, i);
+				
+			for (int f = 0; f < nFeat; f++) {
+				samplesPerQuantile[f][oldq[f]].erase(indices[i]);
+				samplesPerQuantile[f][newq[f]].insert(newIndex);
+			}
+
+			indices[i] = newIndex;
+			
+			objC = newObjC;
+			objQ = newObjQ;
+			obj = newObj;
+		}
+		else {
+			//revert anything already changed
+			for (int f = 0; f < nFeat; f++) {
+				sampleCountPerQuantile[f][newq[f]]--;
+				sampleCountPerquantile[f][oldq[f]]++;
+			}
+
+			std::memcpy(
+				reinterpret_cast<void *>(features.data() + (i * nFeat)),
+				reinterpret_cast<void *>(oldf.data()),
+				nFeat * sizeof(T),
+			);
+		}
+
+		//update annealing temperature
+		temp -= d;
+	}
+
+	//add samples to output layer
+	for (int i = 0 ; < nSamp; i++) {
+		double x = GT[0] + x[i] * GT[1] + y[i] * GT[2];
+		double y = GT[3] + x[i] * GT[4] + y[i] * GT[5];
+		OGRPoint point = OGRPoint(x, y);
+		addPoint(&point, p_layer);
+
+		if (plot) {
+			xCoords.push_back(x[i]);
+			yCoords.push_back(y[i]);
+		}
+	}
 }
 
 /**
  *
  */
-std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
+std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
 clhs(
 	GDALRasterWrapper *p_raster, 
-	int numSamples,
+	int nSamp,
+	int iterations,
 	GDALVectorWrapper *p_access,
 	std::string layerName,
 	double buffInner,
@@ -504,13 +677,13 @@ clhs(
 
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
-	int count = p_raster->getBandCount();
+	int nFeat = p_raster->getBandCount();
 	double *GT = p_raster->getGeotransform();
 	
 	std::vector<double> xCoords, yCoords;
 
 	std::vector<RasterBandMetaData> bands(p_raster->getBandCount());
-	for (int i = 0; i < count; i++) {
+	for (int i = 0; i < nFeat; i++) {
 		bands[i].p_band = p_raster->getRasterBand(i);
 		bands[i].type = p_raster->getRasterBandType(i);
 		bands[i].size = p_raster->getRasterBandTypeSize(i);
@@ -564,21 +737,39 @@ clhs(
 		std::vector<std::vector<double>> quantiles;
 		
 		//create instance of data management class
-		CLHSDataManager<double> clhs(numSamples, count);
+		CLHSDataManager<double> clhs(nSamp, nFeat);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
-		readRaster<double>(bands, clhs, access, rand, quantiles, type, sizeof(double), width, height, count, numSamples);
+		readRaster<double>(bands, clhs, access, rand, quantiles, type, sizeof(double), width, height, nFeat, nSamp);
+
+		//select samples and add them to output layer
+		selectSamples<double>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 	else { //type == GDT_Float32		
 		std::vector<std::vector<float>> quantiles;
 
 		//create instance of data management class
-		CLHSDataManager<float> clhs(numSamples, count);
+		CLHSDataManager<float> clhs(nSamp, nFeat);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
-		readRasterSP<float>(bands, clhs, access, rand, quantiles type, sizeof(float), width, height, count, numSamples);
+		readRasterSP<float>(bands, clhs, access, rand, quantiles type, sizeof(float), width, height, nFeat, nSamp);
+
+		//select samples and add them to output layer
+		selectSamples<double>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 
+	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_samples);
+
+	if (filename != "") {
+		try {
+			p_sampleVectorWrapper->write(filename);
+		}
+		catch (const std::exception& e) {
+			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
+		}
+	}
+
+	return {{sCoords, yCoords}, p_sampleVectorWrapper};
 }
 
 } // typedef clhs

@@ -51,10 +51,23 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("get_linestrings", &GDALVectorWrapper::getLineStrings);
 
 	// source code in sgs/calculate/pca/pca.h
-	m.def("pca.h", &pca::pca);
+	m.def("pca_cpp", &pca::pca);
+
+	// source code in sgs/sample/clhs/clhs.h
+	m.def("clhs_cpp", &clhs::clhs,
+		pybind11::arg("p_raster"),
+		pybind11::arg("nSamp"),
+		pybind11::arg("iterations"),
+		pybind11::arg("p_access").none(true),
+		pybind11::arg("layerName"),
+		pybind11::arg("buffInner"),
+		pybind11::arg("buffOuter"),
+		pybind11::arg("plot"),
+		pybind11::arg("tempFolder")
+		pybind11::arg("filename"));
 
 	// source code in sgs/sample/srs/srs.h
-	m.def("srs.h", &srs::srs, 
+	m.def("srs_cpp", &srs::srs, 
 		pybind11::arg("p_raster"),
 		pybind11::arg("numSamples"),
 		pybind11::arg("mindist"),
@@ -68,7 +81,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("filename"));
 
 	// source code in sgs/sample/strat/strat.h
-	m.def("strat.h", &strat::strat,
+	m.def("strat_cpp", &strat::strat,
 		pybind11::arg("p_raster"),
 		pybind11::arg("bandNum"),
 		pybind11::arg("numSamples"),
@@ -92,7 +105,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("tempFolder"));
 
 	// source code in sgs/sample/systematic/systematic.h
-	m.def("systematic.h", &systematic::systematic,
+	m.def("systematic_cpp", &systematic::systematic,
 		pybind11::arg("p_raster"),
 		pybind11::arg("cellSize"),
 		pybind11::arg("shape"),
@@ -107,15 +120,15 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("filename"));
 
 	// source code in sgs/stratify/breaks/breaks.h
-	m.def("breaks.h", &breaks::breaks);
+	m.def("breaks_cpp", &breaks::breaks);
 
 	// source code in sgs/stratify/map/map_stratifications.h
-	m.def("map.h", &map::map);
+	m.def("map_cpp", &map::map);
 
 	// source code in sgs/stratify/poly/poly.h
-	m.def("poly.h", &poly::poly);
+	m.def("poly_cpp", &poly::poly);
 
 	// source code in sgs/stratify/quantiles/quantiles.h
-	m.def("quantiles.h", &quantiles::quantiles);
+	m.def("quantiles_cpp", &quantiles::quantiles);
 }
 
