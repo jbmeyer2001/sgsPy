@@ -101,6 +101,15 @@ class CLHSDataManager {
 		
 		this->corr = corr;
 
+		//TODO REMOVE
+		std::cout << "correlation matrix: " << std::endl;
+		for (int i = 0; i < this->nFeat; i++) {
+			for (int j = 0; j < this->nFeat; j++) {
+				std::cout << "corr[" << i << "][" << j <<"] = " << corr[i][j] << std::endl;
+			}
+		}
+		std::cout << std::endl;
+
 		this->x.resize(this->size);
 		this->y.resize(this->size);
 		this->features.resize(this->size * nFeat);
@@ -193,7 +202,7 @@ readRaster(
 	int yBlockSize = bands[0].yBlockSize;
 
 	int xBlocks = (width + xBlockSize - 1) / xBlockSize;
-	int yBlocks = (width + yBlockSize - 1) / yBlockSize;
+	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
 
 	double deps = .001;
 	float seps = .001;
@@ -213,7 +222,7 @@ readRaster(
 	oneapi::dal::covariance::partial_compute_result<> partial_result;
 
 	//create tasks for quantile streaming calculation with MKL
-	std::vector<VSLSSTaskPtr> quantileTasks;
+	std::vector<VSLSSTaskPtr> quantileTasks(count);
 	int status;
 	MKL_INT quant_order_n = count;
 	MKL_INT p = 1;
@@ -225,7 +234,7 @@ readRaster(
 	if (type == GDT_Float64) {
 		for (int i = 0; i < count; i++) {
 			//reinterpret cast the pointer for compiler reasons
-			vsldSSNewTask(
+			status = vsldSSNewTask(
 				&quantileTasks[i], 
 				&p, 
 				&n, 
@@ -239,7 +248,7 @@ readRaster(
 	else {
 		for (int i = 0; i < count; i++) {
 			//reinterpret cast the pointer for compiler reasons
-			vslsSSNewTask(
+			status = vslsSSNewTask(
 				&quantileTasks[i],
 				&p,
 				&n,
@@ -255,6 +264,7 @@ readRaster(
 
 	bool calledEditStreamQuantiles = false;
 	void *p_data = reinterpret_cast<void *>(corrBuffer.data());
+
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			//get block size
@@ -341,6 +351,7 @@ readRaster(
 							&deps
 						);
 					}
+					calledEditStreamQuantiles = true;
 				}
 				for (int i = 0; i < count; i++) {
 					status = vsldSSCompute(
@@ -363,6 +374,7 @@ readRaster(
 							&seps
 						);
 					}
+					calledEditStreamQuantiles = true;
 				}
 				for (int i = 0; i < count; i++) {
 					status = vslsSSCompute(
@@ -417,6 +429,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	      std::vector<double>& xCoords,
 	      std::vector<double>& yCoords)
 {
+	std::cout << "HERE 5.1" << std::endl;
 	std::uniform_real_distribution<T> dist(0.0, 1.0);
 	std::uniform_int_distribution<int> indexDist(0, nSamp);
 
@@ -441,6 +454,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 	//get first random samples
 	int i = 0;
+	std::cout << "HERE 5.2" << std::endl;
 	while (i < nSamp) {
 		uint64_t index = clhs.randomIndex();
 		
@@ -468,6 +482,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		}
 	}
 
+	std::cout << "HERE 5.3" << std::endl;
 	//define covariance calculation 
 	DALHomogenTable table = DALHomogenTable(features.data(), nFeat, nSamp, [](const T *){}, oneapi::dal::data_layout::row_major);
 	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(oneapi::dal::covariance::result_options::cor_matrix);		
@@ -490,8 +505,10 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 	obj = objQ + objC;
 
+	std::cout << "HERE 5.4" << std::endl;
 	//begin annealing schedule. If we have a perfect latin hypercube -- or if we pass enough iterations -- stop iterating.
 	while (temp > 0 && objQ != 0) {
+		std::cout << "HERE 5.5" << std::endl;
 		uint64_t swpIndex; //the index of the sample
 		int i; //the index within the indices, x, y, and features vector so we know what to swap without searching
 		if (dist(rng) < 0.5) {
@@ -616,6 +633,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		temp -= d;
 	}
 
+	std::cout << "HERE 5.6" << std::endl;
 	//add samples to output layer
 	for (int i = 0 ; i < nSamp; i++) {
 		double xCoord = GT[0] + x[i] * GT[1] + y[i] * GT[2];
@@ -628,6 +646,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			yCoords.push_back(yCoord);
 		}
 	}
+	std::cout << "HERE 5.7" << std::endl;
 }
 
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
@@ -703,6 +722,7 @@ clhs(
 		}
 	}
 
+	std::cout << "HERE 1" << std::endl;
 	if (type == GDT_Float64) {	
 		std::vector<std::vector<double>> quantiles;
 		
@@ -715,18 +735,31 @@ clhs(
 		//select samples and add them to output layer
 		selectSamples<double>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
-	else { //type == GDT_Float32		
+	else { //type == GDT_Float32	
+	       	std::cout << "HERE 2" << std::endl;	
 		std::vector<std::vector<float>> quantiles;
 
+		std::cout << "HERE 3" << std::endl;
 		//create instance of data management class
 		CLHSDataManager<float> clhs(nFeat, nSamp, &rng);
 
+		std::cout << "HERE 4" << std::endl;
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<float>(bands, clhs, access, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
 
+		for (int f = 0; f < nFeat; f++) {
+			std::cout << "feature " << f << " quantiles: " << std::endl;
+			for (int s = 0; s < nSamp; s++) {
+				std::cout << "quantiles[" << s << "] = " << quantiles[f][s] << std::endl;
+			}
+			std::cout << std::endl;
+		}
+		std::cout << "HERE 5" << std::endl;
 		//select samples and add them to output layer
 		selectSamples<float>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
+		std::cout << "HERE 6" << std::endl;
 	}
+	std::cout << "HERE 7" << std::endl;
 
 	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_samples);
 
