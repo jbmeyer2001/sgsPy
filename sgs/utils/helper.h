@@ -837,6 +837,9 @@ class Variance {
  */
 inline uint64_t
 getProbabilityMultiplier(GDALRasterWrapper *p_raster, int startMult, int numSamples, bool useMindist, double accessibleArea) {
+	std::cout << "startMult: " << startMult << std::endl;
+	std::cout << "numSamples: " << numSamples << std::endl;
+
 	double height = static_cast<double>(p_raster->getHeight());
 	double width = static_cast<double>(p_raster->getWidth());
 	double samples = static_cast<double>(numSamples);
@@ -852,8 +855,12 @@ getProbabilityMultiplier(GDALRasterWrapper *p_raster, int startMult, int numSamp
 		numer *= (totalArea / accessibleArea);
 	}
 
+	if (numer > denom) {
+		return 0;
+	}
+
 	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer)));
-	return (bits <= 0) ? 0 : (1 << bits) - 1;
+	return (1 << bits) - 1;
 }
 
 /**
@@ -880,6 +887,7 @@ private:
 	size_t randValIndex = 0;
 	uint64_t multiplier = 0;
 	xso::xoshiro_4x64_plus *p_rng = nullptr;
+	bool alwaysTrue = false;
 
 public:
 	/**
@@ -892,10 +900,15 @@ public:
 	 * @param xso::xoshiro_4x64_plus *p_rng
 	 */
 	RandValController(int xBlockSize, int yBlockSize, uint64_t multiplier, xso::xoshiro_4x64_plus *p_rng) {
-		this->randVals.resize(xBlockSize * yBlockSize);
-		this->randValIndex = static_cast<size_t>(xBlockSize * yBlockSize);
-		this->multiplier = multiplier;
-		this->p_rng = p_rng;
+		if (this->multiplier == 0) {
+			this->alwaysTrue = true;
+		}
+		else {
+			this->randVals.resize(xBlockSize * yBlockSize);
+			this->randValIndex = static_cast<size_t>(xBlockSize * yBlockSize);
+			this->multiplier = multiplier;
+			this->p_rng = p_rng;
+		}
 	}
 
 	/**
@@ -912,6 +925,10 @@ public:
 	 */
 	inline void 
 	calculateRandValues(void) {
+		if (alwaysTrue) {
+			return;
+		}
+
 		for (size_t i = 0; i < randValIndex; i++) {
 			randVals[i] = (((*p_rng)() >> 11) & multiplier) == multiplier;
 		}
@@ -924,6 +941,10 @@ public:
 	 */
 	inline bool 
 	next(void) {
+		if (alwaysTrue) {
+			return true;
+		}
+
 		bool retval = randVals[randValIndex];
 		randValIndex++;
 		return retval;

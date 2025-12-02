@@ -50,7 +50,7 @@ class CLHSDataManager {
 	size_t fi; //features index
 	size_t count;
 	int64_t size;
-	uint64_t usize;
+	uint64_t ucount;
 
 	std::vector<std::vector<T>> quantiles;
 	std::vector<std::vector<T>> corr;
@@ -64,6 +64,7 @@ class CLHSDataManager {
 	public:
 	CLHSDataManager(int nFeat, int nSamp, xso::xoshiro_4x64_plus *p_rng) {
 		this->nFeat = nFeat;
+		this->nSamp = nSamp;
 		this->count = 0;
 		this->fi = 0;
 		this->size = MILLION;
@@ -95,7 +96,7 @@ class CLHSDataManager {
 
 	inline void
 	finalize(std::vector<std::vector<T>> corr) {
-		if (this->size < static_cast<int64_t>(this->nSamp)) {
+		if (this->count < static_cast<size_t>(this->nSamp)) {
 			throw std::runtime_error("not enough points saved during raster iteration to conduct clhs sampling.");
 		}
 		
@@ -103,11 +104,13 @@ class CLHSDataManager {
 
 		this->x.resize(this->size);
 		this->y.resize(this->size);
-		this->features.resize(this->size * nFeat);
-		this->usize = static_cast<int64_t>(size);
-	
+		this->features.resize(this->count * nFeat);
+		this->ucount = static_cast<uint64_t>(this->count);
+
+		std::cout << "count: " << this->count << std::endl;
+
 		//use bit twiddling to fill the mask
-		this->mask = static_cast<uint64_t>(size);
+		this->mask = static_cast<uint64_t>(this->count);
 		this->mask--;
 		this->mask |= this->mask >> 1;
 		this->mask |= this->mask >> 2;
@@ -121,7 +124,7 @@ class CLHSDataManager {
 	randomIndex() {
 		uint64_t index = ((*p_rng)() >> 11) & mask;
 
-		while (index > usize) {
+		while (index > ucount) {
 			index = ((*p_rng)() >> 11) & mask;
 		}
 
@@ -312,9 +315,9 @@ readRaster(
 					if (!isNan) {
 						n++;
 
-						if (access.used && p_access[index] == 1 && rand.next()) {
+						if ((!access.used || p_access[index] == 1) && rand.next()) {
 							clhs.addPoint(
-								&corrBuffer[n * count],
+								corrBuffer.data() + (n * count),
 								xBlock * xBlockSize + x,
 								yBlock * yBlockSize + y		
 							);
@@ -435,8 +438,8 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	std::vector<std::vector<std::unordered_set<uint64_t>>> samplesPerQuantile(nFeat);
 	for (int i = 0; i < nFeat; i++) {
 		sampleCountPerQuantile[i].resize(nSamp, 0);
-		samplesPerQuantile.resize(nSamp);
-		corr.resize(nFeat);
+		samplesPerQuantile[i].resize(nSamp);
+		corr[i].resize(nFeat);
 	}
 
 	std::vector<T> features(nSamp * nFeat);
@@ -707,6 +710,7 @@ clhs(
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng;
 	uint64_t multiplier = getProbabilityMultiplier(p_raster, 4, MILLION * 10, false, access.area);
+	std::cout << "multiplier: " << multiplier << std::endl;
 
 	RandValController rand(bands[0].xBlockSize, bands[0].yBlockSize, multiplier, &rng);
 
@@ -724,6 +728,7 @@ clhs(
 		std::vector<std::vector<double>> quantiles;
 		
 		//create instance of data management class
+		std::cout << "nSamp: " << nSamp << std::endl;
 		CLHSDataManager<double> clhs(nFeat, nSamp, &rng);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
