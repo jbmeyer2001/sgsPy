@@ -837,9 +837,6 @@ class Variance {
  */
 inline uint64_t
 getProbabilityMultiplier(GDALRasterWrapper *p_raster, int startMult, int numSamples, bool useMindist, double accessibleArea) {
-	std::cout << "startMult: " << startMult << std::endl;
-	std::cout << "numSamples: " << numSamples << std::endl;
-
 	double height = static_cast<double>(p_raster->getHeight());
 	double width = static_cast<double>(p_raster->getWidth());
 	double samples = static_cast<double>(numSamples);

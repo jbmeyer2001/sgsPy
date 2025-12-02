@@ -107,8 +107,6 @@ class CLHSDataManager {
 		this->features.resize(this->count * nFeat);
 		this->ucount = static_cast<uint64_t>(this->count);
 
-		std::cout << "count: " << this->count << std::endl;
-
 		//use bit twiddling to fill the mask
 		this->mask = static_cast<uint64_t>(this->count);
 		this->mask--;
@@ -184,10 +182,10 @@ readRaster(
 	quantiles.resize(count);
 
 	for (int i = 0; i < count; i++) {
-		probabilities[i].resize(nSamp);
-		quantiles[i].resize(nSamp);
+		probabilities[i].resize(nSamp - 1);
+		quantiles[i].resize(nSamp - 1);
 
-		for (int j = 0; j < nSamp; j++) {
+		for (int j = 0; j < nSamp - 1; j++) {
 			probabilities[i][j] = static_cast<T>(j + 1) / static_cast<T>(nSamp);
 		}
 	}
@@ -218,7 +216,7 @@ readRaster(
 	//create tasks for quantile streaming calculation with MKL
 	std::vector<VSLSSTaskPtr> quantileTasks(count);
 	int status;
-	MKL_INT quant_order_n = nSamp;
+	MKL_INT quant_order_n = quantiles[0].size();
 	MKL_INT p = 1;
 	MKL_INT n = xBlockSize * yBlockSize;
 	MKL_INT nparams = VSL_SS_SQUANTS_ZW_PARAMS_N;
@@ -429,7 +427,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	      std::vector<double>& xCoords,
 	      std::vector<double>& yCoords)
 {
-	std::cout << "HERE 5.1" << std::endl;
 	std::uniform_real_distribution<T> dist(0.0, 1.0);
 	std::uniform_int_distribution<int> indexDist(0, nSamp);
 
@@ -454,7 +451,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 	//get first random samples
 	int i = 0;
-	std::cout << "HERE 5.2" << std::endl;
 	while (i < nSamp) {
 		uint64_t index = clhs.randomIndex();
 		
@@ -482,7 +478,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		}
 	}
 
-	std::cout << "HERE 5.3" << std::endl;
 	//define covariance calculation 
 	DALHomogenTable table = DALHomogenTable(features.data(), nFeat, nSamp, [](const T *){}, oneapi::dal::data_layout::row_major);
 	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(oneapi::dal::covariance::result_options::cor_matrix);		
@@ -505,18 +500,25 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 	obj = objQ + objC;
 
-	std::cout << "HERE 5.4" << std::endl;
+	int test1 = 0;
+	int test2 = 0;
+
 	//begin annealing schedule. If we have a perfect latin hypercube -- or if we pass enough iterations -- stop iterating.
 	while (temp > 0 && objQ != 0) {
-		std::cout << "HERE 5.5" << std::endl;
+		std::cout << "START" << std::endl;
+		if (temp == 0.25 || temp == 0.50 || temp == 0.75 || temp == 1.0) {
+			std::cout << "obj: " << obj << std::endl;
+		}
 		uint64_t swpIndex; //the index of the sample
 		int i; //the index within the indices, x, y, and features vector so we know what to swap without searching
 		if (dist(rng) < 0.5) {
+			test1++;
 			//50% of the time, choose a random sample to replace
 			i = indexDist(rng);
 			swpIndex = indices[i];
 		}
 		else {
+			test2++;
 			//50% of the time, choose the worst sample to replace
 			int f, q, max;
 
@@ -525,12 +527,12 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 				max = 0; 
 				q = 0;
 
-				for (int i = 0; i < nSamp; i++) {
-					int count = sampleCountPerQuantile[f][i];
+				for (int s = 0; s < nSamp; s++) {
+					int count = sampleCountPerQuantile[f][s];
 
 					if (count > max) {
 						max = count;
-						q = i;
+						q = s;
 					}
 				}
 
@@ -571,6 +573,16 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			sampleCountPerQuantile[f][q]--;
 
 			q = getQuantile(p.p_features[f], quantiles[f]);
+			if (q >= nSamp) {
+				std::cout << "q is larger than should be possible..." << std::endl;
+				std::cout << "feature num is: " << f << std::endl;
+				std::cout << "feature is: " << p.p_features[f] << std::endl;
+				std::cout << "q: " << q << std::endl;
+				std::cout << "quantiles: " << std::endl;
+				for (int k = 0; k < nSamp; k++) {
+					std::cout << "quantiles[" << k << "] = " << quantiles[f][k] << std::endl;
+				}
+			}
 			newq[f] = q;
 			sampleCountPerQuantile[f][q]++;
 		}
@@ -598,6 +610,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		bool keep = dist(rng) < std::exp(-1 * delta * temp);
 
 		if (keep) {
+			std::cout << "KEEP" << std::endl;
 			//update the new changes
 			x[i] = p.x;
 			y[i] = p.y;
@@ -616,6 +629,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			obj = newObj;
 		}
 		else {
+			std::cout << "DONT KEEP" << std::endl;
 			//revert anything already changed
 			for (int f = 0; f < nFeat; f++) {
 				sampleCountPerQuantile[f][newq[f]]--;
@@ -631,9 +645,10 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 		//update annealing temperature
 		temp -= d;
+		std::cout << "TEMP: " << temp << std::endl;
 	}
 
-	std::cout << "HERE 5.6" << std::endl;
+	std::cout << "OUT" << std::endl;
 	//add samples to output layer
 	for (int i = 0 ; i < nSamp; i++) {
 		double xCoord = GT[0] + x[i] * GT[1] + y[i] * GT[2];
@@ -646,7 +661,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			yCoords.push_back(yCoord);
 		}
 	}
-	std::cout << "HERE 5.7" << std::endl;
 }
 
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
@@ -710,8 +724,6 @@ clhs(
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng;
 	uint64_t multiplier = getProbabilityMultiplier(p_raster, 4, MILLION * 10, false, access.area);
-	std::cout << "multiplier: " << multiplier << std::endl;
-
 	RandValController rand(bands[0].xBlockSize, bands[0].yBlockSize, multiplier, &rng);
 
 	//get data type for all bands
@@ -723,12 +735,10 @@ clhs(
 		}
 	}
 
-	std::cout << "HERE 1" << std::endl;
 	if (type == GDT_Float64) {	
 		std::vector<std::vector<double>> quantiles;
 		
 		//create instance of data management class
-		std::cout << "nSamp: " << nSamp << std::endl;
 		CLHSDataManager<double> clhs(nFeat, nSamp, &rng);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
@@ -738,23 +748,17 @@ clhs(
 		selectSamples<double>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 	else { //type == GDT_Float32	
-	       	std::cout << "HERE 2" << std::endl;	
 		std::vector<std::vector<float>> quantiles;
 
-		std::cout << "HERE 3" << std::endl;
 		//create instance of data management class
 		CLHSDataManager<float> clhs(nFeat, nSamp, &rng);
 
-		std::cout << "HERE 4" << std::endl;
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<float>(bands, clhs, access, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
 
-		std::cout << "HERE 5" << std::endl;
 		//select samples and add them to output layer
 		selectSamples<float>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
-		std::cout << "HERE 6" << std::endl;
 	}
-	std::cout << "HERE 7" << std::endl;
 
 	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_samples);
 
