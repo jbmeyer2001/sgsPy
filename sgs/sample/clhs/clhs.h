@@ -55,13 +55,14 @@ class CLHSDataManager {
 	std::vector<std::vector<T>> quantiles;
 	std::vector<std::vector<T>> corr;
 
-	int64_t nFeat;
+	int nFeat;
+	int nSamp;
 
 	xso::xoshiro_4x64_plus *p_rng = nullptr;
 	uint64_t mask = 0;
 
 	public:
-	CLHSDataManager(int nFeat, xso::xoshiro_4x64_plus *p_rng) {
+	CLHSDataManager(int nFeat, int nSamp, xso::xoshiro_4x64_plus *p_rng) {
 		this->nFeat = nFeat;
 		this->count = 0;
 		this->fi = 0;
@@ -94,6 +95,10 @@ class CLHSDataManager {
 
 	inline void
 	finalize(std::vector<std::vector<T>> corr) {
+		if (this->size < static_cast<int64_t>(this->nSamp)) {
+			throw std::runtime_error("not enough points saved during raster iteration to conduct clhs sampling.");
+		}
+		
 		this->corr = corr;
 
 		this->x.resize(this->size);
@@ -530,6 +535,9 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 		Point<T> p;
 		uint64_t newIndex = clhs.randomIndex();
+		while (indicesMap.contains(newIndex)) {
+			newIndex = clhs.randomIndex();
+		}
 		clhs.getPoint(p, newIndex);
 		std::memcpy(
 			reinterpret_cast<void *>(features.data() + (i * nFeat)), 	//dst
@@ -699,7 +707,7 @@ clhs(
 		std::vector<std::vector<double>> quantiles;
 		
 		//create instance of data management class
-		CLHSDataManager<double> clhs(nFeat, &rng);
+		CLHSDataManager<double> clhs(nFeat, nSamp, &rng);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<double>(bands, clhs, access, rand, type, quantiles, sizeof(double), width, height, nFeat, nSamp);
@@ -711,7 +719,7 @@ clhs(
 		std::vector<std::vector<float>> quantiles;
 
 		//create instance of data management class
-		CLHSDataManager<float> clhs(nFeat, &rng);
+		CLHSDataManager<float> clhs(nFeat, nSamp, &rng);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<float>(bands, clhs, access, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
