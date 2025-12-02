@@ -101,15 +101,6 @@ class CLHSDataManager {
 		
 		this->corr = corr;
 
-		//TODO REMOVE
-		std::cout << "correlation matrix: " << std::endl;
-		for (int i = 0; i < this->nFeat; i++) {
-			for (int j = 0; j < this->nFeat; j++) {
-				std::cout << "corr[" << i << "][" << j <<"] = " << corr[i][j] << std::endl;
-			}
-		}
-		std::cout << std::endl;
-
 		this->x.resize(this->size);
 		this->y.resize(this->size);
 		this->features.resize(this->size * nFeat);
@@ -224,7 +215,7 @@ readRaster(
 	//create tasks for quantile streaming calculation with MKL
 	std::vector<VSLSSTaskPtr> quantileTasks(count);
 	int status;
-	MKL_INT quant_order_n = count;
+	MKL_INT quant_order_n = nSamp;
 	MKL_INT p = 1;
 	MKL_INT n = xBlockSize * yBlockSize;
 	MKL_INT nparams = VSL_SS_SQUANTS_ZW_PARAMS_N;
@@ -239,7 +230,7 @@ readRaster(
 				&p, 
 				&n, 
 				&xstorage, 
-				reinterpret_cast<double *>(probabilities[i].data()), 
+				reinterpret_cast<double *>(quantileBuffers[i].data()), 
 				0, 
 				0
 			);
@@ -253,7 +244,7 @@ readRaster(
 				&p,
 				&n,
 				&xstorage,
-				reinterpret_cast<float *>(probabilities[i].data()),
+				reinterpret_cast<float *>(quantileBuffers[i].data()),
 				0,
 				0
 			);
@@ -376,7 +367,7 @@ readRaster(
 					}
 					calledEditStreamQuantiles = true;
 				}
-				for (int i = 0; i < count; i++) {
+				for (int i = 0; i < count; i++) {	
 					status = vslsSSCompute(
 						quantileTasks[i],
 						VSL_SS_STREAM_QUANTS,
@@ -402,6 +393,7 @@ readRaster(
 
 	oneapi::dal::row_accessor<const T> acc {correlation};
 
+	n = 0;
 	std::vector<std::vector<T>> corr(count);
 	for (int i = 0; i < count; i++) {
 		corr[i].resize(count);
@@ -410,6 +402,11 @@ readRaster(
 		for (int j = 0; j < count; j++) {
 			corr[i][j] = row[j];
 		}
+
+		status = (type == GDT_Float64) ?
+			vsldSSCompute(quantileTasks[i], VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW) :
+			vslsSSCompute(quantileTasks[i], VSL_SS_STREAM_QUANTS, VSL_SS_METHOD_SQUANTS_ZW);
+		status = vslSSDeleteTask(&quantileTasks[i]);
 	}
 
 	clhs.finalize(corr);
@@ -747,13 +744,6 @@ clhs(
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<float>(bands, clhs, access, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
 
-		for (int f = 0; f < nFeat; f++) {
-			std::cout << "feature " << f << " quantiles: " << std::endl;
-			for (int s = 0; s < nSamp; s++) {
-				std::cout << "quantiles[" << s << "] = " << quantiles[f][s] << std::endl;
-			}
-			std::cout << std::endl;
-		}
 		std::cout << "HERE 5" << std::endl;
 		//select samples and add them to output layer
 		selectSamples<float>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
