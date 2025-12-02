@@ -21,9 +21,9 @@
 
 #define MILLION 1000000
 
-namespace clhs {
-
 typedef oneapi::dal::homogen_table				DALHomogenTable;
+
+namespace clhs {
 
 template <typename T>
 struct Point {
@@ -32,9 +32,6 @@ struct Point {
 	int y = -1;
 };
 
-/**
- *
- */
 template <typename T>
 inline size_t 
 getQuantile(T val, std::vector<T>& quantiles) {
@@ -44,9 +41,6 @@ getQuantile(T val, std::vector<T>& quantiles) {
 		std::distance(quantiles.begin(), it);
 }
 
-/**
- *
- */
 template <typename T>
 class CLHSDataManager {
 	private:
@@ -67,9 +61,6 @@ class CLHSDataManager {
 	uint64_t mask = 0;
 
 	public:
-	/**
-	 *
-	 */
 	CLHSDataManager(int nFeat, xso::xoshiro_4x64_plus *p_rng) {
 		this->nFeat = nFeat;
 		this->count = 0;
@@ -82,9 +73,6 @@ class CLHSDataManager {
 		this->p_rng = p_rng;
 	}
 
-	/**
-	 *
-	 */
 	inline void
 	addPoint(T *p_features, int x, int y) {
 		for (int f = 0; f < nFeat; f++) {
@@ -97,23 +85,20 @@ class CLHSDataManager {
 		this->count++;
 
 		if (this->count == this->size) {
-			this->points.resize(this->points.size + MILLION * this->nFeat);
+			this->features.resize(this->features.size() + MILLION * this->nFeat);
 			this->x.resize(this->x.size() + MILLION);
 			this->y.resize(this->y.size() + MILLION);
 			this->size += MILLION;
 		}	
 	}
 
-	/**
-	 *
-	 */
 	inline void
 	finalize(std::vector<std::vector<T>> corr) {
 		this->corr = corr;
 
 		this->x.resize(this->size);
 		this->y.resize(this->size);
-		this->points.resize(this->size * nFeat);
+		this->features.resize(this->size * nFeat);
 		this->usize = static_cast<int64_t>(size);
 	
 		//use bit twiddling to fill the mask
@@ -127,9 +112,6 @@ class CLHSDataManager {
 		this->mask |= this->mask >> 32;
 	}
 
-	/**
-	 *
-	 */
 	inline uint64_t
 	randomIndex() {
 		uint64_t index = ((*p_rng)() >> 11) & mask;
@@ -141,9 +123,6 @@ class CLHSDataManager {
 		return index;
 	}
 
-	/**
-	 *
-	 */
 	inline void
 	getPoint(Point<T>& point, uint64_t index) {		
 		point.p_features = this->features.data() + (index * nFeat);
@@ -151,9 +130,6 @@ class CLHSDataManager {
 		point.y = y[index];
 	}
 
-	/**
-	 *
-	 */
 	inline T
 	quantileObjectiveFunc(std::vector<std::vector<int>>& sampleCountPerQuantile) {
 		int retval = 0;
@@ -167,9 +143,6 @@ class CLHSDataManager {
 		return static_cast<T>(retval);
 	}
 
-	/**
-	 *
-	 */
 	inline T
 	correlationObjectiveFunc(std::vector<std::vector<T>>& corr) {
 		T retval = 0;
@@ -406,15 +379,9 @@ readRaster(
 		VSIFree(access.band.p_buffer);
 	}
 
-	//update clhs data manager with quantiles
-	clhs.setQuantiles(quantiles);
-	
 	//calculate and update clhs data manager with correlation matrix
 	auto result = oneapi::dal::finalize_compute(cor_desc, partial_result);
 	auto correlation = result.get_cor_matrix();
-
-	int64_t rows = correlation.get_row_count();
-	int64_t cols = correlation.get_column_count();
 
 	oneapi::dal::row_accessor<const T> acc {correlation};
 
@@ -428,7 +395,7 @@ readRaster(
 		}
 	}
 
-	clhs.setCorrelation(correlation);
+	clhs.finalize(corr);
 }
 
 template <typename T>
@@ -551,7 +518,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			}
 
 			swpIndex = *samplesPerQuantile[f][q].begin();
-			i = indicesMap.find(swpIndex);
+			i = indicesMap.find(swpIndex)->second;
 		}
 
 		std::vector<T> oldf(nFeat);
@@ -574,11 +541,11 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		std::vector<int> oldq(nFeat);
 		std::vector<int> newq(nFeat);
 		for (int f = 0; f < nFeat; f++) {
-			int q = getQuantile(oldf[f]);
+			int q = getQuantile(oldf[f], quantiles[f]);
 			oldq[f] = q;
 			sampleCountPerQuantile[f][q]--;
 
-			q = getQuantile(p.p_features[f]);
+			q = getQuantile(p.p_features[f], quantiles[f]);
 			newq[f] = q;
 			sampleCountPerQuantile[f][q]++;
 		}
@@ -655,9 +622,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	}
 }
 
-/**
- *
- */
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
 clhs(
 	GDALRasterWrapper *p_raster, 
@@ -718,7 +682,7 @@ clhs(
 	//fast random number generator using xoshiro256+
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng;
-	multiplier = getProbabilityMultiplier(p_raster, 4, MILLION * 10, false, access.area);
+	uint64_t multiplier = getProbabilityMultiplier(p_raster, 4, MILLION * 10, false, access.area);
 
 	RandValController rand(bands[0].xBlockSize, bands[0].yBlockSize, multiplier, &rng);
 
@@ -735,10 +699,10 @@ clhs(
 		std::vector<std::vector<double>> quantiles;
 		
 		//create instance of data management class
-		CLHSDataManager<double> clhs(nSamp, nFeat);
+		CLHSDataManager<double> clhs(nFeat, &rng);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
-		readRaster<double>(bands, clhs, access, rand, quantiles, type, sizeof(double), width, height, nFeat, nSamp);
+		readRaster<double>(bands, clhs, access, rand, type, quantiles, sizeof(double), width, height, nFeat, nSamp);
 
 		//select samples and add them to output layer
 		selectSamples<double>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
@@ -747,13 +711,13 @@ clhs(
 		std::vector<std::vector<float>> quantiles;
 
 		//create instance of data management class
-		CLHSDataManager<float> clhs(nSamp, nFeat);
+		CLHSDataManager<float> clhs(nFeat, &rng);
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
-		readRasterSP<float>(bands, clhs, access, rand, quantiles type, sizeof(float), width, height, nFeat, nSamp);
+		readRaster<float>(bands, clhs, access, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
 
 		//select samples and add them to output layer
-		selectSamples<double>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
+		selectSamples<float>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 
 	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_samples);
@@ -767,7 +731,7 @@ clhs(
 		}
 	}
 
-	return {{sCoords, yCoords}, p_sampleVectorWrapper};
+	return {{xCoords, yCoords}, p_sampleVectorWrapper};
 }
-/******************************************************************************
- *
+
+}
