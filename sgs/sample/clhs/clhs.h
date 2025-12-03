@@ -25,6 +25,9 @@ typedef oneapi::dal::homogen_table				DALHomogenTable;
 
 namespace clhs {
 
+/**
+ *
+ */
 template <typename T>
 struct Point {
 	T *p_features = nullptr;
@@ -32,6 +35,9 @@ struct Point {
 	int y = -1;
 };
 
+/**
+ *
+ */
 template <typename T>
 inline size_t 
 getQuantile(T val, std::vector<T>& quantiles) {
@@ -41,6 +47,9 @@ getQuantile(T val, std::vector<T>& quantiles) {
 		std::distance(quantiles.begin(), it);
 }
 
+/**
+ *
+ */
 template <typename T>
 class CLHSDataManager {
 	private:
@@ -62,6 +71,9 @@ class CLHSDataManager {
 	uint64_t mask = 0;
 
 	public:
+	/**
+	 *
+	 */
 	CLHSDataManager(int nFeat, int nSamp, xso::xoshiro_4x64_plus *p_rng) {
 		this->nFeat = nFeat;
 		this->nSamp = nSamp;
@@ -75,6 +87,9 @@ class CLHSDataManager {
 		this->p_rng = p_rng;
 	}
 
+	/**
+	 *
+	 */
 	inline void
 	addPoint(T *p_features, int x, int y) {
 		for (int f = 0; f < nFeat; f++) {
@@ -94,8 +109,11 @@ class CLHSDataManager {
 		}	
 	}
 
+	/**
+	 *
+	 */
 	inline void
-	finalize(std::vector<std::vector<T>> corr) {
+	finalize(std::vector<std::vector<T>>& corr) {
 		if (this->count < static_cast<size_t>(this->nSamp)) {
 			throw std::runtime_error("not enough points saved during raster iteration to conduct clhs sampling.");
 		}
@@ -118,6 +136,9 @@ class CLHSDataManager {
 		this->mask |= this->mask >> 32;
 	}
 
+	/**
+	 *
+	 */
 	inline uint64_t
 	randomIndex() {
 		uint64_t index = ((*p_rng)() >> 11) & mask;
@@ -129,6 +150,9 @@ class CLHSDataManager {
 		return index;
 	}
 
+	/**
+	 *
+	 */
 	inline void
 	getPoint(Point<T>& point, uint64_t index) {		
 		point.p_features = this->features.data() + (index * nFeat);
@@ -136,6 +160,9 @@ class CLHSDataManager {
 		point.y = y[index];
 	}
 
+	/**
+	 *
+	 */
 	inline T
 	quantileObjectiveFunc(std::vector<std::vector<int>>& sampleCountPerQuantile) {
 		int retval = 0;
@@ -149,6 +176,9 @@ class CLHSDataManager {
 		return static_cast<T>(retval);
 	}
 
+	/**
+	 *
+	 */
 	inline T
 	correlationObjectiveFunc(std::vector<std::vector<T>>& corr) {
 		T retval = 0;
@@ -163,6 +193,9 @@ class CLHSDataManager {
 	}
 };
 
+/**
+ *
+ */
 template <typename T>
 inline void
 readRaster(
@@ -312,8 +345,9 @@ readRaster(
 
 					if (!isNan) {
 						n++;
-
-						if ((!access.used || p_access[index] == 1) && rand.next()) {
+						
+						bool accessible = !access.used || p_access[index] != 1;
+						if (accessible && rand.next()) {
 							clhs.addPoint(
 								corrBuffer.data() + (n * count),
 								xBlock * xBlockSize + x,
@@ -413,6 +447,9 @@ readRaster(
 	clhs.finalize(corr);
 }
 
+/**
+ *
+ */
 template <typename T>
 inline void
 selectSamples(std::vector<std::vector<T>>& quantiles,
@@ -637,6 +674,9 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	}
 }
 
+/**
+ *
+ */
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
 clhs(
 	GDALRasterWrapper *p_raster, 
