@@ -26,7 +26,8 @@ typedef oneapi::dal::homogen_table				DALHomogenTable;
 namespace clhs {
 
 /**
- *
+ * Structure for containing the x and y positions of a point,
+ * along with an array of its feature values.
  */
 template <typename T>
 struct Point {
@@ -36,7 +37,12 @@ struct Point {
 };
 
 /**
+ * This function is used to get the quantile which a particular value fits into.
+ * It requires both that value, and a vector of the quantile values to be passed.
  *
+ * @param T val
+ * @param std::vector<T>& quantiles
+ * @returns size_t
  */
 template <typename T>
 inline size_t 
@@ -48,7 +54,11 @@ getQuantile(T val, std::vector<T>& quantiles) {
 }
 
 /**
+ * This class is responsible for managing the data for the clhs sampling method.
  *
+ * It contains a vector with the feature values of all added pixels, as well as 
+ * the x and y values of those pixels, and can randomly return one of those pixels
+ * as desired. It also stores the correlation matrix of the raster. 
  */
 template <typename T>
 class CLHSDataManager {
@@ -61,7 +71,6 @@ class CLHSDataManager {
 	int64_t size;
 	uint64_t ucount;
 
-	std::vector<std::vector<T>> quantiles;
 	std::vector<std::vector<T>> corr;
 
 	int nFeat;
@@ -72,7 +81,13 @@ class CLHSDataManager {
 
 	public:
 	/**
+	 * Constructor, sets the nFeat, nSamp, and random number generator. Also
+	 * sizes the vectors to 1,000,000 points (initially). The vector will
+	 * resize as required, and sizes down once raster reading is completed.
 	 *
+	 * @param int nFeat
+	 * @param int nSamp
+	 * @param xso::xoshiro_4x64_plus *p_rng
 	 */
 	CLHSDataManager(int nFeat, int nSamp, xso::xoshiro_4x64_plus *p_rng) {
 		this->nFeat = nFeat;
@@ -88,7 +103,12 @@ class CLHSDataManager {
 	}
 
 	/**
+	 * This function saves a point to the data manager. It takes a feature
+	 * vector (array), as a parameter alongside the x and y indices of the
+	 * pixel containing those features.
 	 *
+	 * The x, y, and features vectors are updated accordingly and resized
+	 * if required.
 	 */
 	inline void
 	addPoint(T *p_features, int x, int y) {
@@ -110,7 +130,22 @@ class CLHSDataManager {
 	}
 
 	/**
+	 * This function is called once the raster has been read, meaining no
+	 * more points will be added to the data manager. The correlation
+	 * matrix, which is calculated just after the raster reading finishes,
+	 * is passed as a parameter so that it can be saved.
 	 *
+	 * The x, y, and features vectors are resized.
+	 *
+	 * A mask, which is used along with the random number generator to 
+	 * generate random indices within the saved points, is generated.
+	 * The mask value is all 1 starting from the most significant
+	 * bit which is 1 when the index is at it's largest.
+	 *
+	 * When anded against a new random number, the mask value will generate
+	 * a number which can be any of the indices, and is quite likely not to
+	 * be larger than the capacity. If it is larger than the capacity it can
+	 * just be calculated again. 
 	 */
 	inline void
 	finalize(std::vector<std::vector<T>>& corr) {
@@ -127,7 +162,6 @@ class CLHSDataManager {
 
 		//use bit twiddling to fill the mask
 		this->mask = static_cast<uint64_t>(this->count);
-		this->mask--;
 		this->mask |= this->mask >> 1;
 		this->mask |= this->mask >> 2;
 		this->mask |= this->mask >> 4;
