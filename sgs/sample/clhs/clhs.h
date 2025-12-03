@@ -428,7 +428,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	      std::vector<double>& yCoords)
 {
 	std::uniform_real_distribution<T> dist(0.0, 1.0);
-	std::uniform_int_distribution<int> indexDist(0, nSamp);
+	std::uniform_int_distribution<int> indexDist(0, nSamp - 1);
 
 	std::vector<std::vector<T>> corr(nFeat);
 	std::vector<std::vector<int>> sampleCountPerQuantile(nFeat);
@@ -442,6 +442,8 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	std::vector<T> features(nSamp * nFeat);
 	std::vector<int> x(nSamp);
 	std::vector<int> y(nSamp);
+
+	int featuresSize = nSamp * nFeat;
 
 	//indices vector used to get an index value in O(1) time after this vector is randomly indexed
 	std::vector<uint64_t> indices(nSamp); 
@@ -500,33 +502,22 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 	obj = objQ + objC;
 
-	int test1 = 0;
-	int test2 = 0;
-
-	/*
 	//begin annealing schedule. If we have a perfect latin hypercube -- or if we pass enough iterations -- stop iterating.
 	while (temp > 0 && objQ != 0) {
-		std::cout << "START" << std::endl;
-		if (temp == 0.25 || temp == 0.50 || temp == 0.75 || temp == 1.0) {
-			std::cout << "obj: " << obj << std::endl;
-		}
 		uint64_t swpIndex; //the index of the sample
 		int i; //the index within the indices, x, y, and features vector so we know what to swap without searching
 		if (dist(rng) < 0.5) {
-			test1++;
 			//50% of the time, choose a random sample to replace
 			i = indexDist(rng);
 			swpIndex = indices[i];
 		}
 		else {
-			test2++;
 			//50% of the time, choose the worst sample to replace
 			int f, q, max;
 
 			//get feature and quantile to remove
 			for (f = 0; f < nFeat; f++) {	
 				max = 0; 
-				q = 0;
 
 				for (int s = 0; s < nSamp; s++) {
 					int count = sampleCountPerQuantile[f][s];
@@ -542,7 +533,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 				}
 			}
 
-			swpIndex = *samplesPerQuantile[f][q].begin();
+			swpIndex = *(samplesPerQuantile[f][q].begin());
 			i = indicesMap.find(swpIndex)->second;
 		}
 
@@ -560,7 +551,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		for (int j = 0; j < nFeat; j++) {
 			features[i * nFeat + j] = p.p_features[j];
 		}
-			
+	
 		//recalculate sample count per quantile
 		std::vector<int> oldq(nFeat);
 		std::vector<int> newq(nFeat);
@@ -597,7 +588,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		bool keep = dist(rng) < std::exp(-1 * delta * temp);
 
 		if (keep) {
-			std::cout << "KEEP" << std::endl;
 			//update the new changes
 			x[i] = p.x;
 			y[i] = p.y;
@@ -616,7 +606,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			obj = newObj;
 		}
 		else {
-			std::cout << "DONT KEEP" << std::endl;
 			//revert anything already changed
 			for (int f = 0; f < nFeat; f++) {
 				sampleCountPerQuantile[f][newq[f]]--;
@@ -632,10 +621,8 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 		//update annealing temperature
 		temp -= d;
-		std::cout << "TEMP: " << temp << std::endl;
 	}
 
-	std::cout << "OUT" << std::endl;
 	//add samples to output layer
 	for (int i = 0 ; i < nSamp; i++) {
 		double xCoord = GT[0] + x[i] * GT[1] + y[i] * GT[2];
@@ -648,7 +635,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			yCoords.push_back(yCoord);
 		}
 	}
-	*/
 }
 
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
