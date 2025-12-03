@@ -503,6 +503,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	int test1 = 0;
 	int test2 = 0;
 
+	/*
 	//begin annealing schedule. If we have a perfect latin hypercube -- or if we pass enough iterations -- stop iterating.
 	while (temp > 0 && objQ != 0) {
 		std::cout << "START" << std::endl;
@@ -546,11 +547,9 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		}
 
 		std::vector<T> oldf(nFeat);
-		std::memcpy(
-			reinterpret_cast<void *>(oldf.data()), 				//dst
-			reinterpret_cast<void *>(features.data() + (i * nFeat)), 	//src
-			nFeat * sizeof(T)						//size bytes
-		);
+		for (int j = 0; j < nFeat; j++) {
+			oldf[j] = features[i * nFeat + j];
+		}
 
 		Point<T> p;
 		uint64_t newIndex = clhs.randomIndex();
@@ -558,11 +557,9 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			newIndex = clhs.randomIndex();
 		}
 		clhs.getPoint(p, newIndex);
-		std::memcpy(
-			reinterpret_cast<void *>(features.data() + (i * nFeat)), 	//dst
-			reinterpret_cast<void *>(p.p_features), 			//src
-			nFeat * sizeof(T)						//size bytes
-		);
+		for (int j = 0; j < nFeat; j++) {
+			features[i * nFeat + j] = p.p_features[j];
+		}
 			
 		//recalculate sample count per quantile
 		std::vector<int> oldq(nFeat);
@@ -573,16 +570,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			sampleCountPerQuantile[f][q]--;
 
 			q = getQuantile(p.p_features[f], quantiles[f]);
-			if (q >= nSamp) {
-				std::cout << "q is larger than should be possible..." << std::endl;
-				std::cout << "feature num is: " << f << std::endl;
-				std::cout << "feature is: " << p.p_features[f] << std::endl;
-				std::cout << "q: " << q << std::endl;
-				std::cout << "quantiles: " << std::endl;
-				for (int k = 0; k < nSamp; k++) {
-					std::cout << "quantiles[" << k << "] = " << quantiles[f][k] << std::endl;
-				}
-			}
 			newq[f] = q;
 			sampleCountPerQuantile[f][q]++;
 		}
@@ -661,6 +648,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			yCoords.push_back(yCoord);
 		}
 	}
+	*/
 }
 
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
