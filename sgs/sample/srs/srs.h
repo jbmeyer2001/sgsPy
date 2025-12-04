@@ -101,69 +101,6 @@ processBlock(
 }
 
 /**
- * This is a helper function used for determine the probability multiplier for a given raster.
- * The probability of any given function being added is the number of samples divided by the
- * number of total pixels. 
- *
- * Rather than storing the indexes of all possible (accessible, not nan) pixels, which is potentially
- * encredibly memory-inefficient for large rasters, it is much better to only store the indexes
- * of roughly the number of total pixels we need to sample. A random number generator is used 
- * for each pixel which is a candidate for being added as a sample. The sample is retained if 
- * the random number generator creates a series of 1's for the first n bits. This value n determines 
- * the probability a sample is added. For example, if n were three then 1/8 or 1/(2^n) pixels would
- * be sampled.
- *
- * It can be seen that setting up an n value which is close to the probability samples/pixels but
- * an over estimation would result in an adequte number of indexes stored WITHOUT storing a
- * rediculous number of values.
- *
- * The way this number n is enforced, is by determining a multiplier that takes the form of the first
- * n bits are 1 and the remaining are 0. For example:
- * 1 	-> 00000001 	-> 50%
- * 3 	-> 00000011 	-> 25%
- * 7 	-> 00000111 	-> 12.5%
- * 63 	-> 00111111	-> 1.56%
- *
- * The AND of this multiplier is taken with the rng value, and the result of that and is compared against
- * the multiplier. The 0's from the and remove the unimportant bits, and the 1's enforce the first n
- * values at the beginning.
- *
- * The multiplier is determined by determining the numerator and denominator of this probability (samples/pixels),
- * with extra multipliers for an unknonwn amount of nan values, and multiplying by extra if the mindist parameter
- * is passed as it may cause samples to be thrown out. Further, if an access vector is given and all samples 
- * must fall within the accessible area, the probability is increased by the ratio of the total area in the raster
- * to the accessible area. The probability would then simply be numerator/denominator, but we want a multiplier
- * with a specific number of bits not a small floating point value. The log base 2 is used to transform this division
- * int a subtraction problem, resulting in the number of bits. The value 1 is then left shifted by the number of bits,
- * and subtracted by 1 to give the multiplier.
- *
- * @param GDALRasterWrapper *p_raster
- * @param int numSamples
- * @param bool useMindist
- * @param double accessibleArea
- */
-inline uint64_t
-getProbabilityMultiplier(GDALRasterWrapper *p_raster, int numSamples, bool useMindist, double accessibleArea) {
-	double height = static_cast<double>(p_raster->getHeight());
-	double width = static_cast<double>(p_raster->getWidth());
-	double samples = static_cast<double>(numSamples);
-
-	double numer = samples * 4 * (useMindist ? 3 : 1);
-	double denom = height * width;
-
-	if (accessibleArea != -1) {
-		double pixelHeight = static_cast<double>(p_raster->getPixelHeight());
-		double pixelWidth = static_cast<double>(p_raster->getPixelWidth());
-		double totalArea = width * pixelWidth * height * pixelHeight;
-
-		numer *= (totalArea / accessibleArea);
-	}
-
-	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer)));
-	return (bits <= 0) ? 0 : (1 << bits) - 1;
-}
-
-/**
  * This function uses random sampling to determine the location
  * of sample plots given a raster image.
  *
@@ -324,7 +261,7 @@ srs(
 	//to make that percentage happen. Doing this enables retaining only a small portion of pixel data
 	//and reducing memory footprint significantly, otherwise the index of every pixel
 	//would have to be stored, which would not be feasible for large rasters.
-	uint64_t multiplier = getProbabilityMultiplier(p_raster, numSamples, useMindist, access.area);
+	uint64_t multiplier = getProbabilityMultiplier(p_raster, 4, numSamples, useMindist, access.area);
 
 	std::vector<Index> indices;
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {

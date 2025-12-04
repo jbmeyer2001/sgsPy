@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <mutex>
 
+#include <xoshiro.h>
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
@@ -791,3 +792,159 @@ class Variance {
 		return this->k;
 	}
 };
+
+/**
+ * This is a helper function used for determine the probability multiplier for a given raster.
+ * The probability of any given function being added is the number of samples divided by the
+ * number of total pixels. 
+ *
+ * Rather than storing the indexes of all possible (accessible, not nan) pixels, which is potentially
+ * encredibly memory-inefficient for large rasters, it is much better to only store the indexes
+ * of roughly the number of total pixels we need to sample. A random number generator is used 
+ * for each pixel which is a candidate for being added as a sample. The sample is retained if 
+ * the random number generator creates a series of 1's for the first n bits. This value n determines 
+ * the probability a sample is added. For example, if n were three then 1/8 or 1/(2^n) pixels would
+ * be sampled.
+ *
+ * It can be seen that setting up an n value which is close to the probability samples/pixels but
+ * an over estimation would result in an adequte number of indexes stored WITHOUT storing a
+ * rediculous number of values.
+ *
+ * The way this number n is enforced, is by determining a multiplier that takes the form of the first
+ * n bits are 1 and the remaining are 0. For example:
+ * 1 	-> 00000001 	-> 50%
+ * 3 	-> 00000011 	-> 25%
+ * 7 	-> 00000111 	-> 12.5%
+ * 63 	-> 00111111	-> 1.56%
+ *
+ * The AND of this multiplier is taken with the rng value, and the result of that and is compared against
+ * the multiplier. The 0's from the and remove the unimportant bits, and the 1's enforce the first n
+ * values at the beginning.
+ *
+ * The multiplier is determined by determining the numerator and denominator of this probability (samples/pixels),
+ * with extra multipliers for an unknonwn amount of nan values, and multiplying by extra if the mindist parameter
+ * is passed as it may cause samples to be thrown out. Further, if an access vector is given and all samples 
+ * must fall within the accessible area, the probability is increased by the ratio of the total area in the raster
+ * to the accessible area. The probability would then simply be numerator/denominator, but we want a multiplier
+ * with a specific number of bits not a small floating point value. The log base 2 is used to transform this division
+ * int a subtraction problem, resulting in the number of bits. The value 1 is then left shifted by the number of bits,
+ * and subtracted by 1 to give the multiplier.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param int numSamples
+ * @param bool useMindist
+ * @param double accessibleArea
+ */
+inline uint64_t
+getProbabilityMultiplier(GDALRasterWrapper *p_raster, int startMult, int numSamples, bool useMindist, double accessibleArea) {
+	double height = static_cast<double>(p_raster->getHeight());
+	double width = static_cast<double>(p_raster->getWidth());
+	double samples = static_cast<double>(numSamples);
+
+	double numer = samples * startMult * (useMindist ? 3 : 1);
+	double denom = height * width;
+
+	if (accessibleArea != -1) {
+		double pixelHeight = static_cast<double>(p_raster->getPixelHeight());
+		double pixelWidth = static_cast<double>(p_raster->getPixelWidth());
+		double totalArea = width * pixelWidth * height * pixelHeight;
+
+		numer *= (totalArea / accessibleArea);
+	}
+
+	if (numer > denom) {
+		return 0;
+	}
+
+	uint8_t bits = static_cast<uint8_t>(std::ceil(std::log2(denom) - std::log2(numer)));
+	return (1 << bits) - 1;
+}
+
+/**
+ * This struct controls the calculation and usage of random values during the
+ * iteration through the raster. A random number must be generated for
+ * each pixel to see if it will be saved for potential sampling.
+ *
+ * The xoshiro random number generator is used because it is efficient and 
+ * statistically sound. The specific generator used (xso::xoshrio_4x64_plus) is used
+ * because it is very fast. However, it's lowest 11 bits have low linear complexity (Blackman & Vigna).
+ * 
+ * We have no need for these lower 11 bits, instead using only the upper 53 bits of the uint64_t value.
+ * Proof of this is that, supposing we require the use of all 53 bits, this means a probability of 
+ * 1/(2^(56)), or roughly 1 sample per 10^16 pixels. If there were 10^16 pixels to process than a minimum of
+ * multiple years would likely pass before execution finished.
+ *
+ * Rather than calling the generator on every iteration, the generator is repeatedly called at the 
+ * beginning of a block for the remaining required pixels, and the true/false values for whether
+ * to save a pixel or not are stored in a vector of type boolean.
+ */
+class RandValController {
+private:
+	std::vector<bool> randVals;
+	size_t randValIndex = 0;
+	uint64_t multiplier = 0;
+	xso::xoshiro_4x64_plus *p_rng = nullptr;
+	bool alwaysTrue = false;
+
+public:
+	/**
+	 * Constructor, sets the size of the boolean vector, and assigns the randValIndex, multiplier, and p_rng
+	 * member variables.
+	 *
+	 * @param int xBlockSize
+	 * @param int yBlockSize
+	 * @param uint64_t multiplier
+	 * @param xso::xoshiro_4x64_plus *p_rng
+	 */
+	RandValController(int xBlockSize, int yBlockSize, uint64_t multiplier, xso::xoshiro_4x64_plus *p_rng) {
+		if (this->multiplier == 0) {
+			this->alwaysTrue = true;
+		}
+		else {
+			this->randVals.resize(xBlockSize * yBlockSize);
+			this->randValIndex = static_cast<size_t>(xBlockSize * yBlockSize);
+			this->multiplier = multiplier;
+			this->p_rng = p_rng;
+		}
+	}
+
+	/**
+	 * Calculates the true/false values from rand values, a number of times equal to the
+	 * number of used random values from the previous block. The return value of the
+	 * random number generator is bit shifted by 11 to ignore the lower 11 bits, which
+	 * have low linear complexity.
+	 *
+	 * Next, the bit shifted random value is masked with the multiplier, and if the random
+	 * value contains a 1 in every bit which the multiplier does, true is added to the rand
+	 * val vector.
+	 *
+	 * This function is called before iterating through a new block.
+	 */
+	inline void 
+	calculateRandValues(void) {
+		if (alwaysTrue) {
+			return;
+		}
+
+		for (size_t i = 0; i < randValIndex; i++) {
+			randVals[i] = (((*p_rng)() >> 11) & multiplier) == multiplier;
+		}
+		randValIndex = 0;
+	}
+
+	/**
+	 * get the next boolean value from the storage vector, and iterate the index to this
+	 * vector.
+	 */
+	inline bool 
+	next(void) {
+		if (alwaysTrue) {
+			return true;
+		}
+
+		bool retval = randVals[randValIndex];
+		randValIndex++;
+		return retval;
+	}
+};
+
