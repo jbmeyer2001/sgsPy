@@ -171,7 +171,18 @@ class CLHSDataManager {
 	}
 
 	/**
+	 * This function is for generating a random index among the points saved.
 	 *
+	 * Due to using the random number generator and a mask direcly (faster
+	 * than something like an std::uniform_int_distribution) there may
+	 * be some values which are larger than the total number of indices
+	 * which are occupied. Due to this, indices are generated until
+	 * there's one which is a valid index.
+	 *
+	 * The reason the generator is initially bit shifted by 11 is because
+	 * the type of generator used is not as random in the first 11 bits.
+	 *
+	 * @returns uint64_t
 	 */
 	inline uint64_t
 	randomIndex() {
@@ -185,7 +196,10 @@ class CLHSDataManager {
 	}
 
 	/**
+	 * This function sets the x, y, and features pointer for a given index.
 	 *
+	 * @param Point<T>& point
+	 * @param uint64_t index
 	 */
 	inline void
 	getPoint(Point<T>& point, uint64_t index) {		
@@ -195,7 +209,18 @@ class CLHSDataManager {
 	}
 
 	/**
+	 * This function calculates the output to the continuous objective function
+	 * for the clhs method. The goal of the clhs method is to have a latin hypercube
+	 * output of samples. This is defined as having a single sample between each quantile
+	 * of the hypercube for every feature. This function returns 0 if the sample is a 
+	 * latin hypercube, and the number of samples off if it is not. 
 	 *
+	 * The output of this function, along with the output of the correlation objective
+	 * function are used to determine whether a sample should be kept or not. Lower values
+	 * are better.
+	 *
+	 * @param std::vector<std::vector<int>>& sampleCountPerQuantile
+	 * @returns T
 	 */
 	inline T
 	quantileObjectiveFunc(std::vector<std::vector<int>>& sampleCountPerQuantile) {
@@ -211,7 +236,17 @@ class CLHSDataManager {
 	}
 
 	/**
+	 * This function calculates the output to the objective function for the 
+	 * differences in the correlation matricies for the clhs method. This
+	 * function penalizes the sample for having features which are correlated
+	 * differently than the whole sample space.
 	 *
+	 * The output of this function, along with the output of the quantile
+	 * objective function are used to determine whether as ample should be kept or not.
+	 * Lower values are better.
+	 *
+	 * @param std::vector<std::vector<T>> corr
+	 * @returns T
 	 */
 	inline T
 	correlationObjectiveFunc(std::vector<std::vector<T>>& corr) {
@@ -228,7 +263,66 @@ class CLHSDataManager {
 };
 
 /**
+ * This function is responsible for three different tasks as it reads through the raster.
+ * The raster is read in blocks, so as to be as memory efficient as possible and 
+ * avoid the potential issue of a raster which is too large to fit in memory.
  *
+ * The three tasks are as follows:
+ *  - calculate the quantile values for every feature, where the number of equally sized
+ *  quantiles is the sample size.
+ *  - calculate the correltion matrix of the features in the raster.
+ *  - Save points, along with their x/y coordinates.
+ *
+ * QUANTILES:
+ * MKL (Math Kernel Library) is used to calculate the quantiles using a quantile streaming
+ * algorithm. As the pixels are iterated through, each pixel is a row an each feature
+ * is a column -- this is because it is how the correlation matrix calculation expects
+ * the values to be, but it also simplifies the removal of nan pixels. However,
+ * the quantile calculation is done per-feature, so each feature has it's own vector of 
+ * values which are copied over from the original matrix while reading. These are
+ * in the quantileBuffers vector of vectors. 
+ *
+ * Additionally, there are seperate MKL functions for single precision vs double precision
+ * floating point values. For this reason, the type is passed (in addition to being templated)
+ * so that the correct MKL function is called according to the data type of the raster.
+ *
+ * Due to the template function also being passed, the pointer type passed to those type-specific
+ * MKL functions must be casted to the correct type. This is because, the C++ compiler is not
+ * aware that the float template will never be passed along with a type of GDT_Float64, and double
+ * will never be passed along with a type of GDT_Float32.
+ *
+ * CORRELATION:
+ * oneDAL is used to calculate the correlation matrix of the raster features using a streaming
+ * algorithm. The features are read such that a pixel corresponds to a row and a feature
+ * corresponds to a column in the buffer passed to the quantile streaming algorithm. This is to
+ * simplify the removal of nan pixels, and to maximize cache-line efficiency.
+ *
+ * POINTS:
+ * The most obvious way to calculate clhs would be to read the entire raster into memory, remove
+ * the nan pixels, then run the simulated annealing algorithm over the entire raster. Essentially,
+ * every pixel in the raster has an equal chance of being selected. This method however falls apart
+ * when there are enough pixels so as to be encredibly memory-inefficent, or so many that they can't
+ * fit in memory at once. In this case, we cannot store the features of every single pixel. 
+ *
+ * Instead, as we iterate through the raster we randomly select pixels which will be added to a pool. The pixels
+ * within that pool are options for being added to the latin hypercube. The probability of each pixel
+ * being added to this pool depends on the total size of the raster (as well as the number of accessible
+ * pixels, if the access parameter is given), but every accessible pixel has an equal chance of being
+ * included in the pool. The size goal for the pool is 10,000,000 pixels because it is (hopefully) enough
+ * to give the simulated annealing algorithm all the options for quantiles it needs, without breaking memory.
+ * If the raster has a small enough number of pixels however, they will all be added to the pool.
+ *
+ * @param std::vector<RasterBandMetaData>& bands
+ * @param CLHSDataManager<T>& clhs
+ * @param Access& access
+ * @param RandValController& rand
+ * @param GDALDataType type
+ * @param std::vector<std::vector<T>>& quantiles
+ * @param size_t size
+ * @param int width
+ * @param int height
+ * @param int count
+ * @param int nSamp
  */
 template <typename T>
 inline void
@@ -482,7 +576,36 @@ readRaster(
 }
 
 /**
+ * This function is responsible for selecting the samples will be in the final sample
+ * using the Conditioned Latin Hypercube Sampling (clhs) method. The CLHSDataManager
+ * contains a pool of points which may be selected, as well as objective functions which
+ * will calculate how good each sample is depending on the number of samples within
+ * each features quantiles, and how closely matching the correlation matrices are between
+ * the sample compared to the entire sample space.
  *
+ * The clhs method uses a simulated annealing algorithm, wherein the sample is constanty being
+ * updated and tested by replacing one of the samples. The old vs new samples are compared usign
+ * the objective functions, and the likelyhood that the sample is added (whether it's an improvement
+ * or not) depends both on a random probability, and the tempreature parameter which decreases after
+ * every iteration. Essentially, at the start of the algorithm it is far more likely that a sample
+ * may be accepted if it makes the objective function worse. The reason why the algorithm doesn't always
+ * accept an improvement and reject a decrease is to avoid finding a local maximum (which is not a
+ * global maximum). At the start of each iteration, there is also a 50% chance that the sample removed
+ * is NOT random, but removed from the quantile which has the most samples (essentially removing the 
+ * 'worst' pixel).
+ *
+ * Once all of the samples are chosen, they are added to the output layer and the function completes.
+ *
+ * @param std::vector<std::vector<T>>& quantiles
+ * @param xso::xoshiro_4x64_plus& rng
+ * @param int iterations
+ * @param int nSamp
+ * @param int nFeat
+ * @param OGRLayer *p_layer
+ * @param double *GT
+ * @param bool plot
+ * @param std::vector<double>& xCoords
+ * @param std::Vector<double>& yCoords
  */
 template <typename T>
 inline void
@@ -709,7 +832,31 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 }
 
 /**
+ * This function conducts Conditioned Latin Hypercube Sampling (CLHS) on a given raster.
  *
+ * First, metadata is acquired for each band within the raster, and an output vector
+ * file is created in-memory which is where chosen sample points will be written to.
+ *
+ * The readRaster() function is called, which iterates through the raster in blocks
+ * and calculates the quantiles for each feature, as well as the correlation matrix,
+ * for the entire sampling space. It also selects pixels and adds them to a pool.
+ *
+ * The selectSamples() function utilizes a simulated annealing algorithm taking
+ * into account the differences in correlation matrix between the sample and the
+ * overall sample space, as well as how close to a latin hypercube the sample is.
+ * The points which this algorithm choses from are from the pool of pixels added
+ * in the readRaster() function.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param int nSamp
+ * @param int iterations
+ * @param GDALVectorWrapper *p_access
+ * @param std::string layerName
+ * @param double buffInner
+ * @param double buffOuter
+ * @param bool plot
+ * @param std::string tempFolder
+ * @param std::string filename
  */
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
 clhs(
