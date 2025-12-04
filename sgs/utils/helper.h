@@ -836,19 +836,12 @@ class Variance {
  * @param double accessibleArea
  */
 inline uint64_t
-getProbabilityMultiplier(GDALRasterWrapper *p_raster, int startMult, int numSamples, bool useMindist, double accessibleArea) {
-	double height = static_cast<double>(p_raster->getHeight());
-	double width = static_cast<double>(p_raster->getWidth());
-	double samples = static_cast<double>(numSamples);
-
-	double numer = samples * startMult * (useMindist ? 3 : 1);
+getProbabilityMultiplier(double width, double height, double pixelWidth, double pixelHeight, int startMult, int numSamples, bool useMindist, double accessibleArea) {
+	double numer = static_cast<double>(numSamples * startMult * (useMindist ? 3 : 1));
 	double denom = height * width;
 
 	if (accessibleArea != -1) {
-		double pixelHeight = static_cast<double>(p_raster->getPixelHeight());
-		double pixelWidth = static_cast<double>(p_raster->getPixelWidth());
 		double totalArea = width * pixelWidth * height * pixelHeight;
-
 		numer *= (totalArea / accessibleArea);
 	}
 

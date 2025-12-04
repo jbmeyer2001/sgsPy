@@ -16,6 +16,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <utils/helper.h>
+
 //used as cutoff for max band allowed in memory
 #define GIGABYTE 1073741824
 
@@ -148,7 +150,34 @@ class GDALRasterWrapper {
 			{size * width, size} 	//stride
 		);
 	}	
-	
+
+	/**
+	 * Populates/constructs the GDALRasterWrapper object using a raster
+	 * dataset pointer. Called by some of the GDALRasterWrapper 
+	 * constructors as a helper function.
+	 *
+	 * @param GDALDataset *GDAL raster dataset
+	 * @throws std::runtime_error if unable to get geotransform
+	 */
+	void createFromDataset(GDALDataset *p_dataset) {
+		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
+
+		//geotransform
+		CPLErr cplerr = this->p_dataset->GetGeoTransform(this->geotransform);
+		if (cplerr) {
+			throw std::runtime_error("error getting geotransform from dataset.");
+		}
+
+		//crs
+		this->crs = std::string(OGRSpatialReference(this->p_dataset->GetProjectionRef()).GetName());
+
+		//initialize (but don't read) raster band pointers
+		this->rasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
+		this->rasterBandRead = std::vector<bool>(this->getBandCount(), false);
+		this->displayRasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
+		this->displayRasterBandRead = std::vector<bool>(this->getBandCount(), false);	
+	}
+
 	public:
 	/**
 	 * Constructor for GDALRasterWrapper class.
@@ -200,30 +229,90 @@ class GDALRasterWrapper {
 	}
 
 	/**
-	 * Populates/constructs the GDALRasterWrapper object using a raster
-	 * dataset pointer. Called by some of the GDALRasterWrapper 
-	 * constructors as a helper function.
+	 * Constructor for generating a GDALRasterWrapper from a numpy array and metadata. 
+	 * The numpy array is passed in the form of a py::buffer.
 	 *
-	 * @param GDALDataset *GDAL raster dataset
-	 * @throws std::runtime_error if unable to get geotransform
+	 * @param py::buffer buffer
+	 * @param std::vector<double> geotransform
+	 * @param std::string projection
 	 */
-	void createFromDataset(GDALDataset *p_dataset) {
-		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
+	GDALRasterWrapper(py::buffer buffer, std::vector<double> geotransform, std::string projection, double nan, std::vector<std::string> names) {
+		py::buffer_info info = buffer.request();
 
-		//geotransform
-		CPLErr cplerr = this->p_dataset->GetGeoTransform(this->geotransform);
-		if (cplerr) {
-			throw std::runtime_error("error getting geotransform from dataset.");
+		//get height width and band count from pybuffer
+		int width, height;
+		size_t bandCount, bandSize;
+		if (info.ndim == 3) {
+			bandCount = info.shape[0];
+			height = info.shape[1];
+			width = info.shape[2];
+			bandSize = info.strides[0];
+		}
+		else if (info.ndim == 2) {
+			bandCount = 1;
+			height = info.shape[0];
+			width = info.shape[1];
+		}
+		else {
+			throw std::runtime_error("dimension of numpy array must be 2 or 3");
+		}		
+
+		if (bandCount != names.size()) {
+			throw std::runtime_error("band names array does not have the same number of bands as the py buffer");
 		}
 
-		//crs
-		this->crs = std::string(OGRSpatialReference(this->p_dataset->GetProjectionRef()).GetName());
+		//get data type from pybuffer
+		GDALDataType type;
+		size_t size;
+		if (info.format == py::format_descriptor<int8_t>::format()) {
+			type = GDT_Int8;
+			size = sizeof(int8_t);
+		}
+		else if (info.format == py::format_descriptor<int16_t>::format()) {
+			type = GDT_Int16;
+			size = sizeof(int16_t);
+		}
+		else if (info.format == py::format_descriptor<uint16_t>::format()) {
+			type = GDT_UInt16;
+			size = sizeof(uint16_t);
+		}
+		else if (info.format == py::format_descriptor<int32_t>::format()) {
+			type = GDT_Int32;
+			size = sizeof(int32_t);
+		}	
+		else if (info.format == py::format_descriptor<uint32_t>::format()) {
+			type = GDT_UInt32;
+			size = sizeof(uint32_t);
+		}
+		else if (info.format == py::format_descriptor<float>::format()) {
+			type = GDT_Float32;
+			size = sizeof(float);
+		}
+		else if (info.format == py::format_descriptor<double>::format()) {
+			type = GDT_Float64;
+			size = sizeof(double);
+		}
+		else {
+			throw std::runtime_error("data type of array must be one of int8, int16, uint16, int32, uint32, float32, or float64.");
+		}
 
-		//initialize (but don't read) raster band pointers
-		this->rasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
-		this->rasterBandRead = std::vector<bool>(this->getBandCount(), false);
-		this->displayRasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
-		this->displayRasterBandRead = std::vector<bool>(this->getBandCount(), false);	
+		GDALAllRegister();
+		GDALDataset *p_dataset = createVirtualDataset("MEM", width, height, geotransform.data(), projection);
+		std::vector<void *> bands(bandCount);	
+		for (size_t i = 0; i < bandCount; i++) {
+			RasterBandMetaData band;
+			band.p_buffer = (void *)((size_t)info.ptr + (i * bandSize));
+			band.type = type;
+		       	band.size = size;
+			band.nan = nan;
+			band.name = names[i];
+			addBandToMEMDataset(p_dataset, band);	
+			bands[i] = band.p_buffer;
+		}
+
+		this->createFromDataset(p_dataset);
+		this->rasterBandPointers = bands;
+		this->rasterBandRead = std::vector<bool>(bandCount, true);
 	}
 
 	/**

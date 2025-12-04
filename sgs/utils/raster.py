@@ -7,7 +7,8 @@
 #
 # ******************************************************************************
 
-import json
+import importlib.util
+import sys
 import shutil
 from typing import Optional
 
@@ -19,6 +20,20 @@ from .import plot
 from .plot import plot_raster
 
 from _sgs import GDALRasterWrapper
+
+#rasterio optional import
+try: 
+    import rasterio
+    RASTERIO = True
+except ImportError as e:
+    RASTERIO = False
+
+#gdal optional import
+try:
+    from osgeo import gdal
+    GDAL = True
+except ImportError as e:
+    GDAL = False
 
 class SpatialRaster:
     """
@@ -180,8 +195,10 @@ class SpatialRaster:
         """
         if (type(image) is str):
             self.cpp_raster = GDALRasterWrapper(image)
-        else:
+        elif type(image) is GDALRasterWrapper:
             self.cpp_raster = image
+        else:
+            throw RuntimeError("parameter passed to SpatialRaster constructor must be of type str or GDALRasterWrapper")
 
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
@@ -301,4 +318,65 @@ class SpatialRaster:
             fig, ax = plt.subplots()
             plot_raster(self, ax, target_width, target_width, band, **kwargs)
             plt.show()
-        
+       
+    @classmethod
+    def from_rasterio(cls, ds, arr):
+        """
+
+
+        """
+        if not RASTERIO:
+            raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
+
+        if type(ds) is not rasterio.io.DatasetReader:
+            raise RuntimeError("the parameter passed to from_raster() must be of type rasterio.io.DatasetReader.")
+
+        if arr is not None:
+            if type(arr) is not np.ndarray:
+                raise RuntimeError("if the array parameter is passed, it must be of type np.ndarray")
+    
+            shape = arr.shape
+            if (len(shape)) == 2:
+                (height, width) = shape
+                if ds.count != 1:
+                    raise RuntimeError("if the array parameter contains only a single band with shape (height, width), the raster must contain only a single band.")
+            else:
+                (band_count, height, width) = shape
+                if (band_count != ds.count):
+                    raise RuntimeError("the array parameter must contains the same number of bands as the raster with shape (band_count, height, width).")
+
+            if height != ds.height:
+                raise RuntimeError("the height of the array passed must be equal to the height of the raster dataset.")
+
+            if width != ds.width:
+                raise RuntimeError("the width of the array passed must be equal to the width of the raster dataset.")
+
+            in_memory = True
+        else:
+            in_memory = False
+
+
+        if not in_memory:
+            #close the rasterio dataset, and open a GDALRasterWrapper of the file
+            filename = ds.name
+            ds.close()
+            return cls(filename)
+
+        if in_memory:
+            #create an in-memory dataset using the numpy array as the data, and the rasterio dataset to provide metadata
+            geotransform = ds.get_transform()
+            projection = ds.crs.wkt
+            buffer = np.getbuffer(arr)
+            return cls(GDALRasterWrapper(buffer, geotransform, projection))
+
+    @classmethod
+    def to_rasterio(cls):
+        raise NotImplementedError("not implemented yet!")
+
+    @classmethod
+    def from_gdal(cls):
+        raise NotImplementedError("not implemented yet!")
+
+    @classmethod
+    def to_gdal(cls):
+        raise NotImplementedError("not implemented yet!")

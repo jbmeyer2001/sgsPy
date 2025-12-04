@@ -261,7 +261,16 @@ srs(
 	//to make that percentage happen. Doing this enables retaining only a small portion of pixel data
 	//and reducing memory footprint significantly, otherwise the index of every pixel
 	//would have to be stored, which would not be feasible for large rasters.
-	uint64_t multiplier = getProbabilityMultiplier(p_raster, 4, numSamples, useMindist, access.area);
+	uint64_t multiplier = getProbabilityMultiplier(
+		width, 
+		height, 
+		p_raster->getPixelWidth(), 
+		p_raster->getPixelHeight(), 
+		4, 
+		numSamples, 
+		useMindist, 
+		access.area
+	);
 
 	std::vector<Index> indices;
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {

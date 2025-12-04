@@ -23,6 +23,7 @@ PYBIND11_MODULE(_sgs, m) {
 	// source code in sgs/utils/raster.h
 	py::class_<GDALRasterWrapper>(m, "GDALRasterWrapper")
 		.def(py::init<std::string>())
+		.def(py::init<py::buffer, std::vector<double>, std::string, double, std::vector<std::string>>())
 		.def("get_driver", &GDALRasterWrapper::getDriver)
 		.def("get_crs", &GDALRasterWrapper::getCRS)
 		.def("get_projection", &GDALRasterWrapper::getFullProjectionInfo)
