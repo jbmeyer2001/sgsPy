@@ -40,6 +40,8 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("get_band_nodata_value", &GDALRasterWrapper::getBandNoDataValue)
 		.def("get_raster_as_memoryview", &GDALRasterWrapper::getRasterBandAsMemView)
 		.def("get_raster_band_type_size", &GDALRasterWrapper::getRasterBandTypeSize)
+		.def("get_geotransform", &GDALRasterWrapper::getGeotransformArray()
+		.def("get_data_type", &GDALRasterWrapper::getDataType)
 		.def("set_temp_dir", &GDALRasterWrapper::setTempDir)
 		.def("get_temp_dir", &GDALRasterWrapper::getTempDir)
 		.def("release_band_buffers", &GDALRasterWrapper::releaseBandBuffers)

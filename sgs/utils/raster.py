@@ -31,6 +31,7 @@ except ImportError as e:
 #gdal optional import
 try:
     from osgeo import gdal
+    from osgeo import gdal_array
     GDAL = True
 except ImportError as e:
     GDAL = False
@@ -151,6 +152,7 @@ class SpatialRaster:
         can also be passed to plot_image().
     """
     have_temp_dir = False
+    temp_dataset = False
     filename = ""
     closed = False
 
@@ -196,8 +198,8 @@ class SpatialRaster:
             if unable to get coordinate reference system
         """
         if (type(image) is str):
-            self.filename = image
             self.cpp_raster = GDALRasterWrapper(image)
+            self.filename = image
         elif type(image) is GDALRasterWrapper:
             self.cpp_raster = image
         else:
@@ -344,8 +346,11 @@ class SpatialRaster:
         if not RASTERIO:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
 
-        if type(ds) is not rasterio.io.DatasetReader:
-            raise RuntimeError("the ds parameter passed to from_raster() must be of type rasterio.io.DatasetReader.")
+        if type(ds) is not rasterio.io.DatasetReader and type(ds) is not rasterio.io.DatasetWriter:
+            raise RuntimeError("the ds parameter passed to from_raster() must be of type rasterio.io.DatasetReader or rasterio.io.DatasetWriter.")
+
+        if ds.driver == "MEM" and arr is None:
+            arr = ds.read()
 
         if arr is not None:
             if type(arr) is not np.ndarray:
@@ -367,12 +372,11 @@ class SpatialRaster:
             if width != ds.width:
                 raise RuntimeError("the width of the array passed must be equal to the width of the raster dataset.")
 
-            arr_given = True
+            use_arr = True
         else:
-            arr_given = False
+            use_arr = False
 
-
-        if not arr_given:
+        if not use_arr:
             #close the rasterio dataset, and open a GDALRasterWrapper of the file
             filename = ds.name
             ds.close()
@@ -391,10 +395,10 @@ class SpatialRaster:
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
-        if (self.filename == ""):
-            raise RuntimeError("the dataset has been saved as a virtual dataset. The raster must have a filename if it is to be converted to a rasterio dataset."
+        if (self.temp_dataset):
+            raise RuntimeError("the dataset has been saved as a temporary file which will be deleted when the C++ object containing it is deleted. the dataset must be either in-memory or have a filename.")
 
-        if with_arr:
+        if with_arr or self.driver == "MEM":
             bands = []
             for i in range(self.band_count):
                 bands.append(np.asarray(self.cpp_raster.get_raster_as_memoryview(self.width, self.height, i)))
@@ -404,10 +408,30 @@ class SpatialRaster:
 
             arr = np.stack(bands, axis=0)
 
+        if self.driver == "MEM":
+            driver = "GTiff"
+            width = self.width
+            height = self.height
+            count = self.band_count
+            crs = self.crs
+            transform = self.cpp_raster.get_geotransform()
+            dtype = self.get_data_type()
+
+            if dtype == "":
+                throw RuntimeError("sgs dataset has bands with different types, which is not supported by rasterio.")
+
         self.cpp_raster.close()
         self.closed = True
-        
-        ds = rasterio.open(self.filename)
+
+        if self.driver == "MEM":
+            ds = rasterio.MemoryFile().open(driver=driver, width=width, height=height, count=count, crs=crs, transform=transform, dtype=dtype)
+            
+            # NOTE: copying from an in-memory GDAL dataset then writing to a rasterio MemoryFile() may cause extra data copying.
+            #
+            # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
+            ds.write(arr) 
+        else:
+            ds = rasterio.open(self.filename)
 
         if with_arr:
             return ds, arr
@@ -425,7 +449,13 @@ class SpatialRaster:
 
         if type(ds) is not gdal.Dataset:
             raise RuntimeError("the ds parameter passed to from_gdal() must be of type gdal.Dataset")
-        
+    
+        if ds.GetDriver().ShortName == "MEM" and arr is None:
+            bands = []
+            for i in range(1, ds.RasterCount + 1):
+                bands.append(ds.GetRasterBand(i).ReadAsArray())
+            arr = np.stack(bands, axis=0)
+
         if arr is not None:
             if type(arr) is not np.ndarray:
                 raise RuntimeError("if the array parameter is passed, it must be of type np.ndarray")
@@ -467,10 +497,10 @@ class SpatialRaster:
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
-        if (self.filename == ""):
-            raise RuntimeError("the dataset has been saved as a virtual dataset. The raster must have a filename if it is to be converted to a rasterio dataset."
+        if (self.temp_dataset):
+            raise RuntimeError("the dataset has been saved as a temporary file which will be deleted when the C++ object containing it is deleted. the dataset must be either in-memory or have a filename.")
 
-        if with_arr:
+        if with_arr or self.driver == "MEM":
             bands = []
             for i in range(self.band_count):
                 bands.append(np.asarray(self.cpp_raster.get_raster_as_memoryview(self.width, self.height, i)))
@@ -478,12 +508,22 @@ class SpatialRaster:
             #ensure numpy array doesn't accidentally get cleaned up by C++ object deletion
             self.cpp_raster.release_band_buffers()
 
-            arr = np.stack(bands, axis=0)
+            arr = np.stack(bands, axis=0)            
 
         self.cpp_raster.close()
         self.closed = True
-        
-        ds = gdal.Open(self.filename)
+
+        if self.driver == "MEM":
+            ds = gdal.GetDriverByName("MEM").Create("", self.width, self.height, 0, gdal.GDT_Unknown)
+            
+            # NOTE: copying from an in-memory GDAL dataset then writing to a rasterio MemoryFile() may cause extra data copying.
+            #
+            # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
+            for i in range(1, arr.shape[0] + 1):
+                ds.AddBand(gdal_array.NumericTypeCodeToGDALTypeCode(arr.dtype))
+                ds.GetRasterBand(i).WriteArray(arr[arr[i - 1])
+        else:
+            ds = gdal.Open(self.filename)
 
         if with_arr:
             return ds, arr

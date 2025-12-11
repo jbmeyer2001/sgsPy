@@ -750,4 +750,46 @@ class GDALRasterWrapper {
 	std::string getTempDir() {
 		return this->tempDir;
 	}
+
+	/**
+	 * Getter method for the geotransform. Meant to be used by the python side of the application.
+	 * Specifically, used when converting from an sgs object to another Python geospatial library
+	 * object.
+	 *
+	 * @returns std::vector<double> 
+	 */
+	std::vector<double> getGeotransformArray() {
+		std::vector<double> retval(6);
+		for (int i = 0; i < 6; i++) {
+			retval[i] = this->geotransform[6];
+		}
+	}
+
+	/**
+	 * Gets the data type of the whole raster. If different bands have different types, returns "".
+	 *
+	 * This is meant to be used by the Python side of the applications, specifically when converting from an
+	 * sgs object to another Python geospatial library object.
+	 *
+	 * @returns std::string 
+	 */
+	std::string getDataType() {
+		GDALDataType type = this->getRasterBandType(0);
+		for (int i = 1; i < this->getBandCount(); i++) {
+			if (this->getRasterBandType(i) != type)	{
+				return "";
+			}
+		}
+
+		switch (type) {
+			case GDT_Int8: return "int8";
+			case GDT_UInt16: return "uint16";
+			case GDT_Int16: return "int16";
+			case GDT_UInt32: return "uint32";
+			case GDT_Int32: return "int32";
+			case GDT_Float32: return "float32";
+			case GDT_Float64: return "float64";
+			default: throw std::runtime_error("GDAL data type not supported");
+		}
+	}
 };

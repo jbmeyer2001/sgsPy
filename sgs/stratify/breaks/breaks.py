@@ -165,6 +165,7 @@ def breaks(
     #now that it's created, give the cpp raster object ownership of the temporary directory
     rast.have_temp_dir = False
     srast.cpp_raster.set_temp_dir(temp_dir)
+    srast.temp_dataset = filename == "" and large_raster
     srast.filename = filename
 
     return srast

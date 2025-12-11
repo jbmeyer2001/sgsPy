@@ -111,5 +111,7 @@ def pca(
     pcomp_rast = SpatialRaster(pcomp)
     pcomp_rast.have_temp_dir = True
     pcomp_rast.temp_dir = temp_dir
+    pcomp_rast.temp_dataset = filename == "" and large_raster
+    srast.filename = filename
 
     return pcomp_rast
