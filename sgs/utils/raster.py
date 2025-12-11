@@ -203,7 +203,7 @@ class SpatialRaster:
         elif type(image) is GDALRasterWrapper:
             self.cpp_raster = image
         else:
-            throw RuntimeError("parameter passed to SpatialRaster constructor must be of type str or GDALRasterWrapper")
+            raise RuntimeError("parameter passed to SpatialRaster constructor must be of type str or GDALRasterWrapper")
 
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
@@ -418,7 +418,7 @@ class SpatialRaster:
             dtype = self.get_data_type()
 
             if dtype == "":
-                throw RuntimeError("sgs dataset has bands with different types, which is not supported by rasterio.")
+                raise RuntimeError("sgs dataset has bands with different types, which is not supported by rasterio.")
 
         self.cpp_raster.close()
         self.closed = True
@@ -521,7 +521,7 @@ class SpatialRaster:
             # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
             for i in range(1, arr.shape[0] + 1):
                 ds.AddBand(gdal_array.NumericTypeCodeToGDALTypeCode(arr.dtype))
-                ds.GetRasterBand(i).WriteArray(arr[arr[i - 1])
+                ds.GetRasterBand(i).WriteArray(arr[i - 1])
         else:
             ds = gdal.Open(self.filename)
 
