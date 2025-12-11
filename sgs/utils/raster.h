@@ -763,6 +763,8 @@ class GDALRasterWrapper {
 		for (int i = 0; i < 6; i++) {
 			retval[i] = this->geotransform[6];
 		}
+
+		return retval;
 	}
 
 	/**
