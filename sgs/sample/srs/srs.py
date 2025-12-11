@@ -73,6 +73,8 @@ def srs(
     filename : str
         the filename to write to, or '' if file should not be written
    """
+    if rast.closed:
+            raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
     if num_samples < 1:
         raise ValueError("num_samples must be greater than 0")

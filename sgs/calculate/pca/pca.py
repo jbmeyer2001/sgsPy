@@ -55,6 +55,9 @@ def pca(
     --------------------
     a SpatialRaster object containing principal component output bands.
     """
+    if rast.closed:
+        raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
+
     breaks_dict = {}
     large_raster = False
     temp_folder = ""

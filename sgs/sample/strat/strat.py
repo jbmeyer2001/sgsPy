@@ -120,7 +120,12 @@ def strat(
     filename : str
         the output filename to write to if desired
     """
-    
+    if strat_rast.closed:
+        raise RuntimeError("the C++ object which the strat_rast object wraps has been cleaned up and closed.")
+
+    if mrast is not None and mrast.closed:
+        raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
+
     if type(band) is str:
         if band not in strat_rast.bands:
             msg = "band " + str(band) + " not in given raster."

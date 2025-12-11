@@ -343,6 +343,40 @@ class GDALRasterWrapper {
 	}
 
 	/**
+	 * This is a copy of the deconstructor, it cleans up the all of the heap allocations
+	 * which the class has made. This is meant to be called by the Python side of the 
+	 * application.
+	 *
+	 * In the case where the used tries to continue to use the object after it has
+	 * been cleaned up, there will be undefined behavior.
+	 *
+	 * For this reason, there is a check to ensure no members of this object are
+	 * accessed after it has been deleted from within the Pyhton code.
+	 */
+	void close(void) {
+		for (int i = 0; i < this->getBandCount(); i++) {
+			if (this->rasterBandRead[i]) {
+				CPLFree(this->rasterBandPointers[i]);
+			}
+
+			if (this->displayRasterBandRead[i]) {
+				CPLFree(this->displayRasterBandPointers[i]);
+			}
+		}
+
+		if (this->p_proj) {
+			free(this->p_proj);
+		}
+
+		GDALClose(GDALDataset::ToHandle(this->p_dataset.release()));
+
+		if (this->tempDir != "") {
+			std::filesystem::path temp = this->tempDir;
+			std::filesystem::remove_all(temp);
+		}	
+	}
+
+	/**
 	 * Getter method for wrapped dataset.
 	 *
 	 * @returns GDALDataset *pointer to the underlying dataset
@@ -593,6 +627,25 @@ class GDALRasterWrapper {
 			default:
 				throw std::runtime_error("raster pixel data type not supported.");
 		}
+	}
+
+	/**
+	 * This function is used when converting the sgs SpatialRaster Python class (which wraps
+	 * this GDALRasterWrapper class) to a different data type, typically for a different 
+	 * geospatial package.
+	 *
+	 * If the user desires the array as a numpy array, then the data must be passed as a 
+	 * buffer AND the ownership of the data must be released from the C++ object, so it is
+	 * not cleaned up by the deconstructor when the C++ object is freed.
+	 *
+	 * This is essentially a memory leak as far as the C++ code is concerned, however
+	 * the numpy array will retain ownership and delete when required.
+	 */
+	void releaseBandBuffers(void) {
+		for (size_t i = 0; i < this->rasterBandPointers.size(); i++) {
+			rasterBandPointers[i] = nullptr;
+			rasterBandRead[i] = false;
+		}	
 	}
 
 	/**

@@ -83,7 +83,9 @@ def systematic(
     filename : str
         the filename to write to or "" if not to write
     """
-    
+    if rast.closed:
+        raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
+
     if cellsize <= 0:
         raise ValueError("cellsize must be greater than 0")
 

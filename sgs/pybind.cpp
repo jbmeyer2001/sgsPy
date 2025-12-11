@@ -41,7 +41,9 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("get_raster_as_memoryview", &GDALRasterWrapper::getRasterBandAsMemView)
 		.def("get_raster_band_type_size", &GDALRasterWrapper::getRasterBandTypeSize)
 		.def("set_temp_dir", &GDALRasterWrapper::setTempDir)
-		.def("get_temp_dir", &GDALRasterWrapper::getTempDir);
+		.def("get_temp_dir", &GDALRasterWrapper::getTempDir)
+		.def("release_band_buffers", &GDALRasterWrapper::releaseBandBuffers)
+		.def("close", &GDALRasterWrapper::close);
 
 	// source code in sgs/utils/vector.h
 	py::class_<GDALVectorWrapper>(m, "GDALVectorWrapper")

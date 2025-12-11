@@ -76,6 +76,8 @@ def breaks(
     a SpatialRaster object containing stratified raster bands.
 
     """
+    if rast.closed:
+            raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
     breaks_dict = {}
     large_raster = False
@@ -163,5 +165,6 @@ def breaks(
     #now that it's created, give the cpp raster object ownership of the temporary directory
     rast.have_temp_dir = False
     srast.cpp_raster.set_temp_dir(temp_dir)
+    srast.filename = filename
 
     return srast

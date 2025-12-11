@@ -78,7 +78,6 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     --------------------
     a SpatialRaster object containing a band of mapped stratifications from the input raster(s).
     """
-
     raster_list = []
     band_lists = []
     strata_lists = []
@@ -89,6 +88,9 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     raster_size_bytes = 0
     large_raster = False
     for (raster, bands, num_stratum) in args: 
+        if raster.closed:
+            raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
+
         if raster.height != height:
             raise ValueError("height is not the same across all rasters.")
 
@@ -192,5 +194,6 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     #now that it's created, give the cpp raster object ownership of the temporary directory
     args[0][0].have_temp_dir = False
     srast.cpp_raster.set_temp_dir(temp_dir)
+    srast.filename = filename
 
     return srast
