@@ -761,7 +761,7 @@ class GDALRasterWrapper {
 	std::vector<double> getGeotransformArray() {
 		std::vector<double> retval(6);
 		for (int i = 0; i < 6; i++) {
-			retval[i] = this->geotransform[6];
+			retval[i] = this->geotransform[i];
 		}
 
 		return retval;
