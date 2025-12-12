@@ -390,7 +390,7 @@ class SpatialRaster:
             projection = ds.crs.wkt
             arr = np.ascontiguousarray(arr)
             buffer = memoryview(arr)
-            return cls(GDALRasterWrapper(buffer, geotransform, projection, nan, ds.descriptions))
+            return cls(GDALRasterWrapper(buffer, geotransform, projection, [nan] * ds.count, ds.descriptions))
 
     def to_rasterio(self, with_arr = False):
         """
@@ -489,11 +489,13 @@ class SpatialRaster:
             if width != ds.RasterXSize:
                 raise RuntimeError("the width of the array passed must be equal to the width of the raster dataset.")
 
-            arr_given = True
-        else:
-            arr_given = False
+            
 
-        if not arr_given:
+            use_arr = True
+        else:
+            use_arr = False
+
+        if not use_arr:
             filename = ds.GetName()
             ds.Close()
             return cls(filename)

@@ -239,7 +239,7 @@ class GDALRasterWrapper {
 	 * @param std::vector<double> geotransform
 	 * @param std::string projection
 	 */
-	GDALRasterWrapper(py::buffer buffer, std::vector<double> geotransform, std::string projection, double nan, std::vector<std::string> names) {
+	GDALRasterWrapper(py::buffer buffer, std::vector<double> geotransform, std::string projection, std::vector<double> nanVals, std::vector<std::string> names) {
 		py::buffer_info info = buffer.request();
 
 		//get height width and band count from pybuffer
@@ -307,7 +307,7 @@ class GDALRasterWrapper {
 			band.p_buffer = (void *)((size_t)info.ptr + (i * bandSize));
 			band.type = type;
 		       	band.size = size;
-			band.nan = nan;
+			band.nan = nanVals[i];
 			band.name = names[i];
 			addBandToMEMDataset(p_dataset, band);	
 			bands[i] = band.p_buffer;
