@@ -67,7 +67,7 @@ def poly(
     ValueError
         if the maximum strata value would result in an integer overflow error
     """
-    if rast.closed:
+    if raster.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
     cases = ""

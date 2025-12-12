@@ -64,6 +64,7 @@ class GDALRasterWrapper {
 	std::string tempDir = "";
 
 	bool destroyed = false;
+	bool externalRasterData = false;
 
 	/**
 	 * Internal function used to read raster band data.
@@ -310,11 +311,13 @@ class GDALRasterWrapper {
 			band.name = names[i];
 			addBandToMEMDataset(p_dataset, band);	
 			bands[i] = band.p_buffer;
+
 		}
 
 		this->createFromDataset(p_dataset);
 		this->rasterBandPointers = bands;
 		this->rasterBandRead = std::vector<bool>(bandCount, true);
+		this->externalRasterData = true;
 	}
 
 	/**
@@ -327,7 +330,9 @@ class GDALRasterWrapper {
 		}
 
 		for (int i = 0; i < this->getBandCount(); i++) {
-			if (this->rasterBandRead[i]) {
+			//if the raster data is coming from a numpy array (this->externalRasterData true), then
+			//the memory will be cleaned up by Pythons garbage collector
+			if (this->rasterBandRead[i] && !this->externalRasterData) {
 				CPLFree(this->rasterBandPointers[i]);
 			}
 
@@ -361,6 +366,8 @@ class GDALRasterWrapper {
 	 */
 	void close(void) {
 		for (int i = 0; i < this->getBandCount(); i++) {
+			//if the raster data is coming from a numpy array (this->externalRasterData true), then
+			//the memory will be cleaned up by Pythons garbage collector
 			if (this->rasterBandRead[i]) {
 				CPLFree(this->rasterBandPointers[i]);
 			}

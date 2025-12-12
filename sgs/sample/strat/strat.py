@@ -226,9 +226,6 @@ def strat(
     if mindist < 0:
         raise ValueError("mindist must be greater than or equal to 0")
 
-    if strat_rast.band_count != 1:
-        raise ValueError("strat_raster must have a single band.")
-
     temp_dir = strat_rast.cpp_raster.get_temp_dir()
     if temp_dir == "":
         temp_dir = tempfile.mkdtemp()

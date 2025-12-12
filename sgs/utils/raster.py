@@ -342,7 +342,6 @@ class SpatialRaster:
         """
 
         """
-
         if not RASTERIO:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
 
@@ -372,6 +371,10 @@ class SpatialRaster:
             if width != ds.width:
                 raise RuntimeError("the width of the array passed must be equal to the width of the raster dataset.")
 
+            nan = ds.profile["nodata"]
+            if nan is None:
+                nan = np.nan
+
             use_arr = True
         else:
             use_arr = False
@@ -385,8 +388,9 @@ class SpatialRaster:
             #create an in-memory dataset using the numpy array as the data, and the rasterio dataset to provide metadata
             geotransform = ds.get_transform()
             projection = ds.crs.wkt
-            buffer = np.getbuffer(arr)
-            return cls(GDALRasterWrapper(buffer, geotransform, projection))
+            arr = np.ascontiguousarray(arr)
+            buffer = memoryview(arr)
+            return cls(GDALRasterWrapper(buffer, geotransform, projection, nan, ds.descriptions))
 
     def to_rasterio(self, with_arr = False):
         """
@@ -411,29 +415,36 @@ class SpatialRaster:
             arr = np.stack(bands, axis=0)
 
         if in_mem:
-            driver = "GTiff"
+            driver = "MEM"
             width = self.width
             height = self.height
             count = self.band_count
             crs = self.projection
-            transform = rasterio.transform.Affine(*self.cpp_raster.get_geotransform())
+            gt = self.cpp_raster.get_geotransform()
+            transform = rasterio.transform.Affine(gt[1], gt[2], gt[0], gt[4], gt[5], gt[3]) #of course the rasterio transform has a different layout than a gdal geotransform... >:(
+
             dtype = self.cpp_raster.get_data_type()
 
             if dtype == "":
                 raise RuntimeError("sgs dataset has bands with different types, which is not supported by rasterio.")
 
+        nan = self.cpp_raster.get_band_nodata_value(0)
+
         self.cpp_raster.close()
         self.closed = True
 
         if in_mem:
-            ds = rasterio.MemoryFile().open(driver=driver, width=width, height=height, count=count, crs=crs, transform=transform, dtype=dtype)
+            ds = rasterio.MemoryFile().open(driver=driver, width=width, height=height, count=count, crs=crs, transform=transform, dtype=dtype, nodata=nan)
            
             # NOTE: copying from an in-memory GDAL dataset then writing to a rasterio MemoryFile() may cause extra data copying.
             #
             # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
             ds.write(arr)
         else:
-            ds = rasterio.open(self.filename)
+            ds = rasterio.open(self.filename, nodata=nan)
+
+        for i in range(len(self.bands)):
+            ds.set_band_description(i + 1, self.bands[i])
 
         if with_arr:
             return ds, arr
@@ -489,7 +500,7 @@ class SpatialRaster:
         else:
             geotransform = ds.GetGeoTransform()
             projection = ds.GetProjection()
-            buffer = np.getbuffer(arr)
+            buffer = memoryview(arr)
             return cls(GDALRasterWrapper(buffer, geotransform, projection))
 
     def to_gdal(self, with_arr = False):
