@@ -460,6 +460,7 @@ class SpatialRaster:
         if not GDAL:
             raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
 
+        print(type(ds))
         if type(ds) is not gdal.Dataset:
             raise RuntimeError("the ds parameter passed to from_gdal() must be of type gdal.Dataset")
     
@@ -551,4 +552,4 @@ class SpatialRaster:
         if with_arr:
             return ds, arr
         else:
-            return arr
+            return ds
