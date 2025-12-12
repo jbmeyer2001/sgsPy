@@ -435,7 +435,6 @@ class SpatialRaster:
         else:
             ds = rasterio.open(self.filename)
 
-        print(ds)
         if with_arr:
             return ds, arr
         else:

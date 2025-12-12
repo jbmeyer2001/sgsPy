@@ -63,6 +63,8 @@ class GDALRasterWrapper {
 
 	std::string tempDir = "";
 
+	bool destroyed = false;
+
 	/**
 	 * Internal function used to read raster band data.
 	 * 
@@ -320,6 +322,10 @@ class GDALRasterWrapper {
 	 * CPLFree() on any allocated raster buffers.
 	 */
 	~GDALRasterWrapper() {
+		if (destroyed) {
+			return;
+		}
+
 		for (int i = 0; i < this->getBandCount(); i++) {
 			if (this->rasterBandRead[i]) {
 				CPLFree(this->rasterBandPointers[i]);
@@ -373,7 +379,9 @@ class GDALRasterWrapper {
 		if (this->tempDir != "") {
 			std::filesystem::path temp = this->tempDir;
 			std::filesystem::remove_all(temp);
-		}	
+		}
+
+		destroyed = true;	
 	}
 
 	/**
