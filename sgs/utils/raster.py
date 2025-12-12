@@ -489,7 +489,12 @@ class SpatialRaster:
             if width != ds.RasterXSize:
                 raise RuntimeError("the width of the array passed must be equal to the width of the raster dataset.")
 
-            
+            nan_vals = []
+            band_names = []
+            for i in range(1, ds.RasterCount + 1):
+                band = ds.GetRasterBand(i)
+                nan_vals.append(band.GetNoDataValue())
+                band_names.append(band.GetDescription())
 
             use_arr = True
         else:
@@ -502,8 +507,9 @@ class SpatialRaster:
         else:
             geotransform = ds.GetGeoTransform()
             projection = ds.GetProjection()
+            arr = np.ascontiguousarray(arr)
             buffer = memoryview(arr)
-            return cls(GDALRasterWrapper(buffer, geotransform, projection))
+            return cls(GDALRasterWrapper(buffer, geotransform, projection, nan_vals, band_names))
 
     def to_gdal(self, with_arr = False):
         """
