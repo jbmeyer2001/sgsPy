@@ -396,6 +396,9 @@ class SpatialRaster:
         """
 
         """
+        if not RASTERIO:
+            raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
+
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
@@ -456,11 +459,9 @@ class SpatialRaster:
         """
 
         """
-
         if not GDAL:
             raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
 
-        print(type(ds))
         if type(ds) is not gdal.Dataset:
             raise RuntimeError("the ds parameter passed to from_gdal() must be of type gdal.Dataset")
     
@@ -516,6 +517,9 @@ class SpatialRaster:
         """
 
         """
+        if not GDAL:
+            raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
+
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
@@ -534,18 +538,30 @@ class SpatialRaster:
 
             arr = np.stack(bands, axis=0)            
 
+        if in_mem:
+            geotransform = self.cpp_raster.get_geotransform()
+            projection = self.projection
+            nan_vals = []
+            for i in range(self.band_count):
+                nan_vals.append(self.cpp_raster.get_band_nodata_value(i))
+            band_names = self.bands
+
         self.cpp_raster.close()
         self.closed = True
 
         if in_mem:
             ds = gdal.GetDriverByName("MEM").Create("", self.width, self.height, 0, gdal.GDT_Unknown)
-            
+            ds.SetGeoTransform(geotransform)
+            ds.SetProjection(projection)
             # NOTE: copying from an in-memory GDAL dataset then writing to a rasterio MemoryFile() may cause extra data copying.
             #
             # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
             for i in range(1, arr.shape[0] + 1):
                 ds.AddBand(gdal_array.NumericTypeCodeToGDALTypeCode(arr.dtype))
-                ds.GetRasterBand(i).WriteArray(arr[i - 1])
+                band = ds.GetRasterBand(i)
+                band.WriteArray(arr[i - 1])
+                band.SetNoDataValue(nan_vals[i - 1])
+                band.SetDescription(band_names[i - 1])
         else:
             ds = gdal.Open(self.filename)
 
