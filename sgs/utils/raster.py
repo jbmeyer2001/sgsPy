@@ -431,23 +431,18 @@ class SpatialRaster:
             if dtype == "":
                 raise RuntimeError("sgs dataset has bands with different types, which is not supported by rasterio.")
 
-        nan = self.cpp_raster.get_band_nodata_value(0)
+            nan = self.cpp_raster.get_band_nodata_value(0)
 
-        self.cpp_raster.close()
-        self.closed = True
+            self.cpp_raster.close()
+            self.closed = True
 
-        if in_mem:
             ds = rasterio.MemoryFile().open(driver=driver, width=width, height=height, count=count, crs=crs, transform=transform, dtype=dtype, nodata=nan)
-           
-            # NOTE: copying from an in-memory GDAL dataset then writing to a rasterio MemoryFile() may cause extra data copying.
-            #
-            # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
             ds.write(arr)
+        
+            for i in range(len(self.bands)):
+                ds.set_band_description(i + 1, self.bands[i]) 
         else:
-            ds = rasterio.open(self.filename, nodata=nan)
-
-        for i in range(len(self.bands)):
-            ds.set_band_description(i + 1, self.bands[i])
+            ds = rasterio.open(self.filename)
 
         if with_arr:
             return ds, arr
@@ -498,21 +493,19 @@ class SpatialRaster:
                 nan_vals.append(band.GetNoDataValue())
                 band_names.append(band.GetDescription())
 
-            use_arr = True
-        else:
-            use_arr = False
-
-        if not use_arr:
-            filename = ds.GetName()
-            ds.Close()
-            return cls(filename)
-        else:
             geotransform = ds.GetGeoTransform()
             projection = ds.GetProjection()
             arr = np.ascontiguousarray(arr)
             buffer = memoryview(arr)
+            
+            ds.Close()
             return cls(GDALRasterWrapper(buffer, geotransform, projection, nan_vals, band_names))
-
+        else:
+            filename = ds.GetName()
+            
+            ds.Close()
+            return cls(filename)
+            
     def to_gdal(self, with_arr = False):
         """
 
@@ -546,10 +539,9 @@ class SpatialRaster:
                 nan_vals.append(self.cpp_raster.get_band_nodata_value(i))
             band_names = self.bands
 
-        self.cpp_raster.close()
-        self.closed = True
+            self.cpp_raster.close()
+            self.closed = True
 
-        if in_mem:
             ds = gdal.GetDriverByName("MEM").Create("", self.width, self.height, 0, gdal.GDT_Unknown)
             ds.SetGeoTransform(geotransform)
             ds.SetProjection(projection)
@@ -563,6 +555,9 @@ class SpatialRaster:
                 band.SetNoDataValue(nan_vals[i - 1])
                 band.SetDescription(band_names[i - 1])
         else:
+            self.cpp_raster.close()
+            self.closed = True
+
             ds = gdal.Open(self.filename)
 
         if with_arr:
