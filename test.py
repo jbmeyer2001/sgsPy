@@ -13,7 +13,7 @@ plt.imshow(arr)
 plt.show()
 """
 
-
+""" gdal """
 rast = sgs.SpatialRaster("C:/Users/jmeyer03/projects/Github/sgs/tests/files/mraster.tif")
 srast = sgs.stratify.quantiles(rast, num_strata={"zq90":5})
 ds, arr = srast.to_gdal(with_arr=True)
@@ -25,3 +25,23 @@ srast = sgs.SpatialRaster.from_gdal(ds, arr)
 print('srast.band(0)')
 print(srast.band(0))
 sample = sgs.sample.strat(strat_rast=srast, band=0, num_samples=200, num_strata=5, plot=True)
+
+""" rasterio """
+rast = sgs.SpatialRaster("C:/Users/jmeyer03/projects/Github/sgs/tests/files/mraster.tif")
+srast = sgs.stratify.quantiles(rast, num_strata={"zq90":5, "pzabove2":5})
+srasterio, arr = srast.to_rasterio(with_arr = True)
+arr[arr == 2] = 4
+print('arr[0]')
+print(arr[0])
+print()
+print('arr[1]')
+print(arr[1])
+print()
+srast = sgs.SpatialRaster.from_rasterio(srasterio, arr)
+print('srast.band(0)')
+print(srast.band(0))
+print()
+print("srast.band(1)")
+print(srast.band(1))
+print()
+sample = sgs.sample.strat(strat_rast = srast, band=0, num_samples=200, num_strata = 5, plot=True)
