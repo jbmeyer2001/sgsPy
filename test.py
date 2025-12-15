@@ -1,19 +1,8 @@
 import sgs
-from osgeo import gdal
+import geopandas as gpd
 import matplotlib.pyplot as plt
 
 """
-ds = gdal.Open("C:/Users/jmeyer03/projects/Github/sgs/tests/files/mraster.tif")
-rast = sgs.SpatialRaster.from_gdal(ds)
-srast = sgs.stratify.quantiles(rast, num_strata={rast.bands[0]: 10})
-srast_gdal = srast.to_gdal()
-
-arr = srast_gdal.GetRasterBand(1).ReadAsArray()
-plt.imshow(arr)
-plt.show()
-"""
-
-""" gdal """
 rast = sgs.SpatialRaster("C:/Users/jmeyer03/projects/Github/sgs/tests/files/mraster.tif")
 srast = sgs.stratify.quantiles(rast, num_strata={"zq90":5})
 ds, arr = srast.to_gdal(with_arr=True)
@@ -26,7 +15,6 @@ print('srast.band(0)')
 print(srast.band(0))
 sample = sgs.sample.strat(strat_rast=srast, band=0, num_samples=200, num_strata=5, plot=True)
 
-""" rasterio """
 rast = sgs.SpatialRaster("C:/Users/jmeyer03/projects/Github/sgs/tests/files/mraster.tif")
 srast = sgs.stratify.quantiles(rast, num_strata={"zq90":5, "pzabove2":5})
 srasterio, arr = srast.to_rasterio(with_arr = True)
@@ -45,3 +33,13 @@ print("srast.band(1)")
 print(srast.band(1))
 print()
 sample = sgs.sample.strat(strat_rast = srast, band=0, num_samples=200, num_strata = 5, plot=True)
+"""
+
+
+rast = sgs.SpatialRaster("C:/Users/jmeyer03/projects/Github/sgs/tests/files/mraster.tif")
+gdf = gpd.read_file("C:/Users/jmeyer03/projects/Github/sgs/tests/files/access.shp")
+print("HERE")
+access = sgs.SpatialVector.from_geopandas(gdf)
+print("from_geopandas completed fine!")
+samples = sgs.sample.srs(rast=rast, num_samples=250, access=access, buff_outer=500 , plot=True) 
+print("done with samples")

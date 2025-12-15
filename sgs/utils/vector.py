@@ -20,7 +20,7 @@ from _sgs import GDALVectorWrapper
 try:
     import geopandas as gpd
     GEOPANDAS = True
-else:
+except ImportError as e:
     GEOPANDAS = False
 
 class SpatialVector:
@@ -176,18 +176,18 @@ class SpatialVector:
             plt.show()
 
     @classmethod
-    def from_geopandas(cls, obj)
+    def from_geopandas(cls, obj):
         """
 
         """
         if not GEOPANDAS:
             raise RuntimeError("from_geopandas() can only be called if geopandas was successfully imported, but it wasn't.")
 
-        if type(obj) is not geopandas.geodataframe.GeoDataFrame and type(obj) is not geopandas.geoseries.GeoSeries:
+        if type(obj) is not gpd.geodataframe.GeoDataFrame and type(obj) is not gpd.geoseries.GeoSeries:
             raise RuntimeError("the object passed must be of type geopandas GeoDataFrame or GeoSeries")
 
         #get a the geopandas object as a geoseries
-        if type(obj) is geopandas.geodataframe.GeoDataFrame:
+        if type(obj) is gpd.geodataframe.GeoDataFrame:
             if 'geometry' not in obj.columns:
                 raise RuntimeError("'geometry' must be a column in the geodataframe passed")
             gs = obj['geometry']
@@ -218,7 +218,8 @@ class SpatialVector:
 
         return cls(GDALVectorWrapper(geometries, projection, geomtype, name))
 
-    def to_geopandas()
-    """
+    def to_geopandas():
+        """
 
-    """
+        """
+        pass
