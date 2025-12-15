@@ -35,6 +35,7 @@ using namespace pybind11::literals;
 class GDALVectorWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
+	OGRSpatialReference srs; 
 
 	public:	
 	/**
@@ -95,6 +96,9 @@ class GDALVectorWrapper {
 			throw std::runtime_error("geomtype is not one of the accepted inputs: 'point', 'line', or 'polygon'.");
 		}
 
+		//set spatial reference
+	       	this->srs.importFromWkt(projection.c_str());
+
 		//create dataset and layer
 		GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
 		if (!p_driver) {
@@ -104,19 +108,11 @@ class GDALVectorWrapper {
 		if (!p_dataset) {
 			throw std::runtime_error("unable to create dataset from driver.");
 		}
-		OGRLayer *p_layer = p_dataset->CreateLayer(name.c_str(), nullptr, type, nullptr);
+		OGRLayer *p_layer = p_dataset->CreateLayer(name.c_str(), &srs, type, nullptr);
 		if (!p_layer) {
 			throw std::runtime_error("unable to create dataset layer.");
 		}
 		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
-
-		//set spatial reference
-		OGRSpatialReference srs;
-	       	srs.importFromWkt(projection.c_str());
-		CPLErr cplerr = p_dataset->SetSpatialRef(&srs);
-		if (cplerr) {
-			throw std::runtime_error("error setting the spatial reference of the dataset.");
-		}
 	
 		//add geometries to dataset
 		for (size_t i = 0; i < geometries.size(); i++) {

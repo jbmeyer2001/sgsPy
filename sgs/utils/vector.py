@@ -216,7 +216,8 @@ class SpatialVector:
         projection = gs.crs.to_wkt()        #projection string
         geometries = gs.to_wkb().to_numpy() #array of wkb geometries
 
-        return cls(GDALVectorWrapper(geometries, projection, geomtype, name))
+        cpp_vector = GDALVectorWrapper(geometries, projection, geomtype, name)
+        return cls(cpp_vector)
 
     def to_geopandas():
         """

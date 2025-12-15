@@ -36,10 +36,15 @@ sample = sgs.sample.strat(strat_rast = srast, band=0, num_samples=200, num_strat
 """
 
 
-rast = sgs.SpatialRaster("C:/Users/jmeyer03/projects/Github/sgs/tests/files/mraster.tif")
-gdf = gpd.read_file("C:/Users/jmeyer03/projects/Github/sgs/tests/files/access.shp")
-print("HERE")
-access = sgs.SpatialVector.from_geopandas(gdf)
-print("from_geopandas completed fine!")
-samples = sgs.sample.srs(rast=rast, num_samples=250, access=access, buff_outer=500 , plot=True) 
-print("done with samples")
+rast = sgs.SpatialRaster("/home/jbmeyer/extdata/mraster.tif")
+#gdf = gpd.read_file("/home/jbmeyer/extdata/access.shp")
+#access = sgs.SpatialVector.from_geopandas(gdf)
+#samples = sgs.sample.srs(rast=rast, num_samples=250, access=access, buff_outer=500 , plot=True) 
+
+gdf = gpd.read_file("/home/jbmeyer/extdata/inventory_polygons.shp")
+print("HURR 1")
+polygons = sgs.SpatialVector.from_geopandas(gdf)
+print("HURR 2")
+srast = sgs.stratify.poly(rast, polygons, attribute='NUTRIENTS', layer_name='inventory_polygons', features=['poor', 'medium', 'rich'])
+print("HURR 3")
+srast.plot()

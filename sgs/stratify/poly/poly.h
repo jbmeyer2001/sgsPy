@@ -29,6 +29,7 @@ GDALRasterWrapper *poly(
 	std::string tempFolder,
 	std::map<std::string, std::string> driverOptions)
 {
+	std::cout << "HERE in poly()" << std::endl;
 	GDALAllRegister();
 
 	//step 1: get required info from vector and raster objects
@@ -120,6 +121,7 @@ GDALRasterWrapper *poly(
 		addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	
 	}
 
+	std::cout << "about to exit poly()" << std::endl;
 	//step 7: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python
 	return isMEMDataset ?
