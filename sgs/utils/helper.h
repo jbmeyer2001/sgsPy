@@ -698,7 +698,7 @@ addPoint(OGRPoint *p_point, OGRLayer *p_layer) {
 
 /**
  * Helper function to add a point to a layer. This is the version
- * which will be claled when there is a const OGRPoint *.
+ * which will be called when there is a const OGRPoint *.
  *
  * @param OGRPoint *p_point
  * @param OGRLayer *p_layer
@@ -709,6 +709,28 @@ addPoint(const OGRPoint *p_point, OGRLayer *p_layer) {
 	p_feature->SetGeometry(p_point);
 	p_layer->CreateFeature(p_feature);
 	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * Helper function which adds a linestring to a layer.
+ */
+inline void
+addLineString(OGRLineString *p_lineString, OGRLayer *p_layer) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_lineString);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);
+}
+
+/**
+ * Helper function which adds a linestring to a layer.
+ */
+inline void
+addPolygon(OGRPolygon *p_polygon, OGRLayer *p_layer) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_polygon);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);
 }
 
 /**

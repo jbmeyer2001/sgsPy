@@ -15,6 +15,7 @@
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
+#include <ogr_geometry.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -59,9 +60,126 @@ class GDALVectorWrapper {
 	*
 	* @param GDALDataset * pointer to existing GDAL dataset
 	*/	
-    GDALVectorWrapper(GDALDataset *p_dataset) {
+    	GDALVectorWrapper(GDALDataset *p_dataset) {
 		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
 	}
+
+	/**
+	 * Constructor for GDALVectorWrapper class. This constructor is meant to be used when importing
+	 * data from another Python geospatial library, like geopandas. The geometries are stored in a python
+	 * list as python bytes objects, and passed to this constructor through pybind11 as a vector of strings.
+	 *
+	 * Additionally, the projection, geometry type (of all geometries), and layer name are all used to create
+	 * the GDALVectorWrapper object.
+	 *
+	 * @param std::vector<std::string> geometries
+	 * @param std::string projection
+	 * @param std::string geomtype
+	 * @param std::string name
+	 */
+	GDALVectorWrapper(std::vector<std::string> geometries, std::string projection, std::string geomtype, std::string name) {
+		GDALAllRegister();
+
+		//set geometry type
+		OGRwkbGeometryType type = wkbUnknown;
+		if (geomtype == "point") {
+			type = wkbPoint;
+		}		
+		else if (geomtype == "line") {
+			type = wkbLineString;
+		}
+		else if (geomtype == "polygon") {
+			type = wkbPolygon;
+		}
+		else {
+			throw std::runtime_error("geomtype is not one of the accepted inputs: 'point', 'line', or 'polygon'.");
+		}
+
+		//create dataset and layer
+		GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
+		if (!p_driver) {
+			throw std::runtime_error("unable to create dataset driver");
+		}
+		GDALDataset *p_dataset = p_driver->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+		if (!p_dataset) {
+			throw std::runtime_error("unable to create dataset from driver.");
+		}
+		OGRLayer *p_layer = p_dataset->CreateLayer(name.c_str(), nullptr, type, nullptr);
+		if (!p_layer) {
+			throw std::runtime_error("unable to create dataset layer.");
+		}
+		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
+
+		//set spatial reference
+		OGRSpatialReference srs;
+	       	srs.importFromWkt(projection.c_str());
+		CPLErr cplerr = p_dataset->SetSpatialRef(&srs);
+		if (cplerr) {
+			throw std::runtime_error("error setting the spatial reference of the dataset.");
+		}
+	
+		//add geometries to dataset
+		for (size_t i = 0; i < geometries.size(); i++) {
+			size_t size = geometries[i].length();
+			void *p_bytes = (void *)geometries[i].c_str();
+			OGRGeometry *p_geometry;
+
+			OGRErr ogrerr = OGRGeometryFactory::createFromWkb(p_bytes, &srs, &p_geometry, size);
+		       	if (!p_geometry) {
+				throw std::runtime_error("unable to create geometry from wkb");
+			}
+
+			switch(type) {
+				case OGRwkbGeometryType::wkbPoint:
+					if (wkbFlatten(p_geometry->getGeometryType()) == wkbPoint) {
+						OGRPoint *p_point = p_geometry->toPoint();
+						addPoint(p_point, p_layer);	
+					}
+					else if (wkbFlatten(p_geometry->getGeometryType()) == wkbMultiPoint) {
+						for (auto& p_point : *p_geometry->toMultiPoint()) {
+							addPoint(p_point, p_layer);
+						}
+					}
+					else {
+						throw std::runtime_error("error mixing multiple geometry types in sgs GDALVectorWrapper object.");
+					}
+					break;
+				case OGRwkbGeometryType::wkbLineString:
+					if (wkbFlatten(p_geometry->getGeometryType()) == wkbLineString) {
+						OGRLineString *p_lineString = p_geometry->toLineString();
+						addLineString(p_lineString, p_layer);
+					}
+					else if (wkbFlatten(p_geometry->getGeometryType()) == wkbMultiLineString) {
+						for (auto& p_lineString : *p_geometry->toMultiLineString()) {
+							addLineString(p_lineString, p_layer);
+						}
+					}
+					else {
+						throw std::runtime_error("error mixing multiple geometry types in sgs GDALVectorWrapper object.");
+					}
+					break;
+				case OGRwkbGeometryType::wkbPolygon:
+					if (wkbFlatten(p_geometry->getGeometryType()) == wkbPolygon) {
+						OGRPolygon *p_polygon = p_geometry->toPolygon();
+						addPolygon(p_polygon, p_layer);
+					}
+					else if (wkbFlatten(p_geometry->getGeometryType()) == wkbMultiPolygon) {
+						for (auto& p_polygon : *p_geometry->toMultiPolygon()) {
+							addPolygon(p_polygon, p_layer);
+						}
+					}
+					else {
+						throw std::runtime_error("error mixing multiple geometry types in sgs GDALVectorWrapper object.");
+					}
+					break;
+				default:
+					throw std::runtime_error("should not be here!!! (bug).");
+			}
+
+			OGRGeometryFactory::destroyGeometry(p_geometry);
+		}
+	}
+		
 	/**
 	 * Getter method for the dataset pointer.
 	 *

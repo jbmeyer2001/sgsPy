@@ -17,6 +17,12 @@ from .plot import plot_vector
 
 from _sgs import GDALVectorWrapper
 
+try:
+    import geopandas as gpd
+    GEOPANDAS = True
+else:
+    GEOPANDAS = False
+
 class SpatialVector:
     """
     A wrapper class of a GDAL vector dataset.
@@ -169,3 +175,50 @@ class SpatialVector:
             plot_vector(self, ax, geomtype, layer, **kwargs)
             plt.show()
 
+    @classmethod
+    def from_geopandas(cls, obj)
+        """
+
+        """
+        if not GEOPANDAS:
+            raise RuntimeError("from_geopandas() can only be called if geopandas was successfully imported, but it wasn't.")
+
+        if type(obj) is not geopandas.geodataframe.GeoDataFrame and type(obj) is not geopandas.geoseries.GeoSeries:
+            raise RuntimeError("the object passed must be of type geopandas GeoDataFrame or GeoSeries")
+
+        #get a the geopandas object as a geoseries
+        if type(obj) is geopandas.geodataframe.GeoDataFrame:
+            if 'geometry' not in obj.columns:
+                raise RuntimeError("'geometry' must be a column in the geodataframe passed")
+            gs = obj['geometry']
+        else:
+            gs = obj
+
+        #map multi and non-multi geometry types to the same value
+        types_map = {
+            'LineString': 'line',
+            'MultiLineString': 'line',
+            'Point': 'point',
+            'MultiPoint': 'point',
+            'Polygon': 'polygon',
+            'MultiPolygon': 'polygon'
+        }
+    
+        #convert the types into a set where the 'multi' and non-'multi' geometry types map to the same value
+        types = set([types_map[x] for x in list(gs.geom_type.value_counts().index)])
+
+        #ensure there is only 1 type in the set
+        if len(types) != 1:
+            raise RuntimeError("the geopandas object passed must contain only a single type of geometry (Point, Line, Polygon). A combination of MultiPoint with Point is fine, along with MultiLine and MultiPolygon")
+   
+        name = gs.name                      #series name
+        geomtype = list(types)[0]           #geomery type
+        projection = gs.crs.to_wkt()        #projection string
+        geometries = gs.to_wkb().to_numpy() #array of wkb geometries
+
+        return cls(GDALVectorWrapper(geometries, projection, geomtype, name))
+
+    def to_geopandas()
+    """
+
+    """
