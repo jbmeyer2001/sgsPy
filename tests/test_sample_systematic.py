@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import geopandas as gpd
 import pytest
@@ -94,7 +96,12 @@ class TestSystematic:
         gs_samples = sgs.systematic(self.rast, 500, "hexagon", "centers", filename=str(temp_file)).to_geopandas()['geometry']
         gs_file = gpd.read_file(temp_file)
 
-        assert len(gs_samples.intersection(gs_file)) == len(gs_samples)
+        # on linux, the following throws a warning about the spatial references differing by:
+        # UTM Zone 17, Northern Hemisphere vs UTM_Zone_17_Northern_Hemisphere
+        # which shouldn't cause any kind of problem
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            assert len(gs_samples.intersection(gs_file)) == len(gs_samples)
 
     def test_existing(self):
         existing = gpd.read_file(existing_shapefile_path)['geometry']

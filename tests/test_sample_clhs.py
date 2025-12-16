@@ -86,5 +86,10 @@ class TestClhs:
         gs_samples = sgs.sample.clhs(self.rast, 200, filename=str(temp_file)).to_geopandas()['geometry']
         gs_file = gpd.read_file(temp_file)
 
-        assert len(gs_samples.intersection(gs_file)) == len(gs_samples)
+        # on linux, the following throws a warning about the spatial references differing by:
+        # UTM Zone 17, Northern Hemisphere vs UTM_Zone_17_Northern_Hemisphere
+        # which shouldn't cause any kind of problem
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            assert len(gs_samples.intersection(gs_file)) == len(gs_samples)
 
