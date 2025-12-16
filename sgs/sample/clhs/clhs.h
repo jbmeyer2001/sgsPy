@@ -918,7 +918,16 @@ clhs(
 	//fast random number generator using xoshiro256+
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng;
-	uint64_t multiplier = getProbabilityMultiplier(p_raster, 4, MILLION * 10, false, access.area);
+	uint64_t multiplier = getProbabilityMultiplier(
+		width, 
+		height, 
+		p_raster->getPixelWidth(), 
+		p_raster->getPixelHeight(), 
+		4, 
+		MILLION * 10, 
+		false, 
+		access.area
+	);
 	RandValController rand(bands[0].xBlockSize, bands[0].yBlockSize, multiplier, &rng);
 
 	//get data type for all bands

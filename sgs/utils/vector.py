@@ -7,7 +7,10 @@
 #
 # ******************************************************************************
 
+import os
+import tempfile
 from typing import Optional
+import warnings
 
 import matplotlib.pyplot as plt
 import matplotlib #fpr type checking matplotlib.axes.Axes
@@ -16,6 +19,12 @@ from.import plot
 from .plot import plot_vector
 
 from _sgs import GDALVectorWrapper
+
+try:
+    import geopandas as gpd
+    GEOPANDAS = True
+except ImportError as e:
+    GEOPANDAS = False
 
 class SpatialVector:
     """
@@ -169,3 +178,90 @@ class SpatialVector:
             plot_vector(self, ax, geomtype, layer, **kwargs)
             plt.show()
 
+    @classmethod
+    def from_geopandas(cls, obj, layer_name=None):
+        """
+        This function is used to convert a geopandas object into an sgs.SpatialVector. The geopandas object
+        may either by of type GeoDataFrame or GeoSeries.
+
+        If a particular layer name is desired, it can be passed as a parameter.
+
+        Examples:
+
+        gdf = gpd.read_file("access.shp")
+        access = sgs.SpatialVector.from_geopandas(gdf)
+
+        
+        gs = gpd['geometry'] #geometry column is a geoseries
+        access = sgs.SpatialVector.from_geopandas(gs)
+
+
+        gdf = gpd.read_file("access.shp")
+        gdf = gdf[gdf == "LineString"]
+        access = sgs.SpatialVector.from_geopandas(gdf)
+        """
+        if not GEOPANDAS:
+            raise RuntimeError("from_geopandas() can only be called if geopandas was successfully imported, but it wasn't.")
+
+        if type(obj) is not gpd.geodataframe.GeoDataFrame and type(obj) is not gpd.geoseries.GeoSeries:
+            raise RuntimeError("the object passed must be of type geopandas GeoDataFrame or GeoSeries")
+
+        #get a the geopandas object as a geoseries
+        if type(obj) is gpd.geodataframe.GeoDataFrame:
+            if 'geometry' not in obj.columns:
+                raise RuntimeError("'geometry' must be a column in the geodataframe passed")
+            gdf = obj
+            gs = gdf['geometry']
+        else:
+            gs = obj
+            gdf = gpd.GeoDataFrame(gs)
+ 
+        if layer_name is None: layer_name = 'geopandas_geodataframe'
+        projection = gs.crs.to_wkt()
+       
+        # the conversion to geojson may raise a warning about how the projection is unable to be converted to the new format correctly
+        #
+        # however, we have the projection from the geodataframes geoseries crs, so it won't be an issue
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            geojson = gdf.to_json().encode('utf-8')
+
+        cpp_vector = GDALVectorWrapper(geojson, projection, layer_name)
+        return cls(cpp_vector)
+
+    def to_geopandas(self):
+        """
+        This function is used to convert an sgs.SpatialVector into a geopandas geodataframe.
+
+        Examples:
+
+        access = sgs.SpatialVector("access.shp")
+        gdf = access.to_geopandas()
+        """
+        if not GEOPANDAS:
+            raise RuntimeError("to_geopandas() can  only be called if geopandas was successfully imported, but it wasn't.")
+
+        tempdir = tempfile.gettempdir()
+        file = os.path.join(tempdir, "temp.geojson")
+
+        #get the projection info
+        projection = self.cpp_vector.get_projection()
+
+        #write the dataset to a tempfile
+        self.cpp_vector.write(file)
+    
+        # This method of writing to a file then reading from that file is definitely clunky,
+        # however it's easy. Theres the possiblity of iterating through every field within
+        # every feature, and needing to then call a different function depending on the data
+        # type of the field (because C++ types are rigid). That may still be done in the future,
+        # but for now this works.
+
+        #have geopandas read the tempfile
+        gdf = gpd.read_file(file)
+        if projection != "": gdf.set_crs(projection, inplace=True, allow_override=True)
+
+        #remove the geojson file
+        os.remove(file)
+
+        return gdf
+        

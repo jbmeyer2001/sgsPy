@@ -23,6 +23,7 @@ PYBIND11_MODULE(_sgs, m) {
 	// source code in sgs/utils/raster.h
 	py::class_<GDALRasterWrapper>(m, "GDALRasterWrapper")
 		.def(py::init<std::string>())
+		.def(py::init<py::buffer, std::vector<double>, std::string, std::vector<double>, std::vector<std::string>>())
 		.def("get_driver", &GDALRasterWrapper::getDriver)
 		.def("get_crs", &GDALRasterWrapper::getCRS)
 		.def("get_projection", &GDALRasterWrapper::getFullProjectionInfo)
@@ -39,17 +40,24 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("get_band_nodata_value", &GDALRasterWrapper::getBandNoDataValue)
 		.def("get_raster_as_memoryview", &GDALRasterWrapper::getRasterBandAsMemView)
 		.def("get_raster_band_type_size", &GDALRasterWrapper::getRasterBandTypeSize)
+		.def("get_geotransform", &GDALRasterWrapper::getGeotransformArray)
+		.def("get_data_type", &GDALRasterWrapper::getDataType)
 		.def("set_temp_dir", &GDALRasterWrapper::setTempDir)
-		.def("get_temp_dir", &GDALRasterWrapper::getTempDir);
+		.def("get_temp_dir", &GDALRasterWrapper::getTempDir)
+		.def("release_band_buffers", &GDALRasterWrapper::releaseBandBuffers)
+		.def("close", &GDALRasterWrapper::close);
 
 	// source code in sgs/utils/vector.h
 	py::class_<GDALVectorWrapper>(m, "GDALVectorWrapper")
 		.def(py::init<std::string>())
+		.def(py::init<py::bytes, std::string, std::string>())
 		.def("get_layer_names", &GDALVectorWrapper::getLayerNames)
 		.def("get_layer_info", &GDALVectorWrapper::getLayerInfo)
 		.def("get_points", &GDALVectorWrapper::getPoints)
 		.def("get_wkt_points", &GDALVectorWrapper::getPointsAsWkt)
-		.def("get_linestrings", &GDALVectorWrapper::getLineStrings);
+		.def("get_linestrings", &GDALVectorWrapper::getLineStrings)
+		.def("write", &GDALVectorWrapper::write)
+		.def("get_projection", &GDALVectorWrapper::getFullProjectionInfo);
 
 	// source code in sgs/calculate/pca/pca.h
 	m.def("pca_cpp", &pca::pca);

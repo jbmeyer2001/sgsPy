@@ -120,7 +120,12 @@ def strat(
     filename : str
         the output filename to write to if desired
     """
-    
+    if strat_rast.closed:
+        raise RuntimeError("the C++ object which the strat_rast object wraps has been cleaned up and closed.")
+
+    if mrast is not None and mrast.closed:
+        raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
+
     if type(band) is str:
         if band not in strat_rast.bands:
             msg = "band " + str(band) + " not in given raster."
@@ -220,9 +225,6 @@ def strat(
 
     if mindist < 0:
         raise ValueError("mindist must be greater than or equal to 0")
-
-    if strat_rast.band_count != 1:
-        raise ValueError("strat_raster must have a single band.")
 
     temp_dir = strat_rast.cpp_raster.get_temp_dir()
     if temp_dir == "":

@@ -40,7 +40,12 @@ GDALRasterWrapper *poly(
 	double *geotransform = p_raster->getGeotransform();
 	std::string projection = std::string(p_rasterDS->GetProjectionRef());
 
-	const OGRSpatialReference *p_layerSrs = p_vector->getLayer(layerName)->GetSpatialRef();
+	OGRLayer *p_layer = p_vector->getLayer(layerName);
+	if (!p_layer) {
+		std::string errmsg = "could not find layer associated with " + layerName;
+		throw std::runtime_error(errmsg);
+	}
+	const OGRSpatialReference *p_layerSrs = p_layer->GetSpatialRef();
 	if (!p_layerSrs) {
 		throw std::runtime_error("vector layer does not have a projection.");
 	}
@@ -114,7 +119,7 @@ GDALRasterWrapper *poly(
 
 	//step 6: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
-	
+
 	if (isVRTDataset) {
 		GDALClose(VRTBandInfo[0].p_dataset);
 		addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	

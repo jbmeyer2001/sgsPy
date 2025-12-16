@@ -7,7 +7,8 @@
 #
 # ******************************************************************************
 
-import json
+import importlib.util
+import sys
 import shutil
 from typing import Optional
 
@@ -19,6 +20,21 @@ from .import plot
 from .plot import plot_raster
 
 from _sgs import GDALRasterWrapper
+
+#rasterio optional import
+try: 
+    import rasterio
+    RASTERIO = True
+except ImportError as e:
+    RASTERIO = False
+
+#gdal optional import
+try:
+    from osgeo import gdal
+    from osgeo import gdal_array
+    GDAL = True
+except ImportError as e:
+    GDAL = False
 
 class SpatialRaster:
     """
@@ -136,6 +152,9 @@ class SpatialRaster:
         can also be passed to plot_image().
     """
     have_temp_dir = False
+    temp_dataset = False
+    filename = ""
+    closed = False
 
     def __init__(self, 
                  image: str | GDALRasterWrapper):
@@ -180,8 +199,11 @@ class SpatialRaster:
         """
         if (type(image) is str):
             self.cpp_raster = GDALRasterWrapper(image)
-        else:
+            self.filename = image
+        elif type(image) is GDALRasterWrapper:
             self.cpp_raster = image
+        else:
+            raise RuntimeError("parameter passed to SpatialRaster constructor must be of type str or GDALRasterWrapper")
 
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
@@ -209,6 +231,9 @@ class SpatialRaster:
         """
         Displays driver, band, size, pixel size, and bound information of the raster.
         """
+        if self.closed:
+            raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
+
         print("driver: {}".format(self.driver))
         print("bands: {}".format(*self.bands))
         print("size: {} x {} x {}".format(self.band_count, self.width, self.height))
@@ -224,6 +249,9 @@ class SpatialRaster:
         band: str or int
             string representing a band or int representing a band
         """
+        if self.closed:
+            raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
+
         if type(band) == str:
             band = self.band_name_dict[band]
 
@@ -240,6 +268,8 @@ class SpatialRaster:
         RuntimeError (from C++):
             if the band is larger than a gigabyte sgs will not load it into memory
         """
+        if self.closed:
+            raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
         self.band_data_dict[band_index] = np.asarray(
             self.cpp_raster.get_raster_as_memoryview(self.width, self.height, band_index).toreadonly(), 
@@ -260,6 +290,9 @@ class SpatialRaster:
         RuntimeError (from C++):
             if the band is larger than a gigabyte sgs will not load it into memory
         """
+        if self.closed:
+            raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
+
         index = self.get_band_index(band)
 
         if index not in self.band_data_dict:
@@ -283,7 +316,7 @@ class SpatialRaster:
         target_width : int
             maximum width in pixels for the image (after downsampling)
         target_height : int
-            maximum height in pixeils for the image (after downsampling)
+            maximum height in pixels for the image (after downsampling)
         band (optional) : int or str
             specification of which bands to plot
         **kwargs (optional)
@@ -294,6 +327,8 @@ class SpatialRaster:
         RuntimeError (from C++)
             if unable to read raster band
         """
+        if self.closed:
+            raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
         if ax is not None:
             plot_raster(self, ax, target_width, target_width, band, **kwargs)
@@ -301,4 +336,278 @@ class SpatialRaster:
             fig, ax = plt.subplots()
             plot_raster(self, ax, target_width, target_width, band, **kwargs)
             plt.show()
+       
+    @classmethod
+    def from_rasterio(cls, ds, arr = None):
+        """
+        This function is used to convert from a rasterio dataset object representing a raster into an sgs.SpatialRaster
+        object. A np.ndarray may be passed as the 'arr' parameter, if so, the following must be true:
+        arr.shape == (ds.count, ds.height, ds.width)
+
+        Examples:
+
+        ds = rasterio.open("rast.tif")
+        rast = sgs.SpatialRaster.from_rasterio(ds)
+
+
+        ds = rasterio.open("rast.tif")
+        arr = ds.read()
+        arr[arr < 2] = np.nan
+        rast = sgs.SpatialRaster.from_rasterio(ds, arr)
+        """
+        if not RASTERIO:
+            raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
+
+        if type(ds) is not rasterio.io.DatasetReader and type(ds) is not rasterio.io.DatasetWriter:
+            raise RuntimeError("the ds parameter passed to from_raster() must be of type rasterio.io.DatasetReader or rasterio.io.DatasetWriter.")
+
+        if ds.driver == "MEM" and arr is None:
+            arr = ds.read()
+
+        if arr is not None:
+            if type(arr) is not np.ndarray:
+                raise RuntimeError("if the array parameter is passed, it must be of type np.ndarray")
+    
+            shape = arr.shape
+            if (len(shape)) == 2:
+                (height, width) = shape
+                if ds.count != 1:
+                    raise RuntimeError("if the array parameter contains only a single band with shape (height, width), the raster must contain only a single band.")
+            else:
+                (band_count, height, width) = shape
+                if (band_count != ds.count):
+                    raise RuntimeError("the array parameter must contains the same number of bands as the raster with shape (band_count, height, width).")
+
+            if height != ds.height:
+                raise RuntimeError("the height of the array passed must be equal to the height of the raster dataset.")
+
+            if width != ds.width:
+                raise RuntimeError("the width of the array passed must be equal to the width of the raster dataset.")
+
+            nan = ds.profile["nodata"]
+            if nan is None:
+                nan = np.nan
+
+            use_arr = True
+        else:
+            use_arr = False
+
+        if not use_arr:
+            #close the rasterio dataset, and open a GDALRasterWrapper of the file
+            filename = ds.name
+            ds.close()
+            return cls(filename)
+        else:
+            #create an in-memory dataset using the numpy array as the data, and the rasterio dataset to provide metadata
+            geotransform = ds.get_transform()
+            projection = ds.crs.wkt
+            arr = np.ascontiguousarray(arr)
+            buffer = memoryview(arr)
+            return cls(GDALRasterWrapper(buffer, geotransform, projection, [nan] * ds.count, ds.descriptions))
+
+    def to_rasterio(self, with_arr = False):
+        """
+        This function is used to convert an sgs.SpatialRaster into a rasterio dataset. If with_arr is set to True,
+        the function will return a numpy.ndarray as a tuple with the rasterio dataset object.
+
+        Examples:
+
+        rast = sgs.SpatialRaster('rast.tif')
+        ds = rast.to_rasterio()
+
+        rast = sgs.SpatialRaster('mraster.tif')
+        ds, arr = sgs.to_rasterio(with_arr=True)
+        """
+        if not RASTERIO:
+            raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
+
+        if self.closed:
+            raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
+
+        if (self.temp_dataset):
+            raise RuntimeError("the dataset has been saved as a temporary file which will be deleted when the C++ object containing it is deleted. the dataset must be either in-memory or have a filename.")
+
+        in_mem = self.driver.find("MEM") != -1
+
+        if with_arr or in_mem:
+            bands = []
+            for i in range(self.band_count):
+                bands.append(np.asarray(self.cpp_raster.get_raster_as_memoryview(self.width, self.height, i)))
+            
+            #ensure numpy array doesn't accidentally get cleaned up by C++ object deletion
+            self.cpp_raster.release_band_buffers()
+
+            arr = np.stack(bands, axis=0)
+
+        if in_mem:
+            driver = "MEM"
+            width = self.width
+            height = self.height
+            count = self.band_count
+            crs = self.projection
+            gt = self.cpp_raster.get_geotransform()
+            transform = rasterio.transform.Affine(gt[1], gt[2], gt[0], gt[4], gt[5], gt[3]) #of course the rasterio transform has a different layout than a gdal geotransform... >:(
+
+            dtype = self.cpp_raster.get_data_type()
+
+            if dtype == "":
+                raise RuntimeError("sgs dataset has bands with different types, which is not supported by rasterio.")
+
+            nan = self.cpp_raster.get_band_nodata_value(0)
+
+            self.cpp_raster.close()
+            self.closed = True
+
+            ds = rasterio.MemoryFile().open(driver=driver, width=width, height=height, count=count, crs=crs, transform=transform, dtype=dtype, nodata=nan)
+            ds.write(arr)
         
+            for i in range(len(self.bands)):
+                ds.set_band_description(i + 1, self.bands[i]) 
+        else:
+            ds = rasterio.open(self.filename)
+
+        if with_arr:
+            return ds, arr
+        else:
+            return ds
+
+    @classmethod
+    def from_gdal(cls, ds, arr = None):
+        """
+        This function is used to convert from a gdal.Dataset object representing a raster into an sgs.SpatialRaster
+        object. A np.ndarray may be passed as the 'arr' parameter, if so, the following must be true:
+        arr.shape == (ds.RasterCount, ds.RasterYSize, ds.RasterXSize)
+
+        Examples:
+
+        ds = gdal.Open("rast.tif")
+        rast = sgs.SpatialRaster.from_gdal(ds)
+
+
+        ds = gdal.Open("rast.tif")
+        bands = []
+        for i in range(1, ds.RasterCount + 1):
+            bands.append(ds.GetRasterBand(1).ReadAsArray())
+        arr = np.stack(bands, axis=0)
+        arr[arr < 2] = np.nan
+        rast = sgs.SpatialRaster.from_gdal(ds, arr)
+        """
+        if not GDAL:
+            raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
+
+        if type(ds) is not gdal.Dataset:
+            raise RuntimeError("the ds parameter passed to from_gdal() must be of type gdal.Dataset")
+    
+        if ds.GetDriver().ShortName == "MEM" and arr is None:
+            bands = []
+            for i in range(1, ds.RasterCount + 1):
+                bands.append(ds.GetRasterBand(i).ReadAsArray())
+            arr = np.stack(bands, axis=0)
+
+        if arr is not None:
+            if type(arr) is not np.ndarray:
+                raise RuntimeError("if the array parameter is passed, it must be of type np.ndarray")
+    
+            shape = arr.shape
+            if (len(shape)) == 2:
+                (height, width) = shape
+                if ds.RasterCount != 1:
+                    raise RuntimeError("if the array parameter contains only a single band with shape (height, width), the raster must contain only a single band.")
+            else:
+                (band_count, height, width) = shape
+                if (band_count != ds.RasterCount):
+                    raise RuntimeError("the array parameter must contains the same number of bands as the raster with shape (band_count, height, width).")
+
+            if height != ds.RasterYSize:
+                raise RuntimeError("the height of the array passed must be equal to the height of the raster dataset.")
+
+            if width != ds.RasterXSize:
+                raise RuntimeError("the width of the array passed must be equal to the width of the raster dataset.")
+
+            nan_vals = []
+            band_names = []
+            for i in range(1, ds.RasterCount + 1):
+                band = ds.GetRasterBand(i)
+                nan_vals.append(band.GetNoDataValue())
+                band_names.append(band.GetDescription())
+
+            geotransform = ds.GetGeoTransform()
+            projection = ds.GetProjection()
+            arr = np.ascontiguousarray(arr)
+            buffer = memoryview(arr)
+            
+            ds.Close()
+            return cls(GDALRasterWrapper(buffer, geotransform, projection, nan_vals, band_names))
+        else:
+            filename = ds.GetName()
+            
+            ds.Close()
+            return cls(filename)
+            
+    def to_gdal(self, with_arr = False):
+        """
+        This function is used to convert an sgs.SpatialRaster into a GDAL dataset. If with_arr is set to True,
+        the function will return a numpy.ndarray as a tuple with the GDAL dataset object.
+
+        Examples:
+
+        rast = sgs.SpatialRaster('rast.tif')
+        ds = rast.to_gdal()
+
+        rast = sgs.SpatialRaster('mraster.tif')
+        ds, arr = sgs.to_gdal(with_arr=True)
+        """
+        if not GDAL:
+            raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
+
+        if self.closed:
+            raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
+
+        if (self.temp_dataset):
+            raise RuntimeError("the dataset has been saved as a temporary file which will be deleted when the C++ object containing it is deleted. the dataset must be either in-memory or have a filename.")
+
+        in_mem = self.driver.find("MEM") != -1 
+        
+        if with_arr or in_mem:
+            bands = []
+            for i in range(self.band_count):
+                bands.append(np.asarray(self.cpp_raster.get_raster_as_memoryview(self.width, self.height, i)))
+            
+            #ensure numpy array doesn't accidentally get cleaned up by C++ object deletion
+            self.cpp_raster.release_band_buffers()
+
+            arr = np.stack(bands, axis=0)            
+
+        if in_mem:
+            geotransform = self.cpp_raster.get_geotransform()
+            projection = self.projection
+            nan_vals = []
+            for i in range(self.band_count):
+                nan_vals.append(self.cpp_raster.get_band_nodata_value(i))
+            band_names = self.bands
+
+            self.cpp_raster.close()
+            self.closed = True
+
+            ds = gdal.GetDriverByName("MEM").Create("", self.width, self.height, 0, gdal.GDT_Unknown)
+            ds.SetGeoTransform(geotransform)
+            ds.SetProjection(projection)
+            # NOTE: copying from an in-memory GDAL dataset then writing to a rasterio MemoryFile() may cause extra data copying.
+            #
+            # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
+            for i in range(1, arr.shape[0] + 1):
+                ds.AddBand(gdal_array.NumericTypeCodeToGDALTypeCode(arr.dtype))
+                band = ds.GetRasterBand(i)
+                band.WriteArray(arr[i - 1])
+                band.SetNoDataValue(nan_vals[i - 1])
+                band.SetDescription(band_names[i - 1])
+        else:
+            self.cpp_raster.close()
+            self.closed = True
+
+            ds = gdal.Open(self.filename)
+
+        if with_arr:
+            return ds, arr
+        else:
+            return ds

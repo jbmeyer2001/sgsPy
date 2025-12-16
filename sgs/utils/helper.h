@@ -466,17 +466,20 @@ addBandToMEMDataset(
 	GDALDataset *p_dataset,
 	RasterBandMetaData& band)
 {
-	band.p_buffer = VSIMalloc3(
-		p_dataset->GetRasterXSize(),
-		p_dataset->GetRasterYSize(),
-		band.size
-	);
+	//allocate data buffer if it has not been allocated yet
+	if (!band.p_buffer) {
+		band.p_buffer = VSIMalloc3(
+			p_dataset->GetRasterXSize(),
+			p_dataset->GetRasterYSize(),
+			band.size
+		);
+	}
 
 	CPLErr err;
 	char **papszOptions = nullptr;
 	std::string datapointer = std::to_string((size_t)band.p_buffer);
 	papszOptions = CSLSetNameValue(papszOptions, "DATAPOINTER", datapointer.c_str());
-	
+
 	err = p_dataset->AddBand(band.type, papszOptions);
 	CSLDestroy(papszOptions);
 	if (err) {
@@ -695,7 +698,7 @@ addPoint(OGRPoint *p_point, OGRLayer *p_layer) {
 
 /**
  * Helper function to add a point to a layer. This is the version
- * which will be claled when there is a const OGRPoint *.
+ * which will be called when there is a const OGRPoint *.
  *
  * @param OGRPoint *p_point
  * @param OGRLayer *p_layer
@@ -836,19 +839,12 @@ class Variance {
  * @param double accessibleArea
  */
 inline uint64_t
-getProbabilityMultiplier(GDALRasterWrapper *p_raster, int startMult, int numSamples, bool useMindist, double accessibleArea) {
-	double height = static_cast<double>(p_raster->getHeight());
-	double width = static_cast<double>(p_raster->getWidth());
-	double samples = static_cast<double>(numSamples);
-
-	double numer = samples * startMult * (useMindist ? 3 : 1);
+getProbabilityMultiplier(double width, double height, double pixelWidth, double pixelHeight, int startMult, int numSamples, bool useMindist, double accessibleArea) {
+	double numer = static_cast<double>(numSamples * startMult * (useMindist ? 3 : 1));
 	double denom = height * width;
 
 	if (accessibleArea != -1) {
-		double pixelHeight = static_cast<double>(p_raster->getPixelHeight());
-		double pixelWidth = static_cast<double>(p_raster->getPixelWidth());
 		double totalArea = width * pixelWidth * height * pixelHeight;
-
 		numer *= (totalArea / accessibleArea);
 	}
 

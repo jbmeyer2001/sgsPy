@@ -1168,8 +1168,26 @@ strat(
 	//fast random number generator using xoshiro256+
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng; 
-	uint64_t multiplier = getProbabilityMultiplier(p_raster, 4, numSamples, useMindist, access.area);
-	uint64_t queinnecMultiplier = getProbabilityMultiplier(p_raster, 32, numSamples, useMindist, access.area);
+	uint64_t multiplier = getProbabilityMultiplier(
+		width, 
+		height, 
+		p_raster->getPixelWidth(),
+	       	p_raster->getPixelHeight(), 
+		4, 
+		numSamples, 
+		useMindist, 
+		access.area
+	);
+	uint64_t queinnecMultiplier = getProbabilityMultiplier(
+		width, 
+		height, 
+		p_raster->getPixelWidth(), 
+		p_raster->getPixelHeight(), 
+		32, 
+		numSamples, 
+		useMindist, 
+		access.area
+	);
 
 	//normal indices used with both methods, queinnec indices used only with queinnec method
 	IndexStorageVectors indices(numStrata, 10000);

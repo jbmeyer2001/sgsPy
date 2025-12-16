@@ -67,6 +67,8 @@ def poly(
     ValueError
         if the maximum strata value would result in an integer overflow error
     """
+    if raster.closed:
+            raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
     cases = ""
     where_entries = []
@@ -119,6 +121,8 @@ def poly(
     #now that it's created, give the cpp raster object ownership of the temporary directory
     raster.have_temp_dir = False
     srast.cpp_raster.set_temp_dir(temp_dir)
+    srast.temp_dataset = filename == "" and large_raster
+    srast.filename = filename
 
     return srast
 

@@ -15,6 +15,9 @@
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
+#include <ogr_geometry.h>
+#include <ogr_api.h>
+#include <ogr_recordbatch.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -34,6 +37,7 @@ using namespace pybind11::literals;
 class GDALVectorWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
+	OGRSpatialReference srs; 
 
 	public:	
 	/**
@@ -59,9 +63,85 @@ class GDALVectorWrapper {
 	*
 	* @param GDALDataset * pointer to existing GDAL dataset
 	*/	
-    GDALVectorWrapper(GDALDataset *p_dataset) {
+    	GDALVectorWrapper(GDALDataset *p_dataset) {
 		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
 	}
+
+	/**
+	 * Constructor for GDALVectorWrapper class. This constructor is meant to be used when importing
+	 * data from another Python geospatial library, like geopandas. The geodataset is converted
+	 * to a geojson string and passed to the GDALOpenEx() function to create a GDALDataset. This
+	 * dataset unfortunately won't have the correcct layer name, and may have an incorrect spatial
+	 * reference system. Because of this, a GDALDataset is created with a new OGRLayer containing
+	 * the correct layer name and spatial reference system. The geometries with their fields are
+	 * then copied from the geojson-created dataset to the new initialized dataset. 
+	 *
+	 * @param std::vector<std::string> geometries
+	 * @param std::string projection
+	 * @param std::string name
+	 */
+	GDALVectorWrapper(std::string bytes, std::string projection, std::string name) {
+		GDALAllRegister();
+		
+		//create dataset from geojson string to copy to new layer
+		GDALDataset *p_indataset = GDALDataset::FromHandle(GDALOpenEx(bytes.c_str(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr));
+		OGRLayer *p_inlayer = p_indataset->GetLayerByName("OGRGeoJSON");
+	
+		//set spatial reference
+	       	OGRErr err = this->srs.importFromWkt(projection.c_str());
+		if (err) {
+			throw std::runtime_error("unable to get Spatial Reference System from projection string.");
+		}
+
+		//create dataset and layer with correct spatial reference and 
+		GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
+		if (!p_driver) {
+			throw std::runtime_error("unable to create dataset driver.");
+		}
+		GDALDataset *p_dataset = p_driver->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+		if (!p_dataset) {
+			throw std::runtime_error("unable to create dataset from driver.");
+		}
+		OGRLayer *p_outlayer = p_dataset->CreateLayer(name.c_str(), &this->srs, wkbUnknown, nullptr);
+		if (!p_outlayer) {
+			throw std::runtime_error("unable to create dataset layer.");
+		}
+		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
+
+
+		/* copy data over from dataset created using geojson string
+		 *
+		 * This is done, because when converting a geopandas geodataframe to json, the layer name,
+		 * and (more importantly) the spatial reference system may not be transferred correctly.
+		 * This way does include A LOT of copying data, however it ensures the srs is correct and
+		 * all of the data from the geodataframe is moved over effectively.
+		 */
+
+		//copy over field definitions	
+		OGRFeatureDefn *p_featdef = p_inlayer->GetLayerDefn();
+		int fcount = p_featdef->GetFieldCount();
+		for (int i = 0; i < fcount; i++) {
+			OGRFieldDefn *p_fielddef = p_featdef->GetFieldDefn(i);
+			OGRErr err = p_outlayer->CreateField(p_fielddef);
+			if (err) {
+				std::cout << "unable to copy field definition." << std::endl;
+			}
+		}
+
+		//copy over features
+		for (auto& p_infeature : p_inlayer) {
+			OGRFeature *p_outfeature = OGRFeature::CreateFeature(p_featdef);
+			for (int i = 0; i < fcount; i++) {
+				p_outfeature->SetField(i, p_infeature->GetRawFieldRef(i));
+			}
+			OGRGeometry *p_geom = p_infeature->GetGeometryRef();
+			p_geom->assignSpatialReference(&this->srs);
+			p_outfeature->SetGeometry(p_geom);
+			p_outlayer->CreateFeature(p_outfeature);
+			OGRFeature::DestroyFeature(p_outfeature);
+		}
+	}	
+			
 	/**
 	 * Getter method for the dataset pointer.
 	 *
@@ -315,5 +395,21 @@ class GDALVectorWrapper {
 		if (err != CE_None) {
 			std::cout << "failed to close dataset of file " << filename << ". The file output may not be correct." << std::endl;
 		}
+	}
+
+	/**
+	 * Getter method for the full projection information as wkt.
+	 *
+	 * @returns std::string
+	 */
+	std::string getFullProjectionInfo() {
+		OGRSpatialReference *p_srs = this->p_dataset->GetLayer(0)->GetSpatialRef();
+		if (p_srs) {
+			char *p_proj;
+			p_srs->exportToPrettyWkt(&p_proj);
+			return std::string(p_proj);
+		}
+			
+		return "";
 	}
 };

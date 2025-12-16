@@ -94,6 +94,8 @@ def quantiles(
     --------------------
     a SpatialRaster object containing stratified raster bands.
     """
+    if rast.closed:
+            raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
     if type(num_strata) is list and len(num_strata) < 1:
         raise ValueError("num_strata list must contain at least one element")
@@ -226,5 +228,7 @@ def quantiles(
     #now that it's created, give the cpp raster object ownership of the temporary directory
     rast.have_temp_dir = False
     srast.cpp_raster.set_temp_dir(temp_dir)
+    srast.temp_dataset = filename == "" and large_raster
+    srast.filename = filename
 
     return srast
