@@ -228,6 +228,8 @@ systematic(
 	bool plot,
 	std::string filename)
 {
+	GDALAllRegister();
+	
 	double *GT; 	//geotransform
 	double IGT[6];	//inverse geotransform
 	GT = p_raster->getGeotransform();
@@ -282,10 +284,21 @@ systematic(
 	//query to create grid
 	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");
 
-	//TODO error check this?
-	GDALAllRegister();
-	GDALDataset *p_sampleDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create("", 0, 0, 0, GDT_Unknown, nullptr);
-	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", nullptr, wkbPoint, nullptr);	
+	//create output dataset before anything that might take a long time (in case creation of dataset fails)
+	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
+	if(!p_driver) {
+		throw std::runtime_error("unable to create output sample dataset driver.");
+	}
+	GDALDataset *p_sampleDataset = p_driver->Create("", 0, 0, 0, GDT_Unknown, nullptr);
+	if (!p_sampleDataset) {
+		throw std::runtime_error("unable to create output dataset with driver.");
+	}
+
+	GDALVectorWrapper *p_wrapper = new GDALVectorWrapper(p_sampleDataset, std::string(p_raster->getDataset()->GetProjectionRef()));
+	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", p_wrapper->getSRS(), wkbPoint, nullptr);	
+	if (!p_sampleLayer) {
+		throw std::runtime_error("unable to create output dataset layer.");
+	}
 
 	//get access polygon if access is given
 	OGRGeometry *access = nullptr;
@@ -426,18 +439,16 @@ systematic(
 		}
 	}
 
-	GDALVectorWrapper * p_sampleVectorWrapper = new GDALVectorWrapper(p_sampleDataset);
-
 	if (filename != "") {
 		try {
-			p_sampleVectorWrapper->write(filename);
+			p_wrapper->write(filename);
 		}
 		catch (const std::exception& e) {
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
 	}	
 
-	return {p_sampleVectorWrapper, {xCoords, yCoords}, grid};
+	return {p_wrapper, {xCoords, yCoords}, grid};
 }
 
 } //namespace systematic

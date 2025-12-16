@@ -38,6 +38,7 @@ class GDALVectorWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
 	OGRSpatialReference srs; 
+	bool haveSRS = false;
 
 	public:	
 	/**
@@ -63,8 +64,13 @@ class GDALVectorWrapper {
 	*
 	* @param GDALDataset * pointer to existing GDAL dataset
 	*/	
-    	GDALVectorWrapper(GDALDataset *p_dataset) {
+    	GDALVectorWrapper(GDALDataset *p_dataset, std::string projection) {
 		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
+		OGRErr err = this->srs.importFromWkt(projection.c_str());
+		if (err) {
+			throw std::runtime_error("unable to get Spatial Reference System from projection string.");
+		}
+		this->haveSRS = true;
 	}
 
 	/**
@@ -92,6 +98,7 @@ class GDALVectorWrapper {
 		if (err) {
 			throw std::runtime_error("unable to get Spatial Reference System from projection string.");
 		}
+		this->haveSRS = true;
 
 		//create dataset and layer with correct spatial reference and 
 		GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
@@ -411,5 +418,18 @@ class GDALVectorWrapper {
 		}
 			
 		return "";
+	}
+
+	/**
+	 * Getter method for OGRSpatialReference.
+	 *
+	 * @return OGRSpatialReference *
+	 */
+	OGRSpatialReference *getSRS(void) {
+		if (!this->haveSRS) {
+			throw std::runtime_error("do not have OGRSpatialReference associated with GDALVectorWrapper.");
+		}
+
+		return &this->srs;
 	}
 };

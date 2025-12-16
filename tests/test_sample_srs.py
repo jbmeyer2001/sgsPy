@@ -86,8 +86,7 @@ class TestSrs:
         temp_dir.mkdir()
 
         temp_file = temp_dir / "vect.shp"
-        samples = sgs.srs(self.rast, num_samples = 1000, filename=str(temp_file)).samples_as_wkt()
-        gs_samples = gpd.GeoSeries.from_wkt(samples)
+        gs_samples = sgs.srs(self.rast, num_samples = 1000, filename=str(temp_file)).to_geopandas()['geometry']
         gs_file = gpd.read_file(temp_file)
         
         assert len(gs_samples.intersection(gs_file)) == 1000

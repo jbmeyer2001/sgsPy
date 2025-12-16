@@ -91,7 +91,7 @@ class TestSystematic:
         temp_dir.mkdir()
         temp_file = temp_dir / "vect.shp"
 
-        gs_samples = gpd.GeoSeries.from_wkt(sgs.systematic(self.rast, 500, "hexagon", "centers", filename=str(temp_file)).samples_as_wkt())
+        gs_samples = sgs.systematic(self.rast, 500, "hexagon", "centers", filename=str(temp_file)).to_geopandas()['geometry']
         gs_file = gpd.read_file(temp_file)
 
         assert len(gs_samples.intersection(gs_file)) == len(gs_samples)

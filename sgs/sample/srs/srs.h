@@ -208,7 +208,9 @@ srs(
 	if (!p_samples) {
 		throw std::runtime_error("unable to create output dataset with driver.");
 	}
-	OGRLayer *p_layer = p_samples->CreateLayer("samples", nullptr, wkbPoint, nullptr);
+
+	GDALVectorWrapper *p_wrapper = new GDALVectorWrapper(p_samples, std::string(p_raster->getDataset()->GetProjectionRef()));
+	OGRLayer *p_layer = p_samples->CreateLayer("samples", p_wrapper->getSRS(), wkbPoint, nullptr);
 	if (!p_layer) {
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
@@ -357,21 +359,18 @@ srs(
 		}	
 	}
 
-	//step 10: create GDALVectorWrapper with dataset containing points
-	GDALVectorWrapper *p_sampleVectorWrapper = new GDALVectorWrapper(p_samples);
-
 	//TODO rather than first making an in-memory dataset then writing to a file afterwards,
 	//just make the correct type of dataset from the get go
 	if (filename != "") {
 		try {
-			p_sampleVectorWrapper->write(filename);
+			p_wrapper->write(filename);
 		}
 		catch (const std::exception& e) {
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
 	}
 
-	return {{xCoords, yCoords}, p_sampleVectorWrapper, samplesAdded};
+	return {{xCoords, yCoords}, p_wrapper, samplesAdded};
 }
 
 } //namespace srs

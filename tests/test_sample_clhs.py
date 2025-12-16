@@ -1,3 +1,5 @@
+import warnings
+
 import geopandas as gpd
 import numpy as np
 import pytest
@@ -81,9 +83,7 @@ class TestClhs:
         temp_dir.mkdir()
         temp_file = temp_dir / "vect.shp"
 
-        gs_samples = gpd.GeoSeries.from_wkt(
-            sgs.sample.clhs(self.rast, 200, filename=str(temp_file)).samples_as_wkt()
-        )
+        gs_samples = sgs.sample.clhs(self.rast, 200, filename=str(temp_file)).to_geopandas()['geometry']
         gs_file = gpd.read_file(temp_file)
 
         assert len(gs_samples.intersection(gs_file)) == len(gs_samples)
