@@ -411,9 +411,10 @@ class GDALRasterWrapper {
 			+ std::string(this->p_dataset->GetDriver()->GetMetadataItem(GDAL_DMD_LONGNAME));
 	}
 
-	/* Getter method for the full projection information as wkt.
+	/** 
+	 * Getter method for the full projection information as wkt.
 	 *
-	 * @param std::string projection as wkt
+	 * @returns std::string projection as wkt
 	 */
 	std::string getFullProjectionInfo() {
 		if (!this->p_proj) {

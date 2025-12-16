@@ -55,7 +55,9 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("get_layer_info", &GDALVectorWrapper::getLayerInfo)
 		.def("get_points", &GDALVectorWrapper::getPoints)
 		.def("get_wkt_points", &GDALVectorWrapper::getPointsAsWkt)
-		.def("get_linestrings", &GDALVectorWrapper::getLineStrings);
+		.def("get_linestrings", &GDALVectorWrapper::getLineStrings)
+		.def("write", &GDALVectorWrapper::write)
+		.def("get_projection", &GDALVectorWrapper::getFullProjectionInfo);
 
 	// source code in sgs/calculate/pca/pca.h
 	m.def("pca_cpp", &pca::pca);

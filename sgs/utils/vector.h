@@ -396,4 +396,20 @@ class GDALVectorWrapper {
 			std::cout << "failed to close dataset of file " << filename << ". The file output may not be correct." << std::endl;
 		}
 	}
+
+	/**
+	 * Getter method for the full projection information as wkt.
+	 *
+	 * @returns std::string
+	 */
+	std::string getFullProjectionInfo() {
+		OGRSpatialReference *p_srs = this->p_dataset->GetLayer(0)->GetSpatialRef();
+		if (p_srs) {
+			char *p_proj;
+			p_srs->exportToPrettyWkt(&p_proj);
+			return std::string(p_proj);
+		}
+			
+		return "";
+	}
 };

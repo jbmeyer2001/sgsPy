@@ -7,6 +7,8 @@
 #
 # ******************************************************************************
 
+import os
+import tempfile
 from typing import Optional
 import warnings
 
@@ -210,8 +212,28 @@ class SpatialVector:
         cpp_vector = GDALVectorWrapper(geojson, projection, layer_name)
         return cls(cpp_vector)
 
-    def to_geopandas():
+    def to_geopandas(self):
         """
 
         """
-        pass
+        if not GEOPANDAS:
+            raise RuntimeError("to_geopandas() can  only be called if geopandas was successfully imported, but it wasn't.")
+
+        tempdir = tempfile.gettempdir()
+        file = os.path.join(tempdir, "temp.geojson")
+
+        #get the projection info
+        projection = self.cpp_vector.get_projection()
+
+        #write the dataset to a tempfile
+        self.cpp_vector.write(file)
+
+        #have geopandas read the tempfile
+        gdf = gpd.read_file(file)
+        if projection != "": gdf.set_crs(projection, inplace=True, allow_override=True)
+
+        #remove the geojson file
+        os.remove(file)
+
+        return gdf
+        
