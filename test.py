@@ -36,9 +36,9 @@ sample = sgs.sample.strat(strat_rast = srast, band=0, num_samples=200, num_strat
 """
 
 rast = sgs.SpatialRaster("/home/jbmeyer/extdata/mraster.tif")
-#gdf = gpd.read_file("/home/jbmeyer/extdata/access.shp")
-#access = sgs.SpatialVector.from_geopandas(gdf)
-#samples = sgs.sample.srs(rast=rast, num_samples=250, access=access, buff_outer=500 , plot=True) 
+gdf = gpd.read_file("/home/jbmeyer/extdata/access.shp")
+access = sgs.SpatialVector.from_geopandas(gdf['geometry'])
+samples = sgs.sample.srs(rast=rast, num_samples=250, access=access, buff_outer=500 , plot=True) 
 
 #gdf = gpd.read_file("/home/jbmeyer/extdata/inventory_polygons.shp")
 #polygons = sgs.SpatialVector.from_geopandas(gdf, layer_name='inventory_polygons')
@@ -49,8 +49,8 @@ rast = sgs.SpatialRaster("/home/jbmeyer/extdata/mraster.tif")
 #existing = sgs.SpatialVector.from_geopandas(gdf)
 #sgs.sample.srs(rast, 10, existing=existing, plot=True)
 
-access = sgs.SpatialVector("/home/jbmeyer/extdata/access.shp")
-gdf = access.to_geopandas()
-gdf = gdf[gdf.geom_type == "MultiLineString"]
-access = sgs.SpatialVector.from_geopandas(gdf)
-samples = sgs.sample.srs(rast, num_samples=250, access=access, buff_outer=200, plot=True)
+#access = sgs.SpatialVector("/home/jbmeyer/extdata/access.shp")
+#gdf = access.to_geopandas()
+#gdf = gdf[gdf.geom_type == "MultiLineString"]
+#access = sgs.SpatialVector.from_geopandas(gdf)
+#samples = sgs.sample.srs(rast, num_samples=250, access=access, buff_outer=200, plot=True)

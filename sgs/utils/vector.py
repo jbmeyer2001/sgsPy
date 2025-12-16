@@ -181,7 +181,24 @@ class SpatialVector:
     @classmethod
     def from_geopandas(cls, obj, layer_name=None):
         """
+        This function is used to convert a geopandas object into an sgs.SpatialVector. The geopandas object
+        may either by of type GeoDataFrame or GeoSeries.
 
+        If a particular layer name is desired, it can be passed as a parameter.
+
+        Examples:
+
+        gdf = gpd.read_file("access.shp")
+        access = sgs.SpatialVector.from_geopandas(gdf)
+
+        
+        gs = gpd['geometry'] #geometry column is a geoseries
+        access = sgs.SpatialVector.from_geopandas(gs)
+
+
+        gdf = gpd.read_file("access.shp")
+        gdf = gdf[gdf == "LineString"]
+        access = sgs.SpatialVector.from_geopandas(gdf)
         """
         if not GEOPANDAS:
             raise RuntimeError("from_geopandas() can only be called if geopandas was successfully imported, but it wasn't.")
@@ -214,7 +231,12 @@ class SpatialVector:
 
     def to_geopandas(self):
         """
+        This function is used to convert an sgs.SpatialVector into a geopandas geodataframe.
 
+        Examples:
+
+        access = sgs.SpatialVector("access.shp")
+        gdf = access.to_geopandas()
         """
         if not GEOPANDAS:
             raise RuntimeError("to_geopandas() can  only be called if geopandas was successfully imported, but it wasn't.")
@@ -227,6 +249,12 @@ class SpatialVector:
 
         #write the dataset to a tempfile
         self.cpp_vector.write(file)
+    
+        # This method of writing to a file then reading from that file is definitely clunky,
+        # however it's easy. Theres the possiblity of iterating through every field within
+        # every feature, and needing to then call a different function depending on the data
+        # type of the field (because C++ types are rigid). That may still be done in the future,
+        # but for now this works.
 
         #have geopandas read the tempfile
         gdf = gpd.read_file(file)

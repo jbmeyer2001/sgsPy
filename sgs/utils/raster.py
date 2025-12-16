@@ -340,7 +340,20 @@ class SpatialRaster:
     @classmethod
     def from_rasterio(cls, ds, arr = None):
         """
+        This function is used to convert from a rasterio dataset object representing a raster into an sgs.SpatialRaster
+        object. A np.ndarray may be passed as the 'arr' parameter, if so, the following must be true:
+        arr.shape == (ds.count, ds.height, ds.width)
 
+        Examples:
+
+        ds = rasterio.open("rast.tif")
+        rast = sgs.SpatialRaster.from_rasterio(ds)
+
+
+        ds = rasterio.open("rast.tif")
+        arr = ds.read()
+        arr[arr < 2] = np.nan
+        rast = sgs.SpatialRaster.from_rasterio(ds, arr)
         """
         if not RASTERIO:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
@@ -394,7 +407,16 @@ class SpatialRaster:
 
     def to_rasterio(self, with_arr = False):
         """
+        This function is used to convert an sgs.SpatialRaster into a rasterio dataset. If with_arr is set to True,
+        the function will return a numpy.ndarray as a tuple with the rasterio dataset object.
 
+        Examples:
+
+        rast = sgs.SpatialRaster('rast.tif')
+        ds = rast.to_rasterio()
+
+        rast = sgs.SpatialRaster('mraster.tif')
+        ds, arr = sgs.to_rasterio(with_arr=True)
         """
         if not RASTERIO:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
@@ -452,7 +474,23 @@ class SpatialRaster:
     @classmethod
     def from_gdal(cls, ds, arr = None):
         """
+        This function is used to convert from a gdal.Dataset object representing a raster into an sgs.SpatialRaster
+        object. A np.ndarray may be passed as the 'arr' parameter, if so, the following must be true:
+        arr.shape == (ds.RasterCount, ds.RasterYSize, ds.RasterXSize)
 
+        Examples:
+
+        ds = gdal.Open("rast.tif")
+        rast = sgs.SpatialRaster.from_gdal(ds)
+
+
+        ds = gdal.Open("rast.tif")
+        bands = []
+        for i in range(1, ds.RasterCount + 1):
+            bands.append(ds.GetRasterBand(1).ReadAsArray())
+        arr = np.stack(bands, axis=0)
+        arr[arr < 2] = np.nan
+        rast = sgs.SpatialRaster.from_gdal(ds, arr)
         """
         if not GDAL:
             raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
@@ -508,7 +546,16 @@ class SpatialRaster:
             
     def to_gdal(self, with_arr = False):
         """
+        This function is used to convert an sgs.SpatialRaster into a GDAL dataset. If with_arr is set to True,
+        the function will return a numpy.ndarray as a tuple with the GDAL dataset object.
 
+        Examples:
+
+        rast = sgs.SpatialRaster('rast.tif')
+        ds = rast.to_gdal()
+
+        rast = sgs.SpatialRaster('mraster.tif')
+        ds, arr = sgs.to_gdal(with_arr=True)
         """
         if not GDAL:
             raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
