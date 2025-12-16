@@ -29,7 +29,6 @@ GDALRasterWrapper *poly(
 	std::string tempFolder,
 	std::map<std::string, std::string> driverOptions)
 {
-	std::cout << "HERE in poly()" << std::endl;
 	GDALAllRegister();
 
 	//step 1: get required info from vector and raster objects
@@ -41,7 +40,12 @@ GDALRasterWrapper *poly(
 	double *geotransform = p_raster->getGeotransform();
 	std::string projection = std::string(p_rasterDS->GetProjectionRef());
 
-	const OGRSpatialReference *p_layerSrs = p_vector->getLayer(layerName)->GetSpatialRef();
+	OGRLayer *p_layer = p_vector->getLayer(layerName);
+	if (!p_layer) {
+		std::string errmsg = "could not find layer associated with " + layerName;
+		throw std::runtime_error(errmsg);
+	}
+	const OGRSpatialReference *p_layerSrs = p_layer->GetSpatialRef();
 	if (!p_layerSrs) {
 		throw std::runtime_error("vector layer does not have a projection.");
 	}
@@ -115,13 +119,12 @@ GDALRasterWrapper *poly(
 
 	//step 6: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
-	
+
 	if (isVRTDataset) {
 		GDALClose(VRTBandInfo[0].p_dataset);
 		addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	
 	}
 
-	std::cout << "about to exit poly()" << std::endl;
 	//step 7: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python
 	return isMEMDataset ?

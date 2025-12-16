@@ -16,6 +16,8 @@
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
 #include <ogr_geometry.h>
+#include <ogr_api.h>
+#include <ogr_recordbatch.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -67,115 +69,79 @@ class GDALVectorWrapper {
 
 	/**
 	 * Constructor for GDALVectorWrapper class. This constructor is meant to be used when importing
-	 * data from another Python geospatial library, like geopandas. The geometries are stored in a python
-	 * list as python bytes objects, and passed to this constructor through pybind11 as a vector of strings.
-	 *
-	 * Additionally, the projection, geometry type (of all geometries), and layer name are all used to create
-	 * the GDALVectorWrapper object.
+	 * data from another Python geospatial library, like geopandas. The geodataset is converted
+	 * to a geojson string and passed to the GDALOpenEx() function to create a GDALDataset. This
+	 * dataset unfortunately won't have the correcct layer name, and may have an incorrect spatial
+	 * reference system. Because of this, a GDALDataset is created with a new OGRLayer containing
+	 * the correct layer name and spatial reference system. The geometries with their fields are
+	 * then copied from the geojson-created dataset to the new initialized dataset. 
 	 *
 	 * @param std::vector<std::string> geometries
 	 * @param std::string projection
-	 * @param std::string geomtype
 	 * @param std::string name
 	 */
-	GDALVectorWrapper(std::vector<std::string> geometries, std::string projection, std::string geomtype, std::string name) {
+	GDALVectorWrapper(std::string bytes, std::string projection, std::string name) {
 		GDALAllRegister();
-
-		//set geometry type
-		OGRwkbGeometryType type = wkbUnknown;
-		if (geomtype == "point") {
-			type = wkbPoint;
-		}		
-		else if (geomtype == "line") {
-			type = wkbLineString;
-		}
-		else if (geomtype == "polygon") {
-			type = wkbPolygon;
-		}
-		else {
-			throw std::runtime_error("geomtype is not one of the accepted inputs: 'point', 'line', or 'polygon'.");
-		}
-
+		
+		//create dataset from geojson string to copy to new layer
+		GDALDataset *p_indataset = GDALDataset::FromHandle(GDALOpenEx(bytes.c_str(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr));
+		OGRLayer *p_inlayer = p_indataset->GetLayerByName("OGRGeoJSON");
+	
 		//set spatial reference
-	       	this->srs.importFromWkt(projection.c_str());
+	       	OGRErr err = this->srs.importFromWkt(projection.c_str());
+		if (err) {
+			throw std::runtime_error("unable to get Spatial Reference System from projection string.");
+		}
 
-		//create dataset and layer
+		//create dataset and layer with correct spatial reference and 
 		GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
 		if (!p_driver) {
-			throw std::runtime_error("unable to create dataset driver");
+			throw std::runtime_error("unable to create dataset driver.");
 		}
 		GDALDataset *p_dataset = p_driver->Create("", 0, 0, 0, GDT_Unknown, nullptr);
 		if (!p_dataset) {
 			throw std::runtime_error("unable to create dataset from driver.");
 		}
-		OGRLayer *p_layer = p_dataset->CreateLayer(name.c_str(), &srs, type, nullptr);
-		if (!p_layer) {
+		OGRLayer *p_outlayer = p_dataset->CreateLayer(name.c_str(), &this->srs, wkbUnknown, nullptr);
+		if (!p_outlayer) {
 			throw std::runtime_error("unable to create dataset layer.");
 		}
 		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
-	
-		//add geometries to dataset
-		for (size_t i = 0; i < geometries.size(); i++) {
-			size_t size = geometries[i].length();
-			void *p_bytes = (void *)geometries[i].c_str();
-			OGRGeometry *p_geometry;
 
-			OGRErr ogrerr = OGRGeometryFactory::createFromWkb(p_bytes, &srs, &p_geometry, size);
-		       	if (!p_geometry) {
-				throw std::runtime_error("unable to create geometry from wkb");
+
+		/* copy data over from dataset created using geojson string
+		 *
+		 * This is done, because when converting a geopandas geodataframe to json, the layer name,
+		 * and (more importantly) the spatial reference system may not be transferred correctly.
+		 * This way does include A LOT of copying data, however it ensures the srs is correct and
+		 * all of the data from the geodataframe is moved over effectively.
+		 */
+
+		//copy over field definitions	
+		OGRFeatureDefn *p_featdef = p_inlayer->GetLayerDefn();
+		int fcount = p_featdef->GetFieldCount();
+		for (int i = 0; i < fcount; i++) {
+			OGRFieldDefn *p_fielddef = p_featdef->GetFieldDefn(i);
+			OGRErr err = p_outlayer->CreateField(p_fielddef);
+			if (err) {
+				std::cout << "unable to copy field definition." << std::endl;
 			}
-
-			switch(type) {
-				case OGRwkbGeometryType::wkbPoint:
-					if (wkbFlatten(p_geometry->getGeometryType()) == wkbPoint) {
-						OGRPoint *p_point = p_geometry->toPoint();
-						addPoint(p_point, p_layer);	
-					}
-					else if (wkbFlatten(p_geometry->getGeometryType()) == wkbMultiPoint) {
-						for (auto& p_point : *p_geometry->toMultiPoint()) {
-							addPoint(p_point, p_layer);
-						}
-					}
-					else {
-						throw std::runtime_error("error mixing multiple geometry types in sgs GDALVectorWrapper object.");
-					}
-					break;
-				case OGRwkbGeometryType::wkbLineString:
-					if (wkbFlatten(p_geometry->getGeometryType()) == wkbLineString) {
-						OGRLineString *p_lineString = p_geometry->toLineString();
-						addLineString(p_lineString, p_layer);
-					}
-					else if (wkbFlatten(p_geometry->getGeometryType()) == wkbMultiLineString) {
-						for (auto& p_lineString : *p_geometry->toMultiLineString()) {
-							addLineString(p_lineString, p_layer);
-						}
-					}
-					else {
-						throw std::runtime_error("error mixing multiple geometry types in sgs GDALVectorWrapper object.");
-					}
-					break;
-				case OGRwkbGeometryType::wkbPolygon:
-					if (wkbFlatten(p_geometry->getGeometryType()) == wkbPolygon) {
-						OGRPolygon *p_polygon = p_geometry->toPolygon();
-						addPolygon(p_polygon, p_layer);
-					}
-					else if (wkbFlatten(p_geometry->getGeometryType()) == wkbMultiPolygon) {
-						for (auto& p_polygon : *p_geometry->toMultiPolygon()) {
-							addPolygon(p_polygon, p_layer);
-						}
-					}
-					else {
-						throw std::runtime_error("error mixing multiple geometry types in sgs GDALVectorWrapper object.");
-					}
-					break;
-				default:
-					throw std::runtime_error("should not be here!!! (bug).");
-			}
-
-			OGRGeometryFactory::destroyGeometry(p_geometry);
 		}
-	}
-		
+
+		//copy over features
+		for (auto& p_infeature : p_inlayer) {
+			OGRFeature *p_outfeature = OGRFeature::CreateFeature(p_featdef);
+			for (int i = 0; i < fcount; i++) {
+				p_outfeature->SetField(i, p_infeature->GetRawFieldRef(i));
+			}
+			OGRGeometry *p_geom = p_infeature->GetGeometryRef();
+			p_geom->assignSpatialReference(&this->srs);
+			p_outfeature->SetGeometry(p_geom);
+			p_outlayer->CreateFeature(p_outfeature);
+			OGRFeature::DestroyFeature(p_outfeature);
+		}
+	}	
+			
 	/**
 	 * Getter method for the dataset pointer.
 	 *

@@ -50,7 +50,7 @@ PYBIND11_MODULE(_sgs, m) {
 	// source code in sgs/utils/vector.h
 	py::class_<GDALVectorWrapper>(m, "GDALVectorWrapper")
 		.def(py::init<std::string>())
-		.def(py::init<std::vector<std::string>, std::string, std::string, std::string>())
+		.def(py::init<py::bytes, std::string, std::string>())
 		.def("get_layer_names", &GDALVectorWrapper::getLayerNames)
 		.def("get_layer_info", &GDALVectorWrapper::getLayerInfo)
 		.def("get_points", &GDALVectorWrapper::getPoints)

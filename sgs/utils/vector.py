@@ -8,6 +8,7 @@
 # ******************************************************************************
 
 from typing import Optional
+import warnings
 
 import matplotlib.pyplot as plt
 import matplotlib #fpr type checking matplotlib.axes.Axes
@@ -176,7 +177,7 @@ class SpatialVector:
             plt.show()
 
     @classmethod
-    def from_geopandas(cls, obj):
+    def from_geopandas(cls, obj, layer_name=None):
         """
 
         """
@@ -190,33 +191,23 @@ class SpatialVector:
         if type(obj) is gpd.geodataframe.GeoDataFrame:
             if 'geometry' not in obj.columns:
                 raise RuntimeError("'geometry' must be a column in the geodataframe passed")
-            gs = obj['geometry']
+            gdf = obj
+            gs = gdf['geometry']
         else:
             gs = obj
+            gdf = gpd.GeoDataFrame(gs)
+ 
+        if layer_name is None: layer_name = 'geopandas_geodataframe'
+        projection = gs.crs.to_wkt()
+       
+        # the conversion to geojson may raise a warning about how the projection is unable to be converted to the new format correctly
+        #
+        # however, we have the projection from the geodataframes geoseries crs, so it won't be an issue
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            geojson = gdf.to_json().encode('utf-8')
 
-        #map multi and non-multi geometry types to the same value
-        types_map = {
-            'LineString': 'line',
-            'MultiLineString': 'line',
-            'Point': 'point',
-            'MultiPoint': 'point',
-            'Polygon': 'polygon',
-            'MultiPolygon': 'polygon'
-        }
-    
-        #convert the types into a set where the 'multi' and non-'multi' geometry types map to the same value
-        types = set([types_map[x] for x in list(gs.geom_type.value_counts().index)])
-
-        #ensure there is only 1 type in the set
-        if len(types) != 1:
-            raise RuntimeError("the geopandas object passed must contain only a single type of geometry (Point, Line, Polygon). A combination of MultiPoint with Point is fine, along with MultiLine and MultiPolygon")
-   
-        name = gs.name                      #series name
-        geomtype = list(types)[0]           #geomery type
-        projection = gs.crs.to_wkt()        #projection string
-        geometries = gs.to_wkb().to_numpy() #array of wkb geometries
-
-        cpp_vector = GDALVectorWrapper(geometries, projection, geomtype, name)
+        cpp_vector = GDALVectorWrapper(geojson, projection, layer_name)
         return cls(cpp_vector)
 
     def to_geopandas():
