@@ -18,4 +18,5 @@ set "PKG_CONFIG_PATH=%CD%\sgs\extern\vcpkg\installed\x64-windows\lib\pkgconfig"
 
 :: run build command
 cls
-pip install .
+::pip install .
+python -m build --wheel --outdir dist

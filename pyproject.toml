@@ -7,8 +7,8 @@ requires = [
 ]
 
 [project]
-name = "sgs"
-version = "0.0.0"
+name = "sgspy"
+version = "1.0.0"
 dependencies = [
 	"numpy", #TODO add version
 	"matplotlib" #TODO add version

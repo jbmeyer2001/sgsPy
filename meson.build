@@ -35,19 +35,19 @@ cxx = meson.get_compiler('cpp')
 if WIN
   path_entries = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(';')
   foreach entry : path_entries
-    if entry.contains('Temp') and entry.contains('pip-build-env') and entry.contains('overlay') and entry.contains('Scripts')
-      pip_build_dir = entry.split('Scripts').get(0)
-      pip_inc_dir = pip_build_dir + join_paths('Library', 'include')
-      pip_lib_dir = pip_build_dir + join_paths('Library', 'lib')
-      pip_bin_dir = pip_build_dir + join_paths('Library', 'bin')
+    if entry.contains('Temp') and entry.contains('build-env') and entry.contains('Scripts')
+      tmp_build_dir = entry.split('Scripts').get(0)
+      tmp_inc_dir = tmp_build_dir + join_paths('Library', 'include')
+      tmp_lib_dir = tmp_build_dir + join_paths('Library', 'lib')
+      tmp_bin_dir = tmp_build_dir + join_paths('Library', 'bin')
     endif
   endforeach
 else
-  pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
+  tmp_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
 
-  pip_inc_dir = pip_build_dir + 'include'
-  pip_lib_dir = pip_build_dir + 'lib'
-  pip_bin_dir = pip_build_dir + 'bin'
+  tmp_inc_dir = tmp_build_dir + 'include'
+  tmp_lib_dir = tmp_build_dir + 'lib'
+  tmp_bin_dir = tmp_build_dir + 'bin'
 endif
 
 #define directories
@@ -93,8 +93,8 @@ else #linux
     lib = simlink.get(0)
     version = simlink.get(1)
     
-    simlink_src = pip_lib_dir + '/lib' + lib + '.so'
-    simlink_dst = pip_lib_dir + '/lib' + lib + '.so' + version #this is the file which actually exists
+    simlink_src = tmp_lib_dir + '/lib' + lib + '.so'
+    simlink_dst = tmp_lib_dir + '/lib' + lib + '.so' + version #this is the file which actually exists
     
     run_command('ln', '-s', simlink_dst, simlink_src, check: true)
   endforeach
@@ -103,19 +103,19 @@ endif
 #add libs for oneDAL build dependency
 oneDAL_dep = []
 foreach lib : onedal_libs
-  oneDAL_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+  oneDAL_dep += cxx.find_library(lib, dirs: [tmp_lib_dir])
 endforeach
  
 #add libs for tbb build dependency
 tbb_dep = []
 foreach lib : tbb_libs
-  tbb_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+  tbb_dep += cxx.find_library(lib, dirs: [tmp_lib_dir])
 endforeach
 
 #add libs for mkl build dependency
 mkl_dep = []
 foreach lib : mkl_libs
-  mkl_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+  mkl_dep += cxx.find_library(lib, dirs: [tmp_lib_dir])
 endforeach
 
 #add link args
@@ -190,21 +190,21 @@ if WIN
     join_paths(bin_dir, 'zstd.dll'),
   
     #onedal dlls
-    join_paths(pip_bin_dir, 'onedal.3.dll'),
-    join_paths(pip_bin_dir, 'onedal_core.3.dll'),
-    join_paths(pip_bin_dir, 'onedal_thread.3.dll'),
-    join_paths(pip_bin_dir, 'tbb12.dll'),
-    join_paths(pip_bin_dir, 'tbbmalloc.dll'),
+    join_paths(tmp_bin_dir, 'onedal.3.dll'),
+    join_paths(tmp_bin_dir, 'onedal_core.3.dll'),
+    join_paths(tmp_bin_dir, 'onedal_thread.3.dll'),
+    join_paths(tmp_bin_dir, 'tbb12.dll'),
+    join_paths(tmp_bin_dir, 'tbbmalloc.dll'),
   
     #mkl dlls
-    join_paths(pip_bin_dir, 'mkl_core.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_tbb_thread.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_blacs_intelmpi_ilp64.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_def.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_avx2.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_avx512.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_cmpt.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_mc3.2.dll'),
+    join_paths(tmp_bin_dir, 'mkl_core.2.dll'),
+    join_paths(tmp_bin_dir, 'mkl_tbb_thread.2.dll'),
+    join_paths(tmp_bin_dir, 'mkl_blacs_intelmpi_ilp64.2.dll'),
+    join_paths(tmp_bin_dir, 'mkl_vml_def.2.dll'),
+    join_paths(tmp_bin_dir, 'mkl_vml_avx2.2.dll'),
+    join_paths(tmp_bin_dir, 'mkl_vml_avx512.2.dll'),
+    join_paths(tmp_bin_dir, 'mkl_vml_cmpt.2.dll'),
+    join_paths(tmp_bin_dir, 'mkl_vml_mc3.2.dll'),
 
     #proj
     meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
@@ -212,35 +212,35 @@ if WIN
 else #linux
   required_files = [
     #onedal libs
-    join_paths(pip_lib_dir, 'libonedal.so.3'),
-    join_paths(pip_lib_dir, 'libonedal_core.so.3'),
-    join_paths(pip_lib_dir, 'libonedal_parameters.so.3'),
-    join_paths(pip_lib_dir, 'libonedal_thread.so.3'),
-    join_paths(pip_lib_dir, 'libtbb.so'),
-    join_paths(pip_lib_dir, 'libtbbmalloc.so'),
-    join_paths(pip_lib_dir, 'libtbb.so.12'),
-    join_paths(pip_lib_dir, 'libtbbmalloc.so.2'),
-    join_paths(pip_lib_dir, 'libtbb.so.12.17'),
-    join_paths(pip_lib_dir, 'libtbbmalloc.so.2.17'),
+    join_paths(tmp_lib_dir, 'libonedal.so.3'),
+    join_paths(tmp_lib_dir, 'libonedal_core.so.3'),
+    join_paths(tmp_lib_dir, 'libonedal_parameters.so.3'),
+    join_paths(tmp_lib_dir, 'libonedal_thread.so.3'),
+    join_paths(tmp_lib_dir, 'libtbb.so'),
+    join_paths(tmp_lib_dir, 'libtbbmalloc.so'),
+    join_paths(tmp_lib_dir, 'libtbb.so.12'),
+    join_paths(tmp_lib_dir, 'libtbbmalloc.so.2'),
+    join_paths(tmp_lib_dir, 'libtbb.so.12.17'),
+    join_paths(tmp_lib_dir, 'libtbbmalloc.so.2.17'),
   
     #mkl libs
-    join_paths(pip_lib_dir, 'libmkl_intel_ilp64.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_tbb_thread.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_core.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_def.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_avx2.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_avx512.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_cmpt.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_mc3.so.2'),
+    join_paths(tmp_lib_dir, 'libmkl_intel_ilp64.so.2'),
+    join_paths(tmp_lib_dir, 'libmkl_tbb_thread.so.2'),
+    join_paths(tmp_lib_dir, 'libmkl_core.so.2'),
+    join_paths(tmp_lib_dir, 'libmkl_vml_def.so.2'),
+    join_paths(tmp_lib_dir, 'libmkl_vml_avx2.so.2'),
+    join_paths(tmp_lib_dir, 'libmkl_vml_avx512.so.2'),
+    join_paths(tmp_lib_dir, 'libmkl_vml_cmpt.so.2'),
+    join_paths(tmp_lib_dir, 'libmkl_vml_mc3.so.2'),
 
     #proj
     meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
 endif
 
-foreach file : required_files
-  install_data(file)
-endforeach
+#foreach file : required_files
+#  install_data(file)
+#endforeach
 
 py.extension_module(
   '_sgs',
@@ -254,7 +254,7 @@ py.extension_module(
     pybind11_dep
   ],
   include_directories: [
-    pip_inc_dir,
+    tmp_inc_dir,
     vcpkg_inc_dir,
     xoshiro_inc_dir,
     inc_dir
