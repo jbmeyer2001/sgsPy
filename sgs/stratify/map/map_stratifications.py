@@ -78,6 +78,15 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     --------------------
     a SpatialRaster object containing a band of mapped stratifications from the input raster(s).
     """
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
+    if type(thread_count) is not int:
+        raise TypeError("'thread_count' parameter must be of type int.")
+
+    if driver_options is not None and type(driver_options) is not dict:
+        raise TypeError("'driver_options' parameter, if given, must be of type dict.")
+
     raster_list = []
     band_lists = []
     strata_lists = []
@@ -87,7 +96,16 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
 
     raster_size_bytes = 0
     large_raster = False
-    for (raster, bands, num_stratum) in args: 
+    for (raster, bands, num_stratum) in args:
+        if type(raster) is not SpatialRaster:
+            raise TypeError("first value in each tuple argument must be of type sgs.SpatialRaster.")
+
+        if type(bands) not in [int, str, list]:
+            raise TypeError("second value in each tuple argument must be of type int, str, or list.")
+
+        if type(num_stratum) not in [int, list]:
+            raise TypeError("third value in each tuple argument must be of type int or list.")
+
         if raster.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 

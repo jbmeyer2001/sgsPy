@@ -94,6 +94,24 @@ def quantiles(
     --------------------
     a SpatialRaster object containing stratified raster bands.
     """
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster")
+
+    if type(num_strata) not in [int, list, dict]:
+        raise TypeError("'num_strata' parameter must be of type int, list, or dict.")
+
+    if type(map) is not bool:
+        raise TypeError("'map' parameter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
+    if type(thread_count) is not int:
+        raise TypeError("'thread_count' parameter must be of type int.")
+
+    if type(eps) is not float:
+        raise TypeError("'eps' parameter must be of type float.")
+
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 

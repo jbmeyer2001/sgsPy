@@ -20,8 +20,8 @@ GIGABYTE = 1073741824
 MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
 def poly(
-    raster: SpatialRaster,
-    vector: SpatialVector,
+    rast: SpatialRaster,
+    vect: SpatialVector,
     layer_name: str,
     attribute: str,
     features: list[str|list[str]],
@@ -51,7 +51,7 @@ def poly(
     --------------------
     rast : SpatialRaster
         raster data structure which will determine height, width, geotransform, and projection
-    vector : SpatialVector
+    vect : SpatialVector
         the vector of polygons to stratify
     layer_name : str
         the layer in the vector to be stratified
@@ -67,8 +67,29 @@ def poly(
     ValueError
         if the maximum strata value would result in an integer overflow error
     """
-    if raster.closed:
-            raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type SpatialRaster")
+
+    if type(vect) is not SpatialVector:
+        raise TypeError("'vect' parameter must be of type SpatialVector")
+
+    if type(layer_name) is not str:
+        raise TypeError("'layer_name' parameter must be of type str.")
+
+    if type(attribute) is not str:
+        raise TypeError("'attribute' parameter must be of type str.")
+
+    if type(features) is not list:
+        raise TypeError("'features' parameter must be of type list.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
+    if driver_options is not None and type(driver_options) is not dict:
+        raise TypeError("'driver_options' parameter, if givne, must be of type dict.")
+
+    if rast.closed:
+            raise RuntimeError("the C++ object which the rast object wraps has been cleaned up and closed.")
 
     cases = ""
     where_entries = []
@@ -99,16 +120,16 @@ def poly(
                 raise ValueError("the key for al key/value pairs in teh driver_options dict must be a string.")
             driver_options_str[key] = str(val)
 
-    large_raster = raster.height * raster.width > GIGABYTE
+    large_raster = rast.height * rast.width > GIGABYTE
     
     #make temp directory which will be deleted if there is any problem when calling the cpp function
     temp_dir = tempfile.mkdtemp()
-    raster.have_temp_dir = True
-    raster.temp_dir = temp_dir
+    rast.have_temp_dir = True
+    rast.temp_dir = temp_dir
 
     srast = SpatialRaster(poly_cpp(
-        vector.cpp_vector,
-        raster.cpp_raster,
+        vect.cpp_vector,
+        rast.cpp_raster,
         num_strata,
         layer_name,
         sql_query,
@@ -119,7 +140,7 @@ def poly(
     ))
 
     #now that it's created, give the cpp raster object ownership of the temporary directory
-    raster.have_temp_dir = False
+    rast.have_temp_dir = False
     srast.cpp_raster.set_temp_dir(temp_dir)
     srast.temp_dataset = filename == "" and large_raster
     srast.filename = filename

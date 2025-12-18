@@ -37,7 +37,6 @@ def plot_raster(raster,
     **kwargs (optional)
         any parameters which may be passed to matplotlib.pyplot.imshow
     """
-
     #get bands argument as list of int
     if band is None:
         if raster.band_count > 1:

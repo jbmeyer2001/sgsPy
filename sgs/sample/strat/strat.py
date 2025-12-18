@@ -33,13 +33,13 @@ def strat(
     mrast: Optional[SpatialRaster] = None,
     mrast_band: Optional[int | str] = None,
     method: str = "Queinnec",
-    mindist: Optional[float] = None,
+    mindist: Optional[int | float] = None,
     existing: Optional[SpatialVector] = None,
     force: bool = False,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
-    buff_inner: Optional[float] = None,
-    buff_outer: Optional[float] = None,
+    buff_inner: Optional[int | float] = None,
+    buff_outer: Optional[int | float] = None,
     plot: bool = False,
     filename: str = "",
     ):
@@ -120,6 +120,66 @@ def strat(
     filename : str
         the output filename to write to if desired
     """
+    if type(strat_rast) is not SpatialRaster:
+        raise TypeError("'strat_rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(band) not in [int, str]:
+        raise TypeError("'band' parameter must be of type int or str.")
+
+    if type(num_samples) is not int:
+        raise TypeError("'num_samples' parameter must be of type int.")
+
+    if type(num_strata) is not int:
+        raise TypeError("'num_strata' parameter must be of type int.")
+
+    if type(wrow) is not int:
+        raise TypeError("'wrow' parameter must be of type int.")
+
+    if type(wcol) is not int:
+        raise TypeError("'wcol' parameter must be of type int.")
+
+    if type(allocation) is not str:
+        raise TypeError("'allocation' parameter must be of type str.")
+
+    if weights is not None and type(weights) is not list:
+        raise TypeError("'weights' parameter, if given, must be a list of float values.")
+
+    if mrast is not None and type(mrast) is not SpatialRaster:
+        raise TypeError("'mrast' parameter, if given, must be of type sgs.SpatialRaster.")
+
+    if mrast_band is not None and type(mrast_band) not in [int, str]:
+        raise TypeError("'mrast_band' parameter, if given, must be of type int or str.")
+
+    if type(method) is not str:
+        raise TypeError("'method' parameter must be of type str.")
+
+    if mindist is not None and type(mindist) not in [int, float]:
+        raise TypeError("'mindist' parameter must be of type int or float.")
+
+    if existing is not None and type(existing) is not SpatialVector:
+        raise TypeError("'existing' parameter must be of type sgs.SpatialVector.")
+
+    if type(force) is not bool:
+        raise TypeError("'force' parameter must be of type bool.")
+
+    if access is not None and type(access) is not SpatialVector:
+        raise TypeError("'access' parameter must be of type sgs.SpatialVector.")
+
+    if layer_name is not None and type(layer_name) is not str:
+        raise TypeError("'layer_name' parameter must be of type str.")
+
+    if buff_inner is not None and type(buff_inner) not in [int, float]:
+        raise TypeError("'buff_inner' parameter must be of type int or float.")
+
+    if buff_outer is not None and type(buff_outer) not in [int, float]:
+        raise TypeError("'buff_outer' parameter must be of type int or float.")
+
+    if type(plot) is not bool:
+        raise TypeError("'plot' paramter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
     if strat_rast.closed:
         raise RuntimeError("the C++ object which the strat_rast object wraps has been cleaned up and closed.")
 

@@ -203,7 +203,7 @@ class SpatialRaster:
         elif type(image) is GDALRasterWrapper:
             self.cpp_raster = image
         else:
-            raise RuntimeError("parameter passed to SpatialRaster constructor must be of type str or GDALRasterWrapper")
+            raise TypeError("'image' parameter of SpatialRaster constructor must be of type str or GDALRasterWrapper")
 
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
@@ -249,6 +249,9 @@ class SpatialRaster:
         band: str or int
             string representing a band or int representing a band
         """
+        if type(band) not in [str, int]:
+            raise TypeError("'band' parameter must be of type str or int.")
+        
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
@@ -268,6 +271,9 @@ class SpatialRaster:
         RuntimeError (from C++):
             if the band is larger than a gigabyte sgs will not load it into memory
         """
+        if type(band_index) is not int:
+            raise TypeError("band_index' parameter must be of type int.")
+
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
@@ -290,6 +296,9 @@ class SpatialRaster:
         RuntimeError (from C++):
             if the band is larger than a gigabyte sgs will not load it into memory
         """
+        if type(band) not in [int, str]:
+            raise TypeError("'band' parameter must be of type int or str.")
+
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
@@ -359,14 +368,14 @@ class SpatialRaster:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
 
         if type(ds) is not rasterio.io.DatasetReader and type(ds) is not rasterio.io.DatasetWriter:
-            raise RuntimeError("the ds parameter passed to from_raster() must be of type rasterio.io.DatasetReader or rasterio.io.DatasetWriter.")
+            raise TypeError("the ds parameter passed to from_raster() must be of type rasterio.io.DatasetReader or rasterio.io.DatasetWriter.")
 
         if ds.driver == "MEM" and arr is None:
             arr = ds.read()
 
         if arr is not None:
             if type(arr) is not np.ndarray:
-                raise RuntimeError("if the array parameter is passed, it must be of type np.ndarray")
+                raise TypeError("the 'arr' parameter, if passed, must be of type np.ndarray")
     
             shape = arr.shape
             if (len(shape)) == 2:
@@ -418,6 +427,9 @@ class SpatialRaster:
         rast = sgs.SpatialRaster('mraster.tif')
         ds, arr = sgs.to_rasterio(with_arr=True)
         """
+        if type(with_arr) is not bool:
+            raise TypeError("'with_arr' parameter must be of type bool.")
+
         if not RASTERIO:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
 
@@ -496,7 +508,7 @@ class SpatialRaster:
             raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
 
         if type(ds) is not gdal.Dataset:
-            raise RuntimeError("the ds parameter passed to from_gdal() must be of type gdal.Dataset")
+            raise TypeError("the ds parameter passed to from_gdal() must be of type gdal.Dataset")
     
         if ds.GetDriver().ShortName == "MEM" and arr is None:
             bands = []
@@ -506,7 +518,7 @@ class SpatialRaster:
 
         if arr is not None:
             if type(arr) is not np.ndarray:
-                raise RuntimeError("if the array parameter is passed, it must be of type np.ndarray")
+                raise TypeError("'arr' parameter, if passed, must be of type np.ndarray")
     
             shape = arr.shape
             if (len(shape)) == 2:
@@ -596,9 +608,10 @@ class SpatialRaster:
             #
             # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
             for i in range(1, arr.shape[0] + 1):
-                ds.AddBand(gdal_array.NumericTypeCodeToGDALTypeCode(arr.dtype))
+                band_arr = arr[i - 1]
+                ds.AddBand(gdal_array.NumericTypeCodeToGDALTypeCode(band_arr.dtype))
                 band = ds.GetRasterBand(i)
-                band.WriteArray(arr[i - 1])
+                band.WriteArray(band_arr)
                 band.SetNoDataValue(nan_vals[i - 1])
                 band.SetDescription(band_names[i - 1])
         else:

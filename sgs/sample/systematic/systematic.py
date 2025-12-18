@@ -22,7 +22,7 @@ from _sgs import systematic_cpp
 
 def systematic(
     rast: SpatialRaster,
-    cellsize: float,
+    cellsize: int | float,
     shape: str = "square",
     location: str = "centers",
     existing: Optional[SpatialVector] = None,
@@ -83,6 +83,42 @@ def systematic(
     filename : str
         the filename to write to or "" if not to write
     """
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(cellsize) not in [int, float]:
+        raise TypeError("'cellsize' parameter must be of type int or float.")
+
+    if type(shape) is not str:
+        raise TypeError("'shape' paramter must be of type str.")
+
+    if type(location) is not str:
+        raise TypeError("'location' parameter must be of type str.")
+
+    if existing is not None and type(existing) is not SpatialVector:
+        raise TypeError("'existing' parameter, if given, must be of type sgs.SpatialVector.")
+
+    if access is not None and type(access) is not SpatialVector:
+        raise TypeError("'access' parameter, if given, must be of type sgs.SpatialVector.")
+
+    if layer_name is not None and type(layer_name) is not str:
+        raise TypeError("'layer_name' parameter, if given, must be of type str.")
+
+    if buff_inner is not None and type(buff_inner) not in [int, float]:
+        raise TypeError("'buff_inner' parameter, if given, must be of type int or float.")
+
+    if buff_outer is not None and type(buff_outer) not in [int, float]:
+        raise TypeError("'buff_outer' parameter, if given, must be of type int or float.")
+
+    if type(force) is not bool:
+        raise TypeError("'force' parameter must be of type bool.")
+
+    if type(plot) is not bool:
+        raise TypeError("'plot' parameter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
     if rast.closed:
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 

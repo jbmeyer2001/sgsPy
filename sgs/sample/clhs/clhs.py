@@ -34,6 +34,33 @@ def clhs(
     """
 
     """
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(num_samples) is not int:
+        raise TypeError("'num_samples' parameter must be of type int.")
+
+    if type(iterations) is not int:
+        raise TypeError("'iterations' parameter must be of type int.")
+
+    if access is not None and type(access) is not SpatialVector:
+        raise TypeError("'access' parameter, if given, must be of type sgs.SpatialVector.")
+
+    if layer_name is not None and type(layer_name) is not str:
+        raise TypeError("'layer_name' parameter, if given, must be of type str.")
+
+    if buff_inner is not None and type(buff_inner) not in [int, float]:
+        raise TypeError("'buff_inner' parameter, if given, must be of type int or float.")
+
+    if buff_outer is not None and type(buff_outer) not in [int, float]:
+        raise TypeError("'buff_outer' parameter, if given, must be of type int or float.")
+
+    if type(plot) is not bool:
+        raise TypeError("'plot' parameter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 

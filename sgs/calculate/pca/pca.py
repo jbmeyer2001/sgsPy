@@ -55,6 +55,22 @@ def pca(
     --------------------
     a SpatialRaster object containing principal component output bands.
     """
+    if type(rast) is not SpatialRaster:
+        print(type(rast))
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(num_comp) is not int:
+        raise TypeError("'num_comp' parameter must be of type int.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
+    if type(display_info) is not bool:
+        raise TypeError("'display_info' parameter must be of type bool.")
+
+    if driver_options is not None and type(driver_options) is not dict: 
+        raise TypeError("'driver_options' parameter, if given, must be of type dict.")
+
     if rast.closed:
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
@@ -72,7 +88,7 @@ def pca(
     if driver_options:
         for (key, val) in driver_options.items():
             if type(key) is not str:
-                raise ValueError("the key for all key/value pairs in the driver_options dict must be a string.")
+                raise TypeError("the key for all key/value pairs in the driver_options dict must be a string.")
             driver_options_str[key] = str(val)
 
    #determine whether the raster should be categorized as 'large' and thus be processed in blocks
