@@ -15,6 +15,7 @@
 
 #include "oneapi/dal.hpp"
 
+namespace sgs {
 namespace pca {
 
 typedef oneapi::dal::homogen_table				DALHomogenTable;
@@ -72,7 +73,7 @@ struct PCAResult {
 template <typename T>
 PCAResult<T>
 calculatePCA(
-	std::vector<RasterBandMetaData>& bands,
+	std::vector<helper::RasterBandMetaData>& bands,
 	GDALDataType type,
 	size_t size,
 	int width,
@@ -82,7 +83,7 @@ calculatePCA(
 	int bandCount = static_cast<int>(bands.size());
 	T *p_data = reinterpret_cast<T *>(VSIMalloc3(width * height, bandCount, size));
 
-	std::vector<Variance> bandVariances(bandCount);
+	std::vector<helper::Variance> bandVariances(bandCount);
 	std::vector<T> noDataVals(bandCount);
 	for (size_t i = 0; i < bands.size(); i++) {
 		noDataVals[i] = static_cast<T>(bands[i].nan);
@@ -208,7 +209,7 @@ calculatePCA(
 template <typename T>
 PCAResult<T>
 calculatePCA(
-	std::vector<RasterBandMetaData>& bands,
+	std::vector<helper::RasterBandMetaData>& bands,
 	GDALDataType type,
 	size_t size,
 	int xBlockSize,
@@ -220,7 +221,7 @@ calculatePCA(
 	int bandCount = static_cast<int>(bands.size());
 	T *p_data = reinterpret_cast<T *>(VSIMalloc3(xBlockSize * yBlockSize, bandCount, size));
 
-	std::vector<Variance> bandVariances(bandCount);
+	std::vector<helper::Variance> bandVariances(bandCount);
 	std::vector<T> noDataVals(bandCount);
 	for (size_t i = 0; i < bands.size(); i++) {
 		noDataVals[i] = static_cast<T>(bands[i].nan);
@@ -353,8 +354,8 @@ calculatePCA(
 template <typename T>
 void 
 writePCA(
-	std::vector<RasterBandMetaData>& bands,
-	std::vector<RasterBandMetaData>& PCABands,
+	std::vector<helper::RasterBandMetaData>& bands,
+	std::vector<helper::RasterBandMetaData>& PCABands,
 	PCAResult<T>& result,
 	GDALDataType type,
 	size_t size,
@@ -488,8 +489,8 @@ writePCA(
 template <typename T>
 void 
 writePCA(
-	std::vector<RasterBandMetaData>& bands,
-	std::vector<RasterBandMetaData>& PCABands,
+	std::vector<helper::RasterBandMetaData>& bands,
+	std::vector<helper::RasterBandMetaData>& PCABands,
 	PCAResult<T>& result,
 	GDALDataType type,
 	size_t size,
@@ -626,9 +627,9 @@ writePCA(
  *		std::vector<double>
  * 	    > 
  */
-std::tuple<GDALRasterWrapper *, std::vector<std::vector<double>>, std::vector<double>>
+std::tuple<raster::GDALRasterWrapper *, std::vector<std::vector<double>>, std::vector<double>>
 pca(
-	GDALRasterWrapper *p_raster,
+	raster::GDALRasterWrapper *p_raster,
 	int nComp,
 	bool largeRaster,
 	std::string tempFolder,
@@ -647,9 +648,9 @@ pca(
 	bool isVRTDataset = largeRaster && filename == "";
 	GDALDataset *p_dataset = nullptr;
 	
-	std::vector<RasterBandMetaData> bands(bandCount);
-	std::vector<RasterBandMetaData> pcaBands(nComp);
-	std::vector<VRTBandDatasetInfo> VRTBandInfo;
+	std::vector<helper::RasterBandMetaData> bands(bandCount);
+	std::vector<helper::RasterBandMetaData> pcaBands(nComp);
+	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo;
 
 	int xBlockSize, yBlockSize;
 	p_raster->getRasterBand(0)->GetBlockSize(&xBlockSize, &yBlockSize);
@@ -667,25 +668,25 @@ pca(
 	}
 
 	if (isMEMDataset) {
-		p_dataset = createVirtualDataset("MEM", width, height, geotransform, projection);
+		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
 	
 		for (int i = 0; i < nComp; i++) {
 			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			pcaBands[i].nan = std::nan("");
-			addBandToMEMDataset(p_dataset, pcaBands[i]);
+			helper::addBandToMEMDataset(p_dataset, pcaBands[i]);
 		}
 	}
 	else if (isVRTDataset){
-		p_dataset = createVirtualDataset("VRT", width, height, geotransform, projection);
+		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
 	
 		for (int i = 0; i < nComp; i++) {
 			pcaBands[i].type = type == GDT_Float64 ? GDT_Float64 : GDT_Float32;
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			pcaBands[i].nan = std::nan("");
-			createVRTBandDataset(p_dataset, pcaBands[i], tempFolder, pcaBands[i].name, VRTBandInfo, driverOptions);
+			helper::createVRTBandDataset(p_dataset, pcaBands[i], tempFolder, pcaBands[i].name, VRTBandInfo, driverOptions);
 		}
 	}
 	else {
@@ -715,7 +716,7 @@ pca(
 			}
 		}
 
-		p_dataset = createDataset(
+		p_dataset = helper::createDataset(
 			filename,
 			driver,
 			width,
@@ -788,7 +789,7 @@ pca(
 	if (isVRTDataset) {
 		for (int b = 0; b < bandCount; b++) {
 			GDALClose(VRTBandInfo[b].p_dataset);
-			addBandToVRTDataset(p_dataset, pcaBands[b], VRTBandInfo[b]);
+			helper::addBandToVRTDataset(p_dataset, pcaBands[b], VRTBandInfo[b]);
 		}
 	}
 
@@ -799,11 +800,12 @@ pca(
 		}
 	}
 
-	GDALRasterWrapper *p_outrast = !isMEMDataset ?
-		new GDALRasterWrapper(p_dataset) :
-		new GDALRasterWrapper(p_dataset, buffers);
+	raster::GDALRasterWrapper *p_outrast = !isMEMDataset ?
+		new raster::GDALRasterWrapper(p_dataset) :
+		new raster::GDALRasterWrapper(p_dataset, buffers);
 
 	return {p_outrast, eigenvectors, eigenvalues};
 }
 
 } //namespace pca
+} //namespace sgs

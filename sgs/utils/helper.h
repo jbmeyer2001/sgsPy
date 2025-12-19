@@ -21,6 +21,9 @@
 #define MAXINT8		127
 #define MAXINT16	32767
 
+namespace sgs {
+namespace helper {
+
 /**
  * This struct represents an index in a raster.
  */
@@ -944,3 +947,5 @@ public:
 	}
 };
 
+} //namespace helper
+} //namespace sgs

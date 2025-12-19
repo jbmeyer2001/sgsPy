@@ -13,14 +13,15 @@
 
 #include "gdal_utils.h"
 
+namespace sgs {
 namespace poly {
 
 /**
  *
  */
-GDALRasterWrapper *poly(
-	GDALVectorWrapper *p_vector,
-	GDALRasterWrapper *p_raster,
+raster::GDALRasterWrapper *poly(
+	vector::GDALVectorWrapper *p_vector,
+	raster::GDALRasterWrapper *p_raster,
 	size_t numStrata,
 	std::string layerName,
 	std::string query,
@@ -59,21 +60,21 @@ GDALRasterWrapper *poly(
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
 	
-	RasterBandMetaData band;
-	setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
+	helper::RasterBandMetaData band;
+	helper::setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
 	p_rasterDS->GetRasterBand(1)->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 	band.name = "strata";
-	std::vector<VRTBandDatasetInfo> VRTBandInfo;
+	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo;
 
 	//step 2: create dataset
 	GDALDataset *p_dataset = nullptr;
 	if (isMEMDataset) {
-		p_dataset = createVirtualDataset("MEM", width, height, geotransform, projection);
-	       	addBandToMEMDataset(p_dataset, band);
+		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
+		helper::addBandToMEMDataset(p_dataset, band);
 	}
 	else if (isVRTDataset) {
-		p_dataset = createVirtualDataset("VRT", width, height, geotransform, projection);
-		createVRTBandDataset(p_dataset, band, tempFolder, layerName + ".tif", VRTBandInfo, driverOptions); 
+		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
+		helper::createVRTBandDataset(p_dataset, band, tempFolder, layerName + ".tif", VRTBandInfo, driverOptions); 
 	}
 	else {
 		std::string driver;
@@ -87,7 +88,7 @@ GDALRasterWrapper *poly(
 			throw std::runtime_error("sgs only supports .tif files right now");
 		}
 
-		p_dataset = createDataset(filename, driver, width, height, geotransform, projection, &band, 1, false, driverOptions);
+		p_dataset = helper::createDataset(filename, driver, width, height, geotransform, projection, &band, 1, false, driverOptions);
 	}
 
 	band.p_band->Fill(band.nan);
@@ -122,14 +123,15 @@ GDALRasterWrapper *poly(
 
 	if (isVRTDataset) {
 		GDALClose(VRTBandInfo[0].p_dataset);
-		addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	
+		helper::addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	
 	}
 
 	//step 7: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python
 	return isMEMDataset ?
-		new GDALRasterWrapper(p_dataset, {band.p_buffer}) :
-		new GDALRasterWrapper(p_dataset);
+		new raster::GDALRasterWrapper(p_dataset, {band.p_buffer}) :
+		new raster::GDALRasterWrapper(p_dataset);
 }
 
 } //namespace poly
+} //namespace sgs

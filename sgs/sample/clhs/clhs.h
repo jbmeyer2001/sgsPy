@@ -23,6 +23,7 @@
 
 typedef oneapi::dal::homogen_table				DALHomogenTable;
 
+namespace sgs {
 namespace clhs {
 
 /**
@@ -333,10 +334,10 @@ class CLHSDataManager {
 template <typename T>
 inline void
 readRaster(
-	std::vector<RasterBandMetaData>& bands,
+	std::vector<helper::RasterBandMetaData>& bands,
 	CLHSDataManager<T>& clhs,
-	Access& access,
-	RandValController& rand,
+	access::Access& access,
+	helper::RandValController& rand,
 	GDALDataType type,
 	std::vector<std::vector<T>>& quantiles,
 	size_t size,
@@ -828,7 +829,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		double xCoord = GT[0] + x[i] * GT[1] + y[i] * GT[2];
 		double yCoord = GT[3] + x[i] * GT[4] + y[i] * GT[5];
 		OGRPoint point = OGRPoint(xCoord, yCoord);
-		addPoint(&point, p_layer);
+		helper::addPoint(&point, p_layer);
 
 		if (plot) {
 			xCoords.push_back(xCoord);
@@ -865,12 +866,12 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
  * @param std::string filename
  * @returns std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
  */
-std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
+std::tuple<std::vector<std::vector<double>>, vector::GDALVectorWrapper *>
 clhs(
-	GDALRasterWrapper *p_raster, 
+	raster::GDALRasterWrapper *p_raster, 
 	int nSamp,
 	int iterations,
-	GDALVectorWrapper *p_access,
+	vector::GDALVectorWrapper *p_access,
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
@@ -887,7 +888,7 @@ clhs(
 	
 	std::vector<double> xCoords, yCoords;
 
-	std::vector<RasterBandMetaData> bands(p_raster->getBandCount());
+	std::vector<helper::RasterBandMetaData> bands(p_raster->getBandCount());
 	for (int i = 0; i < nFeat; i++) {
 		bands[i].p_band = p_raster->getRasterBand(i);
 		bands[i].type = p_raster->getRasterBandType(i);
@@ -906,13 +907,13 @@ clhs(
 		throw std::runtime_error("unable to create output dataset with driver.");
 	}
 
-	GDALVectorWrapper *p_wrapper = new GDALVectorWrapper(p_samples, std::string(p_raster->getDataset()->GetProjectionRef()));
+	vector::GDALVectorWrapper *p_wrapper = new vector::GDALVectorWrapper(p_samples, std::string(p_raster->getDataset()->GetProjectionRef()));
 	OGRLayer *p_layer = p_samples->CreateLayer("samples", p_wrapper->getSRS(), wkbPoint, nullptr);
 	if (!p_layer) {
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
 
-	Access access(
+	access::Access access(
 		p_access,
 		p_raster,
 		layerName,
@@ -927,7 +928,7 @@ clhs(
 	//fast random number generator using xoshiro256+
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng;
-	uint64_t multiplier = getProbabilityMultiplier(
+	uint64_t multiplier = helper::getProbabilityMultiplier(
 		width, 
 		height, 
 		p_raster->getPixelWidth(), 
@@ -937,11 +938,11 @@ clhs(
 		false, 
 		access.area
 	);
-	RandValController rand(bands[0].xBlockSize, bands[0].yBlockSize, multiplier, &rng);
+	helper::RandValController rand(bands[0].xBlockSize, bands[0].yBlockSize, multiplier, &rng);
 
 	//get data type for all bands
 	GDALDataType type = GDT_Float32;
-	for (const RasterBandMetaData& band : bands) {
+	for (const helper::RasterBandMetaData& band : bands) {
 		if (band.type == GDT_Float64) {
 			type = GDT_Float64;
 			break;
@@ -986,3 +987,4 @@ clhs(
 }
 
 } //namespace clhs
+} //namespace sgs

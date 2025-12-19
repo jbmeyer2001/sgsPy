@@ -21,6 +21,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+namespace sgs {
+namespace vector {
+
 namespace py = pybind11;
 using namespace pybind11::literals;
 
@@ -433,3 +436,6 @@ class GDALVectorWrapper {
 		return &this->srs;
 	}
 };
+
+} //namespace vector
+} //namespace sgs

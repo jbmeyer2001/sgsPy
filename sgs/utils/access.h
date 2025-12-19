@@ -14,6 +14,9 @@
 #include "vector.h"
 #include "gdal_utils.h"
 
+namespace sgs {
+namespace access {
+
 /**
  * This Struct controls the creation and storage of access networks
  * for use in sampling functions.
@@ -22,7 +25,7 @@ struct Access {
 	bool used = false;
 	double area = -1;
 	GDALDataset *p_dataset = nullptr;
-	RasterBandMetaData band;
+	helper::RasterBandMetaData band;
 
 	/**
 	* This constructor is responsible for setting the used, area, p_dataset, and band
@@ -60,15 +63,15 @@ struct Access {
 	* int xBlockSize
 	* int yBlockSize
 	*/
-	Access(GDALVectorWrapper *p_vector,
-		GDALRasterWrapper *p_raster,
-		std::string layerName, 
-		double buffInner, 
-		double buffOuter,
-		bool largeRaster,
-		std::string tempFolder,
-		int xBlockSize,
-		int yBlockSize) 
+	Access(vector::GDALVectorWrapper *p_vector,
+	       raster::GDALRasterWrapper *p_raster,
+	       std::string layerName, 
+	       double buffInner, 
+	       double buffOuter,
+	       bool largeRaster,
+	       std::string tempFolder,
+	       int xBlockSize,
+	       int yBlockSize) 
 	{
 		if (!p_vector) {
 			return;
@@ -265,4 +268,5 @@ struct Access {
 	}
 };
 
-
+} //namespace access
+} //namespace sgs

@@ -21,6 +21,9 @@
 //used as cutoff for max band allowed in memory
 #define GIGABYTE 1073741824
 
+namespace sgs {
+namespace raster {
+
 namespace py = pybind11;
 using namespace pybind11::literals;
 
@@ -300,16 +303,16 @@ class GDALRasterWrapper {
 		}
 
 		GDALAllRegister();
-		GDALDataset *p_dataset = createVirtualDataset("MEM", width, height, geotransform.data(), projection);
+		GDALDataset *p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform.data(), projection);
 		std::vector<void *> bands(bandCount);	
 		for (size_t i = 0; i < bandCount; i++) {
-			RasterBandMetaData band;
+			helper::RasterBandMetaData band;
 			band.p_buffer = (void *)((size_t)info.ptr + (i * bandSize));
 			band.type = type;
 		       	band.size = size;
 			band.nan = nanVals[i];
 			band.name = names[i];
-			addBandToMEMDataset(p_dataset, band);	
+			helper::addBandToMEMDataset(p_dataset, band);	
 			bands[i] = band.p_buffer;
 
 		}
@@ -811,3 +814,6 @@ class GDALRasterWrapper {
 		}
 	}
 };
+
+} //namespace raster
+} //namespace sgs

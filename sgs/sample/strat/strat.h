@@ -18,6 +18,7 @@
 
 #include <xoshiro.h>
 
+namespace sgs {
 namespace strat {
 
 /**
@@ -99,8 +100,8 @@ calculateAllocation(
  * strata, as well as whether the optim method is used.
  */
 struct OptimAllocationDataManager {
-	RasterBandMetaData band;
-	std::vector<Variance> variances;
+	helper::RasterBandMetaData band;
+	std::vector<helper::Variance> variances;
 	bool used = false;
 
 	/**
@@ -112,7 +113,7 @@ struct OptimAllocationDataManager {
 	 * @param int bandNum
 	 * @param std::string allocation
 	 */
-	OptimAllocationDataManager(GDALRasterWrapper *p_raster, int bandNum, std::string allocation) {
+	OptimAllocationDataManager(raster::GDALRasterWrapper *p_raster, int bandNum, std::string allocation) {
 		if (!p_raster || allocation != "optim") {
 			return;
 		}
@@ -164,7 +165,7 @@ struct OptimAllocationDataManager {
 	 */
 	inline void
 	readNewBlock(int xBlockSize, int yBlockSize, int xBlock, int yBlock, int xValid, int yValid) {
-		rasterBandIO(this->band, this->band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
+		helper::rasterBandIO(this->band, this->band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 	}
 
 	/**
@@ -177,7 +178,7 @@ struct OptimAllocationDataManager {
 	 */
 	inline void
 	update(int index, int strata) {
-		double val = getPixelValueDependingOnType<double>(this->band.type, this->band.p_buffer, index);
+		double val = helper::getPixelValueDependingOnType<double>(this->band.type, this->band.p_buffer, index);
 		variances[strata].update(val);	
 	}
 
@@ -235,10 +236,10 @@ private:
 	std::vector<int64_t> strataCounts;
 
 	std::vector<int64_t> indexCountPerStrata;
-	std::vector<std::vector<Index>> indexesPerStrata;
+	std::vector<std::vector<helper::Index>> indexesPerStrata;
 	
 	std::vector<int64_t> firstXIndexCountPerStrata;
-	std::vector<std::vector<Index>> firstXIndexesPerStrata;
+	std::vector<std::vector<helper::Index>> firstXIndexesPerStrata;
 
 	int64_t numStrata;
 	int64_t x;
@@ -285,7 +286,7 @@ public:
 	 * @param Index& index
 	 */
 	inline void
-	updateIndexesVector(int strata, Index& index) {
+	updateIndexesVector(int strata, helper::Index& index) {
 		this->indexesPerStrata[strata].push_back(index);
 		this->indexCountPerStrata[strata]++;
 	}
@@ -298,14 +299,14 @@ public:
 	 * @param Index& index
 	 */
 	inline void
-	updateFirstXIndexesVector(int strata, Index& index) {
+	updateFirstXIndexesVector(int strata, helper::Index& index) {
 		int64_t i = firstXIndexCountPerStrata[strata];
 		if (i < this->x) {
 			firstXIndexesPerStrata[strata][i] = index;
 			firstXIndexCountPerStrata[strata]++;	
 		}
 		else if (i == this->x) {
-			std::vector<Index>().swap(firstXIndexesPerStrata[strata]);
+			std::vector<helper::Index>().swap(firstXIndexesPerStrata[strata]);
 			firstXIndexCountPerStrata[strata]++;
 		}
 	}
@@ -328,9 +329,9 @@ public:
 	 *
 	 * @returns std::vector<std::vector<Index> *>
 	 */
-	inline std::vector<std::vector<Index> *>
+	inline std::vector<std::vector<helper::Index> *>
 	getStrataIndexVectors(std::vector<int64_t> existing, std::vector<int64_t> strataSampleCounts, xso::xoshiro_4x64_plus& rng) {
-		std::vector<std::vector<Index> *> retval(numStrata);
+		std::vector<std::vector<helper::Index> *> retval(numStrata);
 
 		for (int64_t i = 0; i < numStrata; i++) {
 			int64_t existingSamples = existing[i];
@@ -413,9 +414,9 @@ std::vector<int64_t>
 processBlocksStratRandom(
 	int numSamples,
 	int numStrata,
-	RasterBandMetaData& band,
-	Access& access,
-	Existing& existing,
+	helper::RasterBandMetaData& band,
+	access::Access& access,
+	existing::Existing& existing,
 	IndexStorageVectors& indices,
 	std::vector<std::vector<OGRPoint>>& existingSamples,
 	uint64_t multiplier,
@@ -441,7 +442,7 @@ processBlocksStratRandom(
 		p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
 	}
 
-	RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
+	helper::RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
 
 	if (optim.used) {
 		optim.init(numStrata, xBlockSize, yBlockSize);
@@ -453,11 +454,11 @@ processBlocksStratRandom(
 	
 			//read block
 			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-			rasterBandIO(band, band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
+			helper::rasterBandIO(band, band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 
 			//read access block
 			if (access.used) {
-				rasterBandIO(access.band, access.band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
+				helper::rasterBandIO(access.band, access.band.p_buffer, xBlockSize, yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 			}
 
 			//read mraster block for optim
@@ -473,7 +474,7 @@ processBlocksStratRandom(
 				int blockIndex = y * xBlockSize;
 				for (int x = 0; x < xValid; x++) {
 					T val = p_buffer[blockIndex];
-					Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
+					helper::Index index = {x + xBlock * xBlockSize, y + yBlock * yBlockSize};
 
 					bool isNan = val == nanInt;
 					bool accessible = !access.used || p_access[blockIndex] != 1;
@@ -717,9 +718,9 @@ std::vector<int64_t>
 processBlocksStratQueinnec(
 	int numSamples,
 	int numStrata,
-	RasterBandMetaData &band,
-	Access& access,
-	Existing& existing,
+	helper::RasterBandMetaData &band,
+	access::Access& access,
+	existing::Existing& existing,
 	IndexStorageVectors& indices,
 	IndexStorageVectors& queinnecIndices,
 	FocalWindow& fw,
@@ -754,8 +755,8 @@ processBlocksStratQueinnec(
 		p_access = reinterpret_cast<int8_t *>(access.band.p_buffer);
 	}
 
-	RandValController rand(xBlockSize, yBlockSize, multiplier, &rng);
-	RandValController queinnecRand(xBlockSize, yBlockSize, queinnecMultiplier, &rng);
+	helper::RandValController rand(xBlockSize, yBlockSize, multiplier, &rng);
+	helper::RandValController queinnecRand(xBlockSize, yBlockSize, queinnecMultiplier, &rng);
 
 	if (optim.used) {
 		optim.init(numStrata, xBlockSize, yBlockSize);
@@ -774,24 +775,35 @@ processBlocksStratQueinnec(
 
 		//read block
 		if (yBlock == 0) { 
-			band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, band.p_buffer, xValid, yValid, band.type, 0, 0);
+			CPLErr err = band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, band.p_buffer, xValid, yValid, band.type, 0, 0);
+			if (err) {
+				throw std::runtime_error("error reading block from raster.");
+			}
 		}
 		else {
 			int stratYOff = yOff - fw.vpad * 2;
 			int stratYValid = yValid + fw.vpad * 2;
-			band.p_band->RasterIO(GF_Read, xOff, stratYOff, xValid, stratYValid, band.p_buffer, xValid, stratYValid, band.type, 0, 0);
+			CPLErr err = band.p_band->RasterIO(GF_Read, xOff, stratYOff, xValid, stratYValid, band.p_buffer, xValid, stratYValid, band.type, 0, 0);
+			if (err) {
+				throw std::runtime_error("error reading block from raster.");
+			}
 		}
 
 		//read access block
 		if (access.used) {
-			access.band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, access.band.p_buffer, xValid, yValid, GDT_Int8, 0, 0);
+			CPLErr err = access.band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, access.band.p_buffer, xValid, yValid, GDT_Int8, 0, 0);
+			if (err) {
+				throw std::runtime_error("error reading block from raster.");
+			}
 		}
 
 		//read mraster block for optim
 		if (optim.used) {
-			optim.band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, optim.band.p_buffer, xValid, yValid, optim.band.type, 0, 0);
+			CPLErr err = optim.band.p_band->RasterIO(GF_Read, xOff, yOff, xValid, yValid, optim.band.p_buffer, xValid, yValid, optim.band.type, 0, 0);
+			if (err) {
+				throw std::runtime_error("error reading block from raster.");
+			}
 		}
-
 
 		//calculate rand vals
 		rand.calculateRandValues();
@@ -810,7 +822,7 @@ processBlocksStratQueinnec(
 			//because they are too close to the edges of the raster	
 			for (int x = 0; x < fw.hpad; x++) {
 				T val = p_buffer[newBlockStart + y * width + x];
-				Index index = {x, y + yBlock * yBlockSize};
+				helper::Index index = {x, y + yBlock * yBlockSize};
 
 				bool isNan = val == nanInt;
 				bool accessible = !access.used || p_access[y * width + x] != 1;
@@ -846,7 +858,7 @@ processBlocksStratQueinnec(
 	
 			for (int x = fw.hpad; x < width - fw.hpad; x++) {
 				T val = p_buffer[newBlockStart + y * width + x];
-				Index index = {x, y + yBlock * yBlockSize};
+				helper::Index index = {x, y + yBlock * yBlockSize};
 
 				bool isNan = val == nanInt;
 				bool accessible = !access.used || p_access[y * width + x] != 1;
@@ -907,7 +919,7 @@ processBlocksStratQueinnec(
 				}
 
 				//add index to queinnec indices if surrounding focal window is all the same
-				Index fwIndex = {x, index.y - fw.vpad};
+				helper::Index fwIndex = {x, index.y - fw.vpad};
 				if (fw.check(fwIndex.x, fwIndex.y)) {
 					bool add = false;
 					int start = newBlockStart + y * width + x - 2 * width * fw.vpad;
@@ -947,7 +959,7 @@ processBlocksStratQueinnec(
 			//because they are too close to the edges of the raster	
 			for (int x = width - fw.hpad; x < width; x++) {
 				T val = p_buffer[newBlockStart + y * width + x];
-				Index index = {x, y + yBlock * yBlockSize};
+				helper::Index index = {x, y + yBlock * yBlockSize};
 
 				bool isNan = val == nanInt;
 				bool accessible = !access.used || p_access[y * width + x] != 1;
@@ -1078,23 +1090,23 @@ processBlocksStratQueinnec(
  * @param std::string filename
  * @param std::string tempFolder
  */
-std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
+std::tuple<std::vector<std::vector<double>>, vector::GDALVectorWrapper *, size_t>
 strat(
-	GDALRasterWrapper *p_raster,
+	raster::GDALRasterWrapper *p_raster,
 	int bandNum,
 	int64_t numSamples,
 	int64_t numStrata,
 	std::string allocation,
 	std::vector<double> weights,
-	GDALRasterWrapper *p_mraster,
+	raster::GDALRasterWrapper *p_mraster,
 	int mrastBandNum,
 	std::string method,
 	int wrow,
 	int wcol,
 	double mindist,
-	GDALVectorWrapper *p_existing,
+	vector::GDALVectorWrapper *p_existing,
 	bool force,
-	GDALVectorWrapper *p_access,
+	vector::GDALVectorWrapper *p_access,
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
@@ -1114,7 +1126,7 @@ strat(
 	std::mutex accessMutex;
 
 	//step 1: get raster band
-	RasterBandMetaData band;
+	helper::RasterBandMetaData band;
 
 	GDALRasterBand *p_band = p_raster->getRasterBand(bandNum);
 	band.p_band = p_band;
@@ -1125,7 +1137,7 @@ strat(
 	band.p_mutex = &bandMutex;
 	p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 
-	printTypeWarningsForInt32Conversion(band.type);
+	helper::printTypeWarningsForInt32Conversion(band.type);
 	
 	//create output dataset before doing anything which will take a long time in case of failure.
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
@@ -1137,13 +1149,13 @@ strat(
 		throw std::runtime_error("unable to create output dataset with driver.");
 	}
 	
-	GDALVectorWrapper *p_wrapper = new GDALVectorWrapper(p_samples, std::string(p_raster->getDataset()->GetProjectionRef()));
+	vector::GDALVectorWrapper *p_wrapper = new vector::GDALVectorWrapper(p_samples, std::string(p_raster->getDataset()->GetProjectionRef()));
 	OGRLayer *p_layer = p_samples->CreateLayer("samples", p_wrapper->getSRS(), wkbPoint, nullptr);
 	if (!p_layer) {
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
 
-	Access access(
+	access::Access access(
 		p_access, 
 		p_raster, 
 		layerName, 
@@ -1157,7 +1169,7 @@ strat(
 
 	std::vector<double> xCoords, yCoords;
 	std::vector<std::vector<OGRPoint>> existingSamples(numStrata);	
-	Existing existing(
+	existing::Existing existing(
 		p_existing,
 		GT,
 		width,
@@ -1170,7 +1182,7 @@ strat(
 	//fast random number generator using xoshiro256+
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng; 
-	uint64_t multiplier = getProbabilityMultiplier(
+	uint64_t multiplier = helper::getProbabilityMultiplier(
 		width, 
 		height, 
 		p_raster->getPixelWidth(),
@@ -1180,7 +1192,7 @@ strat(
 		useMindist, 
 		access.area
 	);
-	uint64_t queinnecMultiplier = getProbabilityMultiplier(
+	uint64_t queinnecMultiplier = helper::getProbabilityMultiplier(
 		width, 
 		height, 
 		p_raster->getPixelWidth(), 
@@ -1245,7 +1257,7 @@ strat(
 		}
 	}
 
-	std::vector<std::vector<Index> *> strataIndexVectors;
+	std::vector<std::vector<helper::Index> *> strataIndexVectors;
 	std::vector<size_t> nextIndexes(numStrata, 0);
 
 	std::vector<bool> completedStrata(numStrata, false);
@@ -1263,7 +1275,7 @@ strat(
 			for (size_t i = 0; i < existingSamples.size(); i++) {
 				std::vector<OGRPoint> samples = existingSamples[i];
 			       	for (const OGRPoint& point : samples) {
-					addPoint(&point, p_layer);
+					helper::addPoint(&point, p_layer);
 
 					addedSamples++;
 					samplesAddedPerStrata[i]++;
@@ -1307,7 +1319,7 @@ strat(
 						}
 					}
 
-					addPoint(&point, p_layer);
+					helper::addPoint(&point, p_layer);
 					
 					addedSamples++;
 					samplesAddedPerStrata[i]++;
@@ -1353,7 +1365,7 @@ strat(
 				continue;
 			}
 
-			std::vector<Index> *strataIndexes = strataIndexVectors[curStrata];
+			std::vector<helper::Index> *strataIndexes = strataIndexVectors[curStrata];
 			size_t nextIndex = nextIndexes[curStrata];	
 			if (strataIndexes->size() == nextIndex) {
 				numCompletedStrataQueinnec++;
@@ -1362,7 +1374,7 @@ strat(
 				continue;
 			}
 
-			Index index = strataIndexes->at(nextIndex);
+			helper::Index index = strataIndexes->at(nextIndex);
 			nextIndexes[curStrata]++;
 
 			double x = GT[0] + index.x * GT[1] + index.y * GT[2];
@@ -1386,7 +1398,7 @@ strat(
 	
 			}
 
-			addPoint(&newPoint, p_layer);
+			helper::addPoint(&newPoint, p_layer);
 			addedSamples++;
 			samplesAddedPerStrata[curStrata]++;
 
@@ -1425,7 +1437,7 @@ strat(
 			continue;
 		}
 
-		std::vector<Index> *strataIndexes = strataIndexVectors[curStrata];
+		std::vector<helper::Index> *strataIndexes = strataIndexVectors[curStrata];
 		size_t nextIndex = nextIndexes[curStrata];
 		if (strataIndexes->size() == nextIndex) {
 			numCompletedStrata++;
@@ -1434,7 +1446,7 @@ strat(
 			continue;
 		}
 
-		Index index = strataIndexes->at(nextIndex);
+		helper::Index index = strataIndexes->at(nextIndex);
 		nextIndexes[curStrata]++;
 
 		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
@@ -1458,7 +1470,7 @@ strat(
 
 		}
 
-		addPoint(&newPoint, p_layer);
+		helper::addPoint(&newPoint, p_layer);
 		addedSamples++;
 		samplesAddedPerStrata[curStrata]++;
 
@@ -1471,9 +1483,6 @@ strat(
 	}
 	
 	//step 10: write vector if filename is not "".
-	//
-	//TODO rather than first making an in-memory dataset then writing to a file afterwards,
-	//just make the correct type of dataset from the get go
 	if (filename != "") {
 		try {
 			p_wrapper->write(filename);
@@ -1488,3 +1497,4 @@ strat(
 }
 
 } //namespace strat
+} //namespace sgs
