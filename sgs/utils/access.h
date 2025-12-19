@@ -105,22 +105,25 @@ struct Access {
 				case OGRwkbGeometryType::wkbLineString: {
 					OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
 					buffOuterPolygons->addGeometry(p_outer);
+					OGRGeometryFactory::destroyGeometry(p_outer);	
 	
 					if (buffInner != 0) {
 						OGRGeometry *p_inner = p_geometry->Buffer(buffInner);
 						buffInnerPolygons->addGeometry(p_inner);
+						OGRGeometryFactory::destroyGeometry(p_inner);
 					}
-	
 					break;
 				}
 				case OGRwkbGeometryType::wkbMultiLineString: {
 					for (const auto& p_lineString : *p_geometry->toMultiLineString()) {
 						OGRGeometry *p_outer = p_lineString->Buffer(buffOuter);
 						buffOuterPolygons->addGeometry(p_outer);
+						OGRGeometryFactory::destroyGeometry(p_outer);	
 	
 						if (buffInner != 0) {
 							OGRGeometry *p_inner = p_lineString->Buffer(buffInner);
 							buffInnerPolygons->addGeometry(p_inner);
+							OGRGeometryFactory::destroyGeometry(p_inner);
 						}
 					}
 	
@@ -135,16 +138,16 @@ struct Access {
 		//step 3: generate the polygon mask and free no longer used memory
 		if (buffInner == 0) {
 			p_polygonMask = buffOuterPolygons->UnionCascaded();
-			free(buffOuterPolygons);
+			delete buffOuterPolygons;
 		}
 		else {
 			OGRGeometry *buffOuterUnion = buffOuterPolygons->UnionCascaded();
 			OGRGeometry *buffInnerUnion = buffInnerPolygons->UnionCascaded();
 			p_polygonMask = buffOuterUnion->Difference(buffInnerUnion);
-			free(buffOuterPolygons);
-			free(buffInnerPolygons);
-			free(buffOuterUnion);
-			free(buffInnerUnion);	
+			delete buffOuterPolygons;
+			delete buffInnerPolygons;
+			OGRGeometryFactory::destroyGeometry(buffOuterUnion);
+			OGRGeometryFactory::destroyGeometry(buffInnerUnion);	
 		}
 
 		//update area to contain the total accessible are within the raster	
@@ -176,7 +179,7 @@ struct Access {
 		}
 
 		//invert polygon mask
-		p_polygonMask = extent.Difference(p_polygonMask);
+		OGRGeometry *p_invertedMask = extent.Difference(p_polygonMask);
 
 		//step 4: create new GDAL dataset to rasterize as access mask
 		GDALDataset *p_accessPolygonDataset = GetGDALDriverManager()->GetDriverByName("MEM")->Create(
@@ -191,7 +194,7 @@ struct Access {
 		OGRLayer *p_layer = p_accessPolygonDataset->CreateLayer(
 			"access", 
 			p_vector->getLayer(layerName.c_str())->GetSpatialRef(), 
-			p_polygonMask->getGeometryType(), 
+			p_invertedMask->getGeometryType(), 
 			nullptr
 		);
 		OGRFieldDefn field("index", OFTInteger);
@@ -200,7 +203,7 @@ struct Access {
 		//step 6: add the access polygon to the new layer
 		OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
 		p_feature->SetField("index", 0);
-		p_feature->SetGeometry(p_polygonMask);
+		p_feature->SetGeometry(p_invertedMask);
 		p_layer->CreateFeature(p_feature); //error handling here???
 		OGRFeature::DestroyFeature(p_feature);
 	
@@ -255,8 +258,11 @@ struct Access {
 
 		//step 11: free dynamically allocated data
 		GDALRasterizeOptionsFree(options);
-		free(p_accessPolygonDataset);
-	
+		GDALClose(GDALDataset::ToHandle(p_accessPolygonDataset));
+		OGRGeometryFactory::destroyGeometry(p_polygonMask);
+		OGRGeometryFactory::destroyGeometry(p_polygonWithinExtent);
+		OGRGeometryFactory::destroyGeometry(p_invertedMask);
+
 		this->used = true;
 	}
 
