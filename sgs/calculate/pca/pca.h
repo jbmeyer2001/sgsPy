@@ -60,6 +60,14 @@ struct PCAResult {
  *
  * A result containing the eigenvectors, eigenvalues, mean per band, and
  * standard deviation per band, is returned.
+ *
+ * @param std::vector<RasterBandMetaData>& bands,
+ * @param GDALDataType type
+ * @param size_t size
+ * @param int width
+ * @param int height
+ * @param int nComp
+ * @returns PCAResult<T>
  */
 template <typename T>
 PCAResult<T>
@@ -186,6 +194,16 @@ calculatePCA(
  * once all blocks have been iterated through, the final resulting mean per band,
  * standard deviation per band, eigenvectors, and eigenvalues are calculated 
  * and returned.
+ *
+ * @param std::vector<RasterBandMetaData>& bands
+ * @param GDALDataType type
+ * @param size_t size
+ * @param int xBlockSize
+ * @param int yBlockSize
+ * @param int xBlocks
+ * @param int yBlocks
+ * @param int nComp
+ * @returns PCAResult<T>
  */
 template <typename T>
 PCAResult<T>
@@ -323,6 +341,14 @@ calculatePCA(
  * a bunch of dot products. It's possible to do these dot products one at a time
  * for each output pixel and component. However, the linear kernel, which is
  * originally meant for fast machine learning use, does exactly what we need.
+ *
+ * @param std::vector<RasterBandMetaData>& bands
+ * @param std::vector<rasterBandMetaData>& PCABands
+ * @param PCAResult<T>& result,
+ * @param GDALDataType type,
+ * @param size_t size,
+ * @param int height
+ * @param int width
  */
 template <typename T>
 void 
@@ -386,7 +412,7 @@ writePCA(
 	 * with the corresponding principal component eigenvector.
 	 * 
 	 * oneDAL has a fast way to calculate dot products which is originally meant to be used for
-	 * machine learning (as I understand it) but it does exactly what we need -- multiply large matrices.
+	 * machine learning, but it does exactly what we need -- multiply large matrices.
 	 */
 
 	//create DAL homogen table wrappers for input data	
@@ -448,6 +474,16 @@ writePCA(
  * a bunch of dot products. It's possible to do these dot products one at a time
  * for each output pixel and component. However, the linear kernel, which is
  * originally meant for fast machine learning use, does exactly what we need.
+ *
+ * @param std::vector<RasterBandMetaData>& bands
+ * @param std::vector<RasterBandMetaData>& PCABands
+ * @param PCAResult<T>& result
+ * @param GDALDataType type
+ * @param size_t size
+ * @param int xBlockSize
+ * @param int yBlockSize
+ * @param int xBlocks
+ * @param int yBlocks
  */
 template <typename T>
 void 
@@ -576,7 +612,19 @@ writePCA(
  * are written to the output dataset.
  *
  * Finally, a GDALRasterWrapper is created using the output dataset,
- * and returned in a tuple alongside the eigenvectors and eigenvalues. 
+ * and returned in a tuple alongside the eigenvectors and eigenvalues.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param int nComp
+ * @param bool largeRaster
+ * @param std::string tempFolder
+ * @param std::string filename
+ * @param std::mape<std::string, std::string> driverOptions
+ * @returns std::tuple<
+ *		GDALRasterWrapper *,
+ *		std::vector<std::vector<double>>
+ *		std::vector<double>
+ * 	    > 
  */
 std::tuple<GDALRasterWrapper *, std::vector<std::vector<double>>, std::vector<double>>
 pca(
