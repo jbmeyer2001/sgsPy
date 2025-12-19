@@ -18,8 +18,9 @@ dependencies = [
 test = [
 	"geopandas" #TODO add version
 ]
-license = "MIT"
-license-files = [ 'LICENSE.txt' ]
+
+#license = "MIT"
+#license-files = [ 'LICENSE.txt' ]
 
 [tool.meson-python.args]
 setup = ['-Db_vscrt=md']
