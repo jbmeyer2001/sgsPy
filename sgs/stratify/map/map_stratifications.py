@@ -29,7 +29,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     the arguments are passed in the form of a tuple, of which there can be any number.
     For example, both of the following are valid:
      - map((rast1, bands1, num_stratum1))
-     - map((rast1, bands1, num_stratum1), (rast1, bands2, num_stratum1))
+     - map((rast1, bands1, num_stratum1), (rast1, bands2, num_stratum2))
 
     the raster within the tuple MUST be of type sgs.utils.SpatialRaster. 
     The bands argument MUST be: 
@@ -62,6 +62,19 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     is the format used to store temporary raster files. Note that if this parameter
     is given, but filename is not and the raster fits entirely in memory, the 
     driver_options parameter will be ignored.
+
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("rast.tif")
+    breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]})
+    quantiles = sgs.stratify.quantiles(rast, num_strata={'zsd': 25})
+    srast = sgs.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
+
+    rast = sgs.SpatialRaster("rast.tif")
+    inventory = sgs.SpatialVector("inventory_polygons.shp")
+    breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]})
+    poly = sgs.stratify.poly(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich'])
+    srast = sgs.stratify.map((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})
 
     Parameters
     --------------------
