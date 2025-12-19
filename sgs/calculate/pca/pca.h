@@ -70,7 +70,7 @@ calculatePCA(
 	int width,
 	int height,
 	int nComp)
-{	
+{
 	int bandCount = static_cast<int>(bands.size());
 	T *p_data = reinterpret_cast<T *>(VSIMalloc3(width * height, bandCount, size));
 
@@ -608,7 +608,7 @@ pca(
 
 	GDALDataType type = GDT_Float32;
 	size_t size = sizeof(float);
-	for (int i = 0; i < p_raster->getBandCount(); i++) {
+	for (int i = 0; i < bandCount; i++) {
 		bands[i].p_band = p_raster->getRasterBand(i);
 		bands[i].nan = bands[i].p_band->GetNoDataValue();
 
@@ -736,18 +736,18 @@ pca(
 		default:
 			throw std::runtime_error("should not be here! GDALDataType should be one of Float32/Float64!");
 	}
-	
+
 	if (isVRTDataset) {
-		for (int b = 0; b < bandCount; b++) {
-			GDALClose(VRTBandInfo[b].p_dataset);
-			addBandToVRTDataset(p_dataset, pcaBands[b], VRTBandInfo[b]);
+		for (int c = 0; c < nComp; c++) {
+			GDALClose(VRTBandInfo[c].p_dataset);
+			addBandToVRTDataset(p_dataset, pcaBands[c], VRTBandInfo[c]);
 		}
 	}
 
-	std::vector<void *> buffers(bandCount);
+	std::vector<void *> buffers(nComp);
 	if (isMEMDataset) {
-		for (int b = 0; b < bandCount; b++) {
-			buffers[b] = pcaBands[b].p_buffer;
+		for (int c = 0; c < nComp; c++) {
+			buffers[c] = pcaBands[c].p_buffer;
 		}
 	}
 
