@@ -109,6 +109,10 @@ class CLHSDataManager {
 	 *
 	 * The x, y, and features vectors are updated accordingly and resized
 	 * if required.
+	 *
+	 * @param T *p_features
+	 * @param int x
+	 * @param int y
 	 */
 	inline void
 	addPoint(T *p_features, int x, int y) {
@@ -145,7 +149,9 @@ class CLHSDataManager {
 	 * When anded against a new random number, the mask value will generate
 	 * a number which can be any of the indices, and is quite likely not to
 	 * be larger than the capacity. If it is larger than the capacity it can
-	 * just be calculated again. 
+	 * just be calculated again.
+	 *
+	 * @param std::vector<std::vector<T>>& corr 
 	 */
 	inline void
 	finalize(std::vector<std::vector<T>>& corr) {
@@ -857,6 +863,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
  * @param bool plot
  * @param std::string tempFolder
  * @param std::string filename
+ * @returns std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
  */
 std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
 clhs(
@@ -978,4 +985,4 @@ clhs(
 	return {{xCoords, yCoords}, p_wrapper};
 }
 
-}
+} //namespace clhs
