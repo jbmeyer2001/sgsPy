@@ -145,6 +145,11 @@ def strat(
         whether or not to plot the output samples
     filename : str
         the output filename to write to if desired
+
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
     """
     if type(strat_rast) is not SpatialRaster:
         raise TypeError("'strat_rast' parameter must be of type sgs.SpatialRaster.")

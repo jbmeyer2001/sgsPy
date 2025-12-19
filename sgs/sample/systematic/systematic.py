@@ -103,6 +103,10 @@ def systematic(
         whether or not to plot the resulting samples
     filename : str
         the filename to write to or "" if not to write
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
     """
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")

@@ -61,6 +61,11 @@ def pca(
         whether to display principal component eigenvalues/eigenvectors
     driver_options : dict
        the creation options as defined by GDAL which will be passed when creating output files
+
+    Returns
+    --------------------
+    a SpatialRater object containing principal component bands
+
     """
     if type(rast) is not SpatialRaster:
         print(type(rast))

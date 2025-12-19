@@ -88,6 +88,10 @@ def clhs(
         whether to plot the output samples or not
     filename : str
         the filename to write to, or '' if file should not be written
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
     """
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
