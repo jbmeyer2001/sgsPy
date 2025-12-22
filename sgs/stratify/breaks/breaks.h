@@ -37,13 +37,23 @@ namespace breaks {
  * value larger than 3 in the breaks vector. This lower bound
  * is the strata. This strata (or the nan value) is then written 
  * with the appropriate type to the strat raster band.
+ *
+ * @param size_t index
+ * @param RasterBandMetaData& dataBand
+ * @param void *p_dataBuffer
+ * @param RasterBandMetaData& stratBand
+ * @param void *p_stratBuffer
+ * @param std::vector<double>& bandBreaks
+ * @param size_t multiplier
+ * @param bool& mapNan
+ * @param size_t& mapStrat
  */
 inline void processMapPixel(
 	size_t index,
 	helper::RasterBandMetaData& dataBand,
-	void * p_dataBuffer,
+	void *p_dataBuffer,
 	helper::RasterBandMetaData& stratBand,
-	void * p_stratBuffer,
+	void *p_stratBuffer,
 	std::vector<double>& bandBreaks,
 	size_t multiplier,
 	bool& mapNan,
@@ -79,6 +89,13 @@ inline void processMapPixel(
  * value larger than 3 in the breaks vector. This lower bound
  * is the strata. This strata (or the nan value) is then written 
  * with the appropriate type to the strat raster band.
+ *
+ * @param size_t index
+ * @param void *p_data
+ * @param RasterBandMetaData *p_dataBand
+ * @param void *p_strat
+ * @param RasterBandMetaData *p_stratBand
+ * @param std::vector<double>& bandBreaks
  */
 inline void
 processPixel(
@@ -183,34 +200,12 @@ processPixel(
  * @param GDALRasterWrapper *p_raster
  * @param std::map<int, std::vector<double>>breaks
  * @param bool map
- * @param std::string
+ * @param std::string filename
  * @param bool largeRaster
  * @param int threads
  * @param std::string tempFolder
  * @param std::map<std::string, std::string> driverOptions
- * @rturns GDALRasterWrapper *pointer to newly created stratified raster
- *
- * p_raster: 
- * 	a pointer to the input raster.
- * breaks: 
- * 	a map of raster band indexes to breaks values.
- * map: 
- * 	a specification of whether to map all of the output
- * 	bands to an additional output band.
- * filename:
- * 	the output filename, or "" if not to write to an 
- * 	output file.
- * largeRaster:
- * 	whether or not the entire raster band should be
- * 	allocated to memory at once.
- * threads:
- * 	the number of threads to process with, only
- * 	used if largeRaster is true.
- * tempFolder:
- * 	the temporary folder to put VRT bands into.
- * driverOptions:
- * 	extra user-defined driver options such as
- * 	compression.
+ * @returns GDALRasterWrapper *
  */
 raster::GDALRasterWrapper *breaks(
 	raster::GDALRasterWrapper *p_raster,
