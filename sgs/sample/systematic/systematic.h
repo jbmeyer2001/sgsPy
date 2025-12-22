@@ -16,6 +16,7 @@
 #include "utils/raster.h"
 #include "utils/vector.h"
 
+namespace sgs {
 namespace systematic {
 
 /**
@@ -33,8 +34,10 @@ namespace systematic {
  * @param std::string layerName
  * @param double buffInner
  * @param double buffOuter
+ *
+ * @returns OGRGeometry *
  */
-OGRGeometry *getAccessPolygon(GDALVectorWrapper *p_access, std::string layerName, double buffInner, double buffOuter) {
+OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string layerName, double buffInner, double buffOuter) {
 	//step 1: create multipolygon buffers
 	OGRMultiPolygon *buffInnerPolygons = new OGRMultiPolygon;
 	OGRMultiPolygon *buffOuterPolygons = new OGRMultiPolygon;
@@ -103,6 +106,8 @@ OGRGeometry *getAccessPolygon(GDALVectorWrapper *p_access, std::string layerName
  * @param double xMax
  * @param double yMin
  * @param double yMax
+ *
+ * @returns bool
  */
 inline bool
 checkExtent(double x, double y, double xMin, double xMax, double yMin, double yMax) {
@@ -114,6 +119,8 @@ checkExtent(double x, double y, double xMin, double xMax, double yMin, double yM
  *
  * @param OGRPoint *p_point
  * @param OGRGeometry *p_geometry
+ *
+ * @returns bool
  */
 inline bool
 checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
@@ -126,9 +133,11 @@ checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
  * @param double x
  * @param double y
  * @param Existing& existing
+ *
+ * @returns bool
  */
 inline bool
-checkExisting(double x, double y, Existing& existing) {
+checkExisting(double x, double y, existing::Existing& existing) {
 	return !existing.used || !existing.containsCoordinates(x, y);
 }
 
@@ -148,9 +157,11 @@ checkExisting(double x, double y, Existing& existing) {
  * @param double xCoord
  * @param double yCoord
  * @param bool force
+ *
+ * @returns bool
  */
 inline bool
-checkNotNan(GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoord, bool force) {
+checkNotNan(raster::GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoord, bool force) {
 	if (force) {
 		int x = static_cast<int>(IGT[0] + xCoord * IGT[1] + yCoord * IGT[2]);
 		int y = static_cast<int>(IGT[3] + xCoord * IGT[4] + yCoord * IGT[5]);
@@ -159,8 +170,11 @@ checkNotNan(GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoo
 			GDALRasterBand *p_band = p_raster->getRasterBand(i);
 			
 			double val;
-			p_band->RasterIO(GF_Read, x, y, 1, 1, &val, 1, 1, GDT_Float64, 0, 0);
-	
+			OGRErr err = p_band->RasterIO(GF_Read, x, y, 1, 1, &val, 1, 1, GDT_Float64, 0, 0);
+			if (err) {
+				throw std::runtime_error("could not read value from raster.");
+			}
+
 			if (val == p_band->GetNoDataValue() || std::isnan(val)) {
 				return false;
 			}	
@@ -202,33 +216,30 @@ checkNotNan(GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoo
  * is randomly sampled, 10 tries are allowed to find a point which is
  * contains a data pixel otherwise that cell is not sampled.
  *
- * @param GDALRasterWrapper *p_raster raster to be systematically sampled
- * @param double cellSize the size of the grid cell shapes
- * @param std::string shape the shape of the grid cells
- * @param std::string location the location within a cell to sample
- * @param bool plot whether to save and return plot-required data
- * @param std::string filename to write to or "" if not to write
+ * @param GDALRasterWrapper *p_raster
+ * @param double cellSize
+ * @param std::string shape
+ * @param std::string location
+ * @param bool plot
+ * @param std::string filename
  * @returns std::tuple<
  * 		GDALVectorWrapper *,
  * 		std::vector<std::vector<double>>,
  * 		std::vector<std::vector<std::vector<double>>>
- * 	>
- * 	Wrapper containing GDALDataset vector of sample points,
- * 	the 2d vector of doubles contains sample points to plot
- * 	the 3d vector of doubles contains grid cells to plot
+ * 	    >
  */
 std::tuple<
-	GDALVectorWrapper *, //GDALDataset containing sample points
+	vector::GDALVectorWrapper *, //GDALDataset containing sample points
 	std::vector<std::vector<double>>, //array of samples to plot
 	std::vector<std::vector<std::vector<double>>> //array of grid to plot
 >
 systematic(
-	GDALRasterWrapper *p_raster,
+	raster::GDALRasterWrapper *p_raster,
 	double cellSize,
 	std::string shape,
 	std::string location,
-	GDALVectorWrapper *p_existing,
-	GDALVectorWrapper *p_access,
+	vector::GDALVectorWrapper *p_existing,
+	vector::GDALVectorWrapper *p_access,
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
@@ -302,7 +313,7 @@ systematic(
 		throw std::runtime_error("unable to create output dataset with driver.");
 	}
 
-	GDALVectorWrapper *p_wrapper = new GDALVectorWrapper(p_sampleDataset, std::string(p_raster->getDataset()->GetProjectionRef()));
+	vector::GDALVectorWrapper *p_wrapper = new vector::GDALVectorWrapper(p_sampleDataset, std::string(p_raster->getDataset()->GetProjectionRef()));
 	OGRLayer *p_sampleLayer = p_sampleDataset->CreateLayer("samples", p_wrapper->getSRS(), wkbPoint, nullptr);	
 	if (!p_sampleLayer) {
 		throw std::runtime_error("unable to create output dataset layer.");
@@ -326,7 +337,7 @@ systematic(
 	std::vector<double> xCoords, yCoords;
 
 	//create existing struct
-	Existing existing(p_existing, GT, p_raster->getWidth(), p_sampleLayer, plot, xCoords, yCoords);
+	existing::Existing existing(p_existing, GT, p_raster->getWidth(), p_sampleLayer, plot, xCoords, yCoords);
 
 	//grid represents the grid used to create the sampels only if PLOT is true, and is returned to the (Python) caller
 	std::vector<std::vector<std::vector<double>>> grid;
@@ -348,7 +359,7 @@ systematic(
 				    checkExisting(x, y, existing) &&
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
-					addPoint(&point, p_sampleLayer);
+					helper::addPoint(&point, p_sampleLayer);
 
 					if (plot) {
 						xCoords.push_back(x);
@@ -367,7 +378,7 @@ systematic(
 				    checkExisting(x, y, existing) &&
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
-					addPoint(&point, p_sampleLayer);
+					helper::addPoint(&point, p_sampleLayer);
 
 					if (plot) {
 						xCoords.push_back(x);
@@ -382,7 +393,7 @@ systematic(
 				    checkExisting(x, y, existing) &&
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
-					addPoint(&secondPoint, p_sampleLayer);
+					helper::addPoint(&secondPoint, p_sampleLayer);
 
 					if (plot) {
 						xCoords.push_back(x);
@@ -420,7 +431,7 @@ systematic(
 					    checkNotNan(p_raster, IGT, x, y, force)) 
 					{
 						found = true;
-						addPoint(&point, p_sampleLayer);
+						helper::addPoint(&point, p_sampleLayer);
 
 						if (plot) {
 							xCoords.push_back(x);
@@ -466,3 +477,4 @@ systematic(
 }
 
 } //namespace systematic
+} //namespace sgs

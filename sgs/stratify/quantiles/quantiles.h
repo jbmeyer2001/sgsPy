@@ -15,6 +15,7 @@
 #include <boost/asio/post.hpp>
 #include <mkl.h>
 
+namespace sgs {
 namespace quantiles {
 
 /* This helper function is used to calculate the quantiles of a
@@ -46,8 +47,8 @@ namespace quantiles {
  * @param std::vector<double>& quantiles
  */
 void calcSPQuantiles(
-	GDALRasterWrapper *p_raster,
-	RasterBandMetaData& band,
+	raster::GDALRasterWrapper *p_raster,
+	helper::RasterBandMetaData& band,
 	std::vector<double>& probabilities,
 	std::vector<double>& quantiles) 
 {
@@ -65,7 +66,7 @@ void calcSPQuantiles(
 	size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());
 	std::vector<float> filteredData(pixelCount);
 	for (size_t i = 0; i < pixelCount; i++) {
-		float val = getPixelValueDependingOnType<float>(band.type, band.p_buffer, i);
+		float val = helper::getPixelValueDependingOnType<float>(band.type, band.p_buffer, i);
 		bool isNan = std::isnan(val) || val == nan;
 		if (!isNan) {
 			filteredData[fi] = val;
@@ -120,8 +121,8 @@ void calcSPQuantiles(
  * @param std::vector<double>& quantiles
  */
 void calcDPQuantiles(
-	GDALRasterWrapper *p_raster,
-	RasterBandMetaData& band,
+	raster::GDALRasterWrapper *p_raster,
+	helper::RasterBandMetaData& band,
 	std::vector<double>& probabilities,
 	std::vector<double>& quantiles) 
 {
@@ -130,7 +131,7 @@ void calcDPQuantiles(
 	size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());
 	std::vector<double> filteredData(pixelCount);
 	for (size_t i = 0; i < pixelCount; i++) {
-		double val = getPixelValueDependingOnType<double>(band.type, band.p_buffer, i);
+		double val = helper::getPixelValueDependingOnType<double>(band.type, band.p_buffer, i);
 		bool isNan = std::isnan(val) || val == band.nan;
 		if (!isNan) {
 			filteredData[fi] = val;
@@ -222,8 +223,8 @@ void calcDPQuantiles(
  * @param double eps
  */
 void batchCalcSPQuantiles(
-	GDALRasterWrapper *p_raster, 
-	RasterBandMetaData& band, 
+	raster::GDALRasterWrapper *p_raster, 
+	helper::RasterBandMetaData& band, 
 	std::vector<double>& probabilities,
 	std::vector<double>& quantiles,
 	std::mutex& mutex,
@@ -279,7 +280,7 @@ void batchCalcSPQuantiles(
 			for (int y = 0; y < yValid; y++) {
 				int index = y * band.xBlockSize;
 				for (int x = 0; x < xValid; x++) {
-					float val = getPixelValueDependingOnType<float>(band.type, p_buffer, index);
+					float val = helper::getPixelValueDependingOnType<float>(band.type, p_buffer, index);
 					bool isNan = std::isnan(val) || val == nan;
 					if (!isNan) {
 						p_filtered[fi] = val;
@@ -381,8 +382,8 @@ void batchCalcSPQuantiles(
  * @param double eps
  */
 void batchCalcDPQuantiles(
-	GDALRasterWrapper *p_raster, 
-	RasterBandMetaData& band, 
+	raster::GDALRasterWrapper *p_raster, 
+	helper::RasterBandMetaData& band, 
 	std::vector<double>& probabilities,
 	std::vector<double>& quantiles,
 	std::mutex& mutex,
@@ -428,7 +429,7 @@ void batchCalcDPQuantiles(
 			for (int y = 0; y < yValid; y++) {
 				int index = y * band.xBlockSize;
 				for (int x = 0; x < xValid; x++) {
-					double val = getPixelValueDependingOnType<double>(band.type, p_buffer, index);
+					double val = helper::getPixelValueDependingOnType<double>(band.type, p_buffer, index);
 					bool isNan = std::isnan(val) || val == band.nan;
 					if (!isNan) {
 						p_filtered[fi] = val;
@@ -485,19 +486,29 @@ void batchCalcDPQuantiles(
  * value larger than 3 in the breaks vector. This lower bound
  * is the strata. This strata (or the nan value) is then written 
  * with the appropriate type to the strat raster band.
+ *
+ * @param size_t index
+ * @param RasterBandMetaData& dataBand
+ * @param void *p_dataBuffer
+ * @param RasterBandMetaData& stratBand
+ * @param void *p_stratBuffer
+ * @param std::vector<double>& quantiles
+ * @param size_t multiplier
+ * @param bool& mapNan
+ * @param size_t &mapStrat
  */
 inline void processMapPixel(
 	size_t index,
-	RasterBandMetaData& dataBand,
+	helper::RasterBandMetaData& dataBand,
 	void * p_dataBuffer,
-	RasterBandMetaData& stratBand,
+	helper::RasterBandMetaData& stratBand,
 	void * p_stratBuffer,
 	std::vector<double>& quantiles,
 	size_t multiplier,
 	bool& mapNan,
 	size_t& mapStrat)
 {
-	double val = getPixelValueDependingOnType<double>(dataBand.type, p_dataBuffer, index);
+	double val = helper::getPixelValueDependingOnType<double>(dataBand.type, p_dataBuffer, index);
 	bool isNan = std::isnan(val) || (double)val == dataBand.nan;
 	mapNan |= isNan;
 		
@@ -507,7 +518,7 @@ inline void processMapPixel(
 		strat = (it == quantiles.end()) ? quantiles.size() : std::distance(quantiles.begin(), it);
 	}
 
-	setStrataPixelDependingOnType(stratBand.type, p_stratBuffer, index, isNan, strat);
+	helper::setStrataPixelDependingOnType(stratBand.type, p_stratBuffer, index, isNan, strat);
 
 	if (!mapNan) {
 		mapStrat += strat * multiplier;
@@ -527,17 +538,24 @@ inline void processMapPixel(
  * value larger than 3 in the breaks vector. This lower bound
  * is the strata. This strata (or the nan value) is then written 
  * with the appropriate type to the strat raster band.
+ *
+ * @param size_t index
+ * @param void *p_data
+ * @param RasterBandMetaData *p_dataBand
+ * @param void *p_strat
+ * @param RasterBandMetaData *p_stratBand
+ * @param std::vector<double>& quantiles
  */
 inline void
 processPixel(
 	size_t index,
 	void *p_data,
-	RasterBandMetaData *p_dataBand,
+	helper::RasterBandMetaData *p_dataBand,
 	void *p_strat,
-	RasterBandMetaData *p_stratBand,
+	helper::RasterBandMetaData *p_stratBand,
 	std::vector<double>& quantiles)
 {
-	double val = getPixelValueDependingOnType<double>(p_dataBand->type, p_data, index);
+	double val = helper::getPixelValueDependingOnType<double>(p_dataBand->type, p_data, index);
 	bool isNan = std::isnan(val) || val == p_dataBand->nan;
 
 	size_t strat = 0;
@@ -546,7 +564,7 @@ processPixel(
 		strat = (it == quantiles.end()) ? quantiles.size() : std::distance(quantiles.begin(), it);
 	}
 
-	setStrataPixelDependingOnType(p_stratBand->type, p_strat, index, isNan, strat);
+	helper::setStrataPixelDependingOnType(p_stratBand->type, p_strat, index, isNan, strat);
 }
 
 /**
@@ -622,6 +640,10 @@ processPixel(
  * without requiring the whole raster to be in memory at once. More information
  * is contained in the documentation for those particular functions.
  *
+ * Information on the quantile streaming algorithm can be found here:
+ *  - https://www.cs.unc.edu/~weiwang/paper/SSDBM07_2.pdf
+ *  - https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
+ *
  * PROCESSING:
  * the processing section iterated through ever pixel in every input band,
  * and calculates/writes the strata to the corresponding output band.
@@ -670,37 +692,9 @@ processPixel(
  * @param std::map<std::string, std::string> driverOptions,
  * @param double eps
  * @returns GDALRasterWrapper *pointer to newly created stratified raster
- *
- * p_raster:
- * 	a pointer to the input raster.
- * userProbababilities:
- * 	a map from int to std::vector<double> which maps
- * 	the input raster bands to a vector of quantile
- * 	probabilities.
- * map:
- * 	a specification of whether to map all of teh output
- * 	bands to an additional output band.
- * filename:
- * 	the output filename, or "" if not to write to an
- * 	output file.
- * tempFolder:
- * 	the temporary folder to put VRT bands into.
- * largeRaster:
- * 	whether or not the entire raster band should be
- * 	allocated to memory at once.
- * threadCount:
- * 	the number of threads to process with, only used
- * 	if largeRaster is true.
- * driverOptions:
- * 	extra user-defined driver options such as compresison.
- * eps:
- * 	a specification of the epsilon value for the quantile
- * 	streaming algorithm.
- * 	https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
- * 	https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
  */
-GDALRasterWrapper *quantiles(
-	GDALRasterWrapper *p_raster,
+raster::GDALRasterWrapper *quantiles(
+	raster::GDALRasterWrapper *p_raster,
 	std::map<int, std::vector<double>> userProbabilites,
 	bool map,
 	std::string filename,
@@ -723,9 +717,9 @@ GDALRasterWrapper *quantiles(
 	std::vector<std::vector<double>> probabilities;
 	std::vector<std::string> bandNames = p_raster->getBands();
 
-	std::vector<RasterBandMetaData> dataBands(bandCount);
-	std::vector<RasterBandMetaData> stratBands(bandCount + map);
-	std::vector<VRTBandDatasetInfo> VRTBandInfo;
+	std::vector<helper::RasterBandMetaData> dataBands(bandCount);
+	std::vector<helper::RasterBandMetaData> stratBands(bandCount + map);
+	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo;
 
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
@@ -737,7 +731,7 @@ GDALRasterWrapper *quantiles(
 	std::string driver;
 	if (isMEMDataset || isVRTDataset) {
 		driver = isMEMDataset ? "MEM" : "VRT";
-	       	p_dataset = createVirtualDataset(driver, width, height, geotransform, projection);	
+	       	p_dataset = helper::createVirtualDataset(driver, width, height, geotransform, projection);	
 	}
 	else {
 		std::filesystem::path filepath = filename;
@@ -756,8 +750,8 @@ GDALRasterWrapper *quantiles(
 	size_t stratPixelSize = 1;
 	size_t band = 0;
 	for (auto const& [key, val] : userProbabilites) {
-		RasterBandMetaData *p_dataBand = &dataBands[band];
-		RasterBandMetaData *p_stratBand = &stratBands[band];
+		helper::RasterBandMetaData *p_dataBand = &dataBands[band];
+		helper::RasterBandMetaData *p_stratBand = &stratBands[band];
 
 		//get and store metadata from input raster band
 		GDALRasterBand *p_band = p_raster->getRasterBand(key);
@@ -774,7 +768,7 @@ GDALRasterWrapper *quantiles(
 
 		//update metadata of new strat raster
 		size_t maxStrata = val.size() + 1;
-		setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
+		helper::setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
 		p_stratBand->name = "strat_" + bandNames[key];
 		p_stratBand->xBlockSize = map ? dataBands[0].xBlockSize : p_dataBand->xBlockSize;
 		p_stratBand->yBlockSize = map ? dataBands[0].yBlockSize : p_dataBand->yBlockSize;
@@ -782,10 +776,10 @@ GDALRasterWrapper *quantiles(
 
 		//update dataset with new band information
 		if (isMEMDataset) {
-			addBandToMEMDataset(p_dataset, *p_stratBand);
+			helper::addBandToMEMDataset(p_dataset, *p_stratBand);
 		}
 		else if (isVRTDataset) {
-			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo, driverOptions);
+			helper::createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo, driverOptions);
 		}
 		else {
 			if (stratPixelSize < p_stratBand->size) {
@@ -806,9 +800,9 @@ GDALRasterWrapper *quantiles(
 		}
 
 		//update info of new strat raster band map
-		RasterBandMetaData *p_stratBand = &stratBands.back();
+		helper::RasterBandMetaData *p_stratBand = &stratBands.back();
 		size_t maxStrata = multipliers.back() * (probabilities.back().size() + 1);
-		setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
+		helper::setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
 		p_stratBand->name = "strat_map";
 		p_stratBand->xBlockSize = dataBands[0].xBlockSize;
 		p_stratBand->yBlockSize = dataBands[0].yBlockSize;
@@ -816,10 +810,10 @@ GDALRasterWrapper *quantiles(
 
 		//update dataset with band information
 		if (isMEMDataset) {
-			addBandToMEMDataset(p_dataset, *p_stratBand);
+			helper::addBandToMEMDataset(p_dataset, *p_stratBand);
 		}
 		else if (isVRTDataset) {
-			createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, "map", VRTBandInfo, driverOptions);
+			helper::createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, "map", VRTBandInfo, driverOptions);
 		}
 		else {
 			if (stratPixelSize < p_stratBand->size) {
@@ -840,7 +834,7 @@ GDALRasterWrapper *quantiles(
 			stratBands[band].p_buffer = !largeRaster ? VSIMalloc3(height, width, stratPixelSize) : nullptr;
 		}
 
-		p_dataset = createDataset(
+		p_dataset = helper::createDataset(
 			filename,
 			driver,
 			width,
@@ -866,7 +860,7 @@ GDALRasterWrapper *quantiles(
 
 		//call batch processing quantiles function depending on data type
 		for (int i = 0; i < bandCount; i++) {
-			RasterBandMetaData band = dataBands[i];
+			helper::RasterBandMetaData band = dataBands[i];
 			quantiles[i].resize(probabilities[i].size());
 			quantilesCalculated[i] = false;
 			if (band.type != GDT_Float64) {
@@ -954,7 +948,7 @@ GDALRasterWrapper *quantiles(
 
 							//read raster band data into band buffers
 							for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
-								rasterBandIO(
+								helper::rasterBandIO(
 									dataBands[band], 
 									dataBuffers[band], 
 									xBlockSize, 
@@ -988,7 +982,7 @@ GDALRasterWrapper *quantiles(
 										);
 									}
 								
-									setStrataPixelDependingOnType(
+									helper::setStrataPixelDependingOnType(
 										stratBands.back().type,
 										stratBuffers.back(),
 										index,
@@ -1002,7 +996,7 @@ GDALRasterWrapper *quantiles(
 					
 							//write strat band data
 							for (size_t band = 0; band <= static_cast<size_t>(bandCount); band++) {
-								rasterBandIO(
+								helper::rasterBandIO(
 									stratBands[band],
 									stratBuffers[band],
 									xBlockSize,
@@ -1027,8 +1021,8 @@ GDALRasterWrapper *quantiles(
 		}
 		else {	
 			for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
-				RasterBandMetaData* p_dataBand = &dataBands[band];
-				RasterBandMetaData* p_stratBand = &stratBands[band];
+				helper::RasterBandMetaData* p_dataBand = &dataBands[band];
+				helper::RasterBandMetaData* p_stratBand = &stratBands[band];
 
 				int xBlockSize = p_dataBand->xBlockSize;
 				int yBlockSize = p_dataBand->yBlockSize;
@@ -1096,7 +1090,7 @@ GDALRasterWrapper *quantiles(
 								}
 								
 								//write resulting stratifications to disk
-								rasterBandIO(
+								helper::rasterBandIO(
 									*p_stratBand,
 									p_strat,
 									xBlockSize,
@@ -1123,7 +1117,7 @@ GDALRasterWrapper *quantiles(
 	else {
 		//call quantiles calculation fuction depending on type
 		for (int i = 0; i < bandCount; i++) {
-			RasterBandMetaData band = dataBands[i];
+			helper::RasterBandMetaData band = dataBands[i];
 			quantiles[i].resize(probabilities[i].size());
 			(band.type != GDT_Float64) ?
 				calcSPQuantiles(p_raster, band, probabilities[i], quantiles[i]) :
@@ -1150,7 +1144,7 @@ GDALRasterWrapper *quantiles(
 					);
 				}
 
-				setStrataPixelDependingOnType(
+				helper::setStrataPixelDependingOnType(
 					stratBands.back().type,
 					stratBands.back().p_buffer,
 					index,
@@ -1203,7 +1197,7 @@ GDALRasterWrapper *quantiles(
 	if (isVRTDataset) {
 		for (size_t band = 0; band < VRTBandInfo.size(); band++) {
 			GDALClose(VRTBandInfo[band].p_dataset);
-			addBandToVRTDataset(p_dataset, stratBands[band], VRTBandInfo[band]);
+			helper::addBandToVRTDataset(p_dataset, stratBands[band], VRTBandInfo[band]);
 		}
 	}
 
@@ -1216,8 +1210,9 @@ GDALRasterWrapper *quantiles(
 	}
 
 	return largeRaster ? 
-		new GDALRasterWrapper(p_dataset) :
-		new GDALRasterWrapper(p_dataset, buffers);
+		new raster::GDALRasterWrapper(p_dataset) :
+		new raster::GDALRasterWrapper(p_dataset, buffers);
 }
 
 } //namespace quantiles
+} //namespace sgs

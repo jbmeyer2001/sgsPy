@@ -35,9 +35,9 @@ def systematic(
     filename: str = ""):
     """
     This function conducts systematic sampling within the extent of
-    the raster given. The cellsize parameter specifies the grid size,
-    shape specifies the grid type, and location specifies where in
-    the grid a sample should fall into.
+    the raster given. The 'cellsize' parameter specifies the grid size,
+    the 'shape' parameter specifies the grid shape, and the 'location' 
+    parameter specifies where in the grid a sample should fall into.
 
     shape can be one of 'square', and 'hexagon'.
     location can be one of 'corners', 'centers', 'random'.
@@ -57,6 +57,25 @@ def systematic(
     If the force parameter is True, then the the samples are forced to 
     fall on an index which is NOT a no data value. This may result
     in some grids not being sampled.
+
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.systematic(rast, 500, "hexagon", "centers")
+
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.systematic(rast, 500, "square", "corners", plot=True, filename="systematic_samples.shp")
+
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.systematic(rast, 500, "hexagon", "random", force=True)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("access_network.shp")
+    samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", access=access, buff_outer=300)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("existing_samples.shp")
+    samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", existing=existing)
 
     Parameters
     --------------------
@@ -78,10 +97,16 @@ def systematic(
         buffer boundary specifying distance from access which CANNOT be sampled
     buff_outer (optional) : int | float
         buffer boundary specifying distance from access which CAN be sampled
+    force : bool
+        True if samples are not allowed to fall on a nodata pixel
     plot : bool
         whether or not to plot the resulting samples
     filename : str
         the filename to write to or "" if not to write
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
     """
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")

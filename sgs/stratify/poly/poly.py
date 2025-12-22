@@ -33,19 +33,28 @@ def poly(
 
     the layer_name parameter is the layer to be rasterized, and the attribute
     is the attribute within the layer to check. The features parameter specifies
-    the feature values within the attribute, and which stratification they will
-    be a part of.
+    the which feature value corresponds to which stratification.
 
     The features parameter is a list containing strings and lists of strings.
     The index within this list determines the stratification value. For example:
     
     features = ["low", "medium", "high"] 
         would result in 3 stratifications (0, 1, 2) where 'low' would correspond
-        to stratification 0, medium to 1, and hight to 2
+        to stratification 0, medium to 1, and hight to 2.
 
     features = ["low", ["medium", "high"]]
         would result in 2 stratifications (0, 1) where 'low' would correspond
-        to stratification 0, and both medium and hight to 1
+        to stratification 0, and both medium and high to stratification 1.
+
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster('rast.tif')
+    vect = sgs.SpatialVector('inventory_polygons.shp')
+    srast = sgs.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', features=['poor', 'medium', 'rich'])
+
+    rast = sgs.SpatialRaster('rast.tif')
+    vect = sgs.SpatialVector('inventory_polygons.shp')
+    srast = sgs.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', 'features=['poor', ['medium', 'rich']], filename='nutrient_stratification.shp')
 
     Parameters
     --------------------
@@ -62,10 +71,10 @@ def poly(
     filename : str
         the output filename to write to, if desired
 
-    Raises
+    Returns
     --------------------
-    ValueError
-        if the maximum strata value would result in an integer overflow error
+    a SpatialRaster object containing the rasterized polygon.
+
     """
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type SpatialRaster")

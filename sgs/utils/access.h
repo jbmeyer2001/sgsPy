@@ -14,6 +14,9 @@
 #include "vector.h"
 #include "gdal_utils.h"
 
+namespace sgs {
+namespace access {
+
 /**
  * This Struct controls the creation and storage of access networks
  * for use in sampling functions.
@@ -22,7 +25,7 @@ struct Access {
 	bool used = false;
 	double area = -1;
 	GDALDataset *p_dataset = nullptr;
-	RasterBandMetaData band;
+	helper::RasterBandMetaData band;
 
 	/**
 	* This constructor is responsible for setting the used, area, p_dataset, and band
@@ -39,6 +42,7 @@ struct Access {
 	*
 	* A vector is created usign the output polygons from this calculation. Then,
 	* GDALRasterize() is called specifying:
+	* -at					(all touched -- sets all pixels touched by polygon)
 	* -burn 1 				(setting the burn value to 1)
 	* -l access 				(specifying the layer name in the polygon dataset as 'access')
 	* -te {xmin} {ymin} {xmax} {ymax}	(setting the extent to the raster extent)
@@ -52,23 +56,23 @@ struct Access {
 	*
 	* @param GDALVectorWrapper *p_vector
 	* @param GDALRasterWrapper *p_raster
-	* std::string layerName
-	* double buffInner
-	* double buffOuter
-	* bool largeRaster
-	* std::string tempFolder
-	* int xBlockSize
-	* int yBlockSize
+	* @param std::string layerName
+	* @param double buffInner
+	* @param double buffOuter
+	* @param bool largeRaster
+	* @param std::string tempFolder
+	* @param int xBlockSize
+	* @param int yBlockSize
 	*/
-	Access(GDALVectorWrapper *p_vector,
-		GDALRasterWrapper *p_raster,
-		std::string layerName, 
-		double buffInner, 
-		double buffOuter,
-		bool largeRaster,
-		std::string tempFolder,
-		int xBlockSize,
-		int yBlockSize) 
+	Access(vector::GDALVectorWrapper *p_vector,
+	       raster::GDALRasterWrapper *p_raster,
+	       std::string layerName, 
+	       double buffInner, 
+	       double buffOuter,
+	       bool largeRaster,
+	       std::string tempFolder,
+	       int xBlockSize,
+	       int yBlockSize) 
 	{
 		if (!p_vector) {
 			return;
@@ -271,4 +275,5 @@ struct Access {
 	}
 };
 
-
+} //namespace access
+} //namespace sgs

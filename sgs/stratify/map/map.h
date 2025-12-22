@@ -13,6 +13,7 @@
 #include "utils/raster.h"
 #include "utils/helper.h"
 
+namespace sgs {
 namespace map {
 
 /**
@@ -98,28 +99,9 @@ namespace map {
  * @param std::string tempFolder
  * @param std::map<std::string, std::string> driverOptions,
  * @returns GDALRasterWrapper *pointer to newly created raster mapping
- *
- * rasters:
- * 	a vector of pointers to input rasters.
- * bands:
- * 	a vector of band indexes to the input rasters.
- * strataCounts:
- *	a vector of vectrors, containing the number of strata in each band.
- * filename:
- *	the output filename, or "" if not to write to an output file.
- * largeRaster:
- *	whether or not the entire raster band should be allocated
- *	into memory at once.
- * threadCount:
- *	the number of threads to process with, only used if largeRaster
- *	is true.
- * tempFolder:
- *	the temporary folder to put VRT bands into.
- * driverOptions:
- * 	extra user-defined driver options such as compression.
  */
-GDALRasterWrapper *map(
-	std::vector<GDALRasterWrapper *> rasters,
+raster::GDALRasterWrapper *map(
+	std::vector<raster::GDALRasterWrapper *> rasters,
 	std::vector<std::vector<int>> bands,
 	std::vector<std::vector<int>> strataCounts,
 	std::string filename,
@@ -168,9 +150,9 @@ GDALRasterWrapper *map(
 		}
 	}
 	
-	std::vector<RasterBandMetaData> stratBands;
-	RasterBandMetaData mapBand;
-	std::vector<VRTBandDatasetInfo> VRTBandInfo(1);
+	std::vector<helper::RasterBandMetaData> stratBands;
+	helper::RasterBandMetaData mapBand;
+	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo(1);
 
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
@@ -182,7 +164,7 @@ GDALRasterWrapper *map(
 	GDALDataset *p_dataset = nullptr;
 	if (isMEMDataset || isVRTDataset) {
 		std::string driver = isMEMDataset ? "MEM" : "VRT";
-		p_dataset = createVirtualDataset(driver, width, height, geotransform, projection);
+		p_dataset = helper::createVirtualDataset(driver, width, height, geotransform, projection);
 	}
 	else {
 		std::filesystem::path filepath = filename;
@@ -199,11 +181,11 @@ GDALRasterWrapper *map(
 	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
 	std::vector<size_t> multipliers(1, 1);	
 	for (size_t i = 0; i < rasters.size(); i++) {
-		GDALRasterWrapper *p_raster = rasters[i];
+		raster::GDALRasterWrapper *p_raster = rasters[i];
 
 		for (size_t j = 0; j < bands[i].size(); j++) {
 			stratBands.resize(stratBands.size() + 1);
-			RasterBandMetaData *p_stratBand = &stratBands.back();
+			helper::RasterBandMetaData *p_stratBand = &stratBands.back();
 			
 			int band = bands[i][j];
 			int strataCount = strataCounts[i][j];
@@ -217,7 +199,7 @@ GDALRasterWrapper *map(
 			p_stratBand->p_mutex = &stratDatasetMutexes[i];
 			p_band->GetBlockSize(&p_stratBand->xBlockSize, &p_stratBand->yBlockSize);
 
-			printTypeWarningsForInt32Conversion(p_stratBand->type);
+			helper::printTypeWarningsForInt32Conversion(p_stratBand->type);
 			multipliers.push_back(multipliers.back() * strataCount);
 		}
 	}
@@ -225,17 +207,17 @@ GDALRasterWrapper *map(
 	size_t bandCount = stratBands.size();
 	size_t maxStrata = multipliers.back();
 	multipliers.pop_back();
-	setStratBandTypeAndSize(maxStrata, &mapBand.type, &mapBand.size);
+	helper::setStratBandTypeAndSize(maxStrata, &mapBand.type, &mapBand.size);
 	mapBand.name = "strat_map";
 	mapBand.xBlockSize = stratBands[0].xBlockSize;
 	mapBand.yBlockSize = stratBands[0].yBlockSize;
 	mapBand.p_mutex = &mapBandMutex;
 
 	if (isMEMDataset) {
-		addBandToMEMDataset(p_dataset, mapBand);
+		helper::addBandToMEMDataset(p_dataset, mapBand);
 	}
 	else if (isVRTDataset) {
-		createVRTBandDataset(
+		helper::createVRTBandDataset(
 			p_dataset,
 			mapBand,
 			tempFolder,
@@ -252,7 +234,7 @@ GDALRasterWrapper *map(
 			VSIMalloc3(height, width, mapBand.size) :
 			nullptr;
 
-		p_dataset = createDataset(
+		p_dataset = helper::createDataset(
 			filename,
 			driver,
 			width,
@@ -331,7 +313,7 @@ GDALRasterWrapper *map(
 								int mappedStrat = 0;
 
 								for (size_t band = 0; band < bandCount; band++) {
-									int strat = getPixelValueDependingOnType<int>(stratBands[band].type, stratBuffers[band], index);
+									int strat = helper::getPixelValueDependingOnType<int>(stratBands[band].type, stratBuffers[band], index);
 									isNan = strat == intNoDataValues[band];
 
 									if (!isNan) {
@@ -342,11 +324,11 @@ GDALRasterWrapper *map(
 									}
 								}
 
-								setStrataPixelDependingOnType(mapBand.type, p_mapBuffer, index, isNan, mappedStrat);
+								helper::setStrataPixelDependingOnType(mapBand.type, p_mapBuffer, index, isNan, mappedStrat);
 							}
 						}
 
-						rasterBandIO(
+						helper::rasterBandIO(
 							mapBand,
 							p_mapBuffer,
 							xBlockSize,
@@ -382,14 +364,14 @@ GDALRasterWrapper *map(
 			int mappedStrat = 0;
 
 			for (size_t band = 0; (band < bandCount) && !isNan; band++) {
-				int strat = getPixelValueDependingOnType<int>(stratBands[band].type, stratBands[band].p_buffer, index);
+				int strat = helper::getPixelValueDependingOnType<int>(stratBands[band].type, stratBands[band].p_buffer, index);
 				isNan = strat == intNoDataValues[band];
 				if (!isNan) {
 					mappedStrat += strat * multipliers[band];
 				}
 			}
 
-			setStrataPixelDependingOnType(mapBand.type, mapBand.p_buffer, index, isNan, mappedStrat);
+			helper::setStrataPixelDependingOnType(mapBand.type, mapBand.p_buffer, index, isNan, mappedStrat);
 		}
 
 		if (!isVRTDataset && !isMEMDataset) {
@@ -415,12 +397,13 @@ GDALRasterWrapper *map(
 	//close and add VRT sub dataset as band
 	if (isVRTDataset) {
 		GDALClose(VRTBandInfo[0].p_dataset);
-		addBandToVRTDataset(p_dataset, mapBand, VRTBandInfo[0]);
+		helper::addBandToVRTDataset(p_dataset, mapBand, VRTBandInfo[0]);
 	}
 
 	return largeRaster ?
-		new GDALRasterWrapper(p_dataset) :
-		new GDALRasterWrapper(p_dataset, {mapBand.p_buffer});
+		new raster::GDALRasterWrapper(p_dataset) :
+		new raster::GDALRasterWrapper(p_dataset, {mapBand.p_buffer});
 }
 
 } //namespace map
+} //namespace sgs
