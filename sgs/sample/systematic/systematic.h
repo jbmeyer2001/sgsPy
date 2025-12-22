@@ -34,6 +34,8 @@ namespace systematic {
  * @param std::string layerName
  * @param double buffInner
  * @param double buffOuter
+ *
+ * @returns OGRGeometry *
  */
 OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string layerName, double buffInner, double buffOuter) {
 	//step 1: create multipolygon buffers
@@ -96,6 +98,8 @@ OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string l
  * @param double xMax
  * @param double yMin
  * @param double yMax
+ *
+ * @returns bool
  */
 inline bool
 checkExtent(double x, double y, double xMin, double xMax, double yMin, double yMax) {
@@ -107,6 +111,8 @@ checkExtent(double x, double y, double xMin, double xMax, double yMin, double yM
  *
  * @param OGRPoint *p_point
  * @param OGRGeometry *p_geometry
+ *
+ * @returns bool
  */
 inline bool
 checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
@@ -119,6 +125,8 @@ checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
  * @param double x
  * @param double y
  * @param Existing& existing
+ *
+ * @returns bool
  */
 inline bool
 checkExisting(double x, double y, existing::Existing& existing) {
@@ -141,6 +149,8 @@ checkExisting(double x, double y, existing::Existing& existing) {
  * @param double xCoord
  * @param double yCoord
  * @param bool force
+ *
+ * @returns bool
  */
 inline bool
 checkNotNan(raster::GDALRasterWrapper *p_raster, double *IGT, double xCoord, double yCoord, bool force) {
@@ -198,20 +208,17 @@ checkNotNan(raster::GDALRasterWrapper *p_raster, double *IGT, double xCoord, dou
  * is randomly sampled, 10 tries are allowed to find a point which is
  * contains a data pixel otherwise that cell is not sampled.
  *
- * @param GDALRasterWrapper *p_raster raster to be systematically sampled
- * @param double cellSize the size of the grid cell shapes
- * @param std::string shape the shape of the grid cells
- * @param std::string location the location within a cell to sample
- * @param bool plot whether to save and return plot-required data
- * @param std::string filename to write to or "" if not to write
+ * @param GDALRasterWrapper *p_raster
+ * @param double cellSize
+ * @param std::string shape
+ * @param std::string location
+ * @param bool plot
+ * @param std::string filename
  * @returns std::tuple<
  * 		GDALVectorWrapper *,
  * 		std::vector<std::vector<double>>,
  * 		std::vector<std::vector<std::vector<double>>>
- * 	>
- * 	Wrapper containing GDALDataset vector of sample points,
- * 	the 2d vector of doubles contains sample points to plot
- * 	the 3d vector of doubles contains grid cells to plot
+ * 	    >
  */
 std::tuple<
 	vector::GDALVectorWrapper *, //GDALDataset containing sample points
@@ -327,7 +334,7 @@ systematic(
 	//grid represents the grid used to create the sampels only if PLOT is true, and is returned to the (Python) caller
 	std::vector<std::vector<std::vector<double>>> grid;
 
-	//iterate through the polygons in the grid and populate the ruturn data depending on user inputs
+	//iterate through the polygons in the grid and populate the return data depending on user inputs
 	for (const auto& p_feature : *p_gridTest) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
 		for (const auto& p_polygon : *p_geometry->toMultiPolygon()) {
