@@ -26,8 +26,8 @@ def pca(
     raster.
 
     A number of output components must be provided as an integer. This integer
-    must be less than or equal to the total number of bands in the input raster.
-    This will be the number of bands in the output raster.
+    must be less than or equal to the total number of bands in the input raster,
+    and will be the number of bands in the output raster.
     A filename may be given to specify an output file location, otherwise
     a virtual file type will be used. The driver_options parameter is 
     used to specify creation options for a the output raster.
@@ -37,6 +37,17 @@ def pca(
     along with mean and standard deviation of each raster band. The
     raster is both centered and scaled, then output values are calculated
     for each principal component.
+
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("raster.tif")
+    pcomp = sgs.calculate.pca(rast, 3)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    pcomp = sgs.calculate.pca(rast, 2, filename="pca.tif", display_info=True)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    pcomp = sgs.calculate.pca(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"}) 
 
     Parameters
     --------------------
@@ -53,7 +64,8 @@ def pca(
 
     Returns
     --------------------
-    a SpatialRaster object containing principal component output bands.
+    a SpatialRater object containing principal component bands
+
     """
     if type(rast) is not SpatialRaster:
         print(type(rast))

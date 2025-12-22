@@ -62,11 +62,6 @@ class SpatialVector:
         --------------------
         image: str | GDALVectorWrapper
            specifies a path to a vector file or the C++ class object itself
-
-        Raises
-        --------------------
-        RuntimeError (from C++):
-            if dataset is not initialized correctly 
         """
         if type(image) is str:
             self.cpp_vector = GDALVectorWrapper(image)
@@ -113,7 +108,7 @@ class SpatialVector:
 
         Parameters
         --------------------
-        layer (optional) : str or int
+        layer : str or int
             specifies the layer to print information on
         """
         if layer is not None and type(layer) not in [int, str]:
@@ -136,13 +131,6 @@ class SpatialVector:
         is comprised entirely of Points or MultiPoints. These conditions
         will be satisfied if this SpatialVector is the output of one of the
         sampling functions in the sgs package.
-
-        Raises
-        --------------------
-        ValueError:
-            if this vector does not have a layer called 'samples'
-        RuntimeError (from C++):
-            if the 'samples' layer has at least one geometry other than Point or MultiPoint
         """
         if "samples" not in self.layers:
             print("this vector does not have a layer 'samples'")
@@ -165,17 +153,8 @@ class SpatialVector:
             the geometry type to try to print
         layer : None | int | str
             specification of which layer to print
-        **kwargs (optional)
+        **kwargs
             any parameter which may be passed ot matplotlib.pyplot.plot
-
-        Raises
-        --------------------
-        ValueError:
-            if no layer was specified, and the image contains more than one layer
-        ValueError:
-            if geomtype is not one of 'Point', 'MultiPoint', 'LineString', 'MultiLineString'
-        RuntimeError (from C++):
-            if the layer contains a geometry NOT of an acceptable type
         """
 
         if ax is not None: 

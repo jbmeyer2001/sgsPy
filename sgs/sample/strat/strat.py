@@ -47,15 +47,14 @@ def strat(
     This function conducts stratified sampling using the stratified
     raster given. There are two methods employed to determine which
     pixels to sample:
-     - The 'random' method randomly selects pixels
-    within a given strata.
-     - The 'Queinnec' method first selects pixels which are surrounded
-    by pixels of the same strata, the focal window, which is defined by 
-    the wrow and wcol parameters.
+     - The 'random' method randomly selects pixels within a given strata.
+     - The 'Queinnec' method prioritizes pixels which are surrounded by other pixels of the same strata.
+    The 'wrow' and 'wcol' parameters determine the size of the surrounding area required for a pixel to be
+    prioritized.
 
     The number of total samples is given by num_samples. The allocation
-    of samples per strata is calculated given the distribution of pixels
-    in each strata, and the allocation method specified by the allocation parameter.
+    of samples per strata is calculated using the distribution of pixels
+    across the strata, and the allocation method specified by the allocation parameter.
 
     In the case where 'optim' allocation is used, an additional raster must be passed
     to the mrast parameter, and if that raster contains more than 1 band the mrast_band
@@ -75,6 +74,33 @@ def strat(
     must be larger than buff_inner. For a multi-layer vector, layer_name
     must be specified.
 
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("raster.tif")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5) #uses Queinnec method with proportional allocation by default
+
+    rast = sgs.SpatialRaster("raster.tif")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="random", mindist=200, plot=True, filename="samples.shp")
+
+    rast = sgs.SpatialRaster("raster.tif")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="Queinnec", allocation="optim", mrast=rast)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="manual", weights=[0.1, 0.1, 0.2, 0.2, 0.4])
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("access_network.shp")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="equal", access=access, buff_inner=100, buff_outer=300)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    existng = sgs.SpatialVector("existing_samples.shp")
+    srast =sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="prop", existing=existing, force=True)
 
     Parameters
     --------------------
@@ -85,7 +111,7 @@ def strat(
     num_samples : int
         the desired number of samples
     num_strata : int
-        the number of strata in the strat_rast. If this number is incorrect it may 
+        the number of strata in the strat_rast. If this number is incorrect it may cause 
         undefined behavior in the C++ code which determines sample locations.
     wrow : int
         the number of rows to be considered in the focal window for the 'Queinnec' method
@@ -119,6 +145,11 @@ def strat(
         whether or not to plot the output samples
     filename : str
         the output filename to write to if desired
+
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
     """
     if type(strat_rast) is not SpatialRaster:
         raise TypeError("'strat_rast' parameter must be of type sgs.SpatialRaster.")

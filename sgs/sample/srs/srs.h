@@ -18,6 +18,7 @@
 #include "utils/raster.h"
 #include "utils/vector.h"
 
+namespace sgs {
 namespace srs {
 
 /**
@@ -42,12 +43,11 @@ namespace srs {
 template <typename T>
 inline void
 processBlock(
-	RasterBandMetaData& band,
-	Access& access,
-	Existing& existing,
-	std::vector<Index>& indices,
-	std::vector<bool>& randVals,
-	int& randValIndex,
+	helper::RasterBandMetaData& band,
+	access::Access& access,
+	existing::Existing& existing,
+	std::vector<helper::Index>& indices,
+	helper::RandValController& rand,
 	int xBlock,
 	int yBlock,
 	int xValid,
@@ -59,42 +59,40 @@ processBlock(
 	for (int y = 0; y < yValid; y++) {
 		size_t blockIndex = static_cast<size_t>(y * band.xBlockSize);
 		for (int x = 0; x < xValid; x++) {
-			//GET VAL
-			T val = getPixelValueDependingOnType<T>(band.type, band.p_buffer, blockIndex);
+			//get val
+			T val = helper::getPixelValueDependingOnType<T>(band.type, band.p_buffer, blockIndex);
 
-			//CHECK NAN
+			//check nan
 			bool isNan = val == nan || std::isnan(val);
 			if (isNan) {
 				blockIndex++;
 				continue;
 			}
 
-			//CHECK ACCESS
+			//check access
 			if (access.used && p_access[blockIndex] == 1) {
 				blockIndex++;
 				continue;
 			}
 
-			Index index = {x + xBlock * band.xBlockSize, y + yBlock * band.yBlockSize};
+			helper::Index index = {x + xBlock * band.xBlockSize, y + yBlock * band.yBlockSize};
 			
-			//CHECK EXISTING
+			//check existing
 			if (existing.used && existing.containsIndex(index.x, index.y)) {
 				blockIndex++;
 				continue;
 			}
 
-			//CHECK RNG
-			if (!randVals[randValIndex]) {
-				randValIndex++;
+			//check rand val
+			if (!rand.next()) {
 				blockIndex++;
 				continue;
 			}
-			randValIndex++;
 
-			//ADD TO INDICES
+			//add index to indices
 			indices.push_back(index);
 
-			//INCREMENT WITHIN-BLOCK INDEX
+			//increment within-block index
 			blockIndex++;
 		}
 	}
@@ -163,14 +161,15 @@ processBlock(
  * @param bool plot
  * @param std::string tempFolder
  * @param std::string filename
+ * @returns std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
  */
-std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t> 
+std::tuple<std::vector<std::vector<double>>, vector::GDALVectorWrapper *, size_t> 
 srs(
-	GDALRasterWrapper *p_raster,
+	raster::GDALRasterWrapper *p_raster,
 	size_t numSamples,
 	double mindist,
-	GDALVectorWrapper *p_existing,
-	GDALVectorWrapper *p_access,
+	vector::GDALVectorWrapper *p_existing,
+	vector::GDALVectorWrapper *p_access,
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
@@ -190,7 +189,7 @@ srs(
 	std::vector<size_t> indexes;
 
 	//step 3: get first raster band
-	RasterBandMetaData band;
+	helper::RasterBandMetaData band;
 	band.p_band = p_raster->getRasterBand(0);
 	band.type = p_raster->getRasterBandType(0);
 	band.size = p_raster->getRasterBandTypeSize(0);
@@ -209,14 +208,14 @@ srs(
 		throw std::runtime_error("unable to create output dataset with driver.");
 	}
 
-	GDALVectorWrapper *p_wrapper = new GDALVectorWrapper(p_samples, std::string(p_raster->getDataset()->GetProjectionRef()));
+	vector::GDALVectorWrapper *p_wrapper = new vector::GDALVectorWrapper(p_samples, std::string(p_raster->getDataset()->GetProjectionRef()));
 	OGRLayer *p_layer = p_samples->CreateLayer("samples", p_wrapper->getSRS(), wkbPoint, nullptr);
 	if (!p_layer) {
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
 
 	//generate access structure
-	Access access(
+	access::Access access(
 		p_access,
 		p_raster,
 		layerName,
@@ -233,7 +232,7 @@ srs(
 	}
 
 	//generate existing structure
-	Existing existing(
+	existing::Existing existing(
 		p_existing,
 		GT,
 		p_raster->getWidth(),
@@ -263,7 +262,7 @@ srs(
 	//to make that percentage happen. Doing this enables retaining only a small portion of pixel data
 	//and reducing memory footprint significantly, otherwise the index of every pixel
 	//would have to be stored, which would not be feasible for large rasters.
-	uint64_t multiplier = getProbabilityMultiplier(
+	uint64_t multiplier = helper::getProbabilityMultiplier(
 		width, 
 		height, 
 		p_raster->getPixelWidth(), 
@@ -274,48 +273,47 @@ srs(
 		access.area
 	);
 
-	std::vector<Index> indices;
+	helper::RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
+
+	std::vector<helper::Index> indices;
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
 
-			//READ BLOCK
+			//read block
 			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-			rasterBandIO(band, band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
+			helper::rasterBandIO(band, band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
 															  //read = true
-			//READ ACCESS BLOCK IF NECESSARY
+			//read access block if necessary
 			if (access.used) {
-				rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false); 
+				helper::rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false); 
 			}
 
-			//CALCULATE RAND VALUES
-			for (int i = 0; i < randValIndex; i++) {
-				randVals[i] = ((rng() >> 11) & multiplier) == multiplier;
-			}
-			randValIndex = 0;
+			//calculate random values
+			rand.calculateRandValues();
 
-			//PROCESS BLOCK
+			//process block
 			switch (band.type) {
 				case GDT_Int8:
-					processBlock<int8_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					processBlock<int8_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_UInt16:
-					processBlock<uint16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					processBlock<uint16_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_Int16:
-					processBlock<int16_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					processBlock<int16_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_UInt32:
-					processBlock<uint32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					processBlock<uint32_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_Int32:
-					processBlock<int32_t>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					processBlock<int32_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_Float32:
-					processBlock<float>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					processBlock<float>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
 					break;
 				case GDT_Float64:
-					processBlock<double>(band, access, existing, indices, randVals, randValIndex, xBlock, yBlock, xValid, yValid);
+					processBlock<double>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
 					break;
 				default:
 					throw std::runtime_error("raster pixel data type is not supported.");
@@ -328,7 +326,7 @@ srs(
 	size_t samplesAdded = existing.used ? existing.count() : 0;
 	size_t i = 0;
 	while (samplesAdded < numSamples && i < indices.size()) {
-		Index index = indices[i];
+		helper::Index index = indices[i];
 		i++;
 
 		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
@@ -350,7 +348,7 @@ srs(
 			}
 		}
 
-		addPoint(&point, p_layer);
+		helper::addPoint(&point, p_layer);
 		samplesAdded++;
 
 		if (plot) {
@@ -359,8 +357,6 @@ srs(
 		}	
 	}
 
-	//TODO rather than first making an in-memory dataset then writing to a file afterwards,
-	//just make the correct type of dataset from the get go
 	if (filename != "") {
 		try {
 			p_wrapper->write(filename);
@@ -374,3 +370,4 @@ srs(
 }
 
 } //namespace srs
+} //namespace sgs

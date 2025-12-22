@@ -45,9 +45,6 @@ def quantiles(
     value in the mapped output band corresponds to a combination a single combination
     of values from the previous bands.
 
-    the filename parameter species an output file name. Right now the only file
-    format except is GTiff (.tiff).
-
     The thread_count parameter specifies the number of threads which this function 
     will utilize the the case where the raster is large and may not fit in memory. If
     the full raster can fit in memory and does not need to be processed in blocks, this
@@ -73,6 +70,20 @@ def quantiles(
         https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
         https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
 
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster('rast.tif')
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+
+    srast = sgs.SpatialRaster('rast.tif')
+    srast = sgs.stratify.quantiles(rast, num_strata=[.1, .2, .3, .5, .7], filename="srast.tif")
+
+    rast = sgs.SpatialRaster('multi_band_rast.tif')
+    srast = sgs.stratify.quantiles(rast, num_strata=[5, 5, [.5, .75]], map=True)
+
+    rast = sgs.SpatialRaster('multi_band_rast.tif')
+    srast = sgs.stratify.quantiles(rast, num_strata={'zq90': 5})
+
     Parameters
     --------------------
     rast : SpatialRaster
@@ -93,6 +104,7 @@ def quantiles(
     Returns
     --------------------
     a SpatialRaster object containing stratified raster bands.
+
     """
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster")
