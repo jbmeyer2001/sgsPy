@@ -113,10 +113,7 @@ struct VRTBandDatasetInfo {
  * @returns size_t pixel type size
  */
 inline size_t
-setStratBandType(
-	size_t maxStrata,
-	std::vector<GDALDataType>& stratBandTypes
-) {
+setStratBandType(size_t maxStrata, std::vector<GDALDataType>& stratBandTypes) {
 	size_t pixelTypeSize;
 
 	if (maxStrata <= MAXINT8) {
@@ -174,7 +171,7 @@ setStratBandTypeAndSize(
  * @param GDALDataType type 
  * @param void *p_data
  * @param size_t index
- * @returns double pixel val
+ * @returns T
  */
 template <typename T>
 inline T
@@ -212,9 +209,9 @@ getPixelValueDependingOnType(
  *
  * @param GDALDataType type
  * @param void *p_data
- * size_t index
- * bool isNan
- * size_t strata
+ * @param size_t index
+ * @param bool isNan
+ * @param size_t strata
  */
 inline void
 setStrataPixelDependingOnType(
@@ -292,7 +289,8 @@ printTypeWarningsForInt32Conversion(GDALDataType type) {
  * @param int width
  * @param int height
  * @param double *geotransform
- * @Param std::string projection
+ * @param std::string projection
+ * @returns GDALDataset *
  */
 inline GDALDataset *
 createVirtualDataset(
@@ -372,6 +370,7 @@ createVirtualDataset(
  * @param RasterBandMetaData *bands
  * @param size_t bandCount
  * @param bool useTiles
+ * @returns GDALDataset *
  */
 inline GDALDataset *
 createDataset(
@@ -532,6 +531,7 @@ addBandToMEMDataset(
  * @param std::string tempFolder
  * @param std::string key
  * @param std::vector<VRTBandDatasetInfo>& VRTBandInfo
+ * @param std::map<std::string, std::string>& driverOptions
  */
 inline void
 createVRTBandDataset(
@@ -634,6 +634,7 @@ addBandToVRTDataset(
  * @param int xValid
  * @param int yValid
  * @param bool read
+ * @param bool threaded
  */
 inline void
 rasterBandIO(
@@ -755,6 +756,11 @@ class Variance {
 	
 	public:
 	inline void
+	/**
+	 * update the variance calculation with a new value.
+	 *
+	 * @param double x
+	 */
 	update(double x) {
 		k++;
 		oldM = M;
@@ -836,10 +842,16 @@ class Variance {
  * int a subtraction problem, resulting in the number of bits. The value 1 is then left shifted by the number of bits,
  * and subtracted by 1 to give the multiplier.
  *
- * @param GDALRasterWrapper *p_raster
+ * @param double width
+ * @param double height
+ * @param double pixelWidth
+ * @param double pixelHeight
+ * @param int startMult
  * @param int numSamples
  * @param bool useMindist
  * @param double accessibleArea
+ *
+ * @returns uint64_t
  */
 inline uint64_t
 getProbabilityMultiplier(double width, double height, double pixelWidth, double pixelHeight, int startMult, int numSamples, bool useMindist, double accessibleArea) {
@@ -932,8 +944,7 @@ public:
 	}
 
 	/**
-	 * get the next boolean value from the storage vector, and iterate the index to this
-	 * vector.
+	 * get the next boolean value from the storage vector, and increment the index of this vector.
 	 */
 	inline bool 
 	next(void) {
