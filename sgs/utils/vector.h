@@ -410,14 +410,17 @@ class GDALVectorWrapper {
 	 * @returns std::string
 	 */
 	std::string getFullProjectionInfo() {
-		OGRSpatialReference *p_srs = this->p_dataset->GetLayer(0)->GetSpatialRef();
-		if (p_srs) {
-			char *p_proj;
-			p_srs->exportToPrettyWkt(&p_proj);
-			return std::string(p_proj);
+		char *p_proj;
+		if (haveSRS) {
+			srs.exportToPrettyWkt(&p_proj);
 		}
-			
-		return "";
+		else {
+			this->p_dataset->GetLayer(0)->GetSpatialRef()->exportToPrettyWkt(&p_proj);
+		}
+		
+		std::string retval = std::string(p_proj);
+		CPLFree(p_proj);
+		return retval;
 	}
 
 	/**

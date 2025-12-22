@@ -138,17 +138,16 @@ struct Access {
 		//step 3: generate the polygon mask and free no longer used memory
 		if (buffInner == 0) {
 			p_polygonMask = buffOuterPolygons->UnionCascaded();
-			delete buffOuterPolygons;
 		}
 		else {
 			OGRGeometry *buffOuterUnion = buffOuterPolygons->UnionCascaded();
 			OGRGeometry *buffInnerUnion = buffInnerPolygons->UnionCascaded();
 			p_polygonMask = buffOuterUnion->Difference(buffInnerUnion);
-			delete buffOuterPolygons;
-			delete buffInnerPolygons;
 			OGRGeometryFactory::destroyGeometry(buffOuterUnion);
 			OGRGeometryFactory::destroyGeometry(buffInnerUnion);	
 		}
+		delete buffOuterPolygons;
+		delete buffInnerPolygons;
 
 		//update area to contain the total accessible are within the raster	
 		this->area = 0;
@@ -258,6 +257,7 @@ struct Access {
 
 		//step 11: free dynamically allocated data
 		GDALRasterizeOptionsFree(options);
+		CSLDestroy(argv);
 		GDALClose(GDALDataset::ToHandle(p_accessPolygonDataset));
 		OGRGeometryFactory::destroyGeometry(p_polygonMask);
 		OGRGeometryFactory::destroyGeometry(p_polygonWithinExtent);

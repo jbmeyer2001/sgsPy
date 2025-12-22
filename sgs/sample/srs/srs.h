@@ -359,7 +359,6 @@ srs(
 		}	
 	}
 
-	//TODO rather than first making an in-memory dataset then writing to a file afterwards,
 	//just make the correct type of dataset from the get go
 	if (filename != "") {
 		try {
@@ -368,6 +367,12 @@ srs(
 		catch (const std::exception& e) {
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
+	}
+
+	//free allocated memory
+	VSIFree(band.p_buffer);
+	if (access.used) {
+		VSIFree(access.band.p_buffer);
 	}
 
 	return {{xCoords, yCoords}, p_wrapper, samplesAdded};
