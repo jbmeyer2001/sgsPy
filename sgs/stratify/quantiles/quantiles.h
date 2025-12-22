@@ -486,6 +486,16 @@ void batchCalcDPQuantiles(
  * value larger than 3 in the breaks vector. This lower bound
  * is the strata. This strata (or the nan value) is then written 
  * with the appropriate type to the strat raster band.
+ *
+ * @param size_t index
+ * @param RasterBandMetaData& dataBand
+ * @param void *p_dataBuffer
+ * @param RasterBandMetaData& stratBand
+ * @param void *p_stratBuffer
+ * @param std::vector<double>& quantiles
+ * @param size_t multiplier
+ * @param bool& mapNan
+ * @param size_t &mapStrat
  */
 inline void processMapPixel(
 	size_t index,
@@ -528,6 +538,13 @@ inline void processMapPixel(
  * value larger than 3 in the breaks vector. This lower bound
  * is the strata. This strata (or the nan value) is then written 
  * with the appropriate type to the strat raster band.
+ *
+ * @param size_t index
+ * @param void *p_data
+ * @param RasterBandMetaData *p_dataBand
+ * @param void *p_strat
+ * @param RasterBandMetaData *p_stratBand
+ * @param std::vector<double>& quantiles
  */
 inline void
 processPixel(
@@ -623,6 +640,10 @@ processPixel(
  * without requiring the whole raster to be in memory at once. More information
  * is contained in the documentation for those particular functions.
  *
+ * Information on the quantile streaming algorithm can be found here:
+ *  - https://www.cs.unc.edu/~weiwang/paper/SSDBM07_2.pdf
+ *  - https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
+ *
  * PROCESSING:
  * the processing section iterated through ever pixel in every input band,
  * and calculates/writes the strata to the corresponding output band.
@@ -671,34 +692,6 @@ processPixel(
  * @param std::map<std::string, std::string> driverOptions,
  * @param double eps
  * @returns GDALRasterWrapper *pointer to newly created stratified raster
- *
- * p_raster:
- * 	a pointer to the input raster.
- * userProbababilities:
- * 	a map from int to std::vector<double> which maps
- * 	the input raster bands to a vector of quantile
- * 	probabilities.
- * map:
- * 	a specification of whether to map all of teh output
- * 	bands to an additional output band.
- * filename:
- * 	the output filename, or "" if not to write to an
- * 	output file.
- * tempFolder:
- * 	the temporary folder to put VRT bands into.
- * largeRaster:
- * 	whether or not the entire raster band should be
- * 	allocated to memory at once.
- * threadCount:
- * 	the number of threads to process with, only used
- * 	if largeRaster is true.
- * driverOptions:
- * 	extra user-defined driver options such as compresison.
- * eps:
- * 	a specification of the epsilon value for the quantile
- * 	streaming algorithm.
- * 	https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
- * 	https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
  */
 raster::GDALRasterWrapper *quantiles(
 	raster::GDALRasterWrapper *p_raster,
