@@ -408,6 +408,23 @@ public:
  *
  * Once all blocks have been processed, free any allocated memory and calculate the sample
  * allocation per strata, and return this allocation.
+ *
+ * @param int numSamples
+ * @param int numStrata
+ * @param RasterBandMetaData& band
+ * @param Access& access
+ * @param Existing& existing
+ * @param IndexStorageVectors& indices
+ * @param std::vector<std::vector<OGRPoint>>& existingSamples
+ * @param uint64_t multiplier
+ * @param xoshiro_4x64_plus& rng
+ * @param std::string allocation
+ * @param OptimAllocationDataManager& optim
+ * @param std::vector<double>weights
+ * @param int width
+ * @param int height
+ * 
+ * @returns std::vector<int64_t>
  */
 template <typename T>
 std::vector<int64_t>
@@ -712,13 +729,33 @@ struct FocalWindow {
  *
  * Once all blocks have been processed, free any allocated memory and calculate the sample allocation per strata,
  * and return this allocation.
+ *
+ * @param int numSamples
+ * @param int numStreata
+ * @param RasterBandMetaData& band
+ * @param Access& access
+ * @param Existing& existing
+ * @param IndexStorageVectors& indices
+ * @param IndexStorageVectors& queinnecIndices
+ * @param FocalWindow& fw
+ * @param std::vector<std::vector<OGRPoint>>& existingSamples
+ * @param uint64_t multiplier
+ * @param uint64_t queinnecMultiplier
+ * @param xso::xoshiro_4x64_plus& rng
+ * @param std::string allocation
+ * @param OptimAllocatoinDataManager& optim
+ * @param std::vector<double> weights
+ * @param int width
+ * @param int height
+ *
+ * @returns std::vector<int64_t>
  */
 template <typename T>
 std::vector<int64_t>
 processBlocksStratQueinnec(
 	int numSamples,
 	int numStrata,
-	helper::RasterBandMetaData &band,
+	helper::RasterBandMetaData& band,
 	access::Access& access,
 	existing::Existing& existing,
 	IndexStorageVectors& indices,
@@ -1089,6 +1126,12 @@ processBlocksStratQueinnec(
  * @param bool plot
  * @param std::string filename
  * @param std::string tempFolder
+ *
+ * @returns std::tuple<
+ * 		std::vector<std::vector<double>>,
+ * 		GDALVectorWrapper *,
+ * 		size_t
+ * 	    >
  */
 std::tuple<std::vector<std::vector<double>>, vector::GDALVectorWrapper *, size_t>
 strat(
