@@ -17,7 +17,39 @@ namespace sgs {
 namespace poly {
 
 /**
+ * This function conducts stratification by polygons on the input raster.
  *
+ * First, the spatial reference of the input vector is compared to that
+ * of the input raster. If they differ, and error is thrown.
+ *
+ * Next, an output raster dataset is created based on the input values. 
+ * The new raster is created to have the same height, width, 
+ * geotransform, and projection of the input raster. It may be an
+ * in-memory dataset, a VRT dataset, or a dataset corresponding to the
+ * user input 'filename' parameter.
+ *
+ * The Python function which calls this C++ function created an SQL 
+ * query which, when ran on the polygon, maps feature values of a
+ * particular attribute in a specific layer to stratification values.
+ * The GDALRasterize function is called using this SQL query to rasterize
+ * the polygon into different stratifications according to the user-
+ * defined inputs. One of the parameters to this rasterization function
+ * is the output raster dataset created, which has the output of the
+ * rasterization written to it's first band.
+ *
+ * The resulting dataset is then returned as a GDALRasterWrapper object.
+ *
+ * @param GDALVectorWrapper *p_vector
+ * @param GDALRasterWrapper *p_raster
+ * @param size_t numStrata
+ * @param std::string layerName
+ * @param std::string query
+ * @param std::string filename
+ * @param bool largeRaster
+ * @param std::string tempFolder
+ * @param std::map<std::string, std::string> driverOptions
+ *
+ * @returns GDALRasterWrapper *
  */
 raster::GDALRasterWrapper *poly(
 	vector::GDALVectorWrapper *p_vector,
