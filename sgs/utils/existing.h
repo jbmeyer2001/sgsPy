@@ -53,6 +53,9 @@ struct Existing {
 	 * @param double *GT
 	 * @param int64_t width
 	 * @param OGRLayer *p_samples
+	 * @param bool plot
+	 * @param std::vector<double>& xCoords
+	 * @param std::vector<double>& yCoords
 	 */
 	Existing(
 		vector::GDALVectorWrapper *p_vect, 
@@ -127,6 +130,10 @@ struct Existing {
 	 *
 	 * This function will be used when determining sample plot placement,
 	 * when iterating through an input raster. 
+	 *
+	 * @param int64_t x
+	 * @param int64_t y
+	 * @returns bool
 	 */
 	inline bool
 	containsIndex(int64_t x, int64_t y) {
@@ -137,6 +144,10 @@ struct Existing {
 	/**
 	 * if the map has already been checked, gets the OGRPoint which
 	 * is associated with a particular value.
+	 *
+	 * @param int64_t x
+	 * @param int64_t y
+	 * @returns OGRPoint
 	 */
 	inline OGRPoint
 	getPoint(int64_t x, int64_t y) {
@@ -150,6 +161,10 @@ struct Existing {
 	 *
 	 * If this index is contained in the samples unordered_set, True
 	 * is returned, otherwise the result will be false.
+	 *
+	 * @param double xCoord
+	 * @param double yCoord
+	 * @returns bool
 	 */
 	inline bool
 	containsCoordinates(double xCoord, double yCoord) {
@@ -159,6 +174,8 @@ struct Existing {
 
 	/**
 	 * Get the number of existing sample points.
+	 *
+	 * @returns size_t
 	 */
 	inline size_t
 	count() {
