@@ -99,25 +99,6 @@ namespace map {
  * @param std::string tempFolder
  * @param std::map<std::string, std::string> driverOptions,
  * @returns GDALRasterWrapper *pointer to newly created raster mapping
- *
- * rasters:
- * 	a vector of pointers to input rasters.
- * bands:
- * 	a vector of band indexes to the input rasters.
- * strataCounts:
- *	a vector of vectrors, containing the number of strata in each band.
- * filename:
- *	the output filename, or "" if not to write to an output file.
- * largeRaster:
- *	whether or not the entire raster band should be allocated
- *	into memory at once.
- * threadCount:
- *	the number of threads to process with, only used if largeRaster
- *	is true.
- * tempFolder:
- *	the temporary folder to put VRT bands into.
- * driverOptions:
- * 	extra user-defined driver options such as compression.
  */
 raster::GDALRasterWrapper *map(
 	std::vector<raster::GDALRasterWrapper *> rasters,
