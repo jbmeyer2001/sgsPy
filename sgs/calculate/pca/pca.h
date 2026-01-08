@@ -131,7 +131,7 @@ calculatePCA(
 
 	//calculate pca
 	DALHomogenTable table = DALHomogenTable::wrap<T>(p_data, nFeatures, bandCount, oneapi::dal::data_layout::row_major);
-	const auto desc = oneapi::dal::pca::descriptor<float, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
+	const auto desc = oneapi::dal::pca::descriptor<T, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
        	const auto result = oneapi::dal::train(desc, table);
 
 	VSIFree(p_data);
@@ -227,7 +227,7 @@ calculatePCA(
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
 
-	const auto desc = oneapi::dal::pca::descriptor<float, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
+	const auto desc = oneapi::dal::pca::descriptor<T, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
 	oneapi::dal::pca::partial_train_result<> partial_result;
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
