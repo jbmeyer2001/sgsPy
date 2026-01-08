@@ -379,12 +379,13 @@ srs(
 			helper::addPoint(&point, p_layer);
 
 			samplesAdded++;
+
+			if (plot) {
+				xCoords.push_back(x);
+				yCoords.push_back(y);
+			}
 		}
 
-		if (plot) {
-			xCoords.push_back(x);
-			yCoords.push_back(y);
-		}
 	}
 
 	if (filename != "") {
