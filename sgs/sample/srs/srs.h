@@ -22,6 +22,18 @@ namespace sgs {
 namespace srs {
 
 /**
+ * This is the hashing function used to store the points for spatial indexing
+ * during sampling.
+ */
+struct PairHash {
+    inline std::size_t operator()(const std::pair<int, int> &v) const {
+        std::size_t h1 = std::hash<int>{}(v.first);
+        std::size_t h2 = std::hash<int>{}(v.second);
+        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+    }
+};
+
+/**
  * This is a helper function for processing a block of the raster. For each
  * pixel in the block: 
  * The value is checked, and not added if it is a nanvalue. 
@@ -324,38 +336,56 @@ srs(
 	std::shuffle(indices.begin(), indices.end(), rng);
 
 	size_t samplesAdded = existing.used ? existing.count() : 0;
-	size_t i = 0;
-	while (samplesAdded < numSamples && i < indices.size()) {
-		helper::Index index = indices[i];
-		i++;
+    size_t i = 0;
+    std::unordered_map<std::pair<int, int>, std::vector<std::pair<double, double>>, PairHash> grid;
+    double mindist_sq = mindist * mindist;
 
-		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
-		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
-		OGRPoint point = OGRPoint(x, y);
+    while (samplesAdded < numSamples && i < indices.size()) {
+        helper::Index index = indices[i];
+        i++;
 
-		if (mindist != 0.0 && p_layer->GetFeatureCount() != 0) {
-			bool add = true;
-			for (const auto &p_feature : *p_layer) {
-				OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
-				if (point.Distance(p_point) < mindist) {
-					add = false;
-					break;
-				}
-			}
+        double x = GT[0] + index.x * GT[1] + index.y * GT[2];
+        double y = GT[3] + index.x * GT[4] + index.y * GT[5];
 
-			if (!add) {
-				continue;
-			}
-		}
+        int cx = static_cast<int>(std::floor(x / mindist));
+        int cy = static_cast<int>(std::floor(y / mindist));
+        bool add = true;
 
-		helper::addPoint(&point, p_layer);
-		samplesAdded++;
+        for (int dx = -1; dx <= 1 && add; dx++) {
+            for (int dy = -1; dy <= 1 && add; dy++) {
+                std::pair<int, int> neighbor = {cx + dx, cy + dy};
 
-		if (plot) {
-			xCoords.push_back(x);
-			yCoords.push_back(y);
-		}	
-	}
+                auto it = grid.find(neighbor);
+                if (it == grid.end())
+                    continue;
+
+                for (const auto &[nx, ny] : it->second) {
+                    float dxp = x - nx;
+                    float dyp = y - ny;
+                    float dist_sq = dxp * dxp + dyp * dyp;
+
+                    if (dist_sq < mindist_sq) {
+                        add = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (add) {
+            grid[{cx, cy}].emplace_back(x, y);
+
+            OGRPoint point = OGRPoint(x, y);
+            helper::addPoint(&point, p_layer);
+
+            samplesAdded++;
+        }
+
+        if (plot) {
+            xCoords.push_back(x);
+            yCoords.push_back(y);
+        }
+    }
 
 	if (filename != "") {
 		try {
