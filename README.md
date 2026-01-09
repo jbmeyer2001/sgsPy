@@ -32,11 +32,6 @@ the virtual environment then resides in the .venv folder, and can be activated w
 source ./.venv/bin/activate
 ```
 
-until the package is available on PyPi, external dynamic libraries will go missing at runtime unless the folder containing the .venv/sgs is added to the LD_LIBRARY_PATH variable.
-```
-export LD_LIBRARY_PATH=[PATH TO THIS FOLDER]/.venv/sgs:$LD_LIBRARY_PATH
-```
-
 4. install dependency requirements. If you do not already have these, the dependency installation will fail.
  - build-essential (if you don't already have a C++ compiler)
  - pkg-config
