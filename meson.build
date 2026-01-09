@@ -36,18 +36,18 @@ if WIN
   path_entries = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(';')
   foreach entry : path_entries
     if entry.contains('Temp') and entry.contains('pip-build-env') and entry.contains('overlay') and entry.contains('Scripts')
-      pip_build_dir = entry.split('Scripts').get(0)
-      pip_inc_dir = pip_build_dir + join_paths('Library', 'include')
-      pip_lib_dir = pip_build_dir + join_paths('Library', 'lib')
-      pip_bin_dir = pip_build_dir + join_paths('Library', 'bin')
+      tmp_build_dir = entry.split('Scripts').get(0)
+      tmp_inc_dir = tmp_build_dir + join_paths('Library', 'include')
+      tmp_lib_dir = tmp_build_dir + join_paths('Library', 'lib')
+      tmp_bin_dir = tmp_build_dir + join_paths('Library', 'bin')
     endif
   endforeach
 else
-  pip_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
+  tmp_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
 
-  pip_inc_dir = pip_build_dir + 'include'
-  pip_lib_dir = pip_build_dir + 'lib'
-  pip_bin_dir = pip_build_dir + 'bin'
+  tmp_inc_dir = tmp_build_dir + 'include'
+  tmp_lib_dir = tmp_build_dir + 'lib'
+  tmp_bin_dir = tmp_build_dir + 'bin'
 endif
 
 #define directories
@@ -93,8 +93,8 @@ else #linux
     lib = simlink.get(0)
     version = simlink.get(1)
     
-    simlink_src = pip_lib_dir + '/lib' + lib + '.so'
-    simlink_dst = pip_lib_dir + '/lib' + lib + '.so' + version #this is the file which actually exists
+    simlink_src = tmp_lib_dir + '/lib' + lib + '.so'
+    simlink_dst = tmp_lib_dir + '/lib' + lib + '.so' + version #this is the file which actually exists
     
     run_command('ln', '-s', simlink_dst, simlink_src, check: true)
   endforeach
@@ -103,19 +103,19 @@ endif
 #add libs for oneDAL build dependency
 oneDAL_dep = []
 foreach lib : onedal_libs
-  oneDAL_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+  oneDAL_dep += cxx.find_library(lib, dirs: [tmp_lib_dir])
 endforeach
  
 #add libs for tbb build dependency
 tbb_dep = []
 foreach lib : tbb_libs
-  tbb_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+  tbb_dep += cxx.find_library(lib, dirs: [tmp_lib_dir])
 endforeach
 
 #add libs for mkl build dependency
 mkl_dep = []
 foreach lib : mkl_libs
-  mkl_dep += cxx.find_library(lib, dirs: [pip_lib_dir])
+  mkl_dep += cxx.find_library(lib, dirs: [tmp_lib_dir])
 endforeach
 
 #add link args
@@ -193,24 +193,7 @@ if WIN
     join_paths(bin_dir, 'uriparser.dll'),
     join_paths(bin_dir, 'zlib1.dll'),
     join_paths(bin_dir, 'zstd.dll'),
-  
-    #onedal dlls
-    join_paths(pip_bin_dir, 'onedal.3.dll'),
-    join_paths(pip_bin_dir, 'onedal_core.3.dll'),
-    join_paths(pip_bin_dir, 'onedal_thread.3.dll'),
-    join_paths(pip_bin_dir, 'tbb12.dll'),
-    join_paths(pip_bin_dir, 'tbbmalloc.dll'),
-  
-    #mkl dlls
-    join_paths(pip_bin_dir, 'mkl_core.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_tbb_thread.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_blacs_intelmpi_ilp64.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_def.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_avx2.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_avx512.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_cmpt.2.dll'),
-    join_paths(pip_bin_dir, 'mkl_vml_mc3.2.dll'),
-
+     
     #proj
     meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
@@ -225,7 +208,7 @@ endforeach
 #when on linux, the libonedal.so.3 dynamic library causes loading issues if it's rpath is not set
 #in order to not change the rpath of libraries which this package does not own, vendor libonedal.so.3
 if not WIN
-  lib_path = join_paths(pip_lib_dir, 'libonedal.so.3')
+  lib_path = join_paths(tmp_lib_dir, 'libonedal.so.3')
   run_command('patchelf', '--set-rpath', '$ORIGIN/../lib', lib_path)
   install_data(lib_path)
 endif
@@ -242,7 +225,7 @@ py.extension_module(
     pybind11_dep
   ],
   include_directories: [
-    pip_inc_dir,
+    tmp_inc_dir,
     vcpkg_inc_dir,
     xoshiro_inc_dir,
     inc_dir
