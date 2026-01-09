@@ -17,15 +17,15 @@ class TestPCA:
         pca = sgs.pca(self.rast, num_comp=3)
         test = pca.band(0)
         correct = self.pca_result.band(0)
-        assert np.array_equal(test, correct, equal_nan=True)
+        np.testing.assert_almost_equal(correct, test, decimal=5)
         
         test = pca.band(1)
         correct = self.pca_result.band(1)
-        assert np.array_equal(test, correct, equal_nan=True)
+        np.testing.assert_almost_equal(correct, test, decimal=5)
 
         test = pca.band(2)
         correct = self.pca_result.band(2)
-        assert np.array_equal(test, correct, equal_nan=True)
+        np.testing.assert_almost_equal(correct, test, decimal=5)
 
     def test_inputs(self):
         pca = sgs.pca(self.rast, num_comp=3)

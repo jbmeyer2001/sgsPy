@@ -152,7 +152,8 @@ raster::GDALRasterWrapper *poly(
 
 	//step 6: free dynamically allocated rasterization options
 	GDALRasterizeOptionsFree(options);
-
+	CSLDestroy(argv);	
+	
 	if (isVRTDataset) {
 		GDALClose(VRTBandInfo[0].p_dataset);
 		helper::addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	

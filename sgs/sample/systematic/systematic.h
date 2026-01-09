@@ -50,17 +50,26 @@ OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string l
 
 		switch (type) {
 			case OGRwkbGeometryType::wkbLineString: {
-				buffOuterPolygons->addGeometry(p_geometry->Buffer(buffOuter));
+				OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
+				buffOuterPolygons->addGeometry(p_outer);
+				OGRGeometryFactory::destroyGeometry(p_outer);
+
 				if (buffInner != 0) {
-					buffInnerPolygons->addGeometry(p_geometry->Buffer(buffInner));
+					OGRGeometry *p_inner = p_geometry->Buffer(buffInner);
+					buffInnerPolygons->addGeometry(p_inner);
+					OGRGeometryFactory::destroyGeometry(p_inner);
 				}
 				break;
 			}
 			case OGRwkbGeometryType::wkbMultiLineString: {
 				for (const auto& p_lineString : *p_geometry->toMultiLineString()) {
-					buffOuterPolygons->addGeometry(p_lineString->Buffer(buffOuter));
+					OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
+					buffOuterPolygons->addGeometry(p_outer);
+					OGRGeometryFactory::destroyGeometry(p_outer);
 					if (buffInner != 0) {
-						buffInnerPolygons->addGeometry(p_lineString->Buffer(buffInner));
+						OGRGeometry *p_inner = p_geometry->Buffer(buffInner);
+						buffInnerPolygons->addGeometry(p_inner);
+						OGRGeometryFactory::destroyGeometry(p_inner);
 					}
 				}
 				break;
@@ -74,17 +83,16 @@ OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string l
 	//step 3: generate the polygon mask and free no longer used memory
 	if (buffInner == 0) {
 		p_polygonMask = buffOuterPolygons->UnionCascaded();
-		free(buffOuterPolygons);
 	}
 	else {
 		OGRGeometry *buffOuterUnion = buffOuterPolygons->UnionCascaded();
 		OGRGeometry *buffInnerUnion = buffInnerPolygons->UnionCascaded();
 		p_polygonMask = buffOuterUnion->Difference(buffInnerUnion);
-		free(buffOuterPolygons);
-		free(buffInnerPolygons);
-		free(buffOuterUnion);
-		free(buffInnerUnion);
+		OGRGeometryFactory::destroyGeometry(buffOuterUnion);
+		OGRGeometryFactory::destroyGeometry(buffInnerUnion);
 	}
+	delete buffOuterPolygons;
+	delete buffInnerPolygons;
 
 	return p_polygonMask;
 }
@@ -293,7 +301,7 @@ systematic(
 		+ std::to_string(rotation) + ")";
 
 	//query to create grid
-	OGRLayer *p_gridTest = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");
+	OGRLayer *p_grid = p_raster->getDataset()->ExecuteSQL(queryString.c_str(), nullptr, "SQLITE");
 
 	//create output dataset before anything that might take a long time (in case creation of dataset fails)
 	GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
@@ -334,8 +342,8 @@ systematic(
 	//grid represents the grid used to create the sampels only if PLOT is true, and is returned to the (Python) caller
 	std::vector<std::vector<std::vector<double>>> grid;
 
-	//iterate through the polygons in the grid and populate the return data depending on user inputs
-	for (const auto& p_feature : *p_gridTest) {
+	//iterate through the polygons in the grid and populate the ruturn data depending on user inputs
+	for (const auto& p_feature : *p_grid) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
 		for (const auto& p_polygon : *p_geometry->toMultiPolygon()) {
 			//generate sample depending on 'location' parameter
@@ -458,6 +466,12 @@ systematic(
 			std::cout << "Exception thrown trying to write file: " << e.what() << std::endl;
 		}
 	}	
+
+	//clean up memory
+	p_raster->getDataset()->ReleaseResultSet(p_grid);
+	if (p_access) {
+		OGRGeometryFactory::destroyGeometry(access);
+	}
 
 	return {p_wrapper, {xCoords, yCoords}, grid};
 }
