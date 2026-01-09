@@ -32,8 +32,94 @@ def clhs(
     plot: bool = False,
     filename: str = ''):
     """
+    This function conducts Conditioned Latin Hypercube Sampling, see the following article for an
+    in depth description of the method itself:
+    
+    Minasny, B. and McBratney, A.B. 2006. A conditioned Latin hypercube method
+    for sampling in the presence of ancillary information. Computers and Geosciences, 32:1378-1388.
 
+    The number of output samples is decided by the 'num_samples' parameter. The 'iterations' parameter
+    indicates the number of iterations the simulated annealing portion of the clhs algorithm will undertake
+    in the case where a perfect latin hypercube is not found. A higher number of iterations may result in
+    a more representative sample, although the standard value recommended by Misany and McBratney is 10000.
+
+    The access parameter may be given to restrict the areas where sampling may occur. The algorithm will still
+    attempt to find a latin hypercube representative across the entire feature space, not just the accessible
+    pixels. The access vector may contain geometries of type LineString or MultiLineString. buff_outer specifies
+    the buffer distance around the geometry which is allowed to be included in the sampling. buff_inner specifies
+    the buffer distance around the geometry which is not allwoed to be included in the sampling. buff_outer must
+    be larger than buff_inner. For a multi layer vector, layer_name must be specified.
+
+    The output is an object of type sgs.SpatialVector which contains the chosen sample points.
+
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.clhs(rast, num_samples=250)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.clhs(rast, num_samples=250, plot=True, filename="clhs_samples.shp")
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("access_network.shp")
+    samples = sgs.sample.clhs(rast, num_samples=200, access=access, buff_outer=300)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("access_network.shp")
+    samples = sgs.sample.clhs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)
+
+    Parameters
+    --------------------
+    rast : SpatialRaster
+        raster data structure containing input raster bands
+    num_samples : int
+        the target number of samples
+    iterations : int
+        the number of iterations in the clhs algorithms
+    access : SpatialVector
+        a vector specifying an access network
+    layer_name : str
+        the layer within the access network which will be used for sampling
+    buff_inner : int | float
+        buffer boundary specifying distance from access geometries which CANNOT be sampled
+    buff_outer : int | float
+        buffer boundary specifying distance from access geometries which CAN be sampled
+    plot : bool
+        whether to plot the output samples or not
+    filename : str
+        the filename to write to, or '' if file should not be written
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
     """
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(num_samples) is not int:
+        raise TypeError("'num_samples' parameter must be of type int.")
+
+    if type(iterations) is not int:
+        raise TypeError("'iterations' parameter must be of type int.")
+
+    if access is not None and type(access) is not SpatialVector:
+        raise TypeError("'access' parameter, if given, must be of type sgs.SpatialVector.")
+
+    if layer_name is not None and type(layer_name) is not str:
+        raise TypeError("'layer_name' parameter, if given, must be of type str.")
+
+    if buff_inner is not None and type(buff_inner) not in [int, float]:
+        raise TypeError("'buff_inner' parameter, if given, must be of type int or float.")
+
+    if buff_outer is not None and type(buff_outer) not in [int, float]:
+        raise TypeError("'buff_outer' parameter, if given, must be of type int or float.")
+
+    if type(plot) is not bool:
+        raise TypeError("'plot' parameter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 

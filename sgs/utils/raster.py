@@ -47,28 +47,21 @@ class SpatialRaster:
 
     Accessing raster data:
 
-        raster data can be accessed in the form of a NumPy array using the Python bracket syntax.
-        The first dimension is the band, followed by the y and x dimensions like so [band][y][x]. 
-        The band can be identified by either a band name or an index, which, following Python's
-        standard is zero-indexed. NumPy's array slicing may also be used.
+        raster data can be accessed in the form of a NumPy array per band. This can be done using 
+        the 'band' function. The band function takes  a single parameter, which must be either
+        an integer or a string. If it is an integer, it must refer to a valid zero-indexed band
+        number. If it is a string, it must refer to a valid band name within the raster.
 
         examples:
-        rast = sgs.utils.raster.SpatialRaster('test.tif')
+        rast = sgs.utils.raster.SpatialRaster('test.tif') #raster with three layers
 
-        #returns a 2d numpy array of the first raster band
-        rast[0]
+        b0 = rast.band(band=0)
+        b0 = rast.band(band=1)
+        b0 = rast.band(band=2)
 
-        #returns a 3d numpy array of the first and second raster band
-        rast[0:2]
-
-        #returns a 2d numpy array of the 'zq90' band
-        rast['zq90']
-
-        #returns a 1d numpy array of the first row of the 'zsd' band
-        rast['zsd', 0]
-
-        #returns a 1d numpy array of the first column of the 'zsd' band
-        rast['zsd', :, 0]
+        zq90 = rast.band(band='zq90')
+        pzabove2 = rast.band(band='pzabove2')
+        zstd = rast.band(band='zstd')
 
     Accessing raster information:
 
@@ -108,11 +101,11 @@ class SpatialRaster:
 
         #plots the second band
         rast = sgs.SpatialRaster('test_multi_band_raster.tif')
-        rast.plot_image(band=1)
+        rast.plot(band=1)
 
         #plots the 'zq90' band
         rast = sgs.SpatialRaster('test_multi_band_raster.tif')
-        rast.plot_image(band='zq90')
+        rast.plot(band='zq90')
 
     Public Attributes
     --------------------
@@ -126,8 +119,10 @@ class SpatialRaster:
         the number of bands in the raster image
     bands : list[str]
         the raster band names
-    crs : dict
-        dictionary representing coordinate reference system information
+    crs : str
+        coordinate reference system
+    projection : str
+        full projection string as wkt
     xmin : double
         minimum x value as defined by the gdal geotransform
     xmax : double
@@ -145,7 +140,7 @@ class SpatialRaster:
     --------------------
     info()
         takes no arguments, prints raster information to the console
-    plot_image()
+    plot()
         takes one optional 'band' argument of type int, or str
         
     Optionally, any of the arguments that can be passed to matplotlib.pyplot.imshow 
@@ -169,6 +164,7 @@ class SpatialRaster:
         self.height
         self.band_count
         self.crs
+        self.projection
         self.xmin
         self.xmax
         self.ymin
@@ -187,15 +183,6 @@ class SpatialRaster:
         --------------------
         image : str
             specifies a raster file path
-
-        Raises
-        --------------------
-        RuntimeError (from C++):
-            if dataset is not initialized correctly
-        RuntimeError (from C++):
-            if unable to getgeotransform
-        RuntimeError (from C++):
-            if unable to get coordinate reference system
         """
         if (type(image) is str):
             self.cpp_raster = GDALRasterWrapper(image)
@@ -203,7 +190,7 @@ class SpatialRaster:
         elif type(image) is GDALRasterWrapper:
             self.cpp_raster = image
         else:
-            raise RuntimeError("parameter passed to SpatialRaster constructor must be of type str or GDALRasterWrapper")
+            raise TypeError("'image' parameter of SpatialRaster constructor must be of type str or GDALRasterWrapper")
 
         self.driver = self.cpp_raster.get_driver()
         self.width = self.cpp_raster.get_width()
@@ -246,9 +233,12 @@ class SpatialRaster:
         Utilizes the band_name_dict to convert a band name to an index if requried.
 
         Parameters:
-        band: str or int
+        band : str or int
             string representing a band or int representing a band
         """
+        if type(band) not in [str, int]:
+            raise TypeError("'band' parameter must be of type str or int.")
+        
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
@@ -260,14 +250,14 @@ class SpatialRaster:
     def load_arr(self, band_index: int):
         """
         Loads the rasters gdal dataset into a numpy array.
-
-        Raises
-        --------------------
-        RuntimeError (from C++):
-            if unable to read raster band
-        RuntimeError (from C++):
-            if the band is larger than a gigabyte sgs will not load it into memory
+        
+        Parameters:
+        band : int
+            integer representing band index
         """
+        if type(band_index) is not int:
+            raise TypeError("band_index' parameter must be of type int.")
+
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
@@ -280,16 +270,13 @@ class SpatialRaster:
         """
         gets a numpy array with the specified bands data.
 
-        May call load_arr if this data has not been directly
-        accessed by Python before.
-
-        Raises
-        --------------------
-        RuntimeError (from C++):
-            if unable to read raster band
-        RuntimeError (from C++):
-            if the band is larger than a gigabyte sgs will not load it into memory
+        Parameters:
+        band : int | str
+            string or int representing band
         """
+        if type(band) not in [int, str]:
+            raise TypeError("'band' parameter must be of type int or str.")
+
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
@@ -317,15 +304,10 @@ class SpatialRaster:
             maximum width in pixels for the image (after downsampling)
         target_height : int
             maximum height in pixels for the image (after downsampling)
-        band (optional) : int or str
+        band : int or str
             specification of which bands to plot
-        **kwargs (optional)
+        **kwargs
             any parameters which may be passed to matplotlib.pyplot.imshow
-
-        Raises
-        --------------------
-        RuntimeError (from C++)
-            if unable to read raster band
         """
         if self.closed:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
@@ -359,14 +341,14 @@ class SpatialRaster:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
 
         if type(ds) is not rasterio.io.DatasetReader and type(ds) is not rasterio.io.DatasetWriter:
-            raise RuntimeError("the ds parameter passed to from_raster() must be of type rasterio.io.DatasetReader or rasterio.io.DatasetWriter.")
+            raise TypeError("the ds parameter passed to from_raster() must be of type rasterio.io.DatasetReader or rasterio.io.DatasetWriter.")
 
         if ds.driver == "MEM" and arr is None:
             arr = ds.read()
 
         if arr is not None:
             if type(arr) is not np.ndarray:
-                raise RuntimeError("if the array parameter is passed, it must be of type np.ndarray")
+                raise TypeError("the 'arr' parameter, if passed, must be of type np.ndarray")
     
             shape = arr.shape
             if (len(shape)) == 2:
@@ -418,6 +400,9 @@ class SpatialRaster:
         rast = sgs.SpatialRaster('mraster.tif')
         ds, arr = sgs.to_rasterio(with_arr=True)
         """
+        if type(with_arr) is not bool:
+            raise TypeError("'with_arr' parameter must be of type bool.")
+
         if not RASTERIO:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
 
@@ -496,7 +481,7 @@ class SpatialRaster:
             raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
 
         if type(ds) is not gdal.Dataset:
-            raise RuntimeError("the ds parameter passed to from_gdal() must be of type gdal.Dataset")
+            raise TypeError("the ds parameter passed to from_gdal() must be of type gdal.Dataset")
     
         if ds.GetDriver().ShortName == "MEM" and arr is None:
             bands = []
@@ -506,7 +491,7 @@ class SpatialRaster:
 
         if arr is not None:
             if type(arr) is not np.ndarray:
-                raise RuntimeError("if the array parameter is passed, it must be of type np.ndarray")
+                raise TypeError("'arr' parameter, if passed, must be of type np.ndarray")
     
             shape = arr.shape
             if (len(shape)) == 2:
@@ -596,9 +581,10 @@ class SpatialRaster:
             #
             # I'm dong it this way for now instead of somehow passing the data pointer directly, for fear of memory leaks/dangling pointers/accidentally deleting memory still in use.
             for i in range(1, arr.shape[0] + 1):
-                ds.AddBand(gdal_array.NumericTypeCodeToGDALTypeCode(arr.dtype))
+                band_arr = arr[i - 1]
+                ds.AddBand(gdal_array.NumericTypeCodeToGDALTypeCode(band_arr.dtype))
                 band = ds.GetRasterBand(i)
-                band.WriteArray(arr[i - 1])
+                band.WriteArray(band_arr)
                 band.SetNoDataValue(nan_vals[i - 1])
                 band.SetDescription(band_names[i - 1])
         else:

@@ -26,8 +26,8 @@ def pca(
     raster.
 
     A number of output components must be provided as an integer. This integer
-    must be less than or equal to the total number of bands in the input raster.
-    This will be the number of bands in the output raster.
+    must be less than or equal to the total number of bands in the input raster,
+    and will be the number of bands in the output raster.
     A filename may be given to specify an output file location, otherwise
     a virtual file type will be used. The driver_options parameter is 
     used to specify creation options for a the output raster.
@@ -37,6 +37,17 @@ def pca(
     along with mean and standard deviation of each raster band. The
     raster is both centered and scaled, then output values are calculated
     for each principal component.
+
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("raster.tif")
+    pcomp = sgs.calculate.pca(rast, 3)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    pcomp = sgs.calculate.pca(rast, 2, filename="pca.tif", display_info=True)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    pcomp = sgs.calculate.pca(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"}) 
 
     Parameters
     --------------------
@@ -53,8 +64,25 @@ def pca(
 
     Returns
     --------------------
-    a SpatialRaster object containing principal component output bands.
+    a SpatialRater object containing principal component bands
+
     """
+    if type(rast) is not SpatialRaster:
+        print(type(rast))
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(num_comp) is not int:
+        raise TypeError("'num_comp' parameter must be of type int.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
+    if type(display_info) is not bool:
+        raise TypeError("'display_info' parameter must be of type bool.")
+
+    if driver_options is not None and type(driver_options) is not dict: 
+        raise TypeError("'driver_options' parameter, if given, must be of type dict.")
+
     if rast.closed:
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
@@ -72,7 +100,7 @@ def pca(
     if driver_options:
         for (key, val) in driver_options.items():
             if type(key) is not str:
-                raise ValueError("the key for all key/value pairs in the driver_options dict must be a string.")
+                raise TypeError("the key for all key/value pairs in the driver_options dict must be a string.")
             driver_options_str[key] = str(val)
 
    #determine whether the raster should be categorized as 'large' and thus be processed in blocks

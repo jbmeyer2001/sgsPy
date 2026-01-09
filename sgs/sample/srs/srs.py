@@ -24,7 +24,7 @@ from _sgs import srs_cpp
 def srs(
     rast: SpatialRaster,
     num_samples: int,
-    mindist: float = 0,
+    mindist: [int | float] = 0,
     existing: Optional[SpatialVector] = None,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
@@ -41,14 +41,34 @@ def srs(
     An access vector of LineString or MultiLineString type can be provided.
     buff_outer specifies the buffer distance around the geometry which
     is allowed to be included in the sampling, buff_inner specifies the
-    geometry which is not allowed to be included in the sampling. buff_outer
-    must be larger than buff_inner. For a multi-layer vector, layer_name
-    must be specified.
+    buffer distance around the geometry which is not allowed to be included 
+    in the sampling. buff_outer must be larger than buff_inner. For a multi 
+    layer vector, layer_name must be specified.
 
     A vector containing existing sample points can be provided. If this is
     the case then all of the points in the existing sample are automatically
     added and random samples are chosen as required until num_samples number
     of samples are chosen.
+
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.srs(rast, num_samples=250)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.srs(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp")
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("access_network.shp")
+    samples = sgs.sample.srs(rast, num_samples=200, mindist=100, access=access, buff_outer=300)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("access_network.shp")
+    samples = sgs.sample.srs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    existing = sgs.SpatialVector("existing_samples.shp")
+    samples = sgs.sample.srs(rast, num_samples=200, existing=existing)
 
     Parameters
     --------------------
@@ -58,21 +78,56 @@ def srs(
         the target number of samples
     mindist : float
         the minimum distance each sample point must be from each other
-    existing (optional) : SpatialVector
+    existing : SpatialVector
         a vector specifying existing sample points
-    access (optional) : SpatialVector
+    access : SpatialVector
         a vector specifying access network
-    layer_name (optional) : str
+    layer_name : str
         the layer within access that is to be used for sampling
-    buff_inner (optional) : int | float
+    buff_inner : int | float
         buffer boundary specifying distance from access which CANNOT be sampled
-    buff_outer (optional) : int | float
+    buff_outer : int | float
         buffer boundary specifying distance from access which CAN be sampled
     plot : bool
         whether to plot the samples or not
     filename : str
         the filename to write to, or '' if file should not be written
+
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
    """
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(num_samples) is not int:
+        raise TypeError("'num_samples' parameter must be of type int.")
+
+    if type(mindist) not in [int, float]:
+        raise TypeError("'mindist' parameter must be of type int or float.")
+
+    if existing is not None and type(existing) is not SpatialVector:
+        raise TypeError("'existing' parameter, if given, must be of type sgs.SpatialVector.")
+
+    if access is not None and type(access) is not SpatialVector:
+        raise TypeError("'access' parameter, if given, must be of type sgs.SpatialVector.")
+
+    if layer_name is not None and type(layer_name) is not str:
+        raise TypeError("'layer_name' parameter, if given, must be of type str.")
+
+    if buff_inner is not None and type(buff_inner) not in [int, float]:
+        raise TypeError("'buff_inner' parameter, if given, must be of type int or float.")
+
+    if buff_outer is not None and type(buff_outer) not in [int, float]:
+        raise TypeError("'buff_outer' parameter, if given, must be of type int or float.")
+
+    if type(plot) is not bool:
+        raise TypeError("'plot' parameter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' paramter must be of type str.")
+
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 

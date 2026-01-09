@@ -16,6 +16,9 @@
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
 
+namespace sgs {
+namespace existing {
+
 /**
  * This struct handles existing sample plot points. It has a constructor
  * which takes a GDALVectorWrapper, geotransform, and width of the raster
@@ -50,9 +53,12 @@ struct Existing {
 	 * @param double *GT
 	 * @param int64_t width
 	 * @param OGRLayer *p_samples
+	 * @param bool plot
+	 * @param std::vector<double>& xCoords
+	 * @param std::vector<double>& yCoords
 	 */
 	Existing(
-		GDALVectorWrapper *p_vect, 
+		vector::GDALVectorWrapper *p_vect, 
 		double *GT, 
 		int64_t width, 
 		OGRLayer *p_samples, 
@@ -83,10 +89,10 @@ struct Existing {
 			switch (wkbFlatten(p_geometry->getGeometryType())) {
 				case OGRwkbGeometryType::wkbPoint: {
 					OGRPoint *p_point = p_geometry->toPoint();
-					int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
+					int64_t index = helper::point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 					this->samples.emplace(index, *p_point);
 					if (p_samples) {
-						addPoint(p_point, p_samples);
+						helper::addPoint(p_point, p_samples);
 						if (plot) {
 							xCoords.push_back(p_point->getX());
 							yCoords.push_back(p_point->getY());
@@ -96,10 +102,10 @@ struct Existing {
 				}
 				case OGRwkbGeometryType::wkbMultiPoint: {
 					for (const auto& p_point : *p_geometry->toMultiPoint()) {
-						int64_t index = point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
+						int64_t index = helper::point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 						this->samples.emplace(index, *p_point);
 						if (p_samples) {
-							addPoint(p_point, p_samples);
+							helper::addPoint(p_point, p_samples);
 							if (plot) {
 								xCoords.push_back(p_point->getX());
 								yCoords.push_back(p_point->getY());
@@ -124,6 +130,10 @@ struct Existing {
 	 *
 	 * This function will be used when determining sample plot placement,
 	 * when iterating through an input raster. 
+	 *
+	 * @param int64_t x
+	 * @param int64_t y
+	 * @returns bool
 	 */
 	inline bool
 	containsIndex(int64_t x, int64_t y) {
@@ -134,6 +144,10 @@ struct Existing {
 	/**
 	 * if the map has already been checked, gets the OGRPoint which
 	 * is associated with a particular value.
+	 *
+	 * @param int64_t x
+	 * @param int64_t y
+	 * @returns OGRPoint
 	 */
 	inline OGRPoint
 	getPoint(int64_t x, int64_t y) {
@@ -147,18 +161,27 @@ struct Existing {
 	 *
 	 * If this index is contained in the samples unordered_set, True
 	 * is returned, otherwise the result will be false.
+	 *
+	 * @param double xCoord
+	 * @param double yCoord
+	 * @returns bool
 	 */
 	inline bool
 	containsCoordinates(double xCoord, double yCoord) {
-		int64_t index = point2index<int64_t>(xCoord, yCoord, this->IGT, this->width);
+		int64_t index = helper::point2index<int64_t>(xCoord, yCoord, this->IGT, this->width);
 		return this->samples.find(index) != this->samples.end();
 	}
 
 	/**
 	 * Get the number of existing sample points.
+	 *
+	 * @returns size_t
 	 */
 	inline size_t
 	count() {
 		return this->samples.size();
 	}
 };
+
+} //namespace existing
+} //namespace sgs

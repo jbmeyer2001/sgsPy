@@ -56,6 +56,20 @@ def breaks(
     Note that if this parameter is given, but filename is not and the raster fits entirely in memory, the
     driver_options parameter will be ignored.
 
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("multi_band_rast.tif")
+    srast = sgs.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 18]})
+
+    rast = sgs.SpatialRaster("single_band_rast.tif")
+    srast = sgs.stratify.breaks(rast, breaks=[20, 40, 60, 80], filename="breaks.tif", driver_options={"COMPRESS", "LZW"}))
+
+    rast = sgs.SpatialRaster("multi_band_rast.tif")
+    srast = sgs.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 10], "band_name2": [20, 40, 60, 80]}, map=True)
+
+    rast = sgs.SpatialRaster("multi_band_rast.tif")
+    srast = sgs.stratify.breaks(rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]])
+
     Parameters
     --------------------
     rast : SpatialRaster
@@ -76,6 +90,24 @@ def breaks(
     a SpatialRaster object containing stratified raster bands.
 
     """
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster")
+
+    if type(breaks) not in [list, dict]:
+        raise TypeError("'breaks' parameter must be of type list or dict.")
+
+    if type(map) is not bool:
+        raise TypeError("'map' parameter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
+    if type(thread_count) is not int:
+        raise TypeError("'thread_count' parameter must be of type int.")
+
+    if driver_options is not None and type(driver_options) is not dict:
+        raise TypeError("'driver_options' parameter, if givne, must be of type dict.")
+
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
@@ -94,19 +126,26 @@ def breaks(
         for i in range(len(breaks)):
             breaks_dict[i] = breaks[i]
 
-    elif type(breaks) is list: #type(breaks[0]) is int or float
+    elif type(breaks) is list and type(breaks[0]) in [int, float]:
         #error check number of raster bands
         if rast.band_count != 1:
             raise ValueError("if breaks is a single list, raster must have a single band (has {}).".format(rast.band_count))
 
         breaks_dict[0] = breaks
 
+    elif type(breaks) is list:
+        raise TypeError("if 'breaks' parameter is of type list, it must be filled with with values of type list, int, or float.")
+
     else: #breaks is a dict
         for key, val in breaks.items():
-            if key in rast.bands:
-                breaks_dict[rast.band_name_dict[key]] = val
-            else:
+            if type(key) is not str:
+                raise TypeError("if 'breaks' parameter is a dict, all keys must be of type str.")
+            if type(val) is not list:
+                raise TypeError("if 'breaks' parameter is a dict, all values in the key values pairs must be of type list[float].")
+            if key not in rast.bands:
                 raise ValueError("breaks dict key must be a valid band name (see SpatialRaster.bands for list of names)")
+            
+            breaks_dict[rast.band_name_dict[key]] = val
 
     #error check max value for potential overflow error
     max_mapped_strata = int(map)

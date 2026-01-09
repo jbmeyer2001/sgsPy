@@ -33,13 +33,13 @@ def strat(
     mrast: Optional[SpatialRaster] = None,
     mrast_band: Optional[int | str] = None,
     method: str = "Queinnec",
-    mindist: Optional[float] = None,
+    mindist: Optional[int | float] = None,
     existing: Optional[SpatialVector] = None,
     force: bool = False,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
-    buff_inner: Optional[float] = None,
-    buff_outer: Optional[float] = None,
+    buff_inner: Optional[int | float] = None,
+    buff_outer: Optional[int | float] = None,
     plot: bool = False,
     filename: str = "",
     ):
@@ -47,15 +47,14 @@ def strat(
     This function conducts stratified sampling using the stratified
     raster given. There are two methods employed to determine which
     pixels to sample:
-     - The 'random' method randomly selects pixels
-    within a given strata.
-     - The 'Queinnec' method first selects pixels which are surrounded
-    by pixels of the same strata, the focal window, which is defined by 
-    the wrow and wcol parameters.
+     - The 'random' method randomly selects pixels within a given strata.
+     - The 'Queinnec' method prioritizes pixels which are surrounded by other pixels of the same strata.
+    The 'wrow' and 'wcol' parameters determine the size of the surrounding area required for a pixel to be
+    prioritized.
 
     The number of total samples is given by num_samples. The allocation
-    of samples per strata is calculated given the distribution of pixels
-    in each strata, and the allocation method specified by the allocation parameter.
+    of samples per strata is calculated using the distribution of pixels
+    across the strata, and the allocation method specified by the allocation parameter.
 
     In the case where 'optim' allocation is used, an additional raster must be passed
     to the mrast parameter, and if that raster contains more than 1 band the mrast_band
@@ -75,6 +74,33 @@ def strat(
     must be larger than buff_inner. For a multi-layer vector, layer_name
     must be specified.
 
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("raster.tif")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5) #uses Queinnec method with proportional allocation by default
+
+    rast = sgs.SpatialRaster("raster.tif")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="random", mindist=200, plot=True, filename="samples.shp")
+
+    rast = sgs.SpatialRaster("raster.tif")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="Queinnec", allocation="optim", mrast=rast)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="manual", weights=[0.1, 0.1, 0.2, 0.2, 0.4])
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("access_network.shp")
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="equal", access=access, buff_inner=100, buff_outer=300)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    existng = sgs.SpatialVector("existing_samples.shp")
+    srast =sgs.stratify.quantiles(rast, num_strata=5)
+    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="prop", existing=existing, force=True)
 
     Parameters
     --------------------
@@ -85,7 +111,7 @@ def strat(
     num_samples : int
         the desired number of samples
     num_strata : int
-        the number of strata in the strat_rast. If this number is incorrect it may 
+        the number of strata in the strat_rast. If this number is incorrect it may cause 
         undefined behavior in the C++ code which determines sample locations.
     wrow : int
         the number of rows to be considered in the focal window for the 'Queinnec' method
@@ -119,7 +145,72 @@ def strat(
         whether or not to plot the output samples
     filename : str
         the output filename to write to if desired
+
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
     """
+    if type(strat_rast) is not SpatialRaster:
+        raise TypeError("'strat_rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(band) not in [int, str]:
+        raise TypeError("'band' parameter must be of type int or str.")
+
+    if type(num_samples) is not int:
+        raise TypeError("'num_samples' parameter must be of type int.")
+
+    if type(num_strata) is not int:
+        raise TypeError("'num_strata' parameter must be of type int.")
+
+    if type(wrow) is not int:
+        raise TypeError("'wrow' parameter must be of type int.")
+
+    if type(wcol) is not int:
+        raise TypeError("'wcol' parameter must be of type int.")
+
+    if type(allocation) is not str:
+        raise TypeError("'allocation' parameter must be of type str.")
+
+    if weights is not None and type(weights) is not list:
+        raise TypeError("'weights' parameter, if given, must be a list of float values.")
+
+    if mrast is not None and type(mrast) is not SpatialRaster:
+        raise TypeError("'mrast' parameter, if given, must be of type sgs.SpatialRaster.")
+
+    if mrast_band is not None and type(mrast_band) not in [int, str]:
+        raise TypeError("'mrast_band' parameter, if given, must be of type int or str.")
+
+    if type(method) is not str:
+        raise TypeError("'method' parameter must be of type str.")
+
+    if mindist is not None and type(mindist) not in [int, float]:
+        raise TypeError("'mindist' parameter must be of type int or float.")
+
+    if existing is not None and type(existing) is not SpatialVector:
+        raise TypeError("'existing' parameter must be of type sgs.SpatialVector.")
+
+    if type(force) is not bool:
+        raise TypeError("'force' parameter must be of type bool.")
+
+    if access is not None and type(access) is not SpatialVector:
+        raise TypeError("'access' parameter must be of type sgs.SpatialVector.")
+
+    if layer_name is not None and type(layer_name) is not str:
+        raise TypeError("'layer_name' parameter must be of type str.")
+
+    if buff_inner is not None and type(buff_inner) not in [int, float]:
+        raise TypeError("'buff_inner' parameter must be of type int or float.")
+
+    if buff_outer is not None and type(buff_outer) not in [int, float]:
+        raise TypeError("'buff_outer' parameter must be of type int or float.")
+
+    if type(plot) is not bool:
+        raise TypeError("'plot' paramter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
     if strat_rast.closed:
         raise RuntimeError("the C++ object which the strat_rast object wraps has been cleaned up and closed.")
 

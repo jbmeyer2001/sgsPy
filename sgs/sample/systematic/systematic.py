@@ -22,7 +22,7 @@ from _sgs import systematic_cpp
 
 def systematic(
     rast: SpatialRaster,
-    cellsize: float,
+    cellsize: int | float,
     shape: str = "square",
     location: str = "centers",
     existing: Optional[SpatialVector] = None,
@@ -35,9 +35,9 @@ def systematic(
     filename: str = ""):
     """
     This function conducts systematic sampling within the extent of
-    the raster given. The cellsize parameter specifies the grid size,
-    shape specifies the grid type, and location specifies where in
-    the grid a sample should fall into.
+    the raster given. The 'cellsize' parameter specifies the grid size,
+    the 'shape' parameter specifies the grid shape, and the 'location' 
+    parameter specifies where in the grid a sample should fall into.
 
     shape can be one of 'square', and 'hexagon'.
     location can be one of 'corners', 'centers', 'random'.
@@ -57,6 +57,25 @@ def systematic(
     If the force parameter is True, then the the samples are forced to 
     fall on an index which is NOT a no data value. This may result
     in some grids not being sampled.
+
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.systematic(rast, 500, "hexagon", "centers")
+
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.systematic(rast, 500, "square", "corners", plot=True, filename="systematic_samples.shp")
+
+    rast = sgs.SpatialRaster("raster.tif")
+    samples = sgs.sample.systematic(rast, 500, "hexagon", "random", force=True)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("access_network.shp")
+    samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", access=access, buff_outer=300)
+
+    rast = sgs.SpatialRaster("raster.tif")
+    access = sgs.SpatialVector("existing_samples.shp")
+    samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", existing=existing)
 
     Parameters
     --------------------
@@ -78,11 +97,53 @@ def systematic(
         buffer boundary specifying distance from access which CANNOT be sampled
     buff_outer (optional) : int | float
         buffer boundary specifying distance from access which CAN be sampled
+    force : bool
+        True if samples are not allowed to fall on a nodata pixel
     plot : bool
         whether or not to plot the resulting samples
     filename : str
         the filename to write to or "" if not to write
+
+    Returns
+    --------------------
+    a SpatialVector object containing point geometries of sample locations
     """
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+
+    if type(cellsize) not in [int, float]:
+        raise TypeError("'cellsize' parameter must be of type int or float.")
+
+    if type(shape) is not str:
+        raise TypeError("'shape' paramter must be of type str.")
+
+    if type(location) is not str:
+        raise TypeError("'location' parameter must be of type str.")
+
+    if existing is not None and type(existing) is not SpatialVector:
+        raise TypeError("'existing' parameter, if given, must be of type sgs.SpatialVector.")
+
+    if access is not None and type(access) is not SpatialVector:
+        raise TypeError("'access' parameter, if given, must be of type sgs.SpatialVector.")
+
+    if layer_name is not None and type(layer_name) is not str:
+        raise TypeError("'layer_name' parameter, if given, must be of type str.")
+
+    if buff_inner is not None and type(buff_inner) not in [int, float]:
+        raise TypeError("'buff_inner' parameter, if given, must be of type int or float.")
+
+    if buff_outer is not None and type(buff_outer) not in [int, float]:
+        raise TypeError("'buff_outer' parameter, if given, must be of type int or float.")
+
+    if type(force) is not bool:
+        raise TypeError("'force' parameter must be of type bool.")
+
+    if type(plot) is not bool:
+        raise TypeError("'plot' parameter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
     if rast.closed:
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 

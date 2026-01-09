@@ -21,6 +21,9 @@
 //used as cutoff for max band allowed in memory
 #define GIGABYTE 1073741824
 
+namespace sgs {
+namespace raster {
+
 namespace py = pybind11;
 using namespace pybind11::literals;
 
@@ -84,7 +87,6 @@ class GDALRasterWrapper {
 	 * @param int width
 	 * @param int height
 	 * @param int band zero-indexed
-	 * @throws std::runtime_error if unable to read raster band
 	 */
 	void readRasterBand(int width, int height, int band) {	
 		GDALDataType type = this->getRasterBandType(band);
@@ -160,7 +162,6 @@ class GDALRasterWrapper {
 	 * constructors as a helper function.
 	 *
 	 * @param GDALDataset *GDAL raster dataset
-	 * @throws std::runtime_error if unable to get geotransform
 	 */
 	void createFromDataset(GDALDataset *p_dataset) {
 		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
@@ -188,8 +189,6 @@ class GDALRasterWrapper {
 	 * createFromDataset() passing the created object.
 	 *
 	 * @param filename as std::string
-	 * @throws std::runtime_error if dataset is not initialized
-	 * @throws std::runtime_error if unable to get geotransform
 	 */
 	GDALRasterWrapper(std::string filename) {
 		//must register drivers before trying to open a dataset
@@ -213,7 +212,6 @@ class GDALRasterWrapper {
 	 *
 	 * @param GDALDataset *p_dataset GDAL raster dataset
 	 * @param std::vector<void *> raster bands
-	 * @throws std::runtime_error if unable to get geotransform
 	 */
 	GDALRasterWrapper(GDALDataset *p_dataset, std::vector<void *> bands) {
 		this->createFromDataset(p_dataset);
@@ -238,6 +236,8 @@ class GDALRasterWrapper {
 	 * @param py::buffer buffer
 	 * @param std::vector<double> geotransform
 	 * @param std::string projection
+	 * @param std::vector<double> nanVals
+	 * @param std::vector<std::string> names
 	 */
 	GDALRasterWrapper(py::buffer buffer, std::vector<double> geotransform, std::string projection, std::vector<double> nanVals, std::vector<std::string> names) {
 		py::buffer_info info = buffer.request();
@@ -300,16 +300,16 @@ class GDALRasterWrapper {
 		}
 
 		GDALAllRegister();
-		GDALDataset *p_dataset = createVirtualDataset("MEM", width, height, geotransform.data(), projection);
+		GDALDataset *p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform.data(), projection);
 		std::vector<void *> bands(bandCount);	
 		for (size_t i = 0; i < bandCount; i++) {
-			RasterBandMetaData band;
+			helper::RasterBandMetaData band;
 			band.p_buffer = (void *)((size_t)info.ptr + (i * bandSize));
 			band.type = type;
 		       	band.size = size;
 			band.nan = nanVals[i];
 			band.name = names[i];
-			addBandToMEMDataset(p_dataset, band);	
+			helper::addBandToMEMDataset(p_dataset, band);	
 			bands[i] = band.p_buffer;
 
 		}
@@ -394,7 +394,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for wrapped dataset.
 	 *
-	 * @returns GDALDataset *pointer to the underlying dataset
+	 * @returns GDALDataset *
 	 */
 	GDALDataset *getDataset() {
 		return this->p_dataset.get();
@@ -403,7 +403,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the raster driver.
 	 *
-	 * @returns std::string of short and long names of the raster driver
+	 * @returns std::string
 	 */
 	std::string getDriver() {
 		return std::string(this->p_dataset->GetDriverName()) 
@@ -414,7 +414,7 @@ class GDALRasterWrapper {
 	/** 
 	 * Getter method for the full projection information as wkt.
 	 *
-	 * @returns std::string projection as wkt
+	 * @returns std::string
 	 */
 	std::string getFullProjectionInfo() {
 		if (!this->p_proj) {
@@ -429,7 +429,7 @@ class GDALRasterWrapper {
 	/**
 	 * Get the CRS name from the OGRSpatialReference object
 	 *
-	 * @returns CRS name
+	 * @returns std::string
 	 */
 	std::string getCRS(){
 		return this->crs;
@@ -438,7 +438,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the raster width.
 	 *
-	 * @returns int raster width (x)
+	 * @returns int
 	 */
 	int getWidth() {
 		return this->p_dataset->GetRasterXSize();
@@ -447,7 +447,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the raster height.
 	 *
-	 * @returns int raster height (y)
+	 * @returns int
 	 */
 	int getHeight(){
 		return this->p_dataset->GetRasterYSize();
@@ -456,7 +456,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the number of raster bands.
 	 *
-	 * @returns int number of raster bands
+	 * @returns int
 	 */
 	int getBandCount() {
 		return this->p_dataset->GetRasterCount();
@@ -466,7 +466,7 @@ class GDALRasterWrapper {
 	 * Getter method for the maximum x value in georeferenced coordinate space.
 	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
-	 * @returns double max x value
+	 * @returns double
 	 */
 	double getXMax() {
 		int width = this->p_dataset->GetRasterXSize();
@@ -481,7 +481,7 @@ class GDALRasterWrapper {
 	 * Getter method for the minimum x value in georeferenced coordinate space.
 	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
-	 * @returns double min x value
+	 * @returns double
 	 */
 	double getXMin() {
 		int width = this->p_dataset->GetRasterXSize();
@@ -496,7 +496,7 @@ class GDALRasterWrapper {
 	 * Getter method for the maximum y value in georeferenced coordinate space.
 	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
-	 * @returns double max y value
+	 * @returns double
 	 */
 	double getYMax() {
 		int width = this->p_dataset->GetRasterXSize();
@@ -511,7 +511,7 @@ class GDALRasterWrapper {
 	 * Getter method for the minimum y value in georeferenced coordinate space.
 	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
-	 * @returns double min y value
+	 * @returns double
 	 */
 	double getYMin() {
 		int width = this->p_dataset->GetRasterXSize();
@@ -526,7 +526,7 @@ class GDALRasterWrapper {
 	 * Getter method for the pixel width. Scalar (absolute) value is given.
 	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
-	 * @returns double pixel width
+	 * @returns double
 	 */
 	double getPixelWidth() {
 		return std::abs(this->geotransform[5]);
@@ -536,7 +536,7 @@ class GDALRasterWrapper {
 	 * Getter method for the pixel height. Scalar (absolute) value is given.
 	 * see https://gdal.org/en/stable/tutorials/geotransforms_tut.html
 	 *
-	 * @returns double pixel height
+	 * @returns double
 	 */
 	double getPixelHeight() {
 		return std::abs(this->geotransform[1]);
@@ -546,7 +546,7 @@ class GDALRasterWrapper {
 	 * Getter method for raster band names. Bands occur in order, meaning
 	 * bands[0] corresponds to band 1, bands[1] to band 2, etc.
 	 *
-	 * @returns std::vector<std::string> vector of raster band names
+	 * @returns std::vector<std::string>
 	 */
 	std::vector<std::string> getBands(){
 		std::vector<std::string> retval;
@@ -561,7 +561,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for geotransform.
 	 *
-	 * @returns double *array of 6 doubles representing GDAL geotransform
+	 * @returns double *
 	 */
 	double *getGeotransform() {
 		return this->geotransform;
@@ -570,7 +570,7 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for a specific (0-indexed) bands nodata value.
 	 *
-	 * @returs double nodata value
+	 * @returns double
 	 */
 	double getBandNoDataValue(int band){
 		GDALRasterBand *p_band = this->getRasterBand(band);
@@ -595,7 +595,6 @@ class GDALRasterWrapper {
 	 * @param int width
 	 * @param int height
 	 * @param int band
-	 * @throws std::runtime_error if unable to read raster band during allocation
 	 * @returns py::buffer python memoryview of the raster
 	 */
 	py::buffer getRasterBandAsMemView(int width, int height, int band) {
@@ -667,9 +666,8 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for a GDALRasterBand in the raster, used by the C++ side of the application.
 	 *
-	 * @param int band zero-indexed
-	 * @returns GDALRasterBand *pointer to band
-	 * @throws std::runtime_error if unable to read raster band during allocation
+	 * @param int band
+	 * @returns GDALRasterBand *
 	 */
 	GDALRasterBand *getRasterBand(int band) {
 		return this->p_dataset->GetRasterBand(band + 1);	
@@ -678,8 +676,8 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the whole GDALRasterBand data buffer.
 	 *
-	 * @param int band zero-indexed
-	 * @returns void *data pointer to band
+	 * @param int
+	 * @returns void *
 	 */
 	void *getRasterBandBuffer(int band) {
 		if (!this->rasterBandRead[band]) {
@@ -696,8 +694,8 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the pixel / raster data type.
 	 *
-	 * @param int band to get type from
-	 * @returns GDALDataType the data type
+	 * @param int band
+	 * @returns GDALDataType
 	 */
 	GDALDataType getRasterBandType(int band) {
 		GDALRasterBand *p_band = this->p_dataset->GetRasterBand(band + 1);
@@ -707,8 +705,8 @@ class GDALRasterWrapper {
 	/**
 	 * Getter method for the pixel /raster data type size.
 	 *
-	 * @param int band to get type size from
-	 * @returns size_t the data type size in bytes
+	 * @param int band
+	 * @returns size_t
 	 */
 	size_t getRasterBandTypeSize(int band) {
 		switch (this->getRasterBandType(band)) {
@@ -811,3 +809,6 @@ class GDALRasterWrapper {
 		}
 	}
 };
+
+} //namespace raster
+} //namespace sgs

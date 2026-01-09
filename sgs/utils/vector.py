@@ -62,16 +62,13 @@ class SpatialVector:
         --------------------
         image: str | GDALVectorWrapper
            specifies a path to a vector file or the C++ class object itself
-
-        Raises
-        --------------------
-        RuntimeError (from C++):
-            if dataset is not initialized correctly 
         """
-        if (type(image) is str):
+        if type(image) is str:
             self.cpp_vector = GDALVectorWrapper(image)
-        else:
+        elif type(image) is GDALVectorWrapper:
             self.cpp_vector = image
+        else:
+            raise TypeError("'image' parameter to SpatialVector constructor must be of type str or GDALVectorWrapper.")
 
         self.layers = self.cpp_vector.get_layer_names()
 
@@ -80,6 +77,8 @@ class SpatialVector:
                    layer_info: dict):
         """
         prints layer information using the layer_info from self.cpp_vector.
+
+        This is an internal function not meant to be used by the end user.
 
         Parameters
         --------------------
@@ -109,9 +108,12 @@ class SpatialVector:
 
         Parameters
         --------------------
-        layer (optional) : str or int
+        layer : str or int
             specifies the layer to print information on
         """
+        if layer is not None and type(layer) not in [int, str]:
+            raise TypeError("'layer' parameter, if given, must be of type int or str.")
+
         if type(layer) == str:
             self.print_info(layer, self.cpp_vector.get_layer_info(layer))
         elif type(layer) == int:
@@ -129,13 +131,6 @@ class SpatialVector:
         is comprised entirely of Points or MultiPoints. These conditions
         will be satisfied if this SpatialVector is the output of one of the
         sampling functions in the sgs package.
-
-        Raises
-        --------------------
-        ValueError:
-            if this vector does not have a layer called 'samples'
-        RuntimeError (from C++):
-            if the 'samples' layer has at least one geometry other than Point or MultiPoint
         """
         if "samples" not in self.layers:
             print("this vector does not have a layer 'samples'")
@@ -158,17 +153,8 @@ class SpatialVector:
             the geometry type to try to print
         layer : None | int | str
             specification of which layer to print
-        **kwargs (optional)
+        **kwargs
             any parameter which may be passed ot matplotlib.pyplot.plot
-
-        Raises
-        --------------------
-        ValueError:
-            if no layer was specified, and the image contains more than one layer
-        ValueError:
-            if geomtype is not one of 'Point', 'MultiPoint', 'LineString', 'MultiLineString'
-        RuntimeError (from C++):
-            if the layer contains a geometry NOT of an acceptable type
         """
 
         if ax is not None: 
@@ -179,7 +165,7 @@ class SpatialVector:
             plt.show()
 
     @classmethod
-    def from_geopandas(cls, obj, layer_name=None):
+    def from_geopandas(cls, obj, layer_name: str=None):
         """
         This function is used to convert a geopandas object into an sgs.SpatialVector. The geopandas object
         may either by of type GeoDataFrame or GeoSeries.
@@ -200,11 +186,14 @@ class SpatialVector:
         gdf = gdf[gdf == "LineString"]
         access = sgs.SpatialVector.from_geopandas(gdf)
         """
+        if layer_name is not None and type(layer_name) is not str:
+            raise TypeError("layer_name, if given, must be of type 'str'.")
+
         if not GEOPANDAS:
             raise RuntimeError("from_geopandas() can only be called if geopandas was successfully imported, but it wasn't.")
 
         if type(obj) is not gpd.geodataframe.GeoDataFrame and type(obj) is not gpd.geoseries.GeoSeries:
-            raise RuntimeError("the object passed must be of type geopandas GeoDataFrame or GeoSeries")
+            raise TypeError("the object passed must be of type geopandas GeoDataFrame or GeoSeries")
 
         #get a the geopandas object as a geoseries
         if type(obj) is gpd.geodataframe.GeoDataFrame:

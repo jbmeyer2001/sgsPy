@@ -13,14 +13,47 @@
 
 #include "gdal_utils.h"
 
+namespace sgs {
 namespace poly {
 
 /**
+ * This function conducts stratification by polygons on the input raster.
  *
+ * First, the spatial reference of the input vector is compared to that
+ * of the input raster. If they differ, and error is thrown.
+ *
+ * Next, an output raster dataset is created based on the input values. 
+ * The new raster is created to have the same height, width, 
+ * geotransform, and projection of the input raster. It may be an
+ * in-memory dataset, a VRT dataset, or a dataset corresponding to the
+ * user input 'filename' parameter.
+ *
+ * The Python function which calls this C++ function created an SQL 
+ * query which, when ran on the polygon, maps feature values of a
+ * particular attribute in a specific layer to stratification values.
+ * The GDALRasterize function is called using this SQL query to rasterize
+ * the polygon into different stratifications according to the user-
+ * defined inputs. One of the parameters to this rasterization function
+ * is the output raster dataset created, which has the output of the
+ * rasterization written to it's first band.
+ *
+ * The resulting dataset is then returned as a GDALRasterWrapper object.
+ *
+ * @param GDALVectorWrapper *p_vector
+ * @param GDALRasterWrapper *p_raster
+ * @param size_t numStrata
+ * @param std::string layerName
+ * @param std::string query
+ * @param std::string filename
+ * @param bool largeRaster
+ * @param std::string tempFolder
+ * @param std::map<std::string, std::string> driverOptions
+ *
+ * @returns GDALRasterWrapper *
  */
-GDALRasterWrapper *poly(
-	GDALVectorWrapper *p_vector,
-	GDALRasterWrapper *p_raster,
+raster::GDALRasterWrapper *poly(
+	vector::GDALVectorWrapper *p_vector,
+	raster::GDALRasterWrapper *p_raster,
 	size_t numStrata,
 	std::string layerName,
 	std::string query,
@@ -59,21 +92,21 @@ GDALRasterWrapper *poly(
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
 	
-	RasterBandMetaData band;
-	setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
+	helper::RasterBandMetaData band;
+	helper::setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
 	p_rasterDS->GetRasterBand(1)->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 	band.name = "strata";
-	std::vector<VRTBandDatasetInfo> VRTBandInfo;
+	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo;
 
 	//step 2: create dataset
 	GDALDataset *p_dataset = nullptr;
 	if (isMEMDataset) {
-		p_dataset = createVirtualDataset("MEM", width, height, geotransform, projection);
-	       	addBandToMEMDataset(p_dataset, band);
+		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
+		helper::addBandToMEMDataset(p_dataset, band);
 	}
 	else if (isVRTDataset) {
-		p_dataset = createVirtualDataset("VRT", width, height, geotransform, projection);
-		createVRTBandDataset(p_dataset, band, tempFolder, layerName + ".tif", VRTBandInfo, driverOptions); 
+		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
+		helper::createVRTBandDataset(p_dataset, band, tempFolder, layerName + ".tif", VRTBandInfo, driverOptions); 
 	}
 	else {
 		std::string driver;
@@ -87,7 +120,7 @@ GDALRasterWrapper *poly(
 			throw std::runtime_error("sgs only supports .tif files right now");
 		}
 
-		p_dataset = createDataset(filename, driver, width, height, geotransform, projection, &band, 1, false, driverOptions);
+		p_dataset = helper::createDataset(filename, driver, width, height, geotransform, projection, &band, 1, false, driverOptions);
 	}
 
 	band.p_band->Fill(band.nan);
@@ -122,14 +155,15 @@ GDALRasterWrapper *poly(
 
 	if (isVRTDataset) {
 		GDALClose(VRTBandInfo[0].p_dataset);
-		addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	
+		helper::addBandToVRTDataset(p_dataset, band, VRTBandInfo[0]);	
 	}
 
 	//step 7: create new GDALRasterWrapper using dataset pointer
 	//this dynamically allocated object will be cleaned up by python
 	return isMEMDataset ?
-		new GDALRasterWrapper(p_dataset, {band.p_buffer}) :
-		new GDALRasterWrapper(p_dataset);
+		new raster::GDALRasterWrapper(p_dataset, {band.p_buffer}) :
+		new raster::GDALRasterWrapper(p_dataset);
 }
 
 } //namespace poly
+} //namespace sgs

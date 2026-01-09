@@ -29,7 +29,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     the arguments are passed in the form of a tuple, of which there can be any number.
     For example, both of the following are valid:
      - map((rast1, bands1, num_stratum1))
-     - map((rast1, bands1, num_stratum1), (rast1, bands2, num_stratum1))
+     - map((rast1, bands1, num_stratum1), (rast1, bands2, num_stratum2))
 
     the raster within the tuple MUST be of type sgs.utils.SpatialRaster. 
     The bands argument MUST be: 
@@ -63,6 +63,19 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     is given, but filename is not and the raster fits entirely in memory, the 
     driver_options parameter will be ignored.
 
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster("rast.tif")
+    breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]})
+    quantiles = sgs.stratify.quantiles(rast, num_strata={'zsd': 25})
+    srast = sgs.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
+
+    rast = sgs.SpatialRaster("rast.tif")
+    inventory = sgs.SpatialVector("inventory_polygons.shp")
+    breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]})
+    poly = sgs.stratify.poly(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich'])
+    srast = sgs.stratify.map((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})
+
     Parameters
     --------------------
     *args : tuple[SpatialRaster, int|list[int]|list[str], int|list[int]]
@@ -78,6 +91,15 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     --------------------
     a SpatialRaster object containing a band of mapped stratifications from the input raster(s).
     """
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
+    if type(thread_count) is not int:
+        raise TypeError("'thread_count' parameter must be of type int.")
+
+    if driver_options is not None and type(driver_options) is not dict:
+        raise TypeError("'driver_options' parameter, if given, must be of type dict.")
+
     raster_list = []
     band_lists = []
     strata_lists = []
@@ -87,7 +109,16 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
 
     raster_size_bytes = 0
     large_raster = False
-    for (raster, bands, num_stratum) in args: 
+    for (raster, bands, num_stratum) in args:
+        if type(raster) is not SpatialRaster:
+            raise TypeError("first value in each tuple argument must be of type sgs.SpatialRaster.")
+
+        if type(bands) not in [int, str, list]:
+            raise TypeError("second value in each tuple argument must be of type int, str, or list.")
+
+        if type(num_stratum) not in [int, list]:
+            raise TypeError("third value in each tuple argument must be of type int or list.")
+
         if raster.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 

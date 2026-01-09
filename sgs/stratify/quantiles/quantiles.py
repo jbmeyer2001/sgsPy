@@ -45,9 +45,6 @@ def quantiles(
     value in the mapped output band corresponds to a combination a single combination
     of values from the previous bands.
 
-    the filename parameter species an output file name. Right now the only file
-    format except is GTiff (.tiff).
-
     The thread_count parameter specifies the number of threads which this function 
     will utilize the the case where the raster is large and may not fit in memory. If
     the full raster can fit in memory and does not need to be processed in blocks, this
@@ -73,6 +70,20 @@ def quantiles(
         https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
         https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
 
+    Examples
+    --------------------
+    rast = sgs.SpatialRaster('rast.tif')
+    srast = sgs.stratify.quantiles(rast, num_strata=5)
+
+    srast = sgs.SpatialRaster('rast.tif')
+    srast = sgs.stratify.quantiles(rast, num_strata=[.1, .2, .3, .5, .7], filename="srast.tif")
+
+    rast = sgs.SpatialRaster('multi_band_rast.tif')
+    srast = sgs.stratify.quantiles(rast, num_strata=[5, 5, [.5, .75]], map=True)
+
+    rast = sgs.SpatialRaster('multi_band_rast.tif')
+    srast = sgs.stratify.quantiles(rast, num_strata={'zq90': 5})
+
     Parameters
     --------------------
     rast : SpatialRaster
@@ -93,7 +104,26 @@ def quantiles(
     Returns
     --------------------
     a SpatialRaster object containing stratified raster bands.
+
     """
+    if type(rast) is not SpatialRaster:
+        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster")
+
+    if type(num_strata) not in [int, list, dict]:
+        raise TypeError("'num_strata' parameter must be of type int, list, or dict.")
+
+    if type(map) is not bool:
+        raise TypeError("'map' parameter must be of type bool.")
+
+    if type(filename) is not str:
+        raise TypeError("'filename' parameter must be of type str.")
+
+    if type(thread_count) is not int:
+        raise TypeError("'thread_count' parameter must be of type int.")
+
+    if type(eps) is not float:
+        raise TypeError("'eps' parameter must be of type float.")
+
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
