@@ -39,6 +39,7 @@ source ./.venv/bin/activate
  - libtool
  - bison
  - flex
+ - patchelf
 
 ```
 sudo apt install build-essential
@@ -47,6 +48,7 @@ sudo apt install auto-conf
 sudo apt install libtool
 sudo apt install bison
 sudo apt install flex
+sudo apt install patchelf
 ```
 
 5. Run the following command to install remaining dependencies and build the project.
@@ -112,14 +114,17 @@ To run sgs on your own data, the best resource to look to is the tests, which ar
  - stratified sampling (including large raster processing)
  - simple random sampling (including large raster processing)
  - systematic sampling (including large raster processing)
+ - implement clhs sampling method (including large raster processing)
 
 ### calculating:
  - principal component analysis (including large raster processing)
 
 ### Projected future development priorities:
- - implement clhs sampling method
  - publish on PyPi
- - implement kmeans stratification
+ - implement strat_kmeans
+ - implement sample_ahels
+ - implement calc_representation
+ - various performance improvements
 
 ## Licensing
 the sgsPy package is licensed under the MIT license. the LICENSE.txt file contains
