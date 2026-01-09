@@ -128,6 +128,11 @@ if WIN
     '-lwldap32',  #wldap32.lib from Windows SDK
     '-lwbemuuid'  #wbemuuid.lib from Windows SDK
   ]
+else
+  link_args = [
+    '-Wl,-rpath,$ORIGIN/../../../sgs',
+    '-Wl,-rpath,$ORIGIN/../../',
+  ]
 endif
 add_global_link_arguments('-L' + lib_dir, language: 'cpp')
 
@@ -210,36 +215,43 @@ if WIN
     meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
 else #linux
-  required_files = [
+  required_files = []
+  #only vendor the files which need their rpath to be specifically edited
+  vendored_libs = [
     #onedal libs
     join_paths(pip_lib_dir, 'libonedal.so.3'),
-    join_paths(pip_lib_dir, 'libonedal_core.so.3'),
-    join_paths(pip_lib_dir, 'libonedal_parameters.so.3'),
-    join_paths(pip_lib_dir, 'libonedal_thread.so.3'),
-    join_paths(pip_lib_dir, 'libtbb.so'),
-    join_paths(pip_lib_dir, 'libtbbmalloc.so'),
-    join_paths(pip_lib_dir, 'libtbb.so.12'),
-    join_paths(pip_lib_dir, 'libtbbmalloc.so.2'),
-    join_paths(pip_lib_dir, 'libtbb.so.12.17'),
-    join_paths(pip_lib_dir, 'libtbbmalloc.so.2.17'),
+    #join_paths(pip_lib_dir, 'libonedal_core.so.3'),
+    #join_paths(pip_lib_dir, 'libonedal_parameters.so.3'),
+    #join_paths(pip_lib_dir, 'libonedal_thread.so.3'),
+    #join_paths(pip_lib_dir, 'libtbb.so'),
+    #join_paths(pip_lib_dir, 'libtbbmalloc.so'),
+    #join_paths(pip_lib_dir, 'libtbb.so.12'),
+    #join_paths(pip_lib_dir, 'libtbbmalloc.so.2'),
+    #join_paths(pip_lib_dir, 'libtbb.so.12.17'),
+    #join_paths(pip_lib_dir, 'libtbbmalloc.so.2.17'),
   
     #mkl libs
-    join_paths(pip_lib_dir, 'libmkl_intel_ilp64.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_tbb_thread.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_core.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_def.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_avx2.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_avx512.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_cmpt.so.2'),
-    join_paths(pip_lib_dir, 'libmkl_vml_mc3.so.2'),
+    #join_paths(pip_lib_dir, 'libmkl_intel_ilp64.so.2'),
+    #join_paths(pip_lib_dir, 'libmkl_tbb_thread.so.2'),
+    #join_paths(pip_lib_dir, 'libmkl_core.so.2'),
+    #join_paths(pip_lib_dir, 'libmkl_vml_def.so.2'),
+    #join_paths(pip_lib_dir, 'libmkl_vml_avx2.so.2'),
+    #join_paths(pip_lib_dir, 'libmkl_vml_avx512.so.2'),
+    #join_paths(pip_lib_dir, 'libmkl_vml_cmpt.so.2'),
+    #join_paths(pip_lib_dir, 'libmkl_vml_mc3.so.2'),
 
     #proj
-    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+    #meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
 endif
 
 foreach file : required_files
   install_data(file)
+endforeach
+
+foreach lib_path : vendored_libs
+  run_command('patchelf', '--set-rpath', '$ORIGIN/../lib', lib_path)
+  install_data(lib_path)
 endforeach
 
 py.extension_module(

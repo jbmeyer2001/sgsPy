@@ -4,6 +4,7 @@ requires = [
 	"meson-python == 0.18.0",
 	"pybind11 == 3.0.0",
 	"daal-devel == 2025.9.0",
+	"patchelf",
 ]
 
 [project]
@@ -11,7 +12,8 @@ name = "sgs"
 version = "0.0.0"
 dependencies = [
 	"numpy", #TODO add version
-	"matplotlib" #TODO add version
+	"matplotlib", #TODO add version
+	"daal-devel == 2025.9.0",
 ]
 
 [project.optional-dependencies]

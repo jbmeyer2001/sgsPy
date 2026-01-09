@@ -1,6 +1,7 @@
 import os
 import sys
 import platform
+import ctypes
 
 if (platform.system() == 'Windows'):
     bin_path = os.path.join(sys.prefix, "sgs")
@@ -12,7 +13,30 @@ if (platform.system() == 'Windows'):
     if bin_path not in os.environ['PATH']:
         os.environ['PATH'] = bin_path + os.pathsep + os.environ['PATH']
 
+else: #linux
+    
+    """
+    if 'LD_LIBRARY_PATH' not in os.environ:
+        os.environ['LD_LIBRARY_PATH'] = "/home/jbmeyer/github/sgs/.venv/lib"
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
+    prev_cwd = os.getcwd()
+    print(prev_cwd)
+    os.chdir(os.path.join(sys.prefix, "lib"))
+    """
+
+    libs = [
+        os.path.join(sys.prefix, 'lib', 'libtbb.so.12'),
+    ]
+
+    flags = os.RTLD_GLOBAL | os.RTLD_NOW
+
+    for lib in libs:
+        ctypes.CDLL(lib, mode=flags)
+
+    """
+    os.chdir(prev_cwd)
+    """
 
 from . import utils
 from . import calculate
