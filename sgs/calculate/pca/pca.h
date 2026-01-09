@@ -79,7 +79,7 @@ calculatePCA(
 	int width,
 	int height,
 	int nComp)
-{	
+{
 	int bandCount = static_cast<int>(bands.size());
 	T *p_data = reinterpret_cast<T *>(VSIMalloc3(width * height, bandCount, size));
 
@@ -131,7 +131,7 @@ calculatePCA(
 
 	//calculate pca
 	DALHomogenTable table = DALHomogenTable::wrap<T>(p_data, nFeatures, bandCount, oneapi::dal::data_layout::row_major);
-	const auto desc = oneapi::dal::pca::descriptor<float, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
+	const auto desc = oneapi::dal::pca::descriptor<T, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
        	const auto result = oneapi::dal::train(desc, table);
 
 	VSIFree(p_data);
@@ -227,7 +227,7 @@ calculatePCA(
 		noDataVals[i] = static_cast<T>(bands[i].nan);
 	}
 
-	const auto desc = oneapi::dal::pca::descriptor<float, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
+	const auto desc = oneapi::dal::pca::descriptor<T, oneapi::dal::pca::method::cov>().set_component_count(nComp).set_deterministic(true);
 	oneapi::dal::pca::partial_train_result<> partial_result;
 
 	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
@@ -657,7 +657,7 @@ pca(
 
 	GDALDataType type = GDT_Float32;
 	size_t size = sizeof(float);
-	for (int i = 0; i < p_raster->getBandCount(); i++) {
+	for (int i = 0; i < bandCount; i++) {
 		bands[i].p_band = p_raster->getRasterBand(i);
 		bands[i].nan = bands[i].p_band->GetNoDataValue();
 
@@ -785,18 +785,18 @@ pca(
 		default:
 			throw std::runtime_error("should not be here! GDALDataType should be one of Float32/Float64!");
 	}
-	
+
 	if (isVRTDataset) {
-		for (int b = 0; b < bandCount; b++) {
-			GDALClose(VRTBandInfo[b].p_dataset);
-			helper::addBandToVRTDataset(p_dataset, pcaBands[b], VRTBandInfo[b]);
+		for (int c = 0; c < nComp; c++) {
+			GDALClose(VRTBandInfo[c].p_dataset);
+			helper::addBandToVRTDataset(p_dataset, pcaBands[c], VRTBandInfo[c]);
 		}
 	}
 
-	std::vector<void *> buffers(bandCount);
+	std::vector<void *> buffers(nComp);
 	if (isMEMDataset) {
-		for (int b = 0; b < bandCount; b++) {
-			buffers[b] = pcaBands[b].p_buffer;
+		for (int c = 0; c < nComp; c++) {
+			buffers[c] = pcaBands[c].p_buffer;
 		}
 	}
 

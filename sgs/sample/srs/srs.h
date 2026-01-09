@@ -412,6 +412,12 @@ srs(
 		}
 	}
 
+	//free allocated memory
+	VSIFree(band.p_buffer);
+	if (access.used) {
+		VSIFree(access.band.p_buffer);
+	}
+
 	return {{xCoords, yCoords}, p_wrapper, samplesAdded};
 }
 
