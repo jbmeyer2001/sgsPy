@@ -4,14 +4,19 @@ import platform
 import ctypes
 
 if (platform.system() == 'Windows'):
-    bin_path = os.path.join(sys.prefix, "sgs")
-    os.add_dll_directory(bin_path)
+    vendored_lib_path = os.path.join(sys.prefix, "sgs")
+    lib_path = os.path.join(sys.prefix, "lib")
+    os.add_dll_directory(vendored_lib_path)
+    os.add_dll_directory(lib_path)
 
-    if bin_path not in os.environ.get('PROJ_LIB', ''):
-        os.environ['PROJ_LIB'] = bin_path
+    if vendored_lib_path not in os.environ.get('PROJ_LIB', ''):
+        os.environ['PROJ_LIB'] = vendored_lib_path
 
-    if bin_path not in os.environ['PATH']:
-        os.environ['PATH'] = bin_path + os.pathsep + os.environ['PATH']
+    if vendored_lib_path not in os.environ['PATH']:
+        os.environ['PATH'] = vendored_lib_path + os.pathsep + os.environ['PATH']
+
+    if lib_path not in os.environ['PATH']:
+        os.environ['path'] = lib_path + os.pathsep + os.environ['PATH']
 
 else: #linux 
     #this library goes missing at runtime if we don't do this

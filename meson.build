@@ -35,7 +35,7 @@ cxx = meson.get_compiler('cpp')
 if WIN
   path_entries = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(';')
   foreach entry : path_entries
-    if entry.contains('Temp') and entry.contains('build-env') and entry.contains('Scripts')
+    if entry.contains('Temp') and entry.contains('pip-build-env') and entry.contains('overlay') and entry.contains('Scripts')
       tmp_build_dir = entry.split('Scripts').get(0)
       tmp_inc_dir = tmp_build_dir + join_paths('Library', 'include')
       tmp_lib_dir = tmp_build_dir + join_paths('Library', 'lib')
@@ -193,7 +193,7 @@ if WIN
     join_paths(bin_dir, 'uriparser.dll'),
     join_paths(bin_dir, 'zlib1.dll'),
     join_paths(bin_dir, 'zstd.dll'),
-  
+    
     #onedal dlls
     join_paths(tmp_bin_dir, 'onedal.3.dll'),
     join_paths(tmp_bin_dir, 'onedal_core.3.dll'),
@@ -210,7 +210,7 @@ if WIN
     join_paths(tmp_bin_dir, 'mkl_vml_avx512.2.dll'),
     join_paths(tmp_bin_dir, 'mkl_vml_cmpt.2.dll'),
     join_paths(tmp_bin_dir, 'mkl_vml_mc3.2.dll'),
-
+	
     #proj
     meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
@@ -218,9 +218,9 @@ else #linux
   required_files = []
 endif
 
-#foreach file : required_files
-#  install_data(file)
-#endforeach
+foreach file : required_files
+  install_data(file)
+endforeach
 
 #when on linux, the libonedal.so.3 dynamic library causes loading issues if it's rpath is not set
 #in order to not change the rpath of libraries which this package does not own, vendor libonedal.so.3
