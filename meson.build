@@ -216,43 +216,19 @@ if WIN
   ]
 else #linux
   required_files = []
-  #only vendor the files which need their rpath to be specifically edited
-  vendored_libs = [
-    #onedal libs
-    join_paths(pip_lib_dir, 'libonedal.so.3'),
-    #join_paths(pip_lib_dir, 'libonedal_core.so.3'),
-    #join_paths(pip_lib_dir, 'libonedal_parameters.so.3'),
-    #join_paths(pip_lib_dir, 'libonedal_thread.so.3'),
-    #join_paths(pip_lib_dir, 'libtbb.so'),
-    #join_paths(pip_lib_dir, 'libtbbmalloc.so'),
-    #join_paths(pip_lib_dir, 'libtbb.so.12'),
-    #join_paths(pip_lib_dir, 'libtbbmalloc.so.2'),
-    #join_paths(pip_lib_dir, 'libtbb.so.12.17'),
-    #join_paths(pip_lib_dir, 'libtbbmalloc.so.2.17'),
-  
-    #mkl libs
-    #join_paths(pip_lib_dir, 'libmkl_intel_ilp64.so.2'),
-    #join_paths(pip_lib_dir, 'libmkl_tbb_thread.so.2'),
-    #join_paths(pip_lib_dir, 'libmkl_core.so.2'),
-    #join_paths(pip_lib_dir, 'libmkl_vml_def.so.2'),
-    #join_paths(pip_lib_dir, 'libmkl_vml_avx2.so.2'),
-    #join_paths(pip_lib_dir, 'libmkl_vml_avx512.so.2'),
-    #join_paths(pip_lib_dir, 'libmkl_vml_cmpt.so.2'),
-    #join_paths(pip_lib_dir, 'libmkl_vml_mc3.so.2'),
-
-    #proj
-    #meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
-  ]
 endif
 
 foreach file : required_files
   install_data(file)
 endforeach
 
-foreach lib_path : vendored_libs
+#when on linux, the libonedal.so.3 dynamic library causes loading issues if it's rpath is not set
+#in order to not change the rpath of libraries which this package does not own, vendor libonedal.so.3
+if not WIN
+  lib_path = join_paths(pip_lib_dir, 'libonedal.so.3')
   run_command('patchelf', '--set-rpath', '$ORIGIN/../lib', lib_path)
   install_data(lib_path)
-endforeach
+endif
 
 py.extension_module(
   '_sgs',

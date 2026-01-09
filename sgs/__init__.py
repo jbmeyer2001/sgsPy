@@ -13,31 +13,10 @@ if (platform.system() == 'Windows'):
     if bin_path not in os.environ['PATH']:
         os.environ['PATH'] = bin_path + os.pathsep + os.environ['PATH']
 
-else: #linux
+else: #linux 
+    #this library goes missing at runtime if we don't do this
+    ctypes.CDLL(os.path.join(sys.prefix, 'lib', 'libtbb.so.12'), os.RTLD_GLOBAL | os.RTLD_NOW)
     
-    """
-    if 'LD_LIBRARY_PATH' not in os.environ:
-        os.environ['LD_LIBRARY_PATH'] = "/home/jbmeyer/github/sgs/.venv/lib"
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-
-    prev_cwd = os.getcwd()
-    print(prev_cwd)
-    os.chdir(os.path.join(sys.prefix, "lib"))
-    """
-
-    libs = [
-        os.path.join(sys.prefix, 'lib', 'libtbb.so.12'),
-    ]
-
-    flags = os.RTLD_GLOBAL | os.RTLD_NOW
-
-    for lib in libs:
-        ctypes.CDLL(lib, mode=flags)
-
-    """
-    os.chdir(prev_cwd)
-    """
-
 from . import utils
 from . import calculate
 from . import sample
