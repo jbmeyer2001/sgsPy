@@ -5,7 +5,7 @@ import ctypes
 
 if (platform.system() == 'Windows'):
     vendored_lib_path = os.path.join(sys.prefix, "sgs")
-    lib_path = os.path.join(sys.prefix, "lib")
+    lib_path = os.path.join(sys.prefix, "Library", "bin")
     os.add_dll_directory(vendored_lib_path)
     os.add_dll_directory(lib_path)
 

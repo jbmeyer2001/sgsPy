@@ -193,24 +193,7 @@ if WIN
     join_paths(bin_dir, 'uriparser.dll'),
     join_paths(bin_dir, 'zlib1.dll'),
     join_paths(bin_dir, 'zstd.dll'),
-    
-    #onedal dlls
-    join_paths(tmp_bin_dir, 'onedal.3.dll'),
-    join_paths(tmp_bin_dir, 'onedal_core.3.dll'),
-    join_paths(tmp_bin_dir, 'onedal_thread.3.dll'),
-    join_paths(tmp_bin_dir, 'tbb12.dll'),
-    join_paths(tmp_bin_dir, 'tbbmalloc.dll'),
-  
-    #mkl dlls
-    join_paths(tmp_bin_dir, 'mkl_core.2.dll'),
-    join_paths(tmp_bin_dir, 'mkl_tbb_thread.2.dll'),
-    join_paths(tmp_bin_dir, 'mkl_blacs_intelmpi_ilp64.2.dll'),
-    join_paths(tmp_bin_dir, 'mkl_vml_def.2.dll'),
-    join_paths(tmp_bin_dir, 'mkl_vml_avx2.2.dll'),
-    join_paths(tmp_bin_dir, 'mkl_vml_avx512.2.dll'),
-    join_paths(tmp_bin_dir, 'mkl_vml_cmpt.2.dll'),
-    join_paths(tmp_bin_dir, 'mkl_vml_mc3.2.dll'),
-	
+     
     #proj
     meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
