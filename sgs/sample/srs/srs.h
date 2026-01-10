@@ -22,18 +22,6 @@ namespace sgs {
 namespace srs {
 
 /**
- * This is the hashing function used to store the points for spatial indexing
- * during sampling.
- */
-struct PairHash {
-	inline std::size_t operator()(const std::pair<int, int> &v) const {
-		std::size_t h1 = std::hash<int>{}(v.first);
-		std::size_t h2 = std::hash<int>{}(v.second);
-		return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
-	}
-};
-
-/**
  * This is a helper function for processing a block of the raster. For each
  * pixel in the block: 
  * The value is checked, and not added if it is a nanvalue. 
@@ -337,70 +325,32 @@ srs(
 
 	size_t samplesAdded = existing.used ? existing.count() : 0;
 	size_t i = 0;
-	std::unordered_map<std::pair<int, int>, std::vector<std::pair<double, double>>, PairHash> grid;
+  helper::NeighborMap neighbor_map;
 	double mindist_sq = mindist * mindist;
 
 	while (samplesAdded < numSamples && i < indices.size()) {
 		helper::Index index = indices[i];
-		i++;
+		bool valid = true;
 
 		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
 		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
 
-		if (!useMindist) {
-			//if mindist is not used, add sample to the output layer
-			OGRPoint point = OGRPoint(x, y);
+    if (useMindist) {
+      valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
+    }
+
+    if (valid) {
+      OGRPoint point = OGRPoint(x, y);
 			helper::addPoint(&point, p_layer);
 
 			samplesAdded++;
 
-			if (plot) {
-				xCoords.push_back(x);
-				yCoords.push_back(y);
-			}
-
-		}
-		else { // useMindist == true
-			//if mindist is used, check to ensure sample is not too close to any other sample
-			int cx = static_cast<int>(std::floor(x / mindist));
-			int cy = static_cast<int>(std::floor(y / mindist));
-			bool add = true;
-
-			for (int dx = -1; dx <= 1 && add; dx++) {
-				for (int dy = -1; dy <= 1 && add; dy++) {
-					std::pair<int, int> neighbor = {cx + dx, cy + dy};
-	
-					auto it = grid.find(neighbor);
-					if (it == grid.end())
-						continue;
-	
-					for (const auto &[nx, ny] : it->second) {
-						float dxp = x - nx;
-						float dyp = y - ny;
-						float dist_sq = dxp * dxp + dyp * dyp;
-	
-						if (dist_sq < mindist_sq) {
-							add = false;
-							break;
-						}
-					}
-				}
-			}
-	
-			if (add) {
-				grid[{cx, cy}].emplace_back(x, y);
-	
-				OGRPoint point = OGRPoint(x, y);
-				helper::addPoint(&point, p_layer);
-	
-				samplesAdded++;
-	
-				if (plot) {
-					xCoords.push_back(x);
-					yCoords.push_back(y);
-				}
-			}
-		}
+      if (plot) {
+        xCoords.push_back(x);
+        yCoords.push_back(y);
+      }
+    }
+    i++;
 	}
 
 	if (filename != "") {
