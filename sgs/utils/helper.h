@@ -958,5 +958,58 @@ public:
 	}
 };
 
+/**
+ * This is the hashing function used to store the points for spatial indexing during sampling.
+ */
+struct PointHash {
+	inline std::size_t operator()(const std::pair<int, int> &v) const {
+		std::size_t h1 = std::hash<int>{}(v.first);
+		std::size_t h2 = std::hash<int>{}(v.second);
+		return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+	}
+};
+
+/**
+ * This is a type alias for the neighborhood used for spatial hashing during sampling.
+ */
+typedef std::unordered_map<std::pair<int, int>, std::vector<std::pair<double, double>>, PointHash> NeighborMap;
+
+/**
+ * This is the spatial hashing core implementation if a minimum distance is provided.
+ * @param double x
+ * @param double y
+ * @param NeighborMap& neighbor_map
+ * @param float mindist
+ * @param float mindist_sq
+ */
+bool is_valid_sample(double x, double y, NeighborMap& neighbor_map, float mindist, float mindist_sq) {
+	int cx = static_cast<int>(std::floor(x / mindist));
+	int cy = static_cast<int>(std::floor(y / mindist));
+
+	for (int dx = -1; dx <= 1; dx++) {
+		for (int dy = -1; dy <= 1; dy++) {
+			std::pair<int, int> neighbor = {cx + dx, cy + dy};
+
+			auto it = neighbor_map.find(neighbor);
+			if (it == neighbor_map.end())
+				continue;
+
+			for (const auto &[nx, ny] : it->second) {
+				float dxp = x - nx;
+				float dyp = y - ny;
+				float dist_sq = dxp * dxp + dyp * dyp;
+
+				if (dist_sq < mindist_sq) {
+					return false;
+				}
+			}
+		}
+	}
+
+	// add point to neighborhood
+	neighbor_map[{cx, cy}].emplace_back(x, y);
+	return true;
+}
+
 } //namespace helper
 } //namespace sgs
