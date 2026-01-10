@@ -1159,6 +1159,7 @@ strat(
 {
 	GDALAllRegister();
 
+	double mindist_sq = mindist * mindist;
 	bool useMindist = mindist != 0;
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
@@ -1312,6 +1313,7 @@ strat(
 	int64_t addedSamples = 0;
 
 	//add existing sample plots
+	helper::NeighborMap neighbor_map;
 	if (existing.used) {
 		if (force) {
 			//if force is used, add all samples no matter what
@@ -1345,33 +1347,27 @@ strat(
 				size_t j = 0;
 				while (samplesAddedPerStrata[i] < strataSampleCounts[i] && j < samples.size()) {
 					OGRPoint point = samples[j];
+					double x = point.getX();
+					double y = point.getY();
+					bool valid = true;
 
-					if (mindist != 0 && p_layer->GetFeatureCount() != 0) {
-						bool add = true;
-						for (const auto &p_feature : *p_layer) {
-							OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
-							if (point.Distance(p_point) < mindist) {
-								add = false;
-								break;
-							}
-						}
+					if (useMindist) {
+						valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
+					}
 
-						if (!add) {
-							j++;
-							continue;
+					if (valid) {
+						helper::addPoint(&point, p_layer);
+
+						addedSamples++;
+						samplesAddedPerStrata[i]++;
+
+						if (plot) {
+							xCoords.push_back(point.getX());
+							yCoords.push_back(point.getY());
 						}
 					}
 
-					helper::addPoint(&point, p_layer);
-					
-					addedSamples++;
-					samplesAddedPerStrata[i]++;
 					j++;
-
-					if (plot) {
-						xCoords.push_back(point.getX());
-						yCoords.push_back(point.getY());
-					}
 				}
 
 				if (samplesAddedPerStrata[i] == strataSampleCounts[i]) {
@@ -1385,7 +1381,7 @@ strat(
 	}	
 
 	if (method == "Queinnec") {
-		strataIndexVectors = queinnecIndices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);	
+		strataIndexVectors = queinnecIndices.getStrataIndexVectors(samplesAddedPerStrata, strataSampleCounts, rng);
 
 		int64_t curStrata = 0;
 		while (numCompletedStrataQueinnec < numStrata && addedSamples < numSamples) {
@@ -1420,34 +1416,25 @@ strat(
 			helper::Index index = strataIndexes->at(nextIndex);
 			nextIndexes[curStrata]++;
 
+			bool valid = true;
 			double x = GT[0] + index.x * GT[1] + index.y * GT[2];
 			double y = GT[3] + index.x * GT[4] + index.y * GT[5];
 			OGRPoint newPoint = OGRPoint(x, y);
-	
-			if (mindist != 0.0 && p_layer->GetFeatureCount() != 0) {
-				bool add = true;
-				for (const auto &p_feature : *p_layer) {
-					OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
-					if (newPoint.Distance(p_point) < mindist) {
-						add = false;
-						break;
-					}
-				}
-			
-				if (!add) {
-					curStrata++;
-					continue;
-				}
-	
+
+			if (useMindist) {
+				valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
 			}
-
-			helper::addPoint(&newPoint, p_layer);
-			addedSamples++;
-			samplesAddedPerStrata[curStrata]++;
-
-			if (plot) {
-				xCoords.push_back(x);
-				yCoords.push_back(y);
+			
+			if (valid) {    
+				helper::addPoint(&newPoint, p_layer);
+				
+				addedSamples++;
+				samplesAddedPerStrata[curStrata]++;
+				
+				if (plot) {
+					xCoords.push_back(x);
+					yCoords.push_back(y);
+				}
 			}
 
 			curStrata++;
@@ -1491,35 +1478,26 @@ strat(
 
 		helper::Index index = strataIndexes->at(nextIndex);
 		nextIndexes[curStrata]++;
-
+		
+		bool valid = true;
 		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
 		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
 		OGRPoint newPoint = OGRPoint(x, y);
 
-		if (mindist != 0.0 && p_layer->GetFeatureCount() != 0) {
-			bool add = true;
-			for (const auto &p_feature : *p_layer) {
-				OGRPoint *p_point = p_feature->GetGeometryRef()->toPoint();
-				if (newPoint.Distance(p_point) < mindist) {
-					add = false;
-					break;
-				}
-			}
-		
-			if (!add) {
-				curStrata++;
-				continue;
-			}
-
+		if (useMindist) {
+			valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
 		}
 
-		helper::addPoint(&newPoint, p_layer);
-		addedSamples++;
-		samplesAddedPerStrata[curStrata]++;
+		if (valid) {
+			helper::addPoint(&newPoint, p_layer);
+		
+			addedSamples++;
+			samplesAddedPerStrata[curStrata]++;
 
-		if (plot) {
-			xCoords.push_back(x);
-			yCoords.push_back(y);
+			if (plot) {
+				xCoords.push_back(x);
+				yCoords.push_back(y);
+			}
 		}
 
 		curStrata++;
