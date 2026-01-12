@@ -9,9 +9,6 @@ if (platform.system() == 'Windows'):
     os.add_dll_directory(vendored_lib_path)
     os.add_dll_directory(lib_path)
 
-    if vendored_lib_path not in os.environ.get('PROJ_LIB', ''):
-        os.environ['PROJ_LIB'] = vendored_lib_path
-
     if vendored_lib_path not in os.environ['PATH']:
         os.environ['PATH'] = vendored_lib_path + os.pathsep + os.environ['PATH']
 

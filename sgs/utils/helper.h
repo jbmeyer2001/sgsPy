@@ -99,40 +99,6 @@ struct VRTBandDatasetInfo {
 };
 
 /**
- * Helper function for setting the pixel type of a particular
- * strat raster band, by determining the maximum strata value
- * and finding the smallest signed integer type which will
- * hold that value without overflow.
- *
- * The function also adds the type onto the end of a vector
- * of GDALDataType type so that the caller knows the type
- * for future reference.
- *
- * @param size_t maxStrata
- * @param std::vector<GDALDataType>& stratBandTypes
- * @returns size_t pixel type size
- */
-inline size_t
-setStratBandType(size_t maxStrata, std::vector<GDALDataType>& stratBandTypes) {
-	size_t pixelTypeSize;
-
-	if (maxStrata <= MAXINT8) {
-		stratBandTypes.push_back(GDT_Int8);
-		pixelTypeSize = sizeof(int8_t);
-	}
-	else if (maxStrata <= MAXINT16) {
-		stratBandTypes.push_back(GDT_Int16);
-		pixelTypeSize = sizeof(int16_t);
-	}
-	else {
-		stratBandTypes.push_back(GDT_Int32);
-		pixelTypeSize = sizeof(int32_t);
-	}
-
-	return pixelTypeSize;
-}
-
-/**
  * Helper function which determines the smallest 
  * signed integer type and it's corresponding size
  * which can fit the maxStrata without overflow
