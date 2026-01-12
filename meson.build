@@ -198,7 +198,10 @@ if WIN
     meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
 else #linux
-  required_files = []
+  required_files = [
+    #proj
+    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+  ]
 endif
 
 foreach file : required_files

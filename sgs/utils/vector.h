@@ -46,11 +46,20 @@ class GDALVectorWrapper {
 	public:	
 	/**
 	 * Constructor for GDALVectorWrapper class. this method registers
-	 * drivers, and creates a GDALDataset object.
+	 * drivers, and creates a GDALDataset object. Set the search path
+	 * for the proj.db file, because this function may be the first called from the Python 
+	 * side of the application, meaning this instance of GDAL may not have found a proj.db file
 	 *
 	 * @param std::string filename
+	 * @param std::string projDBPath
 	 */	
-	GDALVectorWrapper(std::string filename) {
+	GDALVectorWrapper(std::string filename, std::string projDBPath) {
+		//set proj.db search path to search for the proj.db file which is included in sgs package
+		char **paths = nullptr;
+		paths = CSLAddString(paths, projDBPath.c_str());
+		OSRSetPROJSearchPaths(paths);
+		CSLDestroy(paths);
+		
 		//must register drivers before trying to open a dataset
 		GDALAllRegister();
 
@@ -83,13 +92,23 @@ class GDALVectorWrapper {
 	 * dataset unfortunately won't have the correcct layer name, and may have an incorrect spatial
 	 * reference system. Because of this, a GDALDataset is created with a new OGRLayer containing
 	 * the correct layer name and spatial reference system. The geometries with their fields are
-	 * then copied from the geojson-created dataset to the new initialized dataset. 
+	 * then copied from the geojson-created dataset to the new initialized dataset. Set the search path
+	 * for the proj.db file, because this function may be the first called from the Python 
+	 * side of the application, meaning this instance of GDAL may not have found a proj.db file
+	 * yet.
 	 *
 	 * @param std::vector<std::string> geometries
 	 * @param std::string projection
 	 * @param std::string name
+	 * @param std::string projDBPath
 	 */
-	GDALVectorWrapper(std::string bytes, std::string projection, std::string name) {
+	GDALVectorWrapper(std::string bytes, std::string projection, std::string name, std::string projDBPath) {
+		//set proj.db search path to search for the proj.db file which is included in sgs package
+		char **paths = nullptr;
+		paths = CSLAddString(paths, projDBPath.c_str());
+		OSRSetPROJSearchPaths(paths);
+		CSLDestroy(paths);
+		
 		GDALAllRegister();
 		
 		//create dataset from geojson string to copy to new layer

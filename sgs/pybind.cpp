@@ -25,8 +25,8 @@ using namespace pybind11::literals;
 PYBIND11_MODULE(_sgs, m) {
 	// source code in sgs/utils/raster.h
 	py::class_<sgs::raster::GDALRasterWrapper>(m, "GDALRasterWrapper")
-		.def(py::init<std::string>())
-		.def(py::init<py::buffer, std::vector<double>, std::string, std::vector<double>, std::vector<std::string>>())
+		.def(py::init<std::string, std::string>())
+		.def(py::init<py::buffer, std::vector<double>, std::string, std::vector<double>, std::vector<std::string>, std::string>())
 		.def("get_driver", &sgs::raster::GDALRasterWrapper::getDriver)
 		.def("get_crs", &sgs::raster::GDALRasterWrapper::getCRS)
 		.def("get_projection", &sgs::raster::GDALRasterWrapper::getFullProjectionInfo)
@@ -52,8 +52,8 @@ PYBIND11_MODULE(_sgs, m) {
 
 	// source code in sgs/utils/vector.h
 	py::class_<sgs::vector::GDALVectorWrapper>(m, "GDALVectorWrapper")
-		.def(py::init<std::string>())
-		.def(py::init<py::bytes, std::string, std::string>())
+		.def(py::init<std::string, std::string>())
+		.def(py::init<py::bytes, std::string, std::string, std::string>())
 		.def("get_layer_names", &sgs::vector::GDALVectorWrapper::getLayerNames)
 		.def("get_layer_info", &sgs::vector::GDALVectorWrapper::getLayerInfo)
 		.def("get_points", &sgs::vector::GDALVectorWrapper::getPoints)

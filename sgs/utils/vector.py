@@ -19,6 +19,7 @@ from.import plot
 from .plot import plot_vector
 
 from _sgs import GDALVectorWrapper
+from sgs import PROJDB_PATH
 
 try:
     import geopandas as gpd
@@ -64,7 +65,7 @@ class SpatialVector:
            specifies a path to a vector file or the C++ class object itself
         """
         if type(image) is str:
-            self.cpp_vector = GDALVectorWrapper(image)
+            self.cpp_vector = GDALVectorWrapper(image, PROJDB_PATH)
         elif type(image) is GDALVectorWrapper:
             self.cpp_vector = image
         else:
@@ -215,7 +216,7 @@ class SpatialVector:
             warnings.simplefilter("ignore")
             geojson = gdf.to_json().encode('utf-8')
 
-        cpp_vector = GDALVectorWrapper(geojson, projection, layer_name)
+        cpp_vector = GDALVectorWrapper(geojson, projection, layer_name, PROJDB_PATH)
         return cls(cpp_vector)
 
     def to_geopandas(self):

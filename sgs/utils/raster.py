@@ -20,6 +20,7 @@ from .import plot
 from .plot import plot_raster
 
 from _sgs import GDALRasterWrapper
+from sgs import PROJDB_PATH
 
 #rasterio optional import
 try: 
@@ -185,7 +186,7 @@ class SpatialRaster:
             specifies a raster file path
         """
         if (type(image) is str):
-            self.cpp_raster = GDALRasterWrapper(image)
+            self.cpp_raster = GDALRasterWrapper(image, PROJDB_PATH)
             self.filename = image
         elif type(image) is GDALRasterWrapper:
             self.cpp_raster = image
@@ -385,7 +386,7 @@ class SpatialRaster:
             projection = ds.crs.wkt
             arr = np.ascontiguousarray(arr)
             buffer = memoryview(arr)
-            return cls(GDALRasterWrapper(buffer, geotransform, projection, [nan] * ds.count, ds.descriptions))
+            return cls(GDALRasterWrapper(buffer, geotransform, projection, [nan] * ds.count, ds.descriptions, PROJDB_PATH))
 
     def to_rasterio(self, with_arr = False):
         """
@@ -522,7 +523,7 @@ class SpatialRaster:
             buffer = memoryview(arr)
             
             ds.Close()
-            return cls(GDALRasterWrapper(buffer, geotransform, projection, nan_vals, band_names))
+            return cls(GDALRasterWrapper(buffer, geotransform, projection, nan_vals, band_names, PROJDB_PATH))
         else:
             filename = ds.GetName()
             

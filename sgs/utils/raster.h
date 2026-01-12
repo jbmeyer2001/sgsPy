@@ -196,14 +196,24 @@ class GDALRasterWrapper {
 	/**
 	 * Constructor for GDALRasterWrapper class.
 	 * Creates GDALDataset using drivers and given file, then calls
-	 * createFromDataset() passing the created object.
+	 * createFromDataset() passing the created object. Set the search path
+	 * for the proj.db file, because this function may be the first called from the Python 
+	 * side of the application, meaning this instance of GDAL may not have found a proj.db file
+	 * yet.
 	 *
-	 * @param filename as std::string
+	 * @param std::string filename
+	 * @param std::string projDBPath
 	 */
-	GDALRasterWrapper(std::string filename) {
+	GDALRasterWrapper(std::string filename, std::string projDBPath) {
+		//set proj.db search path to search for the proj.db file which is included in sgs package
+		char **paths = nullptr;
+		paths = CSLAddString(paths, projDBPath.c_str());
+		OSRSetPROJSearchPaths(paths);
+		CSLDestroy(paths);
+		
 		//must register drivers before trying to open a dataset
 		GDALAllRegister();
-
+	
 		//dataset
 		GDALDataset *p_dataset = GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly));
 		if (!p_dataset) {
@@ -241,15 +251,25 @@ class GDALRasterWrapper {
 
 	/**
 	 * Constructor for generating a GDALRasterWrapper from a numpy array and metadata. 
-	 * The numpy array is passed in the form of a py::buffer.
+	 * The numpy array is passed in the form of a py::buffer. Set the search path
+	 * for the proj.db file, because this function may be the first called from the Python 
+	 * side of the application, meaning this instance of GDAL may not have found a proj.db file
+	 * yet.
 	 *
 	 * @param py::buffer buffer
 	 * @param std::vector<double> geotransform
 	 * @param std::string projection
 	 * @param std::vector<double> nanVals
 	 * @param std::vector<std::string> names
+	 * @param std::string projDBPath
 	 */
-	GDALRasterWrapper(py::buffer buffer, std::vector<double> geotransform, std::string projection, std::vector<double> nanVals, std::vector<std::string> names) {
+	GDALRasterWrapper(py::buffer buffer, std::vector<double> geotransform, std::string projection, std::vector<double> nanVals, std::vector<std::string> names, std::string projDBPath) {
+		//set proj.db search path to search for the proj.db file which is included in sgs package
+		char **paths = nullptr;
+		paths = CSLAddString(paths, projDBPath.c_str());
+		OSRSetPROJSearchPaths(paths);
+		CSLDestroy(paths);
+		
 		py::buffer_info info = buffer.request();
 
 		//get height width and band count from pybuffer
