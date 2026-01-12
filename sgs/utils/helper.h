@@ -948,7 +948,7 @@ typedef std::unordered_map<std::pair<int, int>, std::vector<std::pair<double, do
  * @param float mindist
  * @param float mindist_sq
  */
-bool is_valid_sample(double x, double y, NeighborMap& neighbor_map, float mindist, float mindist_sq) {
+inline bool is_valid_sample(double x, double y, NeighborMap& neighbor_map, float mindist, float mindist_sq) {
 	int cx = static_cast<int>(std::floor(x / mindist));
 	int cy = static_cast<int>(std::floor(y / mindist));
 
