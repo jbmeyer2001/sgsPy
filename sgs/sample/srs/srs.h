@@ -325,7 +325,7 @@ srs(
 
 	size_t samplesAdded = existing.used ? existing.count() : 0;
 	size_t i = 0;
-  helper::NeighborMap neighbor_map;
+  	helper::NeighborMap neighbor_map;
 	double mindist_sq = mindist * mindist;
 
 	while (samplesAdded < numSamples && i < indices.size()) {
@@ -335,22 +335,22 @@ srs(
 		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
 		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
 
-    if (useMindist) {
-      valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
-    }
+		if (useMindist) {
+			valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
+		}
 
-    if (valid) {
-      OGRPoint point = OGRPoint(x, y);
+		if (valid) {
+	  		OGRPoint point = OGRPoint(x, y);
 			helper::addPoint(&point, p_layer);
 
 			samplesAdded++;
 
-      if (plot) {
-        xCoords.push_back(x);
-        yCoords.push_back(y);
-      }
-    }
-    i++;
+			if (plot) {
+				xCoords.push_back(x);
+				yCoords.push_back(y);
+			}
+		}
+		i++;
 	}
 
 	if (filename != "") {
