@@ -1,3 +1,7 @@
+## 
+# @defgroup user_sample sample
+# @ingroup user
+
 from . import (
     ahels,
     clhs,

@@ -15,10 +15,17 @@
 #include <boost/asio/post.hpp>
 #include <mkl.h>
 
+/**
+ * @defgroup quantiles quantiles
+ * @ingroup stratify
+ */
+
 namespace sgs {
 namespace quantiles {
 
-/* This helper function is used to calculate the quantiles of a
+/** 
+ * @ingroup quantiles
+ * This helper function is used to calculate the quantiles of a
  * raster which is entirely in memory. This is the single
  * precision version of this function, which is used for all 
  * raster data types except double precision floating point 
@@ -99,7 +106,9 @@ void calcSPQuantiles(
 	}
 }
 
-/* This helper function is used to calculate the quantiles of a
+/** 
+ * @ingroup quantiles
+ * This helper function is used to calculate the quantiles of a
  * raster which is entirely in memory. This is the double
  * precision version of this function.
  *
@@ -159,7 +168,9 @@ void calcDPQuantiles(
 	status = vslSSDeleteTask(&task);
 }
 
-/* This helper function is used to calculate the quantiles of a
+/** 
+ * @ingroup quantiles
+ * This helper function is used to calculate the quantiles of a
  * large raster which is more efficient to calculate in batches
  * rather than trying to allocate into memory. This is the single
  * precision version of this function, which is used for all 
@@ -325,7 +336,9 @@ void batchCalcSPQuantiles(
 }
 
 
-/* This helper function is used to calculate the quantiles of a
+/**
+ * @ingroup quantiles
+ * This helper function is used to calculate the quantiles of a
  * large raster which is more efficient to calculate in batches
  * rather than trying to allocate into memory. This is the double
  * precision version of this function.
@@ -469,6 +482,7 @@ void batchCalcDPQuantiles(
 }
 
 /**
+ * @ingroup quantiles
  * This is a helper function for processing a pixel of data
  * when a mapped stratification is being created.
  *
@@ -526,6 +540,7 @@ inline void processMapPixel(
 }	
 
 /**
+ * @ingroup quantiles
  * This is a helper function for processing a pixel of data.
  *
  * First, the value is read in as a double, and it is determined
@@ -568,6 +583,7 @@ processPixel(
 }
 
 /**
+ * @ingroup quantiles
  * This function stratifies a given raster using user-defined probabilities.
  * The probabilities (quantiles) are provided as a vector of doubles mapped
  * to a band index.

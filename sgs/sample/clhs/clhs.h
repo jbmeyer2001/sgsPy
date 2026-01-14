@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup clhs clhs
+ * @ingroup sample
+ */
+
 #include <iostream>
 #include <random>
 
@@ -27,6 +32,7 @@ namespace sgs {
 namespace clhs {
 
 /**
+ * @ingroup clhs
  * Structure for containing the x and y positions of a point,
  * along with an array of its feature values.
  */
@@ -38,6 +44,7 @@ struct Point {
 };
 
 /**
+ * @ingroup clhs
  * This function is used to get the quantile which a particular value fits into.
  * It requires both that value, and a vector of the quantile values to be passed.
  *
@@ -55,6 +62,7 @@ getQuantile(T val, std::vector<T>& quantiles) {
 }
 
 /**
+ * @ingroup clhs
  * This class is responsible for managing the data for the clhs sampling method.
  *
  * It contains a vector with the feature values of all added pixels, as well as 
@@ -270,6 +278,7 @@ class CLHSDataManager {
 };
 
 /**
+ * @ingroup clhs
  * This function is responsible for three different tasks as it reads through the raster.
  * The raster is read in blocks, so as to be as memory efficient as possible and 
  * avoid the potential issue of a raster which is too large to fit in memory.
@@ -583,6 +592,7 @@ readRaster(
 }
 
 /**
+ * @ingroup clhs
  * This function is responsible for selecting the samples will be in the final sample
  * using the Conditioned Latin Hypercube Sampling (clhs) method. The CLHSDataManager
  * contains a pool of points which may be selected, as well as objective functions which
@@ -839,6 +849,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 }
 
 /**
+ * @ingroup clhs
  * This function conducts Conditioned Latin Hypercube Sampling (CLHS) on a given raster.
  *
  * First, metadata is acquired for each band within the raster, and an output vector

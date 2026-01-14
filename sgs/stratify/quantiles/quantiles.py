@@ -7,15 +7,98 @@
 #
 # ******************************************************************************
 
+##
+# @defgroup user_quantiles
+# @ingroup user_stratify
+
 import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
 
 from _sgs import quantiles_cpp
+from sgs import GIGABYTE
 
-GIGABYTE = 1073741824
-MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
-
+##
+# @ingroup user_quantiles
+# This function conducts stratification on the raster given by generating quantile
+# probabilities according to the 'num_strata' argument given by the user.
+# 
+# The quantiles may be defined as an integer, indicating the number of quantiles
+# of equal size. Quantiles may also be defined as a list of probabilities between 0
+# and 1. In the case of a raster with a single band, the quantiles may be passed directly
+# to the num_strata argument as either type: int | list[float].
+# 
+# In the case of a multi-band raster image, the specific bands can be specified by the index
+# of a list containing an equal number of quantiles as bands (list[int | list[float]). 
+# 
+# If not all raster bands should be stratified, specific bands can be selected in 
+# the form of a dict where the key is the name of a raster band and the value is the 
+# quantiles (dict[str, int | list[float]).
+# 
+# if the map parameter is given, an extra output band will be used which combines
+# all stratifications from the bands used into an extra outpu band. A single
+# value in the mapped output band corresponds to a combination a single combination
+# of values from the previous bands.
+# 
+# The thread_count parameter specifies the number of threads which this function 
+# will utilize the the case where the raster is large and may not fit in memory. If
+# the full raster can fit in memory and does not need to be processed in blocks, this
+# argument will be ignored. The default is 8 threads, although the optimal number
+# will depend significantly on the hardware being used and may be more or less
+# than 8.
+# 
+# the driver_options parameter is used to specify creation options for the output
+# raster. See options for the Gtiff driver here: 
+# https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
+# The keys in the driver_options dict must be strings, the values are converted to
+# string. THe options must be valid for the driver corresponding to the filename,
+# and if filename is not given they must be valid for the GTiff format, as that
+# is the format used to store temporary raster files. Note that if this parameter
+# is given, but filename is not and the raster fits entirely in memory, the 
+# driver_options parameter will be ignored.
+# 
+# the eps parameter is used only if batch processing is used to calculate the quantiles
+# for a raster. Quantile streaming algorithms cannot be perfectly accurate, as this
+# would necessitate having the entire raster in memory at once. A good approximation
+# can be made, and the error is controlled by this epsilon (eps) value.
+# The Quantile streaming method is the method introduced by  Zhang et al. and utilized by MKL:
+#     https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
+#     https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
+# 
+# Examples
+# --------------------
+# rast = sgs.SpatialRaster('rast.tif') @n
+# srast = sgs.stratify.quantiles(rast, num_strata=5)
+# 
+# srast = sgs.SpatialRaster('rast.tif') @n
+# srast = sgs.stratify.quantiles(rast, num_strata=[.1, .2, .3, .5, .7], filename="srast.tif")
+# 
+# rast = sgs.SpatialRaster('multi_band_rast.tif') @n
+# srast = sgs.stratify.quantiles(rast, num_strata=[5, 5, [.5, .75]], map=True)
+# 
+# rast = sgs.SpatialRaster('multi_band_rast.tif') @n
+# srast = sgs.stratify.quantiles(rast, num_strata={'zq90': 5})
+# 
+# Parameters
+# --------------------
+# rast : SpatialRaster @n
+#     raster data structure containing the raster to stratify @n @n
+# num_strata : int | list[float] | list[int|list[float]] | dict[str,int|list[float]] @n
+#     specification of the quantiles to stratify @n @n
+# map : bool @n
+#     whether to map the stratifiction of multiple raster bands onto a single band @n @n
+# filename : str @n
+#     filename to write to or ''  if no file should be written @n @n
+# thread_count : int @n
+#     the number of threads to use when multithreading large images @n @n
+# driver_options : dict[] @n
+#     the creation options as defined by GDAL which will be passed when creating output files @n @n
+# eps : float @n
+#     the epsilon value, controlling the error of stream-processed quantiles @n @n
+# 
+# Returns
+# --------------------
+# a SpatialRaster object containing stratified raster bands.
 def quantiles(
     rast: SpatialRaster,
     num_strata: int | list[float] | list[int|list[float]] | dict[str,int|list[float]],
@@ -24,88 +107,9 @@ def quantiles(
     thread_count: int = 8,
     driver_options: dict = None,
     eps: float = .001):
-    """
-    This function conducts stratification on the raster given by generating quantile
-    probabilities according to the 'num_strata' argument given by the user.
-
-    The quantiles may be defined as an integer, indicating the number of quantiles
-    of equal size. Quantiles may also be defined as a list of probabilities between 0
-    and 1. In the case of a raster with a single band, the quantiles may be passed directly
-    to the num_strata argument as either type: int | list[float].
-
-    In the case of a multi-band raster image, the specific bands can be specified by the index
-    of a list containing an equal number of quantiles as bands (list[int | list[float]). 
-
-    If not all raster bands should be stratified, specific bands can be selected in 
-    the form of a dict where the key is the name of a raster band and the value is the 
-    quantiles (dict[str, int | list[float]).
-
-    if the map parameter is given, an extra output band will be used which combines
-    all stratifications from the bands used into an extra outpu band. A single
-    value in the mapped output band corresponds to a combination a single combination
-    of values from the previous bands.
-
-    The thread_count parameter specifies the number of threads which this function 
-    will utilize the the case where the raster is large and may not fit in memory. If
-    the full raster can fit in memory and does not need to be processed in blocks, this
-    argument will be ignored. The default is 8 threads, although the optimal number
-    will depend significantly on the hardware being used and may be more or less
-    than 8.
-
-    the driver_options parameter is used to specify creation options for the output
-    raster. See options for the Gtiff driver here: 
-    https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
-    The keys in the driver_options dict must be strings, the values are converted to
-    string. THe options must be valid for the driver corresponding to the filename,
-    and if filename is not given they must be valid for the GTiff format, as that
-    is the format used to store temporary raster files. Note that if this parameter
-    is given, but filename is not and the raster fits entirely in memory, the 
-    driver_options parameter will be ignored.
-
-    the eps parameter is used only if batch processing is used to calculate the quantiles
-    for a raster. Quantile streaming algorithms cannot be perfectly accurate, as this
-    would necessitate having the entire raster in memory at once. A good approximation
-    can be made, and the error is controlled by this epsilon (eps) value.
-    The Quantile streaming method is the method introduced by  Zhang et al. and utilized by MKL:
-        https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf
-        https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html
-
-    Examples
-    --------------------
-    rast = sgs.SpatialRaster('rast.tif')
-    srast = sgs.stratify.quantiles(rast, num_strata=5)
-
-    srast = sgs.SpatialRaster('rast.tif')
-    srast = sgs.stratify.quantiles(rast, num_strata=[.1, .2, .3, .5, .7], filename="srast.tif")
-
-    rast = sgs.SpatialRaster('multi_band_rast.tif')
-    srast = sgs.stratify.quantiles(rast, num_strata=[5, 5, [.5, .75]], map=True)
-
-    rast = sgs.SpatialRaster('multi_band_rast.tif')
-    srast = sgs.stratify.quantiles(rast, num_strata={'zq90': 5})
-
-    Parameters
-    --------------------
-    rast : SpatialRaster
-        raster data structure containing the raster to stratify
-    num_strata : int | list[float] | list[int|list[float]] | dict[str,int|list[float]]
-        specification of the quantiles to stratify
-    map : bool
-        whether to map the stratifiction of multiple raster bands onto a single band
-    filename : str
-        filename to write to or ''  if no file should be written
-    thread_count : int
-        the number of threads to use when multithreading large images
-    driver_options : dict[]
-        the creation options as defined by GDAL which will be passed when creating output files
-    eps : float
-        the epsilon value, controlling the error of stream-processed quantiles
     
-    Returns
-    --------------------
-    a SpatialRaster object containing stratified raster bands.
-
-    """
+    MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
+    
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster")
 

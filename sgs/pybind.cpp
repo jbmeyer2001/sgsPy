@@ -7,6 +7,30 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup dev developer docs
+ */
+
+/**
+ * @defgroup calculate calculate
+ * @ingroup dev
+ */
+
+/**
+ * @defgroup sample sample
+ * @ingroup dev
+ */
+
+/**
+ * @defgroup stratify stratify
+ * @ingroup dev
+ */
+
+/**
+ * @defgroup utils utils
+ * @ingroup dev
+ */
+
 #include "utils/raster.h"
 #include "utils/vector.h"
 #include "calculate/pca/pca.h"

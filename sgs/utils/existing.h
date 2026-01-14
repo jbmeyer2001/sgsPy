@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup existing existing
+ * @ingroup utils
+ */
+
 #pragma once
 
 #include "vector.h"
@@ -20,6 +25,7 @@ namespace sgs {
 namespace existing {
 
 /**
+ * @ingroup existing
  * This struct handles existing sample plot points. It has a constructor
  * which takes a GDALVectorWrapper, geotransform, and width of the raster
  * as parameters. 

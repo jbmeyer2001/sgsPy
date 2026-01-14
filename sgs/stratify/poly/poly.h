@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup poly poly
+ * @ingroup stratify
+ */
+
 #include "utils/helper.h"
 #include "utils/raster.h"
 #include "utils/vector.h"
@@ -17,6 +22,7 @@ namespace sgs {
 namespace poly {
 
 /**
+ * @ingroup poly
  * This function conducts stratification by polygons on the input raster.
  *
  * First, the spatial reference of the input vector is compared to that

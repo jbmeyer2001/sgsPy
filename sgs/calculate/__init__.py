@@ -1,3 +1,7 @@
+##
+# @defgroup user_calculate calculate
+# @ingroup user
+
 from . import (
     pca,
     representation,

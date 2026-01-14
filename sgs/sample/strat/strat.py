@@ -7,6 +7,10 @@
 #
 # ******************************************************************************
 
+##
+# @defgroup user_strat strat
+# @ingroup user_sample
+
 import tempfile
 from typing import Optional
 
@@ -21,6 +25,114 @@ from sgs.utils import(
 
 from _sgs import strat_cpp
 
+##
+# @ingroup user_strat
+# This function conducts stratified sampling using the stratified
+# raster given. There are two methods employed to determine which
+# pixels to sample:
+#  - The 'random' method randomly selects pixels within a given strata.
+#  - The 'Queinnec' method prioritizes pixels which are surrounded by other pixels of the same strata.
+# The 'wrow' and 'wcol' parameters determine the size of the surrounding area required for a pixel to be
+# prioritized.
+# 
+# The number of total samples is given by num_samples. The allocation
+# of samples per strata is calculated using the distribution of pixels
+# across the strata, and the allocation method specified by the allocation parameter.
+# 
+# In the case where 'optim' allocation is used, an additional raster must be passed
+# to the mrast parameter, and if that raster contains more than 1 band the mrast_band
+# parameter must be given specifying which band. The optim method is specified
+# by Gregoire and Valentine https://doi.org/10.1201/9780203498880 Section 5.4.4.
+# 
+# The 'existing' parameter, if passed, must be a SpatialVector of type Point or MultiPoint. 
+# These points specify samples within an already-existing network. The SpatialVector may
+# only have one layer. If the force parameter is set to True, every pixel in the existing
+# sample will be added no matter what. if the force parameter is false, then the existing
+# samples will be prioritized over other pixels in the same strata.
+# 
+# The 'access' parameter, if passed, must be a SpatialVector of type LineString or MultiLineString.
+# buff_outer specifies the buffer distance around the geometry which
+# is allowed to be included in the sampling, buff_inner specifies the
+# geometry which is not allowed to be included in the sampling. buff_outer
+# must be larger than buff_inner. For a multi-layer vector, layer_name
+# must be specified.
+# 
+# Examples
+# --------------------
+# rast = sgs.SpatialRaster("raster.tif") @n
+# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5) #uses Queinnec method with proportional allocation by default
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="random", mindist=200, plot=True, filename="samples.shp")
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="Queinnec", allocation="optim", mrast=rast)
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="manual", weights=[0.1, 0.1, 0.2, 0.2, 0.4])
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# access = sgs.SpatialVector("access_network.shp") @n
+# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="equal", access=access, buff_inner=100, buff_outer=300)
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# existng = sgs.SpatialVector("existing_samples.shp") @n
+# srast =sgs.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="prop", existing=existing, force=True)
+# 
+# Parameters
+# --------------------
+# strat_rast : SpatialRaster
+#     the raster to sample
+# band : int | str @n
+#     the band within the strat_rast to use, either a 0-indexed int value or the name of the band @n @n
+# num_samples : int @n
+#     the desired number of samples @n @n
+# num_strata : int @n
+#     the number of strata in the strat_rast. If this number is incorrect it may cause 
+#     undefined behavior in the C++ code which determines sample locations. @n @n
+# wrow : int @n
+#     the number of rows to be considered in the focal window for the 'Queinnec' method @n @n
+# wcol : int @n
+#     the number of columns to be considered in the focal window for the 'Queinnec' method @n @n
+# allocation : str @n
+#     the allocation method to determine the number of samples per strata. One of 'prop', 'equal', 'optim', or 'manual' @n @n
+# weights : list[float] @n
+#     the allocation percentages of each strata if the allocation method is 'manual' @n @n
+# mrast : SpatialRaster @n
+#     the raster used to calculate 'optim' allocation if 'optim' allocation is used @n @n
+# mrast_band : str | int @n
+#     specifies the band within mrast to use @n @n
+# method : str @n
+#     the sampling method, either 'random', or 'Queinnec' @n @n
+# mindist : float @n
+#     the minimum distance allowed between sample points @n @n
+# existing : SpatialVector @n
+#     a vector of Point or Multipoint which are part of a pre-existing sample network @n @n
+# force : bool @n
+#     whether to automatically include all points in the existing network or not @n @n
+# access : SpatialVector @n
+#     a vector of LineString or MultiLineString geometries to sample near to @n @n
+# layer_name : str @n @n
+#     the layer within 'access' to use for access buffering @n @n
+# buff_inner : float @n
+#     the inner buffer around the access LineStrings, where samples should not occur @n @n
+# buff_outer : float @n
+#     the outer buffer around the access LineStrings, The area in which samples must occur @n @n
+# plot : bool @n
+#     whether or not to plot the output samples @n @n
+# filename : str @n
+#     the output filename to write to if desired @n @n
+# 
+# 
+# Returns
+# --------------------
+# a SpatialVector object containing point geometries of sample locations
 def strat(
     strat_rast: SpatialRaster,
     band: int | str,
@@ -43,114 +155,7 @@ def strat(
     plot: bool = False,
     filename: str = "",
     ):
-    """
-    This function conducts stratified sampling using the stratified
-    raster given. There are two methods employed to determine which
-    pixels to sample:
-     - The 'random' method randomly selects pixels within a given strata.
-     - The 'Queinnec' method prioritizes pixels which are surrounded by other pixels of the same strata.
-    The 'wrow' and 'wcol' parameters determine the size of the surrounding area required for a pixel to be
-    prioritized.
 
-    The number of total samples is given by num_samples. The allocation
-    of samples per strata is calculated using the distribution of pixels
-    across the strata, and the allocation method specified by the allocation parameter.
-
-    In the case where 'optim' allocation is used, an additional raster must be passed
-    to the mrast parameter, and if that raster contains more than 1 band the mrast_band
-    parameter must be given specifying which band. The optim method is specified
-    by Gregoire and Valentine https://doi.org/10.1201/9780203498880 Section 5.4.4.
-
-    The 'existing' parameter, if passed, must be a SpatialVector of type Point or MultiPoint. 
-    These points specify samples within an already-existing network. The SpatialVector may
-    only have one layer. If the force parameter is set to True, every pixel in the existing
-    sample will be added no matter what. if the force parameter is false, then the existing
-    samples will be prioritized over other pixels in the same strata.
-
-    The 'access' parameter, if passed, must be a SpatialVector of type LineString or MultiLineString.
-    buff_outer specifies the buffer distance around the geometry which
-    is allowed to be included in the sampling, buff_inner specifies the
-    geometry which is not allowed to be included in the sampling. buff_outer
-    must be larger than buff_inner. For a multi-layer vector, layer_name
-    must be specified.
-
-    Examples
-    --------------------
-    rast = sgs.SpatialRaster("raster.tif")
-    srast = sgs.stratify.quantiles(rast, num_strata=5)
-    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5) #uses Queinnec method with proportional allocation by default
-
-    rast = sgs.SpatialRaster("raster.tif")
-    srast = sgs.stratify.quantiles(rast, num_strata=5)
-    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="random", mindist=200, plot=True, filename="samples.shp")
-
-    rast = sgs.SpatialRaster("raster.tif")
-    srast = sgs.stratify.quantiles(rast, num_strata=5)
-    samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="Queinnec", allocation="optim", mrast=rast)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    srast = sgs.stratify.quantiles(rast, num_strata=5)
-    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="manual", weights=[0.1, 0.1, 0.2, 0.2, 0.4])
-
-    rast = sgs.SpatialRaster("raster.tif")
-    access = sgs.SpatialVector("access_network.shp")
-    srast = sgs.stratify.quantiles(rast, num_strata=5)
-    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="equal", access=access, buff_inner=100, buff_outer=300)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    existng = sgs.SpatialVector("existing_samples.shp")
-    srast =sgs.stratify.quantiles(rast, num_strata=5)
-    samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="prop", existing=existing, force=True)
-
-    Parameters
-    --------------------
-    strat_rast : SpatialRaster
-        the raster to sample
-    band : int | str
-        the band within the strat_rast to use, either a 0-indexed int value or the name of the band
-    num_samples : int
-        the desired number of samples
-    num_strata : int
-        the number of strata in the strat_rast. If this number is incorrect it may cause 
-        undefined behavior in the C++ code which determines sample locations.
-    wrow : int
-        the number of rows to be considered in the focal window for the 'Queinnec' method
-    wcol : int
-        the number of columns to be considered in the focal window for the 'Queinnec' method
-    allocation : str
-        the allocation method to determine the number of samples per strata. One of 'prop', 'equal', 'optim', or 'manual'
-    weights : list[float]
-        the allocation percentages of each strata if the allocation method is 'manual'
-    mrast : SpatialRaster
-        the raster used to calculate 'optim' allocation if 'optim' allocation is used
-    mrast_band : str | int
-        specifies the band within mrast to use
-    method : str
-        the sampling method, either 'random', or 'Queinnec'
-    mindist : float
-        the minimum distance allowed between sample points
-    existing : SpatialVector
-        a vector of Point or Multipoint which are part of a pre-existing sample network
-    force : bool
-        whether to automatically include all points in the existing network or not
-    access : SpatialVector
-        a vector of LineString or MultiLineString geometries to sample near to
-    layer_name : str
-        the layer within 'access' to use for access buffering
-    buff_inner : float
-        the inner buffer around the access LineStrings, where samples should not occur
-    buff_outer : float
-        the outer buffer around the access LineStrings, The area in which samples must occur
-    plot : bool
-        whether or not to plot the output samples
-    filename : str
-        the output filename to write to if desired
-
-
-    Returns
-    --------------------
-    a SpatialVector object containing point geometries of sample locations
-    """
     if type(strat_rast) is not SpatialRaster:
         raise TypeError("'strat_rast' parameter must be of type sgs.SpatialRaster.")
 

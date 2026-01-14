@@ -7,6 +7,10 @@
 #
 # ******************************************************************************
 
+##
+# @defgroup user_systematic systematic
+# @ingroup user_sample
+
 from typing import Optional
 
 import numpy as np
@@ -20,6 +24,81 @@ from sgs.utils import (
 
 from _sgs import systematic_cpp
 
+##
+# @ingroup user_systematic
+# This function conducts systematic sampling within the extent of
+# the raster given. The 'cellsize' parameter specifies the grid size,
+# the 'shape' parameter specifies the grid shape, and the 'location' 
+# parameter specifies where in the grid a sample should fall into.
+# 
+# shape can be one of 'square', and 'hexagon'.
+# location can be one of 'corners', 'centers', 'random'.
+# 
+# An access vector of LineString or MultiLineString type can be provided.
+# buff_outer specifies the buffer distance around the geometry which is
+# allowed to be included in the sampling, buff_inner specifies the geometry
+# which is not allowed to be included in teh sampling. buff_outer must
+# be larger than buff_inner. For a multi-layer vector, layer_name
+# must be provided.
+# 
+# A vector containing existing sample points can be provided. If this is
+# the case then all of the points in the existing sample are automatically
+# added and random samples are then chosen as required until num_samples 
+# number of samples are chosen.
+# 
+# If the force parameter is True, then the the samples are forced to 
+# fall on an index which is NOT a no data value. This may result
+# in some grids not being sampled.
+# 
+# Examples
+# --------------------
+# rast = sgs.SpatialRaster("raster.tif") @n
+# samples = sgs.sample.systematic(rast, 500, "hexagon", "centers")
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# samples = sgs.sample.systematic(rast, 500, "square", "corners", plot=True, filename="systematic_samples.shp")
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# samples = sgs.sample.systematic(rast, 500, "hexagon", "random", force=True)
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# access = sgs.SpatialVector("access_network.shp") @n
+# samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", access=access, buff_outer=300)
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# access = sgs.SpatialVector("existing_samples.shp") @n
+# samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", existing=existing)
+# 
+# Parameters
+# --------------------
+# rast : SpatialRaster @n
+#     the raster to be sampled @n @n
+# cellsize : float @n
+#     the size of the grid cells to be sampled @n @n
+# shape : str @n
+#     the shape of the grid cells to be sampled @n @n
+# location : str @n
+#     the location within the grid cell to be sampled @n @n
+# existing (optional) : SpatialVector @n
+#     a vector specifying existing sample points @n @n
+# access (optional) : SpatialVector @n
+#     a vector specifying access network @n @n
+# layer_name (optional) : str @n
+#     the layer within access that is to be used for sampling @n @n
+# buff_inner (optional) : int | float @n
+#     buffer boundary specifying distance from access which CANNOT be sampled @n @n
+# buff_outer (optional) : int | float @n
+#     buffer boundary specifying distance from access which CAN be sampled @n @n
+# force : bool @n
+#     True if samples are not allowed to fall on a nodata pixel @n @n
+# plot : bool @n
+#     whether or not to plot the resulting samples @n @n
+# filename : str @n
+#     the filename to write to or "" if not to write @n @n
+# 
+# Returns
+# --------------------
+# a SpatialVector object containing point geometries of sample locations
 def systematic(
     rast: SpatialRaster,
     cellsize: int | float,
@@ -33,81 +112,7 @@ def systematic(
     force: bool = False,
     plot: bool = False,
     filename: str = ""):
-    """
-    This function conducts systematic sampling within the extent of
-    the raster given. The 'cellsize' parameter specifies the grid size,
-    the 'shape' parameter specifies the grid shape, and the 'location' 
-    parameter specifies where in the grid a sample should fall into.
-
-    shape can be one of 'square', and 'hexagon'.
-    location can be one of 'corners', 'centers', 'random'.
-
-    An access vector of LineString or MultiLineString type can be provided.
-    buff_outer specifies the buffer distance around the geometry which is
-    allowed to be included in the sampling, buff_inner specifies the geometry
-    which is not allowed to be included in teh sampling. buff_outer must
-    be larger than buff_inner. For a multi-layer vector, layer_name
-    must be provided.
-
-    A vector containing existing sample points can be provided. If this is
-    the case then all of the points in the existing sample are automatically
-    added and random samples are then chosen as required until num_samples 
-    number of samples are chosen.
-
-    If the force parameter is True, then the the samples are forced to 
-    fall on an index which is NOT a no data value. This may result
-    in some grids not being sampled.
-
-    Examples
-    --------------------
-    rast = sgs.SpatialRaster("raster.tif")
-    samples = sgs.sample.systematic(rast, 500, "hexagon", "centers")
-
-    rast = sgs.SpatialRaster("raster.tif")
-    samples = sgs.sample.systematic(rast, 500, "square", "corners", plot=True, filename="systematic_samples.shp")
-
-    rast = sgs.SpatialRaster("raster.tif")
-    samples = sgs.sample.systematic(rast, 500, "hexagon", "random", force=True)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    access = sgs.SpatialVector("access_network.shp")
-    samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", access=access, buff_outer=300)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    access = sgs.SpatialVector("existing_samples.shp")
-    samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", existing=existing)
-
-    Parameters
-    --------------------
-    rast : SpatialRaster
-        the raster to be sampled
-    cellsize : float
-        the size of the grid cells to be sampled
-    shape : str
-        the shape of the grid cells to be sampled
-    location : str
-        the location within the grid cell to be sampled
-    existing (optional) : SpatialVector
-        a vector specifying existing sample points
-    access (optional) : SpatialVector
-        a vector specifying access network
-    layer_name (optional) : str
-        the layer within access that is to be used for sampling
-    buff_inner (optional) : int | float
-        buffer boundary specifying distance from access which CANNOT be sampled
-    buff_outer (optional) : int | float
-        buffer boundary specifying distance from access which CAN be sampled
-    force : bool
-        True if samples are not allowed to fall on a nodata pixel
-    plot : bool
-        whether or not to plot the resulting samples
-    filename : str
-        the filename to write to or "" if not to write
-
-    Returns
-    --------------------
-    a SpatialVector object containing point geometries of sample locations
-    """
+        
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
 

@@ -1,3 +1,7 @@
+##
+# @defgroup user_stratify stratify
+# @ingroup user
+
 from . import (
     breaks,
     kmeans,

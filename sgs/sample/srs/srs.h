@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup srs srs
+ * @ingroup sample
+ */
+
 #include <iostream>
 #include <random>
 
@@ -22,6 +27,7 @@ namespace sgs {
 namespace srs {
 
 /**
+ * @ingroup srs
  * This is a helper function for processing a block of the raster. For each
  * pixel in the block: 
  * The value is checked, and not added if it is a nanvalue. 
@@ -99,6 +105,7 @@ processBlock(
 }
 
 /**
+ * @ingroup srs
  * This function uses random sampling to determine the location
  * of sample plots given a raster image.
  *

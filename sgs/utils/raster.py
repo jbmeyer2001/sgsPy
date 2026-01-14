@@ -37,116 +37,120 @@ try:
 except ImportError as e:
     GDAL = False
 
+##
+# @ingroup user_utils
+# This class represents a spatial raster, and is used as an input to many sgs functions. 
+# 
+# It has a number of additional uses, including accessing the raster data within as a numpy array,
+# plotting with matplotlib, as well as converting to a GDAL or Rasterio dataset object. This class
+# also has various attributes representing metadata of the raster which may be useful and can be
+# seen in the 'Public Attributes' section.
+# 
+# Accessing raster data
+# --------------------
+# 
+# raster data can be accessed in the form of a NumPy array per band. This can be done using 
+# the 'band' function. The band function takes  a single parameter, which must be either
+# an integer or a string. If it is an integer, it must refer to a valid zero-indexed band
+# number. If it is a string, it must refer to a valid band name within the raster. This function
+# may fail if the band is too large to fit in memory.
+#
+# rast = sgs.utils.raster.SpatialRaster('test.tif') #raster with three layers
+# 
+# b0 = rast.band(band=0) @n
+# b1 = rast.band(band=1) @n
+# b2 = rast.band(band=2) @n
+# 
+# zq90 = rast.band(band='zq90') @n
+# pzabove2 = rast.band(band='pzabove2') @n
+# zstd = rast.band(band='zstd') @n
+# 
+# Accessing raster information
+# --------------------
+# 
+# raster metadata can be displayed using the info() function. Info
+# inclues: raster driver, band names, dimensions, pixel size, and bounds.
+# 
+# rast = sgs.utils.raster.SpatialRaster('test.tif') @n
+# rast.info() 
+# 
+# Plotting raster
+# --------------------
+# 
+# the plot() function provides a wrapper around matplotlibs imshow 
+# functionality (matplotlib.pyplot.imshow). Only a single band can
+# be plotted, and for multi-band rasters an indication must be given
+# for which band to plot. 
+# 
+# Target width and heights can be given in the parameters 
+# target_width and target_height. Default parameters are 1000 pixels for both. 
+# Information on the actual downsampling can be found here:
+# https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
+# 
+# If no 'band' argument is given, the function will throw an error if the
+# image does not contain a single band.
+# 
+# The 'band' argument allows the end-user to specify either the band
+# index or the band name. 'band' may be an int or str.
+# 
+# Optionally, any of the arguments which may be passed to the matplotlib
+# imshow function may also be passed to plot_image(), such as cmap
+# for a specific color mapping.
+#
+# #plots the single band @n
+# rast = sgs.SpatialRaster('test_single_band_raster.tif')  @n
+# rast.plot_image()
+# 
+# #plots the second band @n
+# rast = sgs.SpatialRaster('test_multi_band_raster.tif') @n
+# rast.plot(band=1)
+# 
+# #plots the 'zq90' band @n
+# rast = sgs.SpatialRaster('test_multi_band_raster.tif') @n
+# rast.plot(band='zq90')
+# 
+# Public Attributes
+# --------------------
+# driver : str @n
+#     gdal dataset driver, for info/display purposes @n @n
+# width : int @n
+#     the pixel width of the raster image @n @n
+# height : int @n
+#     the pixel height of the raster image @n @n
+# band_count : int @n
+#     the number of bands in the raster image @n @n
+# bands : list[str] @n
+#     the raster band names @n @n
+# crs : str @n
+#     coordinate reference system @n @n
+# projection : str @n
+#     full projection string as wkt @n @n
+# xmin : double @n
+#     minimum x value as defined by the gdal geotransform @n @n
+# xmax : double @n
+#     maximum x value as defined by the gdal geotransform @n @n
+# ymin : double @n
+#     minimum y value as defined by the gdal geotransform @n @n
+# ymax : double @n
+#     maximum y value as defined by the gdal geotransform @n @n
+# pixel_height : double  @n
+#     pixel height as defined by the gdal geotransform @n @n
+# pixel_width : double @n
+#     pixel width as defined by the gdal geotransform @n @n
+# 
+# Public Methods
+# --------------------
+# info() @n
+#     takes no arguments, prints raster information to the console @n @n
+# plot() @n
+#     takes one optional 'band' argument of type int, or str @n @n
+# band() @n
+#     returns the band data as a numpy array, may throw an error if the raster band is too large
+#     
+# Optionally, any of the arguments that can be passed to matplotlib.pyplot.imshow 
+#     can also be passed to plot_image().
 class SpatialRaster:
-    """
-    A Python wrapper of the C++ class GDALRasterWrapper. GDAL is used on the C++ side rather
-    than the Python side, as it means gdal does not have to be a python dependency. It also
-    allows smoother integration with other C++ code.
-
-    This class is primarily used under the hood, although it contains raster metadata, and 
-    functions for displaying info and plotting images which are intended for the end-user.
-
-    Accessing raster data:
-
-        raster data can be accessed in the form of a NumPy array per band. This can be done using 
-        the 'band' function. The band function takes  a single parameter, which must be either
-        an integer or a string. If it is an integer, it must refer to a valid zero-indexed band
-        number. If it is a string, it must refer to a valid band name within the raster.
-
-        examples:
-        rast = sgs.utils.raster.SpatialRaster('test.tif') #raster with three layers
-
-        b0 = rast.band(band=0)
-        b0 = rast.band(band=1)
-        b0 = rast.band(band=2)
-
-        zq90 = rast.band(band='zq90')
-        pzabove2 = rast.band(band='pzabove2')
-        zstd = rast.band(band='zstd')
-
-    Accessing raster information:
-
-        raster metadata can be displayed using the info() function. Info
-        inclues: raster driver, band names, dimensions, pixel size, and bounds.
-
-        example:
-        rast = sgs.utils.raster.SpatialRaster('test.tif')
-        rast.info()
-
-    Plotting raster:
-
-        the plot() function provides a wrapper around matplotlibs imshow 
-        functionality (matplotlib.pyplot.imshow). Only a single band can
-        be plotted, and for multi-band rasters an indication must be given
-        for which band to plot. 
-
-        Target width and heights can be given in the parameters 
-        target_width and target_height. Default parameters are 1000 pixels for both. 
-        Information on the actual downsampling can be found here:
-        https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec
-
-        If no 'band' argument is given, the function will throw an error if the
-        image does not contain a single.
-
-        The 'band' argument allows the end-user to specify either the band
-        index or the band name. 'band' may be an int or str.
-
-        Optionally, any of the arguments which may be passed to the matplotlib
-        imshow function may also be passed to plot_image(), such as cmap
-        for a specific color mapping.
-
-        examples:
-        #plots the single band 
-        rast = sgs.SpatialRaster('test_single_band_raster.tif') 
-        rast.plot_image()
-
-        #plots the second band
-        rast = sgs.SpatialRaster('test_multi_band_raster.tif')
-        rast.plot(band=1)
-
-        #plots the 'zq90' band
-        rast = sgs.SpatialRaster('test_multi_band_raster.tif')
-        rast.plot(band='zq90')
-
-    Public Attributes
-    --------------------
-    driver : str
-        gdal dataset driver, for info/display purposes
-    width : int
-        the pixel width of the raster image
-    height : int
-        the pixel height of the raster image
-    band_count : int
-        the number of bands in the raster image
-    bands : list[str]
-        the raster band names
-    crs : str
-        coordinate reference system
-    projection : str
-        full projection string as wkt
-    xmin : double
-        minimum x value as defined by the gdal geotransform
-    xmax : double
-        maximum x value as defined by the gdal geotransform
-    ymin : double
-        minimum y value as defined by the gdal geotransform
-    ymax : double
-        maximum y value as defined by the gdal geotransform
-    pixel_height : double 
-        pixel height as defined by the gdal geotransform
-    pixel_width : double
-        pixel width as defined by the gdal geotransform
-
-    Public Methods
-    --------------------
-    info()
-        takes no arguments, prints raster information to the console
-    plot()
-        takes one optional 'band' argument of type int, or str
-        
-    Optionally, any of the arguments that can be passed to matplotlib.pyplot.imshow 
-        can also be passed to plot_image().
-    """
+    
     have_temp_dir = False
     temp_dataset = False
     filename = ""
@@ -172,13 +176,7 @@ class SpatialRaster:
         self.ymax
         self.pixel_height
         self.pixel_width
-        self.arr
         self.bands
-        self.band_name_dict
-        self.temp_dir
-        
-        arr is initally set to None, as the array is loaded into a NumPy 
-        array only if it is required.
 
         Parameters
         --------------------

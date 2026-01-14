@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup access access
+ * @ingroup utils
+ */
+
 #pragma once
 
 #include "helper.h"
@@ -18,6 +23,7 @@ namespace sgs {
 namespace access {
 
 /**
+ * @ingroup access
  * This Struct controls the creation and storage of access networks
  * for use in sampling functions.
  */

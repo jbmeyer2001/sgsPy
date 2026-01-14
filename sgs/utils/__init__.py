@@ -1,3 +1,7 @@
+##
+# @defgroup user_utils utils
+# @ingroup user
+
 from . import (
     raster,
     vector,

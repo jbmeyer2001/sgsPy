@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup raster raster
+ * @ingroup utils
+ */
+
 #pragma once
 
 #include <filesystem>
@@ -28,6 +33,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 /**
+ * @ingroup raster
  * Wrapper class for a GDAL dataset containing a raster image.
  *
  * This class provides getter methods for important raster data and metadata, 
