@@ -1,3 +1,9 @@
+##
+# @defgroup user_stratify stratify
+# @ingroup user
+#
+# Documentation for the stratification functions. 
+
 from . import (
     breaks,
     kmeans,

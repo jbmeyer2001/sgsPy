@@ -8,6 +8,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup breaks breaks
+ * @ingroup stratify
+ */
+
 #include <iostream>
 
 #include <boost/asio/thread_pool.hpp>
@@ -20,6 +25,7 @@ namespace sgs {
 namespace breaks {
 
 /**
+ * @ingroup breaks
  * This is a helper function for processing a pixel of data
  * when a mapped stratification is being created.
  *
@@ -77,6 +83,7 @@ inline void processMapPixel(
 }	
 
 /**
+ * @ingroup breaks
  * This is a helper function for processing a pixel of data.
  *
  * First, the value is read in as a double, and it is determined
@@ -119,6 +126,7 @@ processPixel(
 }
 
 /**
+ * @ingroup breaks
  * This function stratifies a given raster using user-defined breaks.
  * The breaks are provided as a vector of doubles for each band specified
  * in the input dataset.

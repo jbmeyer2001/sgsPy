@@ -7,6 +7,10 @@
 #
 # ******************************************************************************
 
+##
+# @defgroup user_poly poly
+# @ingroup user_stratify
+
 import tempfile
 
 from sgs.utils import (
@@ -15,10 +19,56 @@ from sgs.utils import (
 )
 
 from _sgs import poly_cpp
+from sgs import GIGABYTE
 
-GIGABYTE = 1073741824
-MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
-
+##
+# @ingroup user_poly
+# This function conducts stratification on a polygon by rasterizing a polygon
+# layer, and using its values to determine stratifications.
+# 
+# the layer_name parameter is the layer to be rasterized, and the attribute
+# is the attribute within the layer to check. The features parameter specifies
+# the which feature value corresponds to which stratification.
+# 
+# The features parameter is a list containing strings and lists of strings.
+# The index within this list determines the stratification value. For example:
+# 
+# features = ["low", "medium", "high"] @n
+#     would result in 3 stratifications (0, 1, 2) where 'low' would correspond
+#     to stratification 0, medium to 1, and hight to 2.
+# 
+# features = ["low", ["medium", "high"]] @n
+#     would result in 2 stratifications (0, 1) where 'low' would correspond
+#     to stratification 0, and both medium and high to stratification 1.
+# 
+# Examples
+# --------------------
+# rast = sgs.SpatialRaster('rast.tif') @n
+# vect = sgs.SpatialVector('inventory_polygons.shp') @n
+# srast = sgs.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', features=['poor', 'medium', 'rich'])
+# 
+# rast = sgs.SpatialRaster('rast.tif') @n
+# vect = sgs.SpatialVector('inventory_polygons.shp') @n
+# srast = sgs.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', 'features=['poor', ['medium', 'rich']], filename='nutrient_stratification.shp')
+# 
+# Parameters
+# --------------------
+# rast : SpatialRaster @n
+#     raster data structure which will determine height, width, geotransform, and projection  @n @n
+# vect : SpatialVector @n
+#     the vector of polygons to stratify  @n @n
+# layer_name : str @n
+#     the layer in the vector to be stratified  @n @n
+# attribute : str @n
+#     the attribute in the layer to be stratified  @n @n
+# features : list[str|list[str]] @n
+#     the stratification values of each feature value, represented as the index in the list  @n @n
+# filename : str @n
+#     the output filename to write to, if desired  @n @n
+# 
+# Returns
+# --------------------
+# a SpatialRaster object containing the rasterized polygon.
 def poly(
     rast: SpatialRaster,
     vect: SpatialVector,
@@ -27,55 +77,9 @@ def poly(
     features: list[str|list[str]],
     filename:str = '',
     driver_options: dict = None):
-    """
-    this function conducts stratification on a polygon by rasterizing a polygon
-    layer, and using its values to determine stratifications.
 
-    the layer_name parameter is the layer to be rasterized, and the attribute
-    is the attribute within the layer to check. The features parameter specifies
-    the which feature value corresponds to which stratification.
+    MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
-    The features parameter is a list containing strings and lists of strings.
-    The index within this list determines the stratification value. For example:
-    
-    features = ["low", "medium", "high"] 
-        would result in 3 stratifications (0, 1, 2) where 'low' would correspond
-        to stratification 0, medium to 1, and hight to 2.
-
-    features = ["low", ["medium", "high"]]
-        would result in 2 stratifications (0, 1) where 'low' would correspond
-        to stratification 0, and both medium and high to stratification 1.
-
-    Examples
-    --------------------
-    rast = sgs.SpatialRaster('rast.tif')
-    vect = sgs.SpatialVector('inventory_polygons.shp')
-    srast = sgs.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', features=['poor', 'medium', 'rich'])
-
-    rast = sgs.SpatialRaster('rast.tif')
-    vect = sgs.SpatialVector('inventory_polygons.shp')
-    srast = sgs.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', 'features=['poor', ['medium', 'rich']], filename='nutrient_stratification.shp')
-
-    Parameters
-    --------------------
-    rast : SpatialRaster
-        raster data structure which will determine height, width, geotransform, and projection
-    vect : SpatialVector
-        the vector of polygons to stratify
-    layer_name : str
-        the layer in the vector to be stratified
-    attribute : str
-        the attribute in the layer to be stratified
-    features : list[str|list[str]]
-        the stratification values of each feature value, represented as the index in the list
-    filename : str
-        the output filename to write to, if desired
-
-    Returns
-    --------------------
-    a SpatialRaster object containing the rasterized polygon.
-
-    """
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type SpatialRaster")
 

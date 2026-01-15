@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup vector vector
+ * @ingroup utils
+ */
+
 #pragma once
 
 #include <iostream>
@@ -28,6 +33,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 /**
+ * @ingroup vector
  * Wrapper class for GDAL dataset containing a vector image.
  *
  * This class provides getter methods for important vector data and metadata,

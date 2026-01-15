@@ -7,15 +7,82 @@
 #
 # ******************************************************************************
 
+##
+# @defgroup user_breaks breaks
+# @ingroup user_stratify
+
 import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
 
 from _sgs import breaks_cpp
+from sgs import GIGABYTE
 
-GIGABYTE = 1073741824
-MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
-
+##
+# @ingroup user_breaks
+# This function conducts stratification on the raster given
+# according to the user defined breaks.
+# 
+# The breaks may be defined as a single list of ints or floats
+# in the case of a raster with a single band. Or, they may be defined
+# as a list of ints or floats where the index indicates the raster band.
+# Or, they may be defined as a dict where the (str) key represents
+# the raster band and the value is a list of ints or floats.
+# 
+# if the map parameter is given, an extra output band will be used which combines
+# all stratifications from the previous bands used. A single value in the mapped
+# output band corresponds to a single combination of values from the previous
+# bands.
+# 
+# the filename parameter specifies an output file name. Right now the only file format
+# excepted is GTiff (.tif).
+# 
+# the thread_count parameter specifies the number of threads which this function will 
+# utilize in the case where the raster is large and may not fit in memory. If the full
+# raster can fit in memory and does not need to be processed in blocks, this argument
+# will be ignored. The default is 8 threads, although the optimal number will depend significantly
+# on the hardware being used and my be less or more than 8.
+# 
+# The driver_options parameter is used to specify creation options for a the output raster.
+# See options for the Gtiff driver here: https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
+# The keys in the driver_options dict must be strings, the values are converted to string.
+# The options must be valid for the driver corresponding to the filename, and if filename is not given
+# they must be valid for the GTiff format, as that is the format used to store temporary raster files.
+# Note that if this parameter is given, but filename is not and the raster fits entirely in memory, the
+# driver_options parameter will be ignored.
+# 
+# Examples
+# --------------------
+# rast = sgs.SpatialRaster("multi_band_rast.tif") @n
+# srast = sgs.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 18]})
+# 
+# rast = sgs.SpatialRaster("single_band_rast.tif") @n
+# srast = sgs.stratify.breaks(rast, breaks=[20, 40, 60, 80], filename="breaks.tif", driver_options={"COMPRESS", "LZW"}))
+# 
+# rast = sgs.SpatialRaster("multi_band_rast.tif") @n
+# srast = sgs.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 10], "band_name2": [20, 40, 60, 80]}, map=True)
+# 
+# rast = sgs.SpatialRaster("multi_band_rast.tif") @n
+# srast = sgs.stratify.breaks(rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]])
+# 
+# Parameters
+# --------------------
+# rast : SpatialRaster @n
+#     raster data structure containing the raster to stratify @n @n
+# breaks :  list[float | list[float]] | dict[str, list[float]], @n
+#     user defined breaks to stratify @n @n
+# map : bool @n
+#     whether to map the stratification of multiple raster bands onto a single band @n @n
+# filename : str @n
+#     filename to write to or '' if no file should be written @n @n
+# thread_count : int @n
+#     the number of threads to use when multithreading large images @n @n
+# driver_options : dict[] @n
+#     the creation options as defined by GDAL which will be passed when creating output files @n @n
+# 
+# Returns
+# --------------------
+# a SpatialRaster object containing stratified raster bands.
 def breaks(
     rast: SpatialRaster,
     breaks: list[float | list[float]] | dict[str, list[float]],
@@ -24,72 +91,9 @@ def breaks(
     thread_count: int = 8,
     driver_options: dict = None
     ):
-    """
-    This function conducts stratification on the raster given
-    according to the user defined breaks.
 
-    The breaks may be defined as a single list of ints or floats
-    in the case of a raster with a single band. Or, they may be defined
-    as a list of ints or floats where the index indicates the raster band.
-    Or, they may be defined as a dict where the (str) key represents
-    the raster band and the value is a list of ints or floats.
-
-    if the map parameter is given, an extra output band will be used which combines
-    all stratifications from the previous bands used. A single value in the mapped
-    output band corresponds to a single combination of values from the previous
-    bands.
-
-    the filename parameter specifies an output file name. Right now the only file format
-    excepted is GTiff (.tif).
-
-    the thread_count parameter specifies the number of threads which this function will 
-    utilize in the case where the raster is large and may not fit in memory. If the full
-    raster can fit in memory and does not need to be processed in blocks, this argument
-    will be ignored. The default is 8 threads, although the optimal number will depend significantly
-    on the hardware being used and my be less or more than 8.
-
-    The driver_options parameter is used to specify creation options for a the output raster.
-    See options for the Gtiff driver here: https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
-    The keys in the driver_options dict must be strings, the values are converted to string.
-    The options must be valid for the driver corresponding to the filename, and if filename is not given
-    they must be valid for the GTiff format, as that is the format used to store temporary raster files.
-    Note that if this parameter is given, but filename is not and the raster fits entirely in memory, the
-    driver_options parameter will be ignored.
-
-    Examples
-    --------------------
-    rast = sgs.SpatialRaster("multi_band_rast.tif")
-    srast = sgs.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 18]})
-
-    rast = sgs.SpatialRaster("single_band_rast.tif")
-    srast = sgs.stratify.breaks(rast, breaks=[20, 40, 60, 80], filename="breaks.tif", driver_options={"COMPRESS", "LZW"}))
-
-    rast = sgs.SpatialRaster("multi_band_rast.tif")
-    srast = sgs.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 10], "band_name2": [20, 40, 60, 80]}, map=True)
-
-    rast = sgs.SpatialRaster("multi_band_rast.tif")
-    srast = sgs.stratify.breaks(rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]])
-
-    Parameters
-    --------------------
-    rast : SpatialRaster
-        raster data structure containing the raster to stratify
-    breaks :  list[float | list[float]] | dict[str, list[float]],
-        user defined breaks to stratify
-    map : bool
-        whether to map the stratification of multiple raster bands onto a single band
-    filename : str
-        filename to write to or '' if no file should be written
-    thread_count : int
-        the number of threads to use when multithreading large images
-    driver_options : dict[]
-        the creation options as defined by GDAL which will be passed when creating output files
+    MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
     
-    Returns
-    --------------------
-    a SpatialRaster object containing stratified raster bands.
-
-    """
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster")
 

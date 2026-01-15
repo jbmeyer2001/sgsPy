@@ -1,3 +1,9 @@
+## 
+# @defgroup user_sample sample
+# @ingroup user
+#
+# Documentation for the sampling functions.
+
 from . import (
     ahels,
     clhs,

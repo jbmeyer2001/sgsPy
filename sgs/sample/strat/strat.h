@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup strat strat
+ * @ingroup sample
+ */
+
 #include <iostream>
 #include <random>
 
@@ -22,6 +27,7 @@ namespace sgs {
 namespace strat {
 
 /**
+ * @ingroup strat
  * Helper function which calculates the count of values for each strata
  * depending on the allocation method.
  *
@@ -93,6 +99,7 @@ calculateAllocation(
 }
 
 /**
+ * @ingroup strat
  * This struct deals with the 'optim' allocation method. The optim allocation
  * method requires that the within-strata variance be calculated based on
  * a seperate raster band. This struct stores band information for the
@@ -216,6 +223,7 @@ struct OptimAllocationDataManager {
 };
 
 /**
+ * @ingroup strat
  * This struct is responsible for storing the indices saved while iterating through the raster. 
  *
  * The strataCounts vector strores the total count of each strata within the stratified raster. 
@@ -387,6 +395,7 @@ public:
 };
 
 /**
+ * @ingroup strat
  * This function processes the strat raster in blocks using the 'random' method. In the random
  * method, every pixel in a particular strata has the same priority of being added as any
  * other pixel in that strata.
@@ -553,6 +562,7 @@ processBlocksStratRandom(
 }
 
 /**
+ * @ingroup strat
  * The focal window is a method used by Queinnec sampling to ensure that
  * pixels which are surrounded by other pixels of the same strata are prioritized
  * over pixels which aren't.
@@ -680,6 +690,7 @@ struct FocalWindow {
 };
 
 /**
+ * @ingroup strat
  * This function processes the strat raster in blocks using the 'Queinnec' method. In the Queinnec
  * method, pixels which are surrounded by pixels of the same strata are prioritized for sampling 
  * over pixels which aren't.
@@ -1057,6 +1068,7 @@ processBlocksStratQueinnec(
 }
 
 /**
+ * @ingroup strat
  * This function conducts stratified random sampling on the provided stratified raster.
  *
  * First, metadata is acquired in the strat raster band, which is to be read to determine

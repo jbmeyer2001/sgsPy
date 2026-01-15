@@ -7,6 +7,10 @@
 #
 # ******************************************************************************
 
+##
+# @defgroup user_srs srs
+# @ingroup user_sample
+
 import tempfile
 from typing import Optional
 
@@ -21,6 +25,72 @@ from sgs.utils import (
 
 from _sgs import srs_cpp
 
+##
+# @ingroup user_srs
+# This function conducts simple random sampling on the raster given. 
+# Sample points are randomly selected from data pixels (can't be nodata).
+# All sample points are at least mindist distance away from eachother.
+# If unable to get the full number of sample points, a message is printed.
+#
+# An access vector of LineString or MultiLineString type can be provided.
+# buff_outer specifies the buffer distance around the geometry which
+# is allowed to be included in the sampling, buff_inner specifies the
+# buffer distance around the geometry which is not allowed to be included 
+# in the sampling. buff_outer must be larger than buff_inner. For a multi 
+# layer vector, layer_name must be specified.
+#
+# A vector containing existing sample points can be provided. If this is
+# the case then all of the points in the existing sample are automatically
+# added and random samples are chosen as required until num_samples number
+# of samples are chosen.
+#
+# Examples
+# --------------------
+# rast = sgs.SpatialRaster("raster.tif") @n
+# samples = sgs.sample.srs(rast, num_samples=250) 
+#
+# rast = sgs.SpatialRaster("raster.tif")
+# samples = sgs.sample.srs(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp") @n
+#
+# rast = sgs.SpatialRaster("raster.tif") @n
+# access = sgs.SpatialVector("access_network.shp") @n
+# samples = sgs.sample.srs(rast, num_samples=200, mindist=100, access=access, buff_outer=300)
+#
+# rast = sgs.SpatialRaster("raster.tif") @n
+# access = sgs.SpatialVector("access_network.shp") @n
+# samples = sgs.sample.srs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)
+#
+# rast = sgs.SpatialRaster("raster.tif") @n
+# existing = sgs.SpatialVector("existing_samples.shp") @n
+# samples = sgs.sample.srs(rast, num_samples=200, existing=existing)
+#
+# Parameters
+# --------------------
+# rast : SpatialRaster @n
+#     raster data structure containing the raster to sample @n @n
+# num_samples : int @n
+#     the target number of samples @n @n
+# mindist : float @n
+#     the minimum distance each sample point must be from each other @n @n
+# existing : SpatialVector @n
+#     a vector specifying existing sample points @n @n
+# access : SpatialVector @n
+#     a vector specifying access network @n @n
+# layer_name : str @n
+#     the layer within access that is to be used for sampling @n @n
+# buff_inner : int | float @n
+#     buffer boundary specifying distance from access which CANNOT be sampled @n @n
+# buff_outer : int | float @n
+#     buffer boundary specifying distance from access which CAN be sampled @n @n
+# plot : bool @n
+#     whether to plot the samples or not @n @n
+# filename : str @n
+#     the filename to write to, or '' if file should not be written @n @n
+#
+#
+# Returns
+# --------------------
+# a SpatialVector object containing point geometries of sample locations
 def srs(
     rast: SpatialRaster,
     num_samples: int,
@@ -32,72 +102,7 @@ def srs(
     buff_outer: Optional[int | float] = None,
     plot: bool = False,
     filename: str = ''):
-    """
-    This function conducts simple random sampling on the raster given. 
-    Sample points are randomly selected from data pixels (can't be nodata).
-    All sample points are at least mindist distance away from eachother.
-    If unable to get the full number of sample points, a message is printed.
-
-    An access vector of LineString or MultiLineString type can be provided.
-    buff_outer specifies the buffer distance around the geometry which
-    is allowed to be included in the sampling, buff_inner specifies the
-    buffer distance around the geometry which is not allowed to be included 
-    in the sampling. buff_outer must be larger than buff_inner. For a multi 
-    layer vector, layer_name must be specified.
-
-    A vector containing existing sample points can be provided. If this is
-    the case then all of the points in the existing sample are automatically
-    added and random samples are chosen as required until num_samples number
-    of samples are chosen.
-
-    Examples
-    --------------------
-    rast = sgs.SpatialRaster("raster.tif")
-    samples = sgs.sample.srs(rast, num_samples=250)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    samples = sgs.sample.srs(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp")
-
-    rast = sgs.SpatialRaster("raster.tif")
-    access = sgs.SpatialVector("access_network.shp")
-    samples = sgs.sample.srs(rast, num_samples=200, mindist=100, access=access, buff_outer=300)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    access = sgs.SpatialVector("access_network.shp")
-    samples = sgs.sample.srs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    existing = sgs.SpatialVector("existing_samples.shp")
-    samples = sgs.sample.srs(rast, num_samples=200, existing=existing)
-
-    Parameters
-    --------------------
-    rast : SpatialRaster
-        raster data structure containing the raster to sample
-    num_samples : int
-        the target number of samples
-    mindist : float
-        the minimum distance each sample point must be from each other
-    existing : SpatialVector
-        a vector specifying existing sample points
-    access : SpatialVector
-        a vector specifying access network
-    layer_name : str
-        the layer within access that is to be used for sampling
-    buff_inner : int | float
-        buffer boundary specifying distance from access which CANNOT be sampled
-    buff_outer : int | float
-        buffer boundary specifying distance from access which CAN be sampled
-    plot : bool
-        whether to plot the samples or not
-    filename : str
-        the filename to write to, or '' if file should not be written
-
-
-    Returns
-    --------------------
-    a SpatialVector object containing point geometries of sample locations
-   """
+        
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
 

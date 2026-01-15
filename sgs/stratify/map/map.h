@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup map
+ * @ingroup stratify
+ */
+
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
 
@@ -17,6 +22,7 @@ namespace sgs {
 namespace map {
 
 /**
+ * @ingroup map
  * This function maps multiple already stratified rasters into a single 
  * stratificication. Every unique combination of input band stratifications
  * corresponds to a single value in the mapped stratification.

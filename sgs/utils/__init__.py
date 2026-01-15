@@ -1,3 +1,9 @@
+##
+# @defgroup user_utils utils
+# @ingroup user
+#
+# Explanations of both the SpatialRaster and SpatialVector classes.
+
 from . import (
     raster,
     vector,

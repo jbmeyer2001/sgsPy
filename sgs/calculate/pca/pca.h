@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup pca pca
+ * @ingroup calculate
+ */
+
 #include <iostream>
 #include <numeric>
 
@@ -21,6 +26,7 @@ namespace pca {
 typedef oneapi::dal::homogen_table				DALHomogenTable;
 
 /**
+ * @ingroup pca
  * This struct contains the output eigenvectors and eigenvalues for
  * the principal components. It also contains the mean and standard
  * deviation for each raster band.
@@ -38,6 +44,7 @@ struct PCAResult {
 };
 
 /**
+ * @ingroup pca
  * This function is used by the pca() function to calculate the principal component
  * eigenvectors and eigenvalues, along with the mean and standard deviation of each
  * input raster band. This function is used in the case where the input raster is
@@ -168,6 +175,7 @@ calculatePCA(
 }
 
 /**
+ * @ingroup pca
  * This function is used by the pca() function to calculate the principal component
  * eigenvectors and eigenvalues, along with the mean and standard deviation of each
  * input raster band. This function is used in the case where the input raster is
@@ -319,6 +327,7 @@ calculatePCA(
 }
 
 /**
+ * @ingroup pca
  * This function is used to write the output principal components to a
  * raster dataset, after the eigenvectors and eigenvalues have already
  * been calculated for the input raster. This function is used in the
@@ -451,6 +460,7 @@ writePCA(
 }
 
 /**
+ * @ingroup pca
  * This function is used to write the output principal components to a
  * raster dataset, after the eigenvectors and eigenvalues have already
  * been calculated for the input raster. This function is used in the
@@ -589,6 +599,7 @@ writePCA(
 }
 
 /**
+ * @ingroup pca
  * This function conducts principal component analysis on the input raster,
  * writing output bands to a new GDALRasterWrapper, and returning the
  * eigenvectors and eigenvalues calculated for each raster band. The output

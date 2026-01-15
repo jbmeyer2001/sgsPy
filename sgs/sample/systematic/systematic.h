@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup systematic systematic
+ * @ingroup sample
+ */
+
 #include <iostream>
 #include <random>
 
@@ -20,6 +25,7 @@ namespace sgs {
 namespace systematic {
 
 /**
+ * @ingroup systematic
  * Helper function for generating a vector geometry containing polygons of the accessible
  * area. This function is called if an access vector is given.
  *
@@ -98,6 +104,7 @@ OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string l
 }
 
 /**
+ * @ingroup systematic
  * Helper function for ensuring the x and y coordinates are within the raster extent.
  *
  * @param double x
@@ -115,6 +122,7 @@ checkExtent(double x, double y, double xMin, double xMax, double yMin, double yM
 }
 
 /**
+ * @ingroup systematic
  * Helper function for checking to see whether a pixel occurs within accessible area.
  *
  * @param OGRPoint *p_point
@@ -128,6 +136,7 @@ checkAccess(OGRPoint *p_point, OGRGeometry *p_geometry) {
 }
 
 /**
+ * @ingroup systematic
  * Helper function for checking to see whether a pixel is already an existing sample location.
  *
  * @param double x
@@ -142,6 +151,7 @@ checkExisting(double x, double y, existing::Existing& existing) {
 }
 
 /**
+ * @ingroup systematic
  * Helper function for checking to see whether a coordinate occurs in an area of nodata.
  *
  * the 'force' parameter is first checked, because if force is not true, then samples
@@ -184,7 +194,8 @@ checkNotNan(raster::GDALRasterWrapper *p_raster, double *IGT, double xCoord, dou
 	return true;
 }	
 
-/*
+/**
+ * @ingroup systematic
  * This function conducts Systematic sampling on an input raster image.
  *
  * First, the extent polygon of the raster is determined, then a random

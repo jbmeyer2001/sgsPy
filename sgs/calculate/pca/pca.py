@@ -7,13 +7,61 @@
 #
 # ******************************************************************************
 
+##
+# @defgroup user_pca pca
+# @ingroup user_calculate
+
 import tempfile
 from sgs.utils import SpatialRaster
 
 from _sgs import pca_cpp
+from sgs import GIGABYTE
 
-GIGABYTE = 1073741824
-
+## 
+# @ingroup user_pca
+# This functions conducts principal component analysis on the given
+# raster.
+# 
+# A number of output components must be provided as an integer. This integer
+# must be less than or equal to the total number of bands in the input raster,
+# and will be the number of bands in the output raster.
+# A filename may be given to specify an output file location, otherwise
+# a virtual file type will be used. The driver_options parameter is 
+# used to specify creation options for a the output raster.
+# See options for the Gtiff driver here: https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
+# 
+# Principal components are calculated across all raster bands, 
+# along with mean and standard deviation of each raster band. The
+# raster is both centered and scaled, then output values are calculated
+# for each principal component.
+# 
+# Examples
+# --------------------
+# rast = sgs.SpatialRaster("raster.tif") @n
+# pcomp = sgs.calculate.pca(rast, 3) 
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# pcomp = sgs.calculate.pca(rast, 2, filename="pca.tif", display_info=True)
+# 
+# rast = sgs.SpatialRaster("raster.tif") @n
+# pcomp = sgs.calculate.pca(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"}) 
+# 
+# Parameters
+# --------------------
+# rast : SpatialRaster @n
+#     raster data structure containing input raster bands @n @n
+# num_comp : int @n
+#     the number of components @n @n
+# filename : str @n
+#     output filename or '' if there should not be an output file @n @n
+# display_info : bool @n
+#     whether to display principal component eigenvalues/eigenvectors @n @n
+# driver_options : dict @n
+#    the creation options as defined by GDAL which will be passed when creating output files @n @n
+# 
+# Returns
+# --------------------
+# a SpatialRaster object containing principal component bands
 def pca(
     rast: SpatialRaster,
     num_comp: int,
@@ -21,52 +69,7 @@ def pca(
     display_info: bool = False,
     driver_options: dict = None
     ):
-    """
-    This functions conducts principal component analysis on the given
-    raster.
-
-    A number of output components must be provided as an integer. This integer
-    must be less than or equal to the total number of bands in the input raster,
-    and will be the number of bands in the output raster.
-    A filename may be given to specify an output file location, otherwise
-    a virtual file type will be used. The driver_options parameter is 
-    used to specify creation options for a the output raster.
-    See options for the Gtiff driver here: https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
-
-    Principal components are calculated across all raster bands, 
-    along with mean and standard deviation of each raster band. The
-    raster is both centered and scaled, then output values are calculated
-    for each principal component.
-
-    Examples
-    --------------------
-    rast = sgs.SpatialRaster("raster.tif")
-    pcomp = sgs.calculate.pca(rast, 3)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    pcomp = sgs.calculate.pca(rast, 2, filename="pca.tif", display_info=True)
-
-    rast = sgs.SpatialRaster("raster.tif")
-    pcomp = sgs.calculate.pca(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"}) 
-
-    Parameters
-    --------------------
-    rast : SpatialRaster
-        raster data structure containing input raster bands
-    num_comp : int
-        the number of components
-    filename : str
-        output filename or '' if there should not be an output file
-    display_info : bool
-        whether to display principal component eigenvalues/eigenvectors
-    driver_options : dict
-       the creation options as defined by GDAL which will be passed when creating output files
-
-    Returns
-    --------------------
-    a SpatialRater object containing principal component bands
-
-    """
+        
     if type(rast) is not SpatialRaster:
         print(type(rast))
         raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")

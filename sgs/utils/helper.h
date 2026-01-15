@@ -7,6 +7,11 @@
  *
  ******************************************************************************/
 
+/**
+ * @defgroup helper helper functions
+ * @ingroup utils
+ */
+
 #pragma once
 
 #include <iostream>
@@ -25,6 +30,7 @@ namespace sgs {
 namespace helper {
 
 /**
+ * @ingroup helper
  * This struct represents an index in a raster.
  */
 struct Index {
@@ -33,27 +39,36 @@ struct Index {
 };
 
 /**
+ * @ingroup helper
  * The RasterBandMetaData struct stores information
  * on a particular raster band. It stores:
  *
  * GDALRasterBand *p_band: 
  * 	a pointer to the associated GDALRasterBand.
+ *
  * void *p_buffer:
  * 	a pointer to the whole raster band as a buffer,
  * 	if the raster is a size where storing the whole band
  * 	is possible.
+ *
  * GDALDataType:
  * 	the pixel type of the raster band.
+ *
  * size_t size:
  * 	the size of the pixel type of the raster band.
+ *
  * std::string name:
  * 	the band name.
+ *
  * double nan:
  *	the bands particular no data value.
+ *
  * int xBlockSize:
  * 	the x component of the raster bands block size.
+ *
  * int yBlockSize:
  * 	the y component of hte raster bands block size.
+ *
  * std::mutex *p_mutex:
  * 	a pointer to the mutex for the GDAL dataset
  * 	corresponding to the raster band. This must
@@ -72,6 +87,7 @@ struct RasterBandMetaData {
 };
 
 /**
+ * @ingroup helper
  * When adding a raster band to a VRT dataset, the dataset
  * (which will be added as a band) must be fully formed.
  * VRT datasets are used as a virtual type to retain processed
@@ -88,6 +104,7 @@ struct RasterBandMetaData {
  *
  * GDALDataset *p_dataset: 
  * 	the pointer to the GDALDataset object representing the dataset.
+ * 
  * std::string filename:
  * 	the file name of the dataset, typically within a temporary
  * 	folder on disk.
@@ -99,6 +116,7 @@ struct VRTBandDatasetInfo {
 };
 
 /**
+ * @ingroup helper
  * Helper function which determines the smallest 
  * signed integer type and it's corresponding size
  * which can fit the maxStrata without overflow
@@ -129,6 +147,7 @@ setStratBandTypeAndSize(
 }
 
 /**
+ * @ingroup helper
  * Helper function for reading a particular pixel from a raster
  * data buffer. The data buffer is cast to the type corresponding
  * to the GDALDataType type parameter, then indexed. The resulting
@@ -167,6 +186,7 @@ getPixelValueDependingOnType(
 }
 
 /**
+ * @ingroup helper
  * Helper function for writing a particular pixel value to a strat
  * raster data buffer. The data buffer is cast to the type
  * corresponding to the GDALDataType type parameter. Then,
@@ -209,6 +229,7 @@ setStrataPixelDependingOnType(
 }
 
 /**
+ * @ingroup helper
  * Helper function which prints a warning to the user if conversion
  * from the raster data type they're using for a strat raster
  * may result in errors in conversion to a 32 bit signed integer
@@ -234,6 +255,7 @@ printTypeWarningsForInt32Conversion(GDALDataType type) {
 }
 
 /**
+ * @ingroup helper
  * This helper function is used by stratification functions to create
  * a virtual dataset to add bands to. The virtual dataset will either
  * be a MEM dataset or in-memory dataset, or a VRT dataset. The 
@@ -297,6 +319,7 @@ createVirtualDataset(
 }
 
 /**
+ * @ingroup helper
  * This helper function is used when the user provides a specific
  * filename, and creates a dataset using the driver associated with
  * the filename extension.
@@ -412,6 +435,7 @@ createDataset(
 
 
 /**
+ * @ingroup helper
  * This helper function dynamically adds a raster band to an existing
  * in-memory dataset (MEM).
  *
@@ -461,6 +485,7 @@ addBandToMEMDataset(
 }
 
 /**
+ * @ingroup helper
  * This helper function is used to create a dataset which will
  * be used as the band of a VRT dataset. In order to pass the
  * checks for the addition of a dataset as a band to a VRT dataset
@@ -548,6 +573,7 @@ createVRTBandDataset(
 
 
 /**
+ * @ingroup helper
  * This helper function adds an existing raster dataset as a band
  * to an existing VRT dataset.
  *
@@ -582,6 +608,7 @@ addBandToVRTDataset(
 }
 
 /**
+ * @ingroup helper
  * This helper function is used to either read or write a chunk
  * of memory from or to a raster band. If the block size of
  * the band corresponds to the block size of the memory,
@@ -653,6 +680,7 @@ rasterBandIO(
 }
 
 /**
+ * @ingroup helper
  * Helper function to add a point to a layer.
  *
  * @param OGRPoint *p_point
@@ -667,6 +695,7 @@ addPoint(OGRPoint *p_point, OGRLayer *p_layer) {
 }
 
 /**
+ * @ingroup helper
  * Helper function to add a point to a layer. This is the version
  * which will be called when there is a const OGRPoint *.
  *
@@ -682,6 +711,7 @@ addPoint(const OGRPoint *p_point, OGRLayer *p_layer) {
 }
 
 /**
+ * @ingroup helper
  * Helper function for calculating the index of a point in a raster.
  * The inverse geotransform is used to calculate the x index and y index.
  * The width is used to calculate a single index assuming row-major.
@@ -703,6 +733,7 @@ point2index(double xCoord, double yCoord, double *IGT, T width) {
 }
 
 /**
+ * @ingroup helper
  * This struct contains the intermediate values, as well as functions
  * for updating the intermediate values of the variance of a raster
  * band using Welfords method. The mean and standard deviation of
@@ -772,6 +803,7 @@ class Variance {
 };
 
 /**
+ * @ingroup helper
  * This is a helper function used for determine the probability multiplier for a given raster.
  * The probability of any given function being added is the number of samples divided by the
  * number of total pixels. 
@@ -792,7 +824,7 @@ class Variance {
  * n bits are 1 and the remaining are 0. For example:
  * 1 	-> 00000001 	-> 50%
  * 3 	-> 00000011 	-> 25%
- * 7 	-> 00000111 	-> 12.5%
+ * 7 	-> 00000111 	-> 12.5% 
  * 63 	-> 00111111	-> 1.56%
  *
  * The AND of this multiplier is taken with the rng value, and the result of that and is compared against
@@ -838,6 +870,7 @@ getProbabilityMultiplier(double width, double height, double pixelWidth, double 
 }
 
 /**
+ * @ingroup
  * This struct controls the calculation and usage of random values during the
  * iteration through the raster. A random number must be generated for
  * each pixel to see if it will be saved for potential sampling.
@@ -925,6 +958,7 @@ public:
 };
 
 /**
+ * @ingroup helper
  * This is the hashing function used to store the points for spatial indexing during sampling.
  */
 struct PointHash {
@@ -936,11 +970,13 @@ struct PointHash {
 };
 
 /**
+ * @ingroup helper
  * This is a type alias for the neighborhood used for spatial hashing during sampling.
  */
 typedef std::unordered_map<std::pair<int, int>, std::vector<std::pair<double, double>>, PointHash> NeighborMap;
 
 /**
+ * @ingroup helper
  * This is the spatial hashing core implementation if a minimum distance is provided.
  * @param double x
  * @param double y

@@ -7,90 +7,95 @@
 #
 # ******************************************************************************
 
+##
+# @defgroup user_map map
+# @ingroup user_stratify
+
 import tempfile
 from sgs.utils import SpatialRaster
 
-GIGABYTE = 1073741824
-MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
-
 from _sgs import map_cpp
+from sgs import GIGABYTE
 
+##
+# @ingroup user_map
+# This function conducts mapping on existing stratifications.
+# 
+# The pre-existing stratifications are passed in the form of a raster, band, and num_stratum.
+# The bands argument specifies which bands within the raster should be used, the num_stratum
+# argument specifies the number of stratum within one particular band.
+# 
+# the arguments are passed in the form of a tuple, of which there can be any number.
+# For example, both of the following are valid:
+#  - map((rast1, bands1, num_stratum1))
+#  - map((rast1, bands1, num_stratum1), (rast1, bands2, num_stratum2))
+# 
+# the raster within the tuple MUST be of type sgs.utils.SpatialRaster. 
+# The bands argument MUST be: 
+#  - an int, specifying a single band.
+#  - a str, specifying a single band.
+#  - a list of ints, specifying the indexes of bands.
+#  - a list of strings, specifying the names of bands.
+# 
+# The num_stratum argument MUST be
+#  - an int, if bands is an int or string, specifiying the exact number of stratum in the 
+#         selected band.
+#  - a list of ints of the same length of bands, specifying the exact number of stratum in 
+#         each of the indexes specified by the bands list.
+# 
+# the filename parameter specifies an output file name. Right now the only file format
+# accepted is GTiff (.tiff).
+# 
+# The thread_count parameter specifies the number of threads which this function will
+# utilize in the case where the raster is large an may not fit in memory. If the full
+# raster can fit in memory and does not need to be processed in blocks, this argument
+# will be ignored. The default is 8 threads, although the optimal number will depend
+# significantly on the hardware being used and may be more or less than 8.
+# 
+# the driver_options parameter is used to specifiy creation options for the output 
+# raster, such as compression. See options fro GTiff driver here:
+# https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
+# The keys in the driver_options dict must be strings, the values are converted to
+# string. THe options must be valid for the driver corresponding to the filename,
+# and if filename is not given they must be valid for the GTiff format, as that
+# is the format used to store temporary raster files. Note that if this parameter
+# is given, but filename is not and the raster fits entirely in memory, the 
+# driver_options parameter will be ignored.
+# 
+# Examples
+# --------------------
+# rast = sgs.SpatialRaster("rast.tif") @n
+# breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
+# quantiles = sgs.stratify.quantiles(rast, num_strata={'zsd': 25}) @n
+# srast = sgs.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
+# 
+# rast = sgs.SpatialRaster("rast.tif") @n
+# inventory = sgs.SpatialVector("inventory_polygons.shp") @n
+# breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
+# poly = sgs.stratify.poly(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich']) @n
+# srast = sgs.stratify.map((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})
+# 
+# Parameters
+# --------------------
+# *args : tuple[SpatialRaster, int|list[int]|list[str], int|list[int]] @n
+#     tuples specifying raster bands and their number of stratifications @n @n
+# filename : str @n
+#     filename to write to or '' if not file should be written @n @n
+# thread_count : int @n
+#     the number of threads to use when multithreading large images @n @n
+# driver_options : dict[str]  @n
+#     the creation options as defined by GDAL which will be passed when creating output files @n @n
+# 
+# Returns
+# --------------------
+# a SpatialRaster object containing a band of mapped stratifications from the input raster(s).
 def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         filename: str = '',
         thread_count: int = 8,
         driver_options: dict = None):
-    """
-    this function conducts mapping on existing stratifications.
+            
+    MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
-    The pre-existing stratifications are passed in the form of a raster, band, and num_stratum.
-    The bands argument specifies which bands within the raster should be used, the num_stratum
-    argument specifies the number of stratum within one particular band.
-
-    the arguments are passed in the form of a tuple, of which there can be any number.
-    For example, both of the following are valid:
-     - map((rast1, bands1, num_stratum1))
-     - map((rast1, bands1, num_stratum1), (rast1, bands2, num_stratum2))
-
-    the raster within the tuple MUST be of type sgs.utils.SpatialRaster. 
-    The bands argument MUST be: 
-     - an int, specifying a single band.
-     - a str, specifying a single band.
-     - a list of ints, specifying the indexes of bands.
-     - a list of strings, specifying the names of bands.
-    
-    The num_stratum argument MUST be
-     - an int, if bands is an int or string, specifiying the exact number of stratum in the 
-            selected band.
-     - a list of ints of the same length of bands, specifying the exact number of stratum in 
-            each of the indexes specified by the bands list.
-
-    the filename parameter specifies an output file name. Right now the only file format
-    accepted is GTiff (.tiff).
-
-    The thread_count parameter specifies the number of threads which this function will
-    utilize in the case where the raster is large an may not fit in memory. If the full
-    raster can fit in memory and does not need to be processed in blocks, this argument
-    will be ignored. The default is 8 threads, although the optimal number will depend
-    significantly on the hardware being used and may be more or less than 8.
-
-    the driver_options parameter is used to specifiy creation options for the output 
-    raster, such as compression. See options fro GTiff driver here:
-    https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options
-    The keys in the driver_options dict must be strings, the values are converted to
-    string. THe options must be valid for the driver corresponding to the filename,
-    and if filename is not given they must be valid for the GTiff format, as that
-    is the format used to store temporary raster files. Note that if this parameter
-    is given, but filename is not and the raster fits entirely in memory, the 
-    driver_options parameter will be ignored.
-
-    Examples
-    --------------------
-    rast = sgs.SpatialRaster("rast.tif")
-    breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]})
-    quantiles = sgs.stratify.quantiles(rast, num_strata={'zsd': 25})
-    srast = sgs.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
-
-    rast = sgs.SpatialRaster("rast.tif")
-    inventory = sgs.SpatialVector("inventory_polygons.shp")
-    breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]})
-    poly = sgs.stratify.poly(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich'])
-    srast = sgs.stratify.map((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})
-
-    Parameters
-    --------------------
-    *args : tuple[SpatialRaster, int|list[int]|list[str], int|list[int]]
-        tuples specifying raster bands and their number of stratifications
-    filename : str
-        filename to write to or '' if not file should be written
-    thread_count : int
-        the number of threads to use when multithreading large images
-    driver_options :
-        the creation options as defined by GDAL which will be passed when creating output files
-
-    Returns
-    --------------------
-    a SpatialRaster object containing a band of mapped stratifications from the input raster(s).
-    """
     if type(filename) is not str:
         raise TypeError("'filename' parameter must be of type str.")
 

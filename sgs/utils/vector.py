@@ -27,28 +27,30 @@ try:
 except ImportError as e:
     GEOPANDAS = False
 
+##
+# @ingroup user_utils
+# This class represents a spatial vector, and is used as an input to many sgs functions.
+#
+# It has a number of additional uses, including displaying info about the vector, converting 
+# to a GDAL or GeoPandas object. 
+# 
+# Accessing vector info:
+#     
+#         vector metadata can be displayed using the info() function. All layers
+#         are displayed unless a specific layer is specified. The per-layer info
+#         includes: name, number of features, number of fields, geomtype, and bounds.
+# 
+# Public Attributes:
+# --------------------
+# layer_names : list[str] @n
+#     a list of layer names
+# 
+# Public Methods:
+# --------------------
+# info() @n
+#     takes an optional argument specify the band, and prints vector metadata to console
 class SpatialVector:
-    """
-    A wrapper class of a GDAL vector dataset.
-    This class is primarily used under the hood, although it has a function
-    for displaying vector information.
 
-    Accessing vector info:
-        
-            vector metadata can be displayed using the info() function. All layers
-            are displayed unless a specific layer is specified. The per-layer info
-            includes: name, number of features, number of fields, geomtype, and bounds.
-
-    Public Attributes:
-    --------------------
-    layer_names : list[str]
-        a list of layer names
-    
-    Public Methods:
-    --------------------
-    info()
-        takes an optional argument specify the band, and prints vector metadata to console
-    """
     def __init__(self, 
                  image: str | GDALVectorWrapper):
         """
