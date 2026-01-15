@@ -14,8 +14,10 @@
 import tempfile
 from sgs.utils import SpatialRaster
 
-from sgs._sgs import pca_cpp
-from sgs import GIGABYTE
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+from _sgs import pca_cpp
+
+GIGABYTE = 1073741824
 
 ## 
 # @ingroup user_pca

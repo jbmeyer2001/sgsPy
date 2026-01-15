@@ -20,10 +20,8 @@ import matplotlib #for type checking matplotlib.axes.Axes
 from .import plot
 from .plot import plot_raster
 
-sys.path.append(os.path.abspath("../"))
-from _sgs import GDALRasterwrapper
-
-PROJDB_PATH = os.path.join(sys.prefix, "sgspy")
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from _sgs import GDALRasterWrapper
 
 #rasterio optional import
 try: 
@@ -39,6 +37,8 @@ try:
     GDAL = True
 except ImportError as e:
     GDAL = False
+
+PROJDB_PATH = os.path.join(sys.prefix, "sgspy")
 
 ##
 # @ingroup user_utils

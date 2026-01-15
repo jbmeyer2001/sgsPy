@@ -19,8 +19,8 @@ import matplotlib #fpr type checking matplotlib.axes.Axes
 from.import plot
 from .plot import plot_vector
 
-sys.path.append(os.path.abspath("../"))
-from _sgs import GDALRasterWrapper
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from _sgs import GDALVectorWrapper
 
 try:
     import geopandas as gpd
