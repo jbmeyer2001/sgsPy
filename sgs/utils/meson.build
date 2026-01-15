@@ -12,6 +12,7 @@ py.extension_module(
     utils_inc_dir
   ],
   install: true,
+  subdir: 'sgspy',
 )
 
 #create vector module
@@ -28,4 +29,5 @@ py.extension_module(
     utils_inc_dir
   ],
   install: true,
+  subdir: 'sgspy',
 )

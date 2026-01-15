@@ -23,7 +23,7 @@ from sgs.utils import (
     plot,
 )
 
-from _sgs import clhs_cpp
+from sgs._sgs import clhs_cpp
 
 ## 
 # @ingroup user_clhs

@@ -14,7 +14,7 @@
 import tempfile
 from sgs.utils import SpatialRaster
 
-from _sgs import pca_cpp
+from sgs._sgs import pca_cpp
 from sgs import GIGABYTE
 
 ## 

@@ -23,7 +23,7 @@ from sgs.utils import (
     plot,
 )
 
-from _sgs import srs_cpp
+from sgs._sgs import srs_cpp
 
 ##
 # @ingroup user_srs

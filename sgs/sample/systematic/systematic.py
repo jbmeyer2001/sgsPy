@@ -22,7 +22,7 @@ from sgs.utils import (
     plot,
 )
 
-from _sgs import systematic_cpp
+from sgs._sgs import systematic_cpp
 
 ##
 # @ingroup user_systematic

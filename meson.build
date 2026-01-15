@@ -1,5 +1,5 @@
 project(
-  'sgs',
+  'sgspy',
   'cpp',
   default_options: [
     'cpp_std=c++20'
@@ -33,6 +33,10 @@ cxx = meson.get_compiler('cpp')
 #to actually get access to it is by running a quick python script which prints the PATH
 #variable, and parsing the printed string in meson...
 if WIN
+  tmp_build_dir = ''
+  tmp_inc_dir = ''
+  tmp_lib_dir = ''
+  tmp_bin_dir = ''
   path_entries = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(';')
   foreach entry : path_entries
     if entry.contains('Temp') and entry.contains('pip-build-env') and entry.contains('overlay') and entry.contains('Scripts')
@@ -42,6 +46,20 @@ if WIN
       tmp_bin_dir = tmp_build_dir + join_paths('Library', 'bin')
     endif
   endforeach
+
+  #when building a distribution rather then just the package, the build directory containing the required libraries and header files
+  #is different and won't be found with the first checks. This loop ensures that the correct folder is found when generating
+  #a distribution of the package.
+  if tmp_build_dir == ''
+    foreach entry : path_entries
+      if entry.contains('Temp') and entry.contains('build-env') and entry.contains('Scripts')
+        tmp_build_dir = entry.split('Scripts').get(0)
+        tmp_inc_dir = tmp_build_dir + join_paths('Library', 'include')
+        tmp_lib_dir = tmp_build_dir + join_paths('Library', 'lib')
+        tmp_bin_dir = tmp_build_dir + join_paths('Library', 'bin')
+      endif
+    endforeach
+  endif
 else
   tmp_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
 
@@ -130,7 +148,7 @@ if WIN
   ]
 else
   link_args = [
-    '-Wl,-rpath,$ORIGIN/../../../sgs',
+    '-Wl,-rpath,$ORIGIN/../../../sgspy',
     '-Wl,-rpath,$ORIGIN/../../',
   ]
 endif
@@ -238,5 +256,7 @@ py.extension_module(
     '-m64'
   ],
   install: true,
+  subdir: 'sgspy',
 )
 
+subdir('sgs')

@@ -19,14 +19,13 @@
 # The sample sections has various sampling functions including simple random sampling 'srs', stratified
 # random sampling 'strat', systematic sampling 'systematic', and conditional latin hypercube sampling 'clhs'. @n
 
-
 import os
 import sys
 import platform
 import ctypes
 
 if (platform.system() == 'Windows'):
-    vendored_lib_path = os.path.join(sys.prefix, "sgs")
+    vendored_lib_path = os.path.join(sys.prefix, "sgspy")
     lib_path = os.path.join(sys.prefix, "Library", "bin")
     os.add_dll_directory(vendored_lib_path)
     os.add_dll_directory(lib_path)
@@ -35,7 +34,7 @@ if (platform.system() == 'Windows'):
         os.environ['PATH'] = vendored_lib_path + os.pathsep + os.environ['PATH']
 
     if lib_path not in os.environ['PATH']:
-        os.environ['path'] = lib_path + os.pathsep + os.environ['PATH']
+        os.environ['PATH'] = lib_path + os.pathsep + os.environ['PATH']
 
 else: #linux 
     #this library goes missing at runtime if we don't do this
@@ -43,11 +42,6 @@ else: #linux
    
 PROJDB_PATH = os.path.join(sys.prefix, "sgs")
 GIGABYTE = 1073741824
-
-from . import utils
-from . import calculate
-from . import sample
-from . import stratify
 
 from .utils import (
     SpatialRaster,

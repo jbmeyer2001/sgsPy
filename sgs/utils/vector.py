@@ -18,9 +18,6 @@ import matplotlib #fpr type checking matplotlib.axes.Axes
 from.import plot
 from .plot import plot_vector
 
-from _sgs import GDALVectorWrapper
-from sgs import PROJDB_PATH
-
 try:
     import geopandas as gpd
     GEOPANDAS = True

@@ -19,9 +19,6 @@ import matplotlib #for type checking matplotlib.axes.Axes
 from .import plot
 from .plot import plot_raster
 
-from _sgs import GDALRasterWrapper
-from sgs import PROJDB_PATH
-
 #rasterio optional import
 try: 
     import rasterio

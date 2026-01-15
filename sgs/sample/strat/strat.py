@@ -23,7 +23,7 @@ from sgs.utils import(
     plot,
 )
 
-from _sgs import strat_cpp
+from sgs._sgs import strat_cpp
 
 ##
 # @ingroup user_strat
