@@ -8,7 +8,7 @@
 # ******************************************************************************
 
 ##
-# @defgroup user_quantiles
+# @defgroup user_quantiles quantiles
 # @ingroup user_stratify
 
 import tempfile

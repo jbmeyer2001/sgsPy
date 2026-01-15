@@ -1,5 +1,24 @@
 ##
-# @defgroup user user documentation
+# @defgroup user User Documentation
+# This is the documentation describing how to use the Python functions within the sgsPy
+# package. For information on the underlying C++ implementations, see the developer
+# docs.
+#
+# The first step in any processing using the sgsPy package will be to initialize in insance
+# of either sgs.SpatialRaster or sgs.SpatialVector. These are the primary data inputs to
+# all sgs functions, and information on their use can be found in the 'utils' section.
+#
+# The processing functions are split into three different categories: calculate, stratify,
+# and sample. @n
+# The calculate section contains various helpful functions to assist in sampling
+# but are not necessarily a specific stratification or sampling function. Right now, 
+# it only has 'pca' or principal component analysis. @n
+# The stratify section has various stratification functions including stratification according 
+# to user defined breaks 'breaks', stratification according to polygons 'poly', stratification
+# along quantiles 'quantiles', and a method for mapping multiple existing stratificaiton outputs 'map'. @n
+# The sample sections has various sampling functions including simple random sampling 'srs', stratified
+# random sampling 'strat', systematic sampling 'systematic', and conditional latin hypercube sampling 'clhs'. @n
+
 
 import os
 import sys

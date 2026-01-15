@@ -8,27 +8,50 @@
  ******************************************************************************/
 
 /**
- * @defgroup dev developer docs
+ * @defgroup dev Developer Documentation
+ * 
+ * This is the documentation explaining the underlying C++ implementations of the
+ * sgsPy Python functions. For documentation of how to use those functions see 
+ * the user documentation.
  */
 
 /**
  * @defgroup calculate calculate
  * @ingroup dev
+ *
+ * Developer documentation for the 'calculate' group of functions. 
  */
 
 /**
  * @defgroup sample sample
  * @ingroup dev
+ *
+ * Developer documentation for the sampling functions.
  */
 
 /**
  * @defgroup stratify stratify
  * @ingroup dev
+ *
+ * Developer documentation for the stratifications functions.
  */
 
 /**
  * @defgroup utils utils
  * @ingroup dev
+ *
+ * Developer documentaiton for utility functions. This includes the class
+ * implementations of both GDALRasterWrapper and GDALVectorWrapper. These
+ * C++ classes are used by the SpatialRaster and SpatialVector Python classes
+ * respectively.
+ *
+ * This documentation also includes the implementation of the Access class,
+ * used when restricting sampling locations according to a user-provided access
+ * networks. In addition to the Exisitng class, used when augmenting sgs sampling
+ * functions with existing sample plot networks.
+ *
+ * Finally, this section includes the helper.h file, which contains various
+ * helper functions which are used accross multiple sgs functions.
  */
 
 #include "utils/raster.h"
