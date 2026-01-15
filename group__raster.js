@@ -1,0 +1,38 @@
+var group__raster =
+[
+    [ "sgs::raster::GDALRasterWrapper", "classsgs_1_1raster_1_1GDALRasterWrapper.html", [
+      [ "GDALRasterWrapper", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a8f2dd4150a9cb4c26987d24c439fa949", null ],
+      [ "GDALRasterWrapper", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a2a929ea9b287ec26e81718b1a1fcfbfb", null ],
+      [ "GDALRasterWrapper", "classsgs_1_1raster_1_1GDALRasterWrapper.html#ab4734ad7e2de7ba2abda7881fedfade4", null ],
+      [ "GDALRasterWrapper", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a4852938da57be29e37bf8bf12b89b9b0", null ],
+      [ "~GDALRasterWrapper", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a29837c9ff66b392cabd37619f7406702", null ],
+      [ "close", "classsgs_1_1raster_1_1GDALRasterWrapper.html#aa9cf056d70064895bbdf26871abb6c9a", null ],
+      [ "getBandCount", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a742ce1fcb2e9444066a18624892c431a", null ],
+      [ "getBandNoDataValue", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a572a5626de6e06245d16d90e9a246425", null ],
+      [ "getBands", "classsgs_1_1raster_1_1GDALRasterWrapper.html#afd03a9dd92faaf7f96189eb173c95282", null ],
+      [ "getCRS", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a7ff5c12649bd4146627ca070140796be", null ],
+      [ "getDataset", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a1e5b3b52f740cdf9f28dbf85154197cc", null ],
+      [ "getDataType", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a2f5d44760355248fca8bf112a5bf6016", null ],
+      [ "getDriver", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a52e954d750f3b99bca1e8fb58ebbf3fd", null ],
+      [ "getFullProjectionInfo", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a91ff1dfdf31af1050b3d151fb6b5b7fc", null ],
+      [ "getGeotransform", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a5d82f06f4f66df7699dfaafc517a2389", null ],
+      [ "getGeotransformArray", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a29a412b6d72722af0450ad87e1d04b2a", null ],
+      [ "getHeight", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a8708cbca84988e6580878f5b7b06d070", null ],
+      [ "getPixelHeight", "classsgs_1_1raster_1_1GDALRasterWrapper.html#aff50c97788012a149f45ac685462afa5", null ],
+      [ "getPixelWidth", "classsgs_1_1raster_1_1GDALRasterWrapper.html#ad8009dc343e90d587f5083b4127a94db", null ],
+      [ "getRasterBand", "classsgs_1_1raster_1_1GDALRasterWrapper.html#aa4cf8f6b34b0816b769daeabab00b3bf", null ],
+      [ "getRasterBandAsMemView", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a55c7a7731614eeb8f7dcdc6aa9f2455a", null ],
+      [ "getRasterBandBuffer", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a11d654929296f9ed011e13004594b39c", null ],
+      [ "getRasterBandType", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a5e8f24d2885ea2fdbbf9c9d31062bd53", null ],
+      [ "getRasterBandTypeSize", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a4df116a4c9651b552846b8f97b2aadf4", null ],
+      [ "getTempDir", "classsgs_1_1raster_1_1GDALRasterWrapper.html#ad566aaaf6d113195f7a00d7d770681fa", null ],
+      [ "getWidth", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a32ab3aa40e19103ede85b3fe890c532f", null ],
+      [ "getXMax", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a7448fbd24872da3ffa6f88042277ffa4", null ],
+      [ "getXMin", "classsgs_1_1raster_1_1GDALRasterWrapper.html#ad080d540a944a5db0b05cacec39d216e", null ],
+      [ "getYMax", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a1175207911d483df1c1cfb977940e383", null ],
+      [ "getYMin", "classsgs_1_1raster_1_1GDALRasterWrapper.html#ad9b5a86990dbf23cfea5d76be04e120c", null ],
+      [ "releaseBandBuffers", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a46b31cc2b7a0dcc8a40f49f9a941a937", null ],
+      [ "setTempDir", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a5c058a968cdfbdc2a1926c383b093ae8", null ],
+      [ "write", "classsgs_1_1raster_1_1GDALRasterWrapper.html#a4c022cf659e06e8cefd32c4b1aaec669", null ]
+    ] ]
+];
