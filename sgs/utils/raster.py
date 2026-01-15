@@ -9,6 +9,7 @@
 
 import importlib.util
 import sys
+import os
 import shutil
 from typing import Optional
 
@@ -18,6 +19,11 @@ import matplotlib #for type checking matplotlib.axes.Axes
 
 from .import plot
 from .plot import plot_raster
+
+sys.path.append(os.path.abspath("../"))
+from _sgs import GDALRasterwrapper
+
+PROJDB_PATH = os.path.join(sys.prefix, "sgspy")
 
 #rasterio optional import
 try: 

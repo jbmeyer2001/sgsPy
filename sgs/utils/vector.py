@@ -7,6 +7,7 @@
 #
 # ******************************************************************************
 
+import sys
 import os
 import tempfile
 from typing import Optional
@@ -18,11 +19,16 @@ import matplotlib #fpr type checking matplotlib.axes.Axes
 from.import plot
 from .plot import plot_vector
 
+sys.path.append(os.path.abspath("../"))
+from _sgs import GDALRasterWrapper
+
 try:
     import geopandas as gpd
     GEOPANDAS = True
 except ImportError as e:
     GEOPANDAS = False
+
+PROJDB_PATH = os.path.join(sys.prefix, "sgspy")
 
 ##
 # @ingroup user_utils

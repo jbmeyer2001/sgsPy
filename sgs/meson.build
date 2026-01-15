@@ -8,3 +8,4 @@ py.install_sources(
 subdir('calculate')
 subdir('sample')
 subdir('stratify')
+subdir('utils')

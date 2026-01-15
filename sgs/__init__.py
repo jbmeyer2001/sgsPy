@@ -40,8 +40,12 @@ else: #linux
     #this library goes missing at runtime if we don't do this
     ctypes.CDLL(os.path.join(sys.prefix, 'lib', 'libtbb.so.12'), os.RTLD_GLOBAL | os.RTLD_NOW)
    
-PROJDB_PATH = os.path.join(sys.prefix, "sgs")
 GIGABYTE = 1073741824
+
+from . import utils
+from . import calculate
+from . import sample
+from . import stratify
 
 from .utils import (
     SpatialRaster,
