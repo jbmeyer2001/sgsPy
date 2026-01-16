@@ -27,8 +27,8 @@ GIGABYTE = 1073741824
 
 ##
 # @ingroup user_poly
-# This function conducts stratification on a polygon by rasterizing a polygon
-# layer, and using its values to determine stratifications.
+# This function conducts stratification on a vector dataset by rasterizing a polygon
+# layer, and using its attribute values to determine stratifications.
 # 
 # the layer_name parameter is the layer to be rasterized, and the attribute
 # is the attribute within the layer to check. The features parameter specifies

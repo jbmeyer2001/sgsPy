@@ -40,7 +40,7 @@ from _sgs import systematic_cpp
 # An access vector of LineString or MultiLineString type can be provided.
 # buff_outer specifies the buffer distance around the geometry which is
 # allowed to be included in the sampling, buff_inner specifies the geometry
-# which is not allowed to be included in teh sampling. buff_outer must
+# which is not allowed to be included in the sampling. buff_outer must
 # be larger than buff_inner. For a multi-layer vector, layer_name
 # must be provided.
 # 

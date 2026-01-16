@@ -52,7 +52,7 @@ from _sgs import srs_cpp
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # samples = sgspy.sample.srs(rast, num_samples=250) 
 #
-# rast = sgspy.SpatialRaster("raster.tif")
+# rast = sgspy.SpatialRaster("raster.tif") @n
 # samples = sgspy.sample.srs(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp") @n
 #
 # rast = sgspy.SpatialRaster("raster.tif") @n

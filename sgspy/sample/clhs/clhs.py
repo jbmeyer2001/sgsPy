@@ -52,19 +52,19 @@ from _sgs import clhs_cpp
 #
 # Examples
 # --------------------
-# rast = sgspy.SpatialRaster("raster.tif")
-# samples = sgspy.sample.clhs(rast, num_samples=250) @n
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# samples = sgspy.sample.clhs(rast, num_samples=250)
 #
-# rast = sgspy.SpatialRaster("raster.tif")
-# samples = sgspy.sample.clhs(rast, num_samples=250, plot=True, filename="clhs_samples.shp") @n
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# samples = sgspy.sample.clhs(rast, num_samples=250, plot=True, filename="clhs_samples.shp")
 #
-# rast = sgspy.SpatialRaster("raster.tif")
-# access = sgspy.SpatialVector("access_network.shp")
-# samples = sgspy.sample.clhs(rast, num_samples=200, access=access, buff_outer=300) @n
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# access = sgspy.SpatialVector("access_network.shp") @n
+# samples = sgspy.sample.clhs(rast, num_samples=200, access=access, buff_outer=300)
 #
-# rast = sgspy.SpatialRaster("raster.tif")
-# access = sgspy.SpatialVector("access_network.shp") 
-# samples = sgspy.sample.clhs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300) @n
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# access = sgspy.SpatialVector("access_network.shp") @n
+# samples = sgspy.sample.clhs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)
 #
 # Parameters
 # --------------------

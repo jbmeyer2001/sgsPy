@@ -38,14 +38,27 @@ from _sgs import strat_cpp
 # The 'wrow' and 'wcol' parameters determine the size of the surrounding area required for a pixel to be
 # prioritized.
 # 
-# The number of total samples is given by num_samples. The allocation
-# of samples per strata is calculated using the distribution of pixels
-# across the strata, and the allocation method specified by the allocation parameter.
-# 
-# In the case where 'optim' allocation is used, an additional raster must be passed
+# The desired number of samples is given by num_samples.
+#
+# **IMPORTANT**
+# the num_strata is required, and represents the number of strata within the input raster band.
+# sgspy EXPECTS num_strata TO BE 0-INDEXED, meaning if the num_strat value of 4 is given, sgspy
+# expects the strata values to be 0, 1, 2, 3. Giving a num_strata of 3 in this case will 
+# result in an ERROR because the function will be only able to store data for 3 strata. All
+# sgspy stratification functions output their rasters in this format, however if you are
+# using your own strat raster it will be important. The recommendation in this case
+# is to either preprocess the data so it follows this pattern, or give a value for num_strata
+# equal to the largest integer in the strat raster + 1 (because it expects 0 to be a strata as well).
+#
+# The allocation parameter specifies the proportion of total samples will be distributed between
+# each strata. The 'prop' method is the default, and attempts to allocate the samples proportionally according to 
+# their prevalence in the overall raster. The 'equal' method attempts to distribute the samples equally among strata.
+# the 'manual' method requires that the weights parameter be given, and attempts to allocate according to the
+# proportions given in the weights parameter. In the case where 'optim' allocation is used, an additional raster must be passed
 # to the mrast parameter, and if that raster contains more than 1 band the mrast_band
-# parameter must be given specifying which band. The optim method is specified
-# by Gregoire and Valentine https://doi.org/10.1201/9780203498880 Section 5.4.4.
+# parameter must be given specifying which band. The optim method is specified by Gregoire and Valentine,
+# and optimizes the desired proportions based on the proportion of each strata AND the within-strata
+# variance in the specified raster band. https://doi.org/10.1201/9780203498880 Section 5.4.4.
 # 
 # The 'existing' parameter, if passed, must be a SpatialVector of type Point or MultiPoint. 
 # These points specify samples within an already-existing network. The SpatialVector may
