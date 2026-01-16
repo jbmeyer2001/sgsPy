@@ -1,9 +1,9 @@
 [submodule "sgs/extern/vcpkg"]
-	path = sgs/extern/vcpkg
+	path = sgspy/extern/vcpkg
 	url = https://github.com/microsoft/vcpkg.git
 [submodule "sgs/extern/oneDAL"]
-	path = sgs/extern/oneDAL
+	path = sgspy/extern/oneDAL
 	url = https://github.com/uxlfoundation/oneDAL
 [submodule "sgs/extern/xoshiro"]
-	path = sgs/extern/xoshiro
+	path = sgspy/extern/xoshiro
 	url = https://github.com/nessan/xoshiro.git

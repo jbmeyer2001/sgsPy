@@ -259,4 +259,4 @@ py.extension_module(
   subdir: 'sgspy',
 )
 
-subdir('sgs')
+subdir('sgspy')
