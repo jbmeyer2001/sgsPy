@@ -15,7 +15,6 @@ import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
 
-from sgs._sgs import quantiles_cpp
 from sgs import GIGABYTE
 
 ##

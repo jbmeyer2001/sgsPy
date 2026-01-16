@@ -14,7 +14,6 @@
 import tempfile
 from sgs.utils import SpatialRaster
 
-from sgs._sgs import map_cpp
 from sgs import GIGABYTE
 
 ##

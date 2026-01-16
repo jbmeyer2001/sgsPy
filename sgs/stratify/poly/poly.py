@@ -18,7 +18,6 @@ from sgs.utils import (
     SpatialVector,
 )
 
-from sgs._sgs import poly_cpp
 from sgs import GIGABYTE
 
 ##
