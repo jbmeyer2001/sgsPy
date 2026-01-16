@@ -148,8 +148,8 @@ if WIN
   ]
 else
   link_args = [
-    '-Wl,-rpath,$ORIGIN/../../../sgspy',
-    '-Wl,-rpath,$ORIGIN/../../',
+    '-Wl,-rpath,$ORIGIN/../../../../sgspy',
+    '-Wl,-rpath,$ORIGIN/../../../',
   ]
 endif
 add_global_link_arguments('-L' + lib_dir, language: 'cpp')

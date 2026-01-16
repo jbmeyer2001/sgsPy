@@ -12,6 +12,6 @@ cd ../../..
 export PKG_CONFIG="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/tools/pkgconf/pkgconf"
 export PKG_CONFIG_PATH="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig"
 
-#run build command
+#run build command -- requires the 'build' python package downloadable with 'pip install build'
 clear
-pip install .
+python -m build --wheel --outdir dist 
