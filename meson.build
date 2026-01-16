@@ -74,11 +74,11 @@ if WIN
 else #linux
   triplet = 'x64-linux'
 endif
-vcpkg_inc_dir = include_directories('sgs/extern/vcpkg/installed/' + triplet + '/include')
-xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
-lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/lib'
-bin_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/bin'
-inc_dir = include_directories('sgs')
+vcpkg_inc_dir = include_directories('sgspy/extern/vcpkg/installed/' + triplet + '/include')
+xoshiro_inc_dir = include_directories('sgspy/extern/xoshiro/include')
+lib_dir = meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triplet + '/lib'
+bin_dir = meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triplet + '/bin'
+inc_dir = include_directories('sgspy')
 
 #get gdal dependency from vcpkg pkg-config
 gdal_dep = dependency('gdal', method: 'pkg-config')
@@ -213,12 +213,12 @@ if WIN
     join_paths(bin_dir, 'zstd.dll'),
      
     #proj
-    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+    meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
 else #linux
   required_files = [
     #proj
-    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+    meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
 endif
 
@@ -236,7 +236,7 @@ endif
 
 py.extension_module(
   '_sgs',
-  'sgs/pybind.cpp',
+  'sgspy/pybind.cpp',
   link_args: link_args,
   dependencies: [
     gdal_dep,

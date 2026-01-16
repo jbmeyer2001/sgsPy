@@ -33,7 +33,5 @@ test = [
 setup = ['-Db_vscrt=md']
 
 [tool.pytest.ini_options]
-pythonpath = "."
-testpaths = [
-	"tests"
-]
+pythonpath = "tests"
+testpaths = [ "tests" ]
