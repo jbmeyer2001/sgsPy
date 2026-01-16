@@ -15,7 +15,7 @@ import os
 import sys
 import tempfile
 import numpy as np
-from sgs.utils import SpatialRaster
+from sgspy.utils import SpatialRaster
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from _sgs import breaks_cpp
@@ -99,7 +99,7 @@ def breaks(
     MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
     
     if type(rast) is not SpatialRaster:
-        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster")
+        raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster")
 
     if type(breaks) not in [list, dict]:
         raise TypeError("'breaks' parameter must be of type list or dict.")

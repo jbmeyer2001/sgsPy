@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-import sgs
+import sgspy as sgs
 
 from files import (
     mraster_geotiff_path,

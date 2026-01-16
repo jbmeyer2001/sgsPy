@@ -15,7 +15,7 @@ import os
 import sys
 import tempfile
 
-from sgs.utils import (
+from sgspy.utils import (
     SpatialRaster,
     SpatialVector,
 )
@@ -85,10 +85,10 @@ def poly(
     MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
 
     if type(rast) is not SpatialRaster:
-        raise TypeError("'rast' parameter must be of type SpatialRaster")
+        raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster")
 
     if type(vect) is not SpatialVector:
-        raise TypeError("'vect' parameter must be of type SpatialVector")
+        raise TypeError("'vect' parameter must be of type sgspy.SpatialVector")
 
     if type(layer_name) is not str:
         raise TypeError("'layer_name' parameter must be of type str.")

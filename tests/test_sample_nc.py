@@ -1,8 +1,8 @@
 import pytest
-import sgs.sample.nc as nc
+import sgspy as sgs
 
 class TestNc:
     #TODO add real tests before implementing nc
     @pytest.mark.xfail
     def test_not_implemented(self):
-        nc()
+        sgs.sample.nc()

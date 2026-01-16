@@ -4,7 +4,7 @@ import numpy as np
 import geopandas as gpd
 import pytest
 
-import sgs
+import sgspy as sgs
 
 from files import (
     mraster_geotiff_path,

@@ -19,7 +19,7 @@ from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sgs.utils import (
+from sgspy.utils import (
     SpatialRaster,
     SpatialVector,
     plot,
@@ -102,7 +102,7 @@ def clhs(
     filename: str = ''):
         
     if type(rast) is not SpatialRaster:
-        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+        raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster.")
 
     if type(num_samples) is not int:
         raise TypeError("'num_samples' parameter must be of type int.")
@@ -111,7 +111,7 @@ def clhs(
         raise TypeError("'iterations' parameter must be of type int.")
 
     if access is not None and type(access) is not SpatialVector:
-        raise TypeError("'access' parameter, if given, must be of type sgs.SpatialVector.")
+        raise TypeError("'access' parameter, if given, must be of type sgspy.SpatialVector.")
 
     if layer_name is not None and type(layer_name) is not str:
         raise TypeError("'layer_name' parameter, if given, must be of type str.")

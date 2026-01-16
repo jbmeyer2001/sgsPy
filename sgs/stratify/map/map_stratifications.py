@@ -14,7 +14,7 @@
 import os
 import sys
 import tempfile
-from sgs.utils import SpatialRaster
+from sgspy.utils import SpatialRaster
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from _sgs import map_cpp
@@ -120,7 +120,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     large_raster = False
     for (raster, bands, num_stratum) in args:
         if type(raster) is not SpatialRaster:
-            raise TypeError("first value in each tuple argument must be of type sgs.SpatialRaster.")
+            raise TypeError("first value in each tuple argument must be of type sgspy.SpatialRaster.")
 
         if type(bands) not in [int, str, list]:
             raise TypeError("second value in each tuple argument must be of type int, str, or list.")

@@ -19,7 +19,7 @@ from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sgs.utils import(
+from sgspy.utils import(
     SpatialRaster,
     SpatialVector,
     plot,
@@ -160,7 +160,7 @@ def strat(
     ):
 
     if type(strat_rast) is not SpatialRaster:
-        raise TypeError("'strat_rast' parameter must be of type sgs.SpatialRaster.")
+        raise TypeError("'strat_rast' parameter must be of type sgspy.SpatialRaster.")
 
     if type(band) not in [int, str]:
         raise TypeError("'band' parameter must be of type int or str.")
@@ -184,7 +184,7 @@ def strat(
         raise TypeError("'weights' parameter, if given, must be a list of float values.")
 
     if mrast is not None and type(mrast) is not SpatialRaster:
-        raise TypeError("'mrast' parameter, if given, must be of type sgs.SpatialRaster.")
+        raise TypeError("'mrast' parameter, if given, must be of type sgspy.SpatialRaster.")
 
     if mrast_band is not None and type(mrast_band) not in [int, str]:
         raise TypeError("'mrast_band' parameter, if given, must be of type int or str.")
@@ -196,13 +196,13 @@ def strat(
         raise TypeError("'mindist' parameter must be of type int or float.")
 
     if existing is not None and type(existing) is not SpatialVector:
-        raise TypeError("'existing' parameter must be of type sgs.SpatialVector.")
+        raise TypeError("'existing' parameter must be of type sgspy.SpatialVector.")
 
     if type(force) is not bool:
         raise TypeError("'force' parameter must be of type bool.")
 
     if access is not None and type(access) is not SpatialVector:
-        raise TypeError("'access' parameter must be of type sgs.SpatialVector.")
+        raise TypeError("'access' parameter must be of type sgspy.SpatialVector.")
 
     if layer_name is not None and type(layer_name) is not str:
         raise TypeError("'layer_name' parameter must be of type str.")

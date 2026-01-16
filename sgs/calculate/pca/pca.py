@@ -14,7 +14,7 @@
 import os
 import sys
 import tempfile
-from sgs.utils import SpatialRaster
+from sgspy.utils import SpatialRaster
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from _sgs import pca_cpp
@@ -76,7 +76,7 @@ def pca(
         
     if type(rast) is not SpatialRaster:
         print(type(rast))
-        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+        raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster.")
 
     if type(num_comp) is not int:
         raise TypeError("'num_comp' parameter must be of type int.")

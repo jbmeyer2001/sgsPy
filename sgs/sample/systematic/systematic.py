@@ -18,7 +18,7 @@ from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sgs.utils import (
+from sgspy.utils import (
     SpatialRaster,
     SpatialVector,
     plot,
@@ -117,7 +117,7 @@ def systematic(
     filename: str = ""):
         
     if type(rast) is not SpatialRaster:
-        raise TypeError("'rast' parameter must be of type sgs.SpatialRaster.")
+        raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster.")
 
     if type(cellsize) not in [int, float]:
         raise TypeError("'cellsize' parameter must be of type int or float.")
@@ -129,10 +129,10 @@ def systematic(
         raise TypeError("'location' parameter must be of type str.")
 
     if existing is not None and type(existing) is not SpatialVector:
-        raise TypeError("'existing' parameter, if given, must be of type sgs.SpatialVector.")
+        raise TypeError("'existing' parameter, if given, must be of type sgspy.SpatialVector.")
 
     if access is not None and type(access) is not SpatialVector:
-        raise TypeError("'access' parameter, if given, must be of type sgs.SpatialVector.")
+        raise TypeError("'access' parameter, if given, must be of type sgspy.SpatialVector.")
 
     if layer_name is not None and type(layer_name) is not str:
         raise TypeError("'layer_name' parameter, if given, must be of type str.")
