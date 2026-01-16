@@ -11,6 +11,8 @@
 # @defgroup user_poly poly
 # @ingroup user_stratify
 
+import os
+import sys
 import tempfile
 
 from sgs.utils import (
@@ -18,7 +20,10 @@ from sgs.utils import (
     SpatialVector,
 )
 
-from sgs import GIGABYTE
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+from _sgs import poly_cpp
+
+GIGABYTE = 1073741824
 
 ##
 # @ingroup user_poly

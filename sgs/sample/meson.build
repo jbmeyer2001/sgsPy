@@ -7,6 +7,7 @@ py.install_sources(
 
 subdir('ahels')
 subdir('clhs')
+subdir('nc')
 subdir('srs')
 subdir('strat')
 subdir('systematic')

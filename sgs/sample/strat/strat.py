@@ -11,6 +11,8 @@
 # @defgroup user_strat strat
 # @ingroup user_sample
 
+import os
+import sys
 import tempfile
 from typing import Optional
 
@@ -23,7 +25,8 @@ from sgs.utils import(
     plot,
 )
 
-from sgs._sgs import strat_cpp
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+from _sgs import strat_cpp
 
 ##
 # @ingroup user_strat

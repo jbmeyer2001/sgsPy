@@ -1,7 +1,7 @@
 py.install_sources(
   [
     '__init__.py',
-    'ahels.py',
+    'nc.py',
   ],
-  subdir: 'sgspy/sample/ahels',
+  subdir: 'sgspy/sample/nc',
 )

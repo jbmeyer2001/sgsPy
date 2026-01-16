@@ -11,11 +11,16 @@
 # @defgroup user_breaks breaks
 # @ingroup user_stratify
 
+import os
+import sys
 import tempfile
 import numpy as np
 from sgs.utils import SpatialRaster
 
-from sgs import GIGABYTE
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+from _sgs import breaks_cpp
+
+GIGABYTE = 1073741824
 
 ##
 # @ingroup user_breaks

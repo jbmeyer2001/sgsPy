@@ -11,12 +11,13 @@
 # @defgroup user_pca pca
 # @ingroup user_calculate
 
+import os
+import sys
 import tempfile
 from sgs.utils import SpatialRaster
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from _sgs import pca_cpp
-from sgs import GIGABYTE
 
 GIGABYTE = 1073741824
 
