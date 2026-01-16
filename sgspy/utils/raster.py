@@ -21,6 +21,7 @@ from .import plot
 from .plot import plot_raster
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+print(os.path.join(os.path.dirname(__file__), ".."))
 from _sgs import GDALRasterWrapper
 
 #rasterio optional import
@@ -58,7 +59,7 @@ PROJDB_PATH = os.path.join(sys.prefix, "sgspy")
 # number. If it is a string, it must refer to a valid band name within the raster. This function
 # may fail if the band is too large to fit in memory.
 #
-# rast = sgs.utils.raster.SpatialRaster('test.tif') #raster with three layers
+# rast = sgspy.SpatialRaster('test.tif') #raster with three layers
 # 
 # b0 = rast.band(band=0) @n
 # b1 = rast.band(band=1) @n
@@ -74,7 +75,7 @@ PROJDB_PATH = os.path.join(sys.prefix, "sgspy")
 # raster metadata can be displayed using the info() function. Info
 # inclues: raster driver, band names, dimensions, pixel size, and bounds.
 # 
-# rast = sgs.utils.raster.SpatialRaster('test.tif') @n
+# rast = sgspy.SpatialRaster('test.tif') @n
 # rast.info() 
 # 
 # Plotting raster
@@ -101,15 +102,15 @@ PROJDB_PATH = os.path.join(sys.prefix, "sgspy")
 # for a specific color mapping.
 #
 # #plots the single band @n
-# rast = sgs.SpatialRaster('test_single_band_raster.tif')  @n
+# rast = sgspy.SpatialRaster('test_single_band_raster.tif')  @n
 # rast.plot_image()
 # 
 # #plots the second band @n
-# rast = sgs.SpatialRaster('test_multi_band_raster.tif') @n
+# rast = sgspy.SpatialRaster('test_multi_band_raster.tif') @n
 # rast.plot(band=1)
 # 
 # #plots the 'zq90' band @n
-# rast = sgs.SpatialRaster('test_multi_band_raster.tif') @n
+# rast = sgspy.SpatialRaster('test_multi_band_raster.tif') @n
 # rast.plot(band='zq90')
 # 
 # Public Attributes
@@ -324,20 +325,20 @@ class SpatialRaster:
     @classmethod
     def from_rasterio(cls, ds, arr = None):
         """
-        This function is used to convert from a rasterio dataset object representing a raster into an sgs.SpatialRaster
+        This function is used to convert from a rasterio dataset object representing a raster into an sgspy.SpatialRaster
         object. A np.ndarray may be passed as the 'arr' parameter, if so, the following must be true:
         arr.shape == (ds.count, ds.height, ds.width)
 
         Examples:
 
         ds = rasterio.open("rast.tif")
-        rast = sgs.SpatialRaster.from_rasterio(ds)
+        rast = sgspy.SpatialRaster.from_rasterio(ds)
 
 
         ds = rasterio.open("rast.tif")
         arr = ds.read()
         arr[arr < 2] = np.nan
-        rast = sgs.SpatialRaster.from_rasterio(ds, arr)
+        rast = sgspy.SpatialRaster.from_rasterio(ds, arr)
         """
         if not RASTERIO:
             raise RuntimeError("from_rasterio() can only be called if rasterio was successfully imported, but it wasn't.")
@@ -391,15 +392,15 @@ class SpatialRaster:
 
     def to_rasterio(self, with_arr = False):
         """
-        This function is used to convert an sgs.SpatialRaster into a rasterio dataset. If with_arr is set to True,
+        This function is used to convert an sgspy.SpatialRaster into a rasterio dataset. If with_arr is set to True,
         the function will return a numpy.ndarray as a tuple with the rasterio dataset object.
 
         Examples:
 
-        rast = sgs.SpatialRaster('rast.tif')
+        rast = sgspy.SpatialRaster('rast.tif')
         ds = rast.to_rasterio()
 
-        rast = sgs.SpatialRaster('mraster.tif')
+        rast = sgspy.SpatialRaster('mraster.tif')
         ds, arr = sgs.to_rasterio(with_arr=True)
         """
         if type(with_arr) is not bool:
@@ -461,14 +462,14 @@ class SpatialRaster:
     @classmethod
     def from_gdal(cls, ds, arr = None):
         """
-        This function is used to convert from a gdal.Dataset object representing a raster into an sgs.SpatialRaster
+        This function is used to convert from a gdal.Dataset object representing a raster into an sgspy.SpatialRaster
         object. A np.ndarray may be passed as the 'arr' parameter, if so, the following must be true:
         arr.shape == (ds.RasterCount, ds.RasterYSize, ds.RasterXSize)
 
         Examples:
 
         ds = gdal.Open("rast.tif")
-        rast = sgs.SpatialRaster.from_gdal(ds)
+        rast = sgspy.SpatialRaster.from_gdal(ds)
 
 
         ds = gdal.Open("rast.tif")
@@ -477,7 +478,7 @@ class SpatialRaster:
             bands.append(ds.GetRasterBand(1).ReadAsArray())
         arr = np.stack(bands, axis=0)
         arr[arr < 2] = np.nan
-        rast = sgs.SpatialRaster.from_gdal(ds, arr)
+        rast = sgspy.SpatialRaster.from_gdal(ds, arr)
         """
         if not GDAL:
             raise RuntimeError("from_gdal() can only be called if gdal was successfully imported, but it wasn't")
@@ -533,15 +534,15 @@ class SpatialRaster:
             
     def to_gdal(self, with_arr = False):
         """
-        This function is used to convert an sgs.SpatialRaster into a GDAL dataset. If with_arr is set to True,
+        This function is used to convert an sgspy.SpatialRaster into a GDAL dataset. If with_arr is set to True,
         the function will return a numpy.ndarray as a tuple with the GDAL dataset object.
 
         Examples:
 
-        rast = sgs.SpatialRaster('rast.tif')
+        rast = sgspy.SpatialRaster('rast.tif')
         ds = rast.to_gdal()
 
-        rast = sgs.SpatialRaster('mraster.tif')
+        rast = sgspy.SpatialRaster('mraster.tif')
         ds, arr = sgs.to_gdal(with_arr=True)
         """
         if not GDAL:

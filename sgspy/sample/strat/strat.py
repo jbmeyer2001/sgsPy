@@ -62,31 +62,31 @@ from _sgs import strat_cpp
 # 
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster("raster.tif") @n
-# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
-# samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5) #uses Queinnec method with proportional allocation by default
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# srast = sgspy.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgspy.sample.strat(srast, band=0, num_samples=200, num_strata=5) #uses Queinnec method with proportional allocation by default
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
-# samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="random", mindist=200, plot=True, filename="samples.shp")
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# srast = sgspy.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgspy.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="random", mindist=200, plot=True, filename="samples.shp")
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
-# samples = sgs.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="Queinnec", allocation="optim", mrast=rast)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# srast = sgspy.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgspy.sample.strat(srast, band=0, num_samples=200, num_strata=5, method="Queinnec", allocation="optim", mrast=rast)
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
-# samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="manual", weights=[0.1, 0.1, 0.2, 0.2, 0.4])
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# srast = sgspy.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgspy.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="manual", weights=[0.1, 0.1, 0.2, 0.2, 0.4])
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# access = sgs.SpatialVector("access_network.shp") @n
-# srast = sgs.stratify.quantiles(rast, num_strata=5) @n
-# samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="equal", access=access, buff_inner=100, buff_outer=300)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# access = sgspy.SpatialVector("access_network.shp") @n
+# srast = sgspy.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgspy.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="equal", access=access, buff_inner=100, buff_outer=300)
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# existng = sgs.SpatialVector("existing_samples.shp") @n
-# srast =sgs.stratify.quantiles(rast, num_strata=5) @n
-# samples = sgs.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="prop", existing=existing, force=True)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# existng = sgspy.SpatialVector("existing_samples.shp") @n
+# srast =sgspy.stratify.quantiles(rast, num_strata=5) @n
+# samples = sgspy.sample.strat(rast, band=0, num_samples=200, num_strata=5, allocation="prop", existing=existing, force=True)
 # 
 # Parameters
 # --------------------

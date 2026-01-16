@@ -71,17 +71,17 @@ GIGABYTE = 1073741824
 # 
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster('rast.tif') @n
-# srast = sgs.stratify.quantiles(rast, num_strata=5)
+# rast = sgspy.SpatialRaster('rast.tif') @n
+# srast = sgspy.stratify.quantiles(rast, num_strata=5)
 # 
-# srast = sgs.SpatialRaster('rast.tif') @n
-# srast = sgs.stratify.quantiles(rast, num_strata=[.1, .2, .3, .5, .7], filename="srast.tif")
+# rast = sgspy.SpatialRaster('rast.tif') @n
+# srast = sgspy.stratify.quantiles(rast, num_strata=[.1, .2, .3, .5, .7], filename="srast.tif")
 # 
-# rast = sgs.SpatialRaster('multi_band_rast.tif') @n
-# srast = sgs.stratify.quantiles(rast, num_strata=[5, 5, [.5, .75]], map=True)
+# rast = sgspy.SpatialRaster('multi_band_rast.tif') @n
+# srast = sgspy.stratify.quantiles(rast, num_strata=[5, 5, [.5, .75]], map=True)
 # 
-# rast = sgs.SpatialRaster('multi_band_rast.tif') @n
-# srast = sgs.stratify.quantiles(rast, num_strata={'zq90': 5})
+# rast = sgspy.SpatialRaster('multi_band_rast.tif') @n
+# srast = sgspy.stratify.quantiles(rast, num_strata={'zq90': 5})
 # 
 # Parameters
 # --------------------

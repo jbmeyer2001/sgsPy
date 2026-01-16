@@ -41,14 +41,14 @@ GIGABYTE = 1073741824
 # 
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster("raster.tif") @n
-# pcomp = sgs.calculate.pca(rast, 3) 
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# pcomp = sgspy.calculate.pca(rast, 3) 
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# pcomp = sgs.calculate.pca(rast, 2, filename="pca.tif", display_info=True)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# pcomp = sgspy.calculate.pca(rast, 2, filename="pca.tif", display_info=True)
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# pcomp = sgs.calculate.pca(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"}) 
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# pcomp = sgspy.calculate.pca(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"}) 
 # 
 # Parameters
 # --------------------

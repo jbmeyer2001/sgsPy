@@ -47,13 +47,13 @@ GIGABYTE = 1073741824
 # 
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster('rast.tif') @n
-# vect = sgs.SpatialVector('inventory_polygons.shp') @n
-# srast = sgs.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', features=['poor', 'medium', 'rich'])
+# rast = sgspy.SpatialRaster('rast.tif') @n
+# vect = sgspy.SpatialVector('inventory_polygons.shp') @n
+# srast = sgspy.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', features=['poor', 'medium', 'rich'])
 # 
-# rast = sgs.SpatialRaster('rast.tif') @n
-# vect = sgs.SpatialVector('inventory_polygons.shp') @n
-# srast = sgs.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', 'features=['poor', ['medium', 'rich']], filename='nutrient_stratification.shp')
+# rast = sgspy.SpatialRaster('rast.tif') @n
+# vect = sgspy.SpatialVector('inventory_polygons.shp') @n
+# srast = sgspy.stratify.poly(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', 'features=['poor', ['medium', 'rich']], filename='nutrient_stratification.shp')
 # 
 # Parameters
 # --------------------

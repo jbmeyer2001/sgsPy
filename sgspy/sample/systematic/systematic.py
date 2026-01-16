@@ -55,22 +55,22 @@ from _sgs import systematic_cpp
 # 
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster("raster.tif") @n
-# samples = sgs.sample.systematic(rast, 500, "hexagon", "centers")
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# samples = sgspy.sample.systematic(rast, 500, "hexagon", "centers")
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# samples = sgs.sample.systematic(rast, 500, "square", "corners", plot=True, filename="systematic_samples.shp")
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# samples = sgspy.sample.systematic(rast, 500, "square", "corners", plot=True, filename="systematic_samples.shp")
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# samples = sgs.sample.systematic(rast, 500, "hexagon", "random", force=True)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# samples = sgspy.sample.systematic(rast, 500, "hexagon", "random", force=True)
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# access = sgs.SpatialVector("access_network.shp") @n
-# samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", access=access, buff_outer=300)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# access = sgspy.SpatialVector("access_network.shp") @n
+# samples = sgspy.sample.systematic(rast, 500, "hexagon", "corners", access=access, buff_outer=300)
 # 
-# rast = sgs.SpatialRaster("raster.tif") @n
-# access = sgs.SpatialVector("existing_samples.shp") @n
-# samples = sgs.sample.systematic(rast, 500, "hexagon", "corners", existing=existing)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# access = sgspy.SpatialVector("existing_samples.shp") @n
+# samples = sgspy.sample.systematic(rast, 500, "hexagon", "corners", existing=existing)
 # 
 # Parameters
 # --------------------

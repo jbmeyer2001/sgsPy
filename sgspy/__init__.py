@@ -5,7 +5,7 @@
 # docs.
 #
 # The first step in any processing using the sgsPy package will be to initialize in insance
-# of either sgs.SpatialRaster or sgs.SpatialVector. These are the primary data inputs to
+# of either sgspy.SpatialRaster or sgspy.SpatialVector. These are the primary data inputs to
 # all sgs functions, and information on their use can be found in the 'utils' section.
 #
 # The processing functions are split into three different categories: calculate, stratify,

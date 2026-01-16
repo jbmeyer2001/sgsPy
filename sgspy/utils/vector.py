@@ -39,9 +39,9 @@ PROJDB_PATH = os.path.join(sys.prefix, "sgspy")
 # 
 # Accessing vector info:
 #     
-#         vector metadata can be displayed using the info() function. All layers
-#         are displayed unless a specific layer is specified. The per-layer info
-#         includes: name, number of features, number of fields, geomtype, and bounds.
+# vector metadata can be displayed using the info() function. All layers
+# are displayed unless a specific layer is specified. The per-layer info
+# includes: name, number of features, number of fields, geomtype, and bounds.
 # 
 # Public Attributes:
 # --------------------
@@ -173,7 +173,7 @@ class SpatialVector:
     @classmethod
     def from_geopandas(cls, obj, layer_name: str=None):
         """
-        This function is used to convert a geopandas object into an sgs.SpatialVector. The geopandas object
+        This function is used to convert a geopandas object into an sgspy.SpatialVector. The geopandas object
         may either by of type GeoDataFrame or GeoSeries.
 
         If a particular layer name is desired, it can be passed as a parameter.
@@ -181,16 +181,16 @@ class SpatialVector:
         Examples:
 
         gdf = gpd.read_file("access.shp")
-        access = sgs.SpatialVector.from_geopandas(gdf)
+        access = sgspy.SpatialVector.from_geopandas(gdf)
 
         
         gs = gpd['geometry'] #geometry column is a geoseries
-        access = sgs.SpatialVector.from_geopandas(gs)
+        access = sgspy.SpatialVector.from_geopandas(gs)
 
 
         gdf = gpd.read_file("access.shp")
         gdf = gdf[gdf == "LineString"]
-        access = sgs.SpatialVector.from_geopandas(gdf)
+        access = sgspy.SpatialVector.from_geopandas(gdf)
         """
         if layer_name is not None and type(layer_name) is not str:
             raise TypeError("layer_name, if given, must be of type 'str'.")
@@ -226,11 +226,11 @@ class SpatialVector:
 
     def to_geopandas(self):
         """
-        This function is used to convert an sgs.SpatialVector into a geopandas geodataframe.
+        This function is used to convert an sgspy.SpatialVector into a geopandas geodataframe.
 
         Examples:
 
-        access = sgs.SpatialVector("access.shp")
+        access = sgspy.SpatialVector("access.shp")
         gdf = access.to_geopandas()
         """
         if not GEOPANDAS:

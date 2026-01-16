@@ -48,23 +48,23 @@ from _sgs import clhs_cpp
 # the buffer distance around the geometry which is not allwoed to be included in the sampling. buff_outer must
 # be larger than buff_inner. For a multi layer vector, layer_name must be specified.
 #
-# The output is an object of type sgs.SpatialVector which contains the chosen sample points.
+# The output is an object of type sgspy.SpatialVector which contains the chosen sample points.
 #
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster("raster.tif")
-# samples = sgs.sample.clhs(rast, num_samples=250) @n
+# rast = sgspy.SpatialRaster("raster.tif")
+# samples = sgspy.sample.clhs(rast, num_samples=250) @n
 #
-# rast = sgs.SpatialRaster("raster.tif")
-# samples = sgs.sample.clhs(rast, num_samples=250, plot=True, filename="clhs_samples.shp") @n
+# rast = sgspy.SpatialRaster("raster.tif")
+# samples = sgspy.sample.clhs(rast, num_samples=250, plot=True, filename="clhs_samples.shp") @n
 #
-# rast = sgs.SpatialRaster("raster.tif")
-# access = sgs.SpatialVector("access_network.shp")
-# samples = sgs.sample.clhs(rast, num_samples=200, access=access, buff_outer=300) @n
+# rast = sgspy.SpatialRaster("raster.tif")
+# access = sgspy.SpatialVector("access_network.shp")
+# samples = sgspy.sample.clhs(rast, num_samples=200, access=access, buff_outer=300) @n
 #
-# rast = sgs.SpatialRaster("raster.tif")
-# access = sgs.SpatialVector("access_network.shp") 
-# samples = sgs.sample.clhs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300) @n
+# rast = sgspy.SpatialRaster("raster.tif")
+# access = sgspy.SpatialVector("access_network.shp") 
+# samples = sgspy.sample.clhs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300) @n
 #
 # Parameters
 # --------------------

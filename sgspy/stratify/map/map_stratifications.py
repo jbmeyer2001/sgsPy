@@ -68,16 +68,16 @@ GIGABYTE = 1073741824
 # 
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster("rast.tif") @n
-# breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
-# quantiles = sgs.stratify.quantiles(rast, num_strata={'zsd': 25}) @n
-# srast = sgs.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
+# rast = sgspy.SpatialRaster("rast.tif") @n
+# breaks = sgspy.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
+# quantiles = sgspy.stratify.quantiles(rast, num_strata={'zsd': 25}) @n
+# srast = sgspy.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
 # 
-# rast = sgs.SpatialRaster("rast.tif") @n
-# inventory = sgs.SpatialVector("inventory_polygons.shp") @n
-# breaks = sgs.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
-# poly = sgs.stratify.poly(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich']) @n
-# srast = sgs.stratify.map((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})
+# rast = sgspy.SpatialRaster("rast.tif") @n
+# inventory = sgspy.SpatialVector("inventory_polygons.shp") @n
+# breaks = sgspy.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
+# poly = sgspy.stratify.poly(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich']) @n
+# srast = sgspy.stratify.map((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})
 # 
 # Parameters
 # --------------------

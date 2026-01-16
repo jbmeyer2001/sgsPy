@@ -57,17 +57,17 @@ GIGABYTE = 1073741824
 # 
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster("multi_band_rast.tif") @n
-# srast = sgs.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 18]})
+# rast = sgspy.SpatialRaster("multi_band_rast.tif") @n
+# srast = sgspy.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 18]})
 # 
-# rast = sgs.SpatialRaster("single_band_rast.tif") @n
-# srast = sgs.stratify.breaks(rast, breaks=[20, 40, 60, 80], filename="breaks.tif", driver_options={"COMPRESS", "LZW"}))
+# rast = sgspy.SpatialRaster("single_band_rast.tif") @n
+# srast = sgspy.stratify.breaks(rast, breaks=[20, 40, 60, 80], filename="breaks.tif", driver_options={"COMPRESS", "LZW"}))
 # 
-# rast = sgs.SpatialRaster("multi_band_rast.tif") @n
-# srast = sgs.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 10], "band_name2": [20, 40, 60, 80]}, map=True)
+# rast = sgspy.SpatialRaster("multi_band_rast.tif") @n
+# srast = sgspy.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 10], "band_name2": [20, 40, 60, 80]}, map=True)
 # 
-# rast = sgs.SpatialRaster("multi_band_rast.tif") @n
-# srast = sgs.stratify.breaks(rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]])
+# rast = sgspy.SpatialRaster("multi_band_rast.tif") @n
+# srast = sgspy.stratify.breaks(rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]])
 # 
 # Parameters
 # --------------------

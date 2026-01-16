@@ -49,23 +49,23 @@ from _sgs import srs_cpp
 #
 # Examples
 # --------------------
-# rast = sgs.SpatialRaster("raster.tif") @n
-# samples = sgs.sample.srs(rast, num_samples=250) 
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# samples = sgspy.sample.srs(rast, num_samples=250) 
 #
-# rast = sgs.SpatialRaster("raster.tif")
-# samples = sgs.sample.srs(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp") @n
+# rast = sgspy.SpatialRaster("raster.tif")
+# samples = sgspy.sample.srs(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp") @n
 #
-# rast = sgs.SpatialRaster("raster.tif") @n
-# access = sgs.SpatialVector("access_network.shp") @n
-# samples = sgs.sample.srs(rast, num_samples=200, mindist=100, access=access, buff_outer=300)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# access = sgspy.SpatialVector("access_network.shp") @n
+# samples = sgspy.sample.srs(rast, num_samples=200, mindist=100, access=access, buff_outer=300)
 #
-# rast = sgs.SpatialRaster("raster.tif") @n
-# access = sgs.SpatialVector("access_network.shp") @n
-# samples = sgs.sample.srs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# access = sgspy.SpatialVector("access_network.shp") @n
+# samples = sgspy.sample.srs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)
 #
-# rast = sgs.SpatialRaster("raster.tif") @n
-# existing = sgs.SpatialVector("existing_samples.shp") @n
-# samples = sgs.sample.srs(rast, num_samples=200, existing=existing)
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# existing = sgspy.SpatialVector("existing_samples.shp") @n
+# samples = sgspy.sample.srs(rast, num_samples=200, existing=existing)
 #
 # Parameters
 # --------------------
