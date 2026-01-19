@@ -16,45 +16,45 @@ jobs:
         
     steps:
       - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
+        uses: actions/setup-python@v5
+        with:
           python-version: ${{ matrix.python }}
       
       - name: Checkout repository and submodules
-      uses: actions/checkout@v5
-      with:
+        uses: actions/checkout@v5
+        with:
           submodules: recursive
-          
+            
       - name: Generate submodule hash
-      id: submodule-hash
-      uses: Andthehand/submodule-version-hash-action@main
-      with:
+        id: submodule-hash
+        uses: Andthehand/submodule-version-hash-action@main
+        with:
           path: 'sgspy/extern/vcpkg'
-          
+            
       - name: Cache submodule build outputs
-      id: cache-vcpkg-submodule
-      uses: actions/cache@v5
-      env:
+        id: cache-vcpkg-submodule
+        uses: actions/cache@v5
+        env:
           cache-name: cache-vcpkg-build
-      with:
+        with:
           path: sgspy/extern/vcpkg/*
           key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
-          
+            
       - name: Install vcpkg dependencies if cache miss
-      if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
-      run: ./scripts/install.sh
-      
+        if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
+        run: ./scripts/install.sh
+        
       - name: Install python dependencies
-      run: |
+        run: |
           python -m pip install --upgrade pip
           pip install pytest geopandas
-      
+        
       - name: Build package
-      run: ./scripts/build.sh
-      
+        run: ./scripts/build.sh
+        
       - name: Run pytests
-      run: pytest
-      
+        run: pytest
+        
   deploy:
     needs: test
     runs-on: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
       matrix:
         python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
         
-    steps: 
+    steps:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
