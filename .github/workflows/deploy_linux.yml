@@ -12,6 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          
       - name: Generate submodule hash
         id: submodule-hash
         uses: Andthehand/submodule-version-hash-action@main
