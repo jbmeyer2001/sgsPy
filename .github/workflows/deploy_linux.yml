@@ -78,6 +78,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest geopandas
         
+      - name: Check folder structure because weird issue
+        run: |
+            ls
+            cd sgspy
+            ls
+            cd extern
+            ls
+            cd vcpkg
+            ls
+            cd installed
+            ls
+            cd x64-linux-release
+            ls
+            cd include
+            ls
+        
       - name: Build package
         run: bash scripts/build.sh
         
