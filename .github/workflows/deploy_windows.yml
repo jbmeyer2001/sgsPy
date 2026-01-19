@@ -9,7 +9,7 @@ permissoins:
 
 jobs:
     test:
-        runs-on: ubuntu-latest
+        runs-on: windows-latest
         strategy:
         matrix:
             py: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -37,7 +37,7 @@ jobs:
                 
           - name: Install vcpkg dependencies if cache miss
             if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
-            run: ./scripts/install.sh
+            run: ./scripts/install.bat
             
           - name: Install python dependencies
             run: |
@@ -45,14 +45,14 @@ jobs:
                 pip install pytest geopandas
             
           - name: Build package
-            run: ./scripts/build.sh
+            run: ./scripts/build.bat
             
           - name: Run pytests
             run: pytest
             
     deploy:
         needs: test
-        runs-on: ubuntu-latest
+        runs-on: windows-latest
         strategy:
         matrix:
             py: ["3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -80,7 +80,7 @@ jobs:
                 
           - name: Install vcpkg dependencies if cache miss
             if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
-            run: ./scripts/install.sh
+            run: ./scripts/install.bat
             
           - name: Install Python Dependencies
             run: |
@@ -88,7 +88,7 @@ jobs:
                 pip install build
             
           - name: Build wheel
-            run: ./scripts/build_dist.sh
+            run: ./scripts/build_dist.bat
             
             #here is where I would deploy, but I'm waiting to see if everything else works first:
             #https://docs.github.com/en/actions/tutorials/build-and-test-code/python
