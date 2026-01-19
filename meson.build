@@ -70,9 +70,9 @@ endif
 
 #define directories
 if WIN
-  triplet = 'x64-windows'
+  triplet = 'x64-windows-release'
 else #linux
-  triplet = 'x64-linux'
+  triplet = 'x64-linux-release'
 endif
 vcpkg_inc_dir = include_directories('sgspy/extern/vcpkg/installed/' + triplet + '/include')
 xoshiro_inc_dir = include_directories('sgspy/extern/xoshiro/include')
