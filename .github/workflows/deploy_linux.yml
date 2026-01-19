@@ -2,29 +2,16 @@ on:
   push:
     branches:
       - main
-      - distribution #remove this once kinks ironed out
+      - distribution #remove this once kinks ironed out on not-main branch
 permissions:
   contents:
     write
 
 jobs:
-  test:
+  build-deps:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
-        
+    
     steps:
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      
-      - name: Checkout repository and submodules
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-            
       - name: Generate submodule hash
         id: submodule-hash
         uses: Andthehand/submodule-version-hash-action@main
@@ -42,7 +29,44 @@ jobs:
             
       - name: Install vcpkg dependencies if cache miss
         if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
-        run: ./scripts/install.sh
+        run: bash scripts/install.sh
+    
+  test:
+    needs: build-deps
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+        
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          
+      - name: Generate submodule hash
+          id: submodule-hash
+          uses: Andthehand/submodule-version-hash-action@main
+          with:
+            path: 'sgspy/extern/vcpkg'
+              
+      - name: Cache submodule build outputs
+        id: cache-vcpkg-submodule
+        uses: actions/cache@v5
+        env:
+          cache-name: cache-vcpkg-build
+        with:
+          path: sgspy/extern/vcpkg/*
+          key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
+            
+      - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
+        name: Fail if cache miss
+        run: exit 1
+      
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
         
       - name: Install python dependencies
         run: |
@@ -50,7 +74,7 @@ jobs:
           pip install pytest geopandas
         
       - name: Build package
-        run: ./scripts/build.sh
+        run: bash scripts/build.sh
         
       - name: Run pytests
         run: pytest
@@ -88,9 +112,9 @@ jobs:
           path: sgspy/extern/vcpkg/*
           key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
-      - name: Install vcpkg dependencies if cache miss
-        if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
-        run: ./scripts/install.sh
+      - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
+        name: Fail if cache miss
+        run: exit 1
         
       - name: Install Python Dependencies
         run: |
@@ -98,7 +122,7 @@ jobs:
           pip install build
         
       - name: Build wheel
-        run: ./scripts/build_dist.sh
+        run: bash scripts/build_dist.sh
         
 #here is where I would deploy, but I'm waiting to see if everything else works first:
 #https://docs.github.com/en/actions/tutorials/build-and-test-code/python
