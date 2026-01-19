@@ -45,11 +45,11 @@ jobs:
           python-version: ${{ matrix.python }}
           
       - name: Generate submodule hash
-          id: submodule-hash
-          uses: Andthehand/submodule-version-hash-action@main
-          with:
-            path: 'sgspy/extern/vcpkg'
-              
+        id: submodule-hash
+        uses: Andthehand/submodule-version-hash-action@main
+        with:
+          path: 'sgspy/extern/vcpkg'
+            
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
         uses: actions/cache@v5
