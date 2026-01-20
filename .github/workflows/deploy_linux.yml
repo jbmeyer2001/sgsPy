@@ -30,11 +30,26 @@ jobs:
           cache-name: cache-vcpkg-build
         with:
           path: sgspy/extern/vcpkg/*
-          key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
+          key: test-key-linux
+          #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - name: Install vcpkg dependencies if cache miss
         if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
-        run: bash scripts/install.sh
+        run: |
+          bash scripts/install.sh
+          ls
+          cd sgspy
+          ls
+          cd extern
+          ls
+          cd vcpkg
+          ls
+          cd installed
+          ls
+          cd x64-linux-release
+          ls
+          cd include
+          ls
     
   test:
     needs: build-deps
@@ -80,19 +95,19 @@ jobs:
         
       - name: Check folder structure because weird issue
         run: |
-            ls
-            cd sgspy
-            ls
-            cd extern
-            ls
-            cd vcpkg
-            ls
-            cd installed
-            ls
-            cd x64-linux-release
-            ls
-            cd include
-            ls
+          ls
+          cd sgspy
+          ls
+          cd extern
+          ls
+          cd vcpkg
+          ls
+          cd installed
+          ls
+          cd x64-linux-release
+          ls
+          cd include
+          ls
         
       - name: Build package
         run: bash scripts/build.sh
