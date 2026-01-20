@@ -24,7 +24,7 @@ jobs:
           path: 'sgspy/extern/vcpkg'
             
       - name: Cache submodule build outputs
-        id: cache-vcpkg-submodule
+        id: cache-vcpkg-submodule-restore
         uses: actions/cache/restore@v5
         with:
           path: sgspy/extern/vcpkg
@@ -32,7 +32,7 @@ jobs:
           #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - name: Install vcpkg dependencies if cache miss
-        if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-vcpkg-submodule-restore.outputs.cache-hit != 'true' }}
         run: |
           ./scripts/install.bat
           ls
@@ -50,8 +50,8 @@ jobs:
           ls
           
       - name: Save cache if there was a cache miss
-        if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
-        id: cache-vcpkg-submodule
+        if: ${{ steps.cache-vcpkg-submodule-restore.outputs.cache-hit != 'true' }}
+        id: cache-vcpkg-submodule-save
         uses: actions/cache/save@v5
         with:
             path: sgspy/extern/vcpkg
