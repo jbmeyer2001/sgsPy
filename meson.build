@@ -70,9 +70,9 @@ endif
 
 #define directories
 if WIN
-  triplet = 'x64-windows-release'
+  triplet = 'x64-windows'
 else #linux
-  triplet = 'x64-linux-release'
+  triplet = 'x64-linux'
 endif
 vcpkg_inc_dir = include_directories('sgspy/extern/vcpkg/installed/' + triplet + '/include')
 xoshiro_inc_dir = include_directories('sgspy/extern/xoshiro/include')
@@ -158,9 +158,7 @@ if WIN
   required_files = [
     #vcpkg dlls
     join_paths(bin_dir, 'aec.dll'),
-    join_paths(bin_dir, 'bz2.dll'),
     join_paths(bin_dir, 'charset-1.dll'),
-    join_paths(bin_dir, 'ffi-8.dll'),
     join_paths(bin_dir, 'freexl-1.dll'),
     join_paths(bin_dir, 'gdal.dll'),
     join_paths(bin_dir, 'geos.dll'),
@@ -200,7 +198,6 @@ if WIN
     join_paths(bin_dir, 'pcre2-32.dll'),
     join_paths(bin_dir, 'pcre2-8.dll'),
     join_paths(bin_dir, 'pcre2-posix.dll'),
-    join_paths(bin_dir, 'pkgconf-7.dll'),
     join_paths(bin_dir, 'proj_9.dll'),
     join_paths(bin_dir, 'qhull_r.dll'),
     join_paths(bin_dir, 'spatialite.dll'),
@@ -253,7 +250,6 @@ py.extension_module(
   ],
   cpp_args: [
     '-DMKL_ILP64',
-    '-m64'
   ],
   install: true,
   subdir: 'sgspy',
