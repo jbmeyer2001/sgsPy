@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   test:
-    needs: build-deps
     runs-on: ubuntu-latest
     strategy:
       matrix:
