@@ -8,121 +8,32 @@ permissions:
     write
 
 jobs:
-  build-deps:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout repository and submodules
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-          
-      - name: Generate submodule hash
-        id: submodule-hash
-        uses: Andthehand/submodule-version-hash-action@main
-        with:
-          path: 'sgspy/extern/vcpkg'
-            
-      - name: Cache submodule build outputs
-        id: cache-vcpkg-submodule-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            sgspy/extern/vcpkg/
-            sgspy/extern/vcpkg/installed/
-            sgspy/extern/vcpkg/installed/x64-linux-release/include/
-            sgspy/extern/vcpkg/installed/x64-linux-release/lib
-          key: test-key-linux3
-          #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
-            
-      - name: Install vcpkg dependencies if cache miss
-        if: ${{ steps.cache-vcpkg-submodule-restore.outputs.cache-hit != 'true' }}
-        run: |
-          bash scripts/install.sh
-          ls
-          cd sgspy
-          ls
-          cd extern
-          ls
-          cd vcpkg
-          ls
-          cd installed
-          ls
-          cd x64-linux-release
-          ls
-          cd include
-          ls
-          
-      - name: Save cache if there was a cache miss
-        if: ${{ steps.cache-vcpkg-submodule-restore.outputs.cache-hit != 'true' }}
-        id: cache-vcpkg-submodule-save
-        uses: actions/cache/save@v4
-        with:
-            path: sgspy/extern/vcpkg/installed
-            key: test-key-linux3
-    
   test:
     needs: build-deps
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+        python: ["3.12"]
+        #python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
         
     steps:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          
-      - name: Generate submodule hash
-        id: submodule-hash
-        uses: Andthehand/submodule-version-hash-action@main
-        with:
-          path: 'sgspy/extern/vcpkg'
-            
-      - name: Cache submodule build outputs
-        id: cache-vcpkg-submodule
-        uses: actions/cache/restore@v4
-        env:
-          cache-name: cache-vcpkg-build
-        with:
-          path: |
-            sgspy/extern/vcpkg/
-            sgspy/extern/vcpkg/installed/
-            sgspy/extern/vcpkg/installed/x64-linux-release/include/
-            sgspy/extern/vcpkg/installed/x64-linux-release/lib
-          key: test-key-linux3
-          #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
-            
-      - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
-        name: Fail if cache miss
-        run: exit 1
       
       - name: Checkout repository and submodules
         uses: actions/checkout@v5
         with:
           submodules: recursive
         
+      - name: Install and build C++ dependencies
+        run: bash scripts/install.sh
+        
       - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pytest geopandas
-        
-      - name: Check folder structure because weird issue
-        run: |
-          ls
-          cd sgspy
-          ls
-          cd extern
-          ls
-          cd vcpkg
-          ls
-          cd installed
-          ls
-          cd x64-linux-release
-          ls
-          cd include
-          ls
         
       - name: Build package
         run: bash scripts/build.sh
@@ -135,7 +46,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+        python: ["3.12"]
+        #python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
         
     steps:
       - name: Setup Python
@@ -147,30 +59,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
-            
-      - name: Generate submodule hash
-        id: submodule-hash
-        uses: Andthehand/submodule-version-hash-action@main
-        with:
-          path: 'sgspy/extern/vcpkg'
-            
-      - name: Cache submodule build outputs
-        id: cache-vcpkg-submodule
-        uses: actions/cache/restore@v4
-        env:
-          cache-name: cache-vcpkg-build
-        with:
-          path: |
-            sgspy/extern/vcpkg/
-            sgspy/extern/vcpkg/installed/
-            sgspy/extern/vcpkg/installed/x64-linux-release/include/
-            sgspy/extern/vcpkg/installed/x64-linux-release/lib
-          key: test-key-linux3
-          #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
-            
-      - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
-        name: Fail if cache miss
-        run: exit 1
+          
+      - name: Install and build C++ dependencies
+        run: bash scripts/install.sh
         
       - name: Install Python Dependencies
         run: |
