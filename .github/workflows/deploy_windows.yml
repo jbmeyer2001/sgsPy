@@ -25,17 +25,15 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-vcpkg-build
+        uses: actions/cache/restore@v5
         with:
-          path: sgspy/extern/vcpkg/*
-          key: test-key-windows
+          path: sgspy/extern/vcpkg
+          key: test-key-windows2
           #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - name: Install vcpkg dependencies if cache miss
         if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
-        run:  |
+        run: |
           ./scripts/install.bat
           ls
           cd sgspy
@@ -50,6 +48,14 @@ jobs:
           ls
           cd include
           ls
+          
+      - name: Save cache if there was a cache miss
+        if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
+        id: cache-vcpkg-submodule
+        uses: actions/cache/save@v5
+        with:
+            path: sgspy/extern/vcpkg
+            key: test-key-windows2
     
   test:
     needs: build-deps
@@ -59,11 +65,6 @@ jobs:
         python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
         
     steps:
-      - name: Checkout repository and submodules
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-          
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -77,16 +78,22 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         env:
           cache-name: cache-vcpkg-build
         with:
-          path: sgspy/extern/vcpkg/*
-          key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
+          path: sgspy/extern/vcpkg
+          key: test-key-windows2
+          #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
         name: Fail if cache miss
         run: exit 1
+      
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
         
       - name: Install python dependencies
         run: |
@@ -141,12 +148,13 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         env:
           cache-name: cache-vcpkg-build
         with:
-          path: sgspy/extern/vcpkg/*
-          key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
+          path: sgspy/extern/vcpkg
+          key: test-key-windows2
+          #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
         name: Fail if cache miss

@@ -25,12 +25,10 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-vcpkg-build
+        uses: actions/cache/restore@v5
         with:
-          path: sgspy/extern/vcpkg/*
-          key: test-key-linux
+          path: sgspy/extern/vcpkg
+          key: test-key-linux2
           #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - name: Install vcpkg dependencies if cache miss
@@ -50,6 +48,14 @@ jobs:
           ls
           cd include
           ls
+          
+      - name: Save cache if there was a cache miss
+        if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }}
+        id: cache-vcpkg-submodule
+        uses: actions/cache/save@v5
+        with:
+            path: sgspy/extern/vcpkg
+            key: test-key-linux2
     
   test:
     needs: build-deps
@@ -72,12 +78,13 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         env:
           cache-name: cache-vcpkg-build
         with:
-          path: sgspy/extern/vcpkg/*
-          key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
+          path: sgspy/extern/vcpkg
+          key: test-key-linux2
+          #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
         name: Fail if cache miss
@@ -141,12 +148,13 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         env:
           cache-name: cache-vcpkg-build
         with:
-          path: sgspy/extern/vcpkg/*
-          key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
+          path: sgspy/extern/vcpkg
+          key: test-key-linux2
+          #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
         name: Fail if cache miss
