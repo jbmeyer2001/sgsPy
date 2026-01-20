@@ -25,10 +25,16 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule-restore
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
-          path: sgspy/extern/vcpkg
-          key: test-key-windows2
+          path: |
+            sgspy/extern/vcpkg/
+            sgspy/extern/vcpkg/installed/
+            sgspy/extern/vcpkg/installed/x64-windows-release/include/
+            sgspy/extern/vcpkg/installed/x64-windows-release/bin/
+            sgspy/extern/vcpkg/installed/x64-windows-release/lib/
+            sgspy/extern/vcpkg/installed/x64-windows-release/tools/pkgconf/
+          key: test-key-windows3
           #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - name: Install vcpkg dependencies if cache miss
@@ -52,10 +58,10 @@ jobs:
       - name: Save cache if there was a cache miss
         if: ${{ steps.cache-vcpkg-submodule-restore.outputs.cache-hit != 'true' }}
         id: cache-vcpkg-submodule-save
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v4
         with:
-            path: sgspy/extern/vcpkg
-            key: test-key-windows2
+            path: sgspy/extern/vcpkg/installed
+            key: test-key-windows3
     
   test:
     needs: build-deps
@@ -78,12 +84,18 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         env:
           cache-name: cache-vcpkg-build
         with:
-          path: sgspy/extern/vcpkg
-          key: test-key-windows2
+          path:  |
+            sgspy/extern/vcpkg/
+            sgspy/extern/vcpkg/installed/
+            sgspy/extern/vcpkg/installed/x64-windows-release/include/
+            sgspy/extern/vcpkg/installed/x64-windows-release/bin/
+            sgspy/extern/vcpkg/installed/x64-windows-release/lib/
+            sgspy/extern/vcpkg/installed/x64-windows-release/tools/pkgconf/
+          key: test-key-windows3
           #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
@@ -148,12 +160,18 @@ jobs:
             
       - name: Cache submodule build outputs
         id: cache-vcpkg-submodule
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         env:
           cache-name: cache-vcpkg-build
         with:
-          path: sgspy/extern/vcpkg
-          key: test-key-windows2
+          path: |
+            sgspy/extern/vcpkg/
+            sgspy/extern/vcpkg/installed/
+            sgspy/extern/vcpkg/installed/x64-windows-release/include/
+            sgspy/extern/vcpkg/installed/x64-windows-release/bin/
+            sgspy/extern/vcpkg/installed/x64-windows-release/lib/
+            sgspy/extern/vcpkg/installed/x64-windows-release/tools/pkgconf/
+          key: test-key-windows3
           #key: ${{ runner.os }}-vcpkg-${{steps.submodule-hash.outputs.sha256}}
             
       - if: ${{ steps.cache-vcpkg-submodule.outputs.cache-hit != 'true' }} #this *should* not fail
