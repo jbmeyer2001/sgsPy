@@ -26,6 +26,11 @@ jobs:
         with:
           submodules: recursive
         
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          
       - name: Install and build C++ dependencies
         run: ./scripts/install.bat
         
