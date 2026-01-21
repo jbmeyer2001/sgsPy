@@ -140,11 +140,11 @@ endforeach
 link_args = []
 if WIN
   link_args = [
-    '-lws2_32',   #ws2_32.lib from Windows SDK 
-    '-lcrypt32',  #crypt32.lib from Windows SDK
-    '-lsecur32',  #secur32.lib from Windows SDK
-    '-lwldap32',  #wldap32.lib from Windows SDK
-    '-lwbemuuid'  #wbemuuid.lib from Windows SDK
+    #'-lws2_32',   #ws2_32.lib from Windows SDK 
+    #'-lcrypt32',  #crypt32.lib from Windows SDK
+    #'-lsecur32',  #secur32.lib from Windows SDK
+    #'-lwldap32',  #wldap32.lib from Windows SDK
+    #'-lwbemuuid'  #wbemuuid.lib from Windows SDK
   ]
 else
   link_args = [
