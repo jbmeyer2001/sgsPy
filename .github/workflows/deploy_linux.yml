@@ -65,7 +65,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build twine auditwheel
         
       - name: Build wheel
         run: bash scripts/build_dist.sh

@@ -81,7 +81,53 @@ bin_dir = meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triple
 inc_dir = include_directories('sgspy')
 
 #get gdal dependency from vcpkg pkg-config
-gdal_dep = dependency('gdal', method: 'pkg-config')
+gdal_dep = []
+if WIN
+  gdal_libs = [
+      'ssl',
+      'crypto',
+      'lzma',
+      'qhull_r',
+      'geotiff_i',
+      'tiff',
+      'Lerc',
+      'zstd',
+      'jpeg',
+      'libpng16',
+      'gif',
+      'netcdf',
+      'hdf5_hl',
+      'hdf5',
+      'webp',
+      'sharpyuv',
+      'openjp2',
+      'kmlengine',
+      'kmldom',
+      'kmlbase',
+      'minizip',
+      'uriparser',
+      'zlib',
+      'pcre2-8',
+      'spatialite',
+      'sqlite3',
+      'pq',
+      'expat',
+      'xml2',
+      'iconv',
+      'charset',
+      'geos_c',
+      'curl',
+      'proj',
+      'json-c',
+      'gdal'
+    ]
+
+  foreach lib : gdal_libs
+    gdal_dep += cxx.find_library(lib, dirs: [lib_dir])
+  endforeach
+else
+  gdal_dep = dependency('gdal', method: 'pkg-config')
+endif
 
 #get pybind11 dep from pyproject.toml build dependencies
 pybind11_dep = dependency('pybind11')
@@ -140,11 +186,11 @@ endforeach
 link_args = []
 if WIN
   link_args = [
-    #'-lws2_32',   #ws2_32.lib from Windows SDK 
-    #'-lcrypt32',  #crypt32.lib from Windows SDK
-    #'-lsecur32',  #secur32.lib from Windows SDK
-    #'-lwldap32',  #wldap32.lib from Windows SDK
-    #'-lwbemuuid'  #wbemuuid.lib from Windows SDK
+    '-lws2_32',   #ws2_32.lib from Windows SDK 
+    '-lcrypt32',  #crypt32.lib from Windows SDK
+    '-lsecur32',  #secur32.lib from Windows SDK
+    '-lwldap32',  #wldap32.lib from Windows SDK
+    '-lwbemuuid'  #wbemuuid.lib from Windows SDK
   ]
 else
   link_args = [
