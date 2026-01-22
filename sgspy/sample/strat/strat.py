@@ -374,8 +374,8 @@ def strat(
     if plot:
         try:
             fig, ax = plt.subplots()
-            strat_rast.plot(ax, band=strat_rast.bands[0])
-            title = "samples on " + strat_rast.bands[0]
+            strat_rast.plot(ax, band=strat_rast.bands[band])
+            title = "samples on " + strat_rast.bands[band]
 
             if access:
                 access.plot('LineString', ax)
