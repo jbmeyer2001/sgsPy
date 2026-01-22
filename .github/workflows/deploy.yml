@@ -1,0 +1,180 @@
+#TODO this should be on release to the main branch only
+on:
+  push:
+    branches:
+      - main
+      - distribution #remove this once kinks ironed out on not-main branch
+permissions:
+  contents:
+    write
+
+jobs:
+  test-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+        
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+        
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          
+      - name: Install and build C++ dependencies
+        run: ./scripts/install.bat
+        
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest geopandas
+        
+      - name: Build package
+        run: ./scripts/build.bat
+        
+      - name: Run pytests
+        run: pytest
+
+  test-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+        
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+        
+      - name: Install and build C++ dependencies
+        run: bash scripts/install.sh
+        
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest geopandas
+        
+      - name: Build package
+        run: bash scripts/build.sh
+        
+      - name: Run pytests
+        run: pytest
+
+  build-windows:
+    needs: 
+      - test-windows
+      - test-linux
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+        
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+ 
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          
+      - name: Install and build C++ dependencies
+        run: ./scripts/install.bat
+        
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+        
+      - name: Build wheel
+        run: ./scripts/build_dist.bat
+
+      - name: Save wheel artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: windows-python${{ matrix.python }}-wheel
+          path: dist/*.whl
+
+  build-linux:
+    needs: 
+      - test-windows
+      - test-linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+        
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          
+      - name: Install and build C++ dependencies
+        run: bash scripts/install.sh
+        
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build auditwheel
+        
+      - name: Build wheel
+        run: bash scripts/build_dist.sh
+
+      - name: Save wheel artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: linux-python${{ matrix.python }}-wheel
+          path: dist/*.whl
+
+  pypi-publish:
+    needs: 
+      - build-windows 
+      - build-linux
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+  
+    steps:
+      - name: Retrive wheel files
+        uses: actions/download-artifact@v5
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: View Wheel Files
+        run: ls -r dist
+ 
+#leave these commented until I know everything works correctly       
+# - name: Publish release distributions to PyPI
+#        uses: pypa/gh-action-pypi-publish@6f7e8d9c0b1a2c3d4e5f6a7b8c9d0e1f2a3b4c5d
