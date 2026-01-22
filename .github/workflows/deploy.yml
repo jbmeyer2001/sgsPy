@@ -177,5 +177,3 @@ jobs:
   
       - name: Publish wheels to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
