@@ -1,9 +1,6 @@
-#TODO this should be on release to the main branch only
 on:
-  push:
-    branches:
-      - main
-      - distribution #remove this once kinks ironed out on not-main branch
+  release:
+    types: [published]
 permissions:
   contents:
     write
