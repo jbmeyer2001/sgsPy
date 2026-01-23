@@ -21,7 +21,6 @@ from .import plot
 from .plot import plot_raster
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-print(os.path.join(os.path.dirname(__file__), ".."))
 from _sgs import GDALRasterWrapper
 
 #rasterio optional import
