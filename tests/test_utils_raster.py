@@ -1,5 +1,5 @@
 import pytest
-import sgs
+import sgspy as sgs
 import numpy as np
 import matplotlib.pyplot as plt
 

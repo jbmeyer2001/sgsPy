@@ -1,34 +1,121 @@
-## Overview
-The sgsPy Python pacakge (Structurally Guided Sampling) is a package in development.
 
-While the package has not yet been officially distributed or released, beta testers
-are highly encouraged! See the lower sections of this readme for installation and
-running instructions. 
+# sgsPy - Structurally Guided Sampling <img src="logo/sgspy_logo.svg" align="right" width="300" />
 
-#### How to stay up to date?
-Either by watching this repository, or if you would like to recieve more detailed information on
-larger updates, you may email me at jmeyer03 'at' mail.ubc.ca asking to join the sgs mailing list.
+sgsPy is a toolbox package of stratification and sampling methods for use on ALS metrics, designed to be fast and efficient on very large raster images.
 
-#### How to contribute?
-The easiest way to contribute is by logging any errors, or posting any ideas as an issue on this github repository.
+<!-- TODO: add numpy monthly downloads -->
+
+ - **Documentation:** https://jbmeyer2001.github.io/sgsPy/
+ - **Source Code:** https://github.com/jbmeyer2001/sgsPy/tree/main/sgspy
+ - **Bug reports / Feature requests:** https://github.com/jbmeyer2001/sgsPy/issues
 
 ## Installation
-### NOTE: when distributed, the package will be available through PyPI and thus a quick 'pip install sgs'. For now, the package can be installed and built as follows depending on operating system.
+sgsPy can be downloaded on either Windows or Linux from the Python Package Index (PyPI) with the following command:
 
-### Linux:
+``` pip install sgspy ```
+
+## Overview
+`sgsPy` is based on the widely-used `sgsR` package, intended originally to help develop representative ground sample networks using auxiliary 
+information like ALS data. `sgsPy` takes much of the existing functionality of the R package and improves upon it's performance, 
+allowing Python users to integrate structurally guided sampling approaches to their workflows.
+
+While the original intention for the package was to be used with ALS metrics, any form of raster data can be used in lieu of ALS metrics.
+
+If you encounter any bugs, unclear documentation, or have any feature ideas then please contribute by posting an issue. https://github.com/jbmeyer2001/sgsPy/issues
+
+The currently implemented functionality includes:
+ - **[calculating] [principal component analysis](https://jbmeyer2001.github.io/sgsPy/group__user__pca.html)**
+ - **[sampling] [conditioned latin hypercube sampling](https://jbmeyer2001.github.io/sgsPy/group__user__clhs.html)**
+ - **[sampling] [simple random sampling](https://jbmeyer2001.github.io/sgsPy/group__user__srs.html)**
+ - **[sampling] [stratified random sampling](https://jbmeyer2001.github.io/sgsPy/group__user__strat.html)**
+ - **[sampling] [systematic sampling](https://jbmeyer2001.github.io/sgsPy/group__user__systematic.html)**
+ - **[stratification] [breaks](https://jbmeyer2001.github.io/sgsPy/group__user__breaks.html)**
+ - **[stratification] [map](https://jbmeyer2001.github.io/sgsPy/group__user__map.html)**
+ - **[stratification] [poly](https://jbmeyer2001.github.io/sgsPy/group__user__poly.html)**
+ - **[stratification] [quantiles](https://jbmeyer2001.github.io/sgsPy/group__user__quantiles.html)**
+
+## Quickstart guide
+### files
+Some helpful files to get started with can be found in the https://github.com/jbmeyer2001/sgsPy/tree/main/tests/files folder. Specifically
+[mraster.tif](https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/mraster.tif), 
+[inventory_polygons.shp](https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/inventory_polygons.shp) along with its associated .dbf, .prj, and .shx files, 
+[access.shp](https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/access.shp) along with its associated .dbf, .prj, and .shx files, 
+[existing.shp](https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/existing.shp) along with its associated .dbf, .prj, and .shx files.
+
+### raster and vector data
+The two data structures used by the stratification, sampling, and calculating methods are the `sgspy.SpatialRaster` [[SpatialRaster documentation](https://jbmeyer2001.github.io/sgsPy/classsgs_1_1utils_1_1raster_1_1SpatialRaster.html)] and `sgspy.SpatialVector` [[SpatialVector documentation](https://jbmeyer2001.github.io/sgsPy/classsgs_1_1utils_1_1vector_1_1SpatialVector.html)]. 
+The beginning of any process using the sgspy package will involve creating one or more of these data structurse. This can be done by providing
+a file path. It can also be done by converting from a data structure used by popular geospatial packages.
+
+```
+import sgspy
+
+#creating SpatialRaster and SpatialVector using file paths
+rast = sgspy.SpatialRaster("mraster.tif")
+vect = sgspy.SpatialVector("access.shp")
+
+#plotting
+rast.plot(band=0)
+rast.plot(band="pzabove2")
+
+#accessing underlying data as a numpy array
+zq90_arr = rast.band("zq90")
+first_band_arr = rast.band(0)
+
+#to/from GDAL raster dataset
+ds = gdal.Open("mraster.tif")
+rast = sgspy.SpatialRaster.from_gdal(ds)
+new_ds = rast.to_gdal()
+
+#to/from rasterio dataset
+ds = rasterio.open("mraster.tif")
+rast = sgspy.SpatialRaster.from_rasterio(ds)
+new_ds = rast.to_rasterio()
+
+#to/from geopandas
+gdf = gpd.read_file("inventory_polygons.shp")
+vect = sgspy.SpatialVector.from_geopandas(gdf)
+new_gdf = gpd.to_geopandas(vect)
+```
+
+### example
+More extensive examples on how to use each method is available in the [user documentation](https://jbmeyer2001.github.io/sgsPy/group__user.html). The following
+shows how one might use three of the different methods available in sgspy to create a new sampling network.
+
+```
+import sgspy
+
+# create SpatialRaster object from desired tif file
+rast = sgspy.SpatialRaster("mraster.tif")
+
+# use principal component analysis for dimensionality reduction (to two components or raster layers)
+pca = sgspy.calculate.pca(rast, num_comp=2)
+
+# stratifiy the two components into 5 equally sized quantiles, and map the two layers into a single mapped output
+srast = sgspy.stratify.quantiles(pca, num_strata={"comp_1":5, "comp2":5}, map=True)
+
+# use stratified random sampling to sample each (of the 25 total) mapped strata proportional to it's number of pixels in the raster band
+# additionaly, plot the output and write it to samples.shp
+samples = sgspy.sample.strat(srast, band="map_strat", num_samples=200, num_strata=25, allocation="prop", plot=True, filename="samples.shp")
+```
+
+## Funding
+The development of the sgsPy package was funded by the Ontario Future Forests (KTTD 2B-2024) grant.
+
+## Developer information
+This section includes installation steps for both Windows and Linux, in addition to notes on running the code.
+See the [Developer Documentation](https://jbmeyer2001.github.io/sgsPy/group__dev.html) for information on the underlying C++ implementations.
+
+### Linux installation:
 1. Ensure you have Python with pip installed, and git.
 2. clone the repository with the following command:
 ```
 git clone https://github.com/jbmeyer2001/sgsPy.git
 ```
 
-3. create a python virtual environment (required)
+3. create and activate a python virtual environment (**highly** recommended)
 ```
 python -m venv .venv
-```
-
-the virtual environment then resides in the .venv folder, and can be activated with the following command:
-```
 source ./.venv/bin/activate
 ```
 
@@ -51,18 +138,24 @@ sudo apt install flex
 sudo apt install patchelf
 ```
 
-5. Run the following command to install remaining dependencies and build the project.
+5. Run the following command to install and build project C++ dependencies.
 ```
-./build.sh
+bash scripts/install.sh
 ```
 
-6. If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow:
+6. Run the following command to build the project
+```
+bash scripts/build.sh
+```
+
+7. If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follows:
 ```
 pip install pytest
 pip install geopandas
 ```
 
-### Windows:
+### Windows installation:
+NOTE: The commands given are for a Windows Powershell command prompt.
 
 1. ensure you have Python with pip, git, and a C++ compiler.
 
@@ -73,19 +166,20 @@ pip install geopandas
 git clone https://github.com/jbmeyer2001/sgsPy.git
 ```
 
-4. create a Python virtual environment (highly recommended).
+4. create and activate a Python virtual environment (**highly** recommended).
 ```
 python -m venv .venv
-```
-
-if you are usign powershell, the activation command is shown below, the activation command for command prompt may be different.
-```
 ./.venv/Scripts/activate
 ```
 
-5. Run the following commands to install remaining dependencies and build the project.
+5. Run the following command to install and build project C++ dependencies. remaining dependencies
 ```
-./build
+./scripts/install
+```
+
+6. Run the following command to build the project
+```
+./scripts/build
 ```
 
 7. If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow:
@@ -94,44 +188,11 @@ pip install pytest
 pip install geopandas
 ```
 
-## How to run sgsPy
+### How to run sgsPy:
+**NOTE: if you try to open a Python instance in the command prompt, or run a Python file residing in this project directory, there may be issues importing the project. This is because the folder name 'sgspy' is the same as the packages name, and the Python files rely on compiled binaries within the environment. This also means that the build command should be run before testing any new Python code written!**
+
 
 Tests may be ran by running the following command from within the folder containing this file. Both pytest and geopandas must be installed to run the tests.
 ```
 pytest
 ```
-
-To run sgs on your own data, the best resource to look to is the tests, which are in the 'tests/' directory. Additionally, preliminary documentation for each function is available within the Python file that contains that function. For example, for information on how to run quantiles stratification on a raster, look to the comments within 'sgs/stratify/quantiles/quantiles.py'. Alternatively, you may contact me directly at jmeyer03 'at' mail.ubc.ca . 
-
-## Develoment progress
-### stratification:
- - breaks (including large raster processing)
- - quantiles (including large raster processing)
- - map (including large raster processing)
- - poly (including large raster processing)
-
-### sampling:
- - stratified sampling (including large raster processing)
- - simple random sampling (including large raster processing)
- - systematic sampling (including large raster processing)
- - implement clhs sampling method (including large raster processing)
-
-### calculating:
- - principal component analysis (including large raster processing)
-
-### Projected future development priorities:
- - publish on PyPi
- - implement strat_kmeans
- - implement sample_ahels
- - implement calc_representation
- - various performance improvements
-
-## Licensing
-the sgsPy package is licensed under the MIT license. the LICENSE.txt file contains
-full licensing information for all dependencies. None of the licenses are
-copyleft licenses sush as GPL. However, it's worth noting that two dependencies,
-oneMKL and oneTBB, are licensed under the Intel Simplified Software License (ISSL).
-The ISSL allows use and redistribution, but is not technically open source since the
-code is propriatery. As such, this software cannot be distributed alongside other
-software which uses a copyleft license such as GPL, since oneMKL and oneTBB are not
-technically open source.

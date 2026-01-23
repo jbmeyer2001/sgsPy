@@ -3,7 +3,7 @@ import geopandas as gpd
 import numpy as np
 import pytest
 
-import sgs
+import sgspy as sgs
 
 from files import (
     mraster_geotiff_path,

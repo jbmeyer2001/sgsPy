@@ -1,5 +1,5 @@
 import pytest
-import sgs
+import sgspy as sgs
 
 from files import (
     access_shapefile_path,

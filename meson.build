@@ -1,5 +1,5 @@
 project(
-  'sgs',
+  'sgspy',
   'cpp',
   default_options: [
     'cpp_std=c++20'
@@ -33,6 +33,10 @@ cxx = meson.get_compiler('cpp')
 #to actually get access to it is by running a quick python script which prints the PATH
 #variable, and parsing the printed string in meson...
 if WIN
+  tmp_build_dir = ''
+  tmp_inc_dir = ''
+  tmp_lib_dir = ''
+  tmp_bin_dir = ''
   path_entries = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(';')
   foreach entry : path_entries
     if entry.contains('Temp') and entry.contains('pip-build-env') and entry.contains('overlay') and entry.contains('Scripts')
@@ -42,6 +46,20 @@ if WIN
       tmp_bin_dir = tmp_build_dir + join_paths('Library', 'bin')
     endif
   endforeach
+
+  #when building a distribution rather then just the package, the build directory containing the required libraries and header files
+  #is different and won't be found with the first checks. This loop ensures that the correct folder is found when generating
+  #a distribution of the package.
+  if tmp_build_dir == ''
+    foreach entry : path_entries
+      if entry.contains('Temp') and entry.contains('build-env') and entry.contains('Scripts')
+        tmp_build_dir = entry.split('Scripts').get(0)
+        tmp_inc_dir = tmp_build_dir + join_paths('Library', 'include')
+        tmp_lib_dir = tmp_build_dir + join_paths('Library', 'lib')
+        tmp_bin_dir = tmp_build_dir + join_paths('Library', 'bin')
+      endif
+    endforeach
+  endif
 else
   tmp_build_dir = run_command(py, '-c', 'import os; print(os.environ["PATH"])', check: true).stdout().strip().split(':').get(0).split('bin').get(0)
 
@@ -56,14 +74,60 @@ if WIN
 else #linux
   triplet = 'x64-linux'
 endif
-vcpkg_inc_dir = include_directories('sgs/extern/vcpkg/installed/' + triplet + '/include')
-xoshiro_inc_dir = include_directories('sgs/extern/xoshiro/include')
-lib_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/lib'
-bin_dir = meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/bin'
-inc_dir = include_directories('sgs')
+vcpkg_inc_dir = include_directories('sgspy/extern/vcpkg/installed/' + triplet + '/include')
+xoshiro_inc_dir = include_directories('sgspy/extern/xoshiro/include')
+lib_dir = meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triplet + '/lib'
+bin_dir = meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triplet + '/bin'
+inc_dir = include_directories('sgspy')
 
 #get gdal dependency from vcpkg pkg-config
-gdal_dep = dependency('gdal', method: 'pkg-config')
+gdal_dep = []
+if WIN
+  gdal_libs = [
+      'ssl',
+      'crypto',
+      'lzma',
+      'qhull_r',
+      'geotiff_i',
+      'tiff',
+      'Lerc',
+      'zstd',
+      'jpeg',
+      'libpng16',
+      'gif',
+      'netcdf',
+      'hdf5_hl',
+      'hdf5',
+      'webp',
+      'sharpyuv',
+      'openjp2',
+      'kmlengine',
+      'kmldom',
+      'kmlbase',
+      'minizip',
+      'uriparser',
+      'zlib',
+      'pcre2-8',
+      'spatialite',
+      'sqlite3',
+      'pq',
+      'expat',
+      'xml2',
+      'iconv',
+      'charset',
+      'geos_c',
+      'curl',
+      'proj',
+      'json-c',
+      'gdal'
+    ]
+
+  foreach lib : gdal_libs
+    gdal_dep += cxx.find_library(lib, dirs: [lib_dir])
+  endforeach
+else
+  gdal_dep = dependency('gdal', method: 'pkg-config')
+endif
 
 #get pybind11 dep from pyproject.toml build dependencies
 pybind11_dep = dependency('pybind11')
@@ -130,8 +194,8 @@ if WIN
   ]
 else
   link_args = [
-    '-Wl,-rpath,$ORIGIN/../../../sgs',
-    '-Wl,-rpath,$ORIGIN/../../',
+    '-Wl,-rpath,$ORIGIN/../../../../sgspy',
+    '-Wl,-rpath,$ORIGIN/../../../',
   ]
 endif
 add_global_link_arguments('-L' + lib_dir, language: 'cpp')
@@ -140,9 +204,7 @@ if WIN
   required_files = [
     #vcpkg dlls
     join_paths(bin_dir, 'aec.dll'),
-    join_paths(bin_dir, 'bz2.dll'),
     join_paths(bin_dir, 'charset-1.dll'),
-    join_paths(bin_dir, 'ffi-8.dll'),
     join_paths(bin_dir, 'freexl-1.dll'),
     join_paths(bin_dir, 'gdal.dll'),
     join_paths(bin_dir, 'geos.dll'),
@@ -182,7 +244,6 @@ if WIN
     join_paths(bin_dir, 'pcre2-32.dll'),
     join_paths(bin_dir, 'pcre2-8.dll'),
     join_paths(bin_dir, 'pcre2-posix.dll'),
-    join_paths(bin_dir, 'pkgconf-7.dll'),
     join_paths(bin_dir, 'proj_9.dll'),
     join_paths(bin_dir, 'qhull_r.dll'),
     join_paths(bin_dir, 'spatialite.dll'),
@@ -195,12 +256,12 @@ if WIN
     join_paths(bin_dir, 'zstd.dll'),
      
     #proj
-    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+    meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
 else #linux
   required_files = [
     #proj
-    meson.current_source_dir() + '/sgs/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
+    meson.current_source_dir() + '/sgspy/extern/vcpkg/installed/' + triplet + '/share/proj/proj.db'
   ]
 endif
 
@@ -218,7 +279,7 @@ endif
 
 py.extension_module(
   '_sgs',
-  'sgs/pybind.cpp',
+  'sgspy/pybind.cpp',
   link_args: link_args,
   dependencies: [
     gdal_dep,
@@ -235,8 +296,9 @@ py.extension_module(
   ],
   cpp_args: [
     '-DMKL_ILP64',
-    '-m64'
   ],
   install: true,
+  subdir: 'sgspy',
 )
 
+subdir('sgspy')
