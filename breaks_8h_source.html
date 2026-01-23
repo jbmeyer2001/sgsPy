@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.14.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>sgsPy: sgs/stratify/breaks/breaks.h Source File</title>
+<title>sgsPy: sgspy/stratify/breaks/breaks.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -131,16 +131,16 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="keywordtype">bool</span> isNan = std::isnan(val) || (double)val == dataBand.<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#afb7af2cf7ef7d6973a5d06bdb5621a46">nan</a>;</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    mapNan |= isNan;</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>        </div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordtype">size_t</span> <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> = 0;</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordtype">size_t</span> <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> = 0;</div>
 <div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="keywordflow">if</span> (!isNan) {</div>
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>        <span class="keyword">auto</span> it = std::lower_bound(bandBreaks.begin(), bandBreaks.end(), val);</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>        <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> = (it == bandBreaks.end()) ? bandBreaks.size() : std::distance(bandBreaks.begin(), it);</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>        <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> = (it == bandBreaks.end()) ? bandBreaks.size() : std::distance(bandBreaks.begin(), it);</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    }</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <a class="code hl_function" href="group__helper.html#ga8c6740d2de7f4a24ba4784ed92ad2ca0">helper::setStrataPixelDependingOnType</a>(stratBand.<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#ae8687a5ccca249aa1f26c78d46bfadff">type</a>, p_stratBuffer, index, isNan, <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a>);</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <a class="code hl_function" href="group__helper.html#ga8c6740d2de7f4a24ba4784ed92ad2ca0">helper::setStrataPixelDependingOnType</a>(stratBand.<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#ae8687a5ccca249aa1f26c78d46bfadff">type</a>, p_stratBuffer, index, isNan, <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a>);</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keywordflow">if</span> (!mapNan) {</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>        mapStrat += <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> * multiplier;</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>        mapStrat += <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> * multiplier;</div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    }</div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>}   </div>
 </div>
@@ -158,13 +158,13 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    <span class="keywordtype">double</span> val = <a class="code hl_function" href="group__helper.html#ga95dc1909d81ef037ed598e69436c8dda">helper::getPixelValueDependingOnType&lt;double&gt;</a>(p_dataBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#ae8687a5ccca249aa1f26c78d46bfadff">type</a>, p_data, index);</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>    <span class="keywordtype">bool</span> isNan = std::isnan(val) || val == p_dataBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#afb7af2cf7ef7d6973a5d06bdb5621a46">nan</a>;</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="keywordtype">size_t</span> <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> = 0;</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="keywordtype">size_t</span> <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> = 0;</div>
 <div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keywordflow">if</span> (!isNan) {</div>
 <div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        <span class="keyword">auto</span> it = std::lower_bound(bandBreaks.begin(), bandBreaks.end(), val);</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> = (it == bandBreaks.end()) ? bandBreaks.size() : std::distance(bandBreaks.begin(), it);</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> = (it == bandBreaks.end()) ? bandBreaks.size() : std::distance(bandBreaks.begin(), it);</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    }</div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span> </div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    <a class="code hl_function" href="group__helper.html#ga8c6740d2de7f4a24ba4784ed92ad2ca0">helper::setStrataPixelDependingOnType</a>(p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#ae8687a5ccca249aa1f26c78d46bfadff">type</a>, p_strat, index, isNan, <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a>);</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    <a class="code hl_function" href="group__helper.html#ga8c6740d2de7f4a24ba4784ed92ad2ca0">helper::setStrataPixelDependingOnType</a>(p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#ae8687a5ccca249aa1f26c78d46bfadff">type</a>, p_strat, index, isNan, <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a>);</div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>}</div>
 </div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span></div>
@@ -172,7 +172,7 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00218" name="l00218"></a><span class="lineno"><a class="line" href="group__breaks.html#ga6e9e93a996334f510d13f070d69f0781">  218</a></span><a class="code hl_class" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *<a class="code hl_function" href="group__breaks.html#ga6e9e93a996334f510d13f070d69f0781">breaks</a>(</div>
 <div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>    <a class="code hl_class" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *p_raster,</div>
 <div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    std::map&lt;<span class="keywordtype">int</span>, std::vector&lt;double&gt;&gt; <a class="code hl_function" href="group__breaks.html#ga6e9e93a996334f510d13f070d69f0781">breaks</a>,</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <span class="keywordtype">bool</span> <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1map.html">map</a>,</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <span class="keywordtype">bool</span> <a class="code hl_namespace" href="namespacesgs_1_1map.html">map</a>,</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    std::string filename,</div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    <span class="keywordtype">bool</span> largeRaster,</div>
 <div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    <span class="keywordtype">int</span> threads,</div>
@@ -193,7 +193,7 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    std::vector&lt;std::string&gt; bandNames = p_raster-&gt;<a class="code hl_function" href="classsgs_1_1raster_1_1GDALRasterWrapper.html#afd03a9dd92faaf7f96189eb173c95282">getBands</a>();</div>
 <div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span> </div>
 <div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    std::vector&lt;helper::RasterBandMetaData&gt; dataBands(bandCount);</div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    std::vector&lt;helper::RasterBandMetaData&gt; stratBands(bandCount + <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1map.html">map</a>);</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    std::vector&lt;helper::RasterBandMetaData&gt; stratBands(bandCount + <a class="code hl_namespace" href="namespacesgs_1_1map.html">map</a>);</div>
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    std::vector&lt;helper::VRTBandDatasetInfo&gt; VRTBandInfo;</div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span> </div>
 <div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    <span class="keywordtype">bool</span> isMEMDataset = !largeRaster &amp;&amp; filename == <span class="stringliteral">&quot;&quot;</span>;</div>
@@ -202,7 +202,7 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    std::mutex dataBandMutex;</div>
 <div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    std::mutex stratBandMutex;</div>
 <div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    <span class="comment">//VRT bands are each their own dataset so they can each have their own mutex</span></div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    std::vector&lt;std::mutex&gt; stratBandMutexes(isVRTDataset * (bandCount + <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1map.html">map</a>));</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    std::vector&lt;std::mutex&gt; stratBandMutexes(isVRTDataset * (bandCount + <a class="code hl_namespace" href="namespacesgs_1_1map.html">map</a>));</div>
 <div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span> </div>
 <div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    std::string driver;</div>
 <div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    <span class="keywordflow">if</span> (isMEMDataset || isVRTDataset) {</div>
@@ -248,8 +248,8 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>        <span class="keywordtype">size_t</span> maxStrata = val.size() + 1;</div>
 <div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>        <a class="code hl_function" href="group__helper.html#gafb4301348d605db2ce92d141063af00b">helper::setStratBandTypeAndSize</a>(maxStrata, &amp;p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#ae8687a5ccca249aa1f26c78d46bfadff">type</a>, &amp;p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#abb1d2c0736db801f4643ee5fc733eeeb">size</a>);</div>
 <div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>        p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#afb8e095c4f0b06277edf7c566dd30e6e">name</a> = <span class="stringliteral">&quot;strat_&quot;</span> + bandNames[key];</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>        p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#a1d9115aee6f24bfbcfee91bb34a4b0c2">xBlockSize</a> = <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1map.html">map</a> ? dataBands[0].xBlockSize : p_dataBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#a1d9115aee6f24bfbcfee91bb34a4b0c2">xBlockSize</a>;</div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>        p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#aad3835a32a572aa92122406ed5911896">yBlockSize</a> = <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1map.html">map</a> ? dataBands[0].yBlockSize : p_dataBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#aad3835a32a572aa92122406ed5911896">yBlockSize</a>;</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>        p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#a1d9115aee6f24bfbcfee91bb34a4b0c2">xBlockSize</a> = <a class="code hl_namespace" href="namespacesgs_1_1map.html">map</a> ? dataBands[0].xBlockSize : p_dataBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#a1d9115aee6f24bfbcfee91bb34a4b0c2">xBlockSize</a>;</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>        p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#aad3835a32a572aa92122406ed5911896">yBlockSize</a> = <a class="code hl_namespace" href="namespacesgs_1_1map.html">map</a> ? dataBands[0].yBlockSize : p_dataBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#aad3835a32a572aa92122406ed5911896">yBlockSize</a>;</div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>        p_stratBand-&gt;<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#a3f124b1db62b777a22feb38e21ac7b4a">p_mutex</a> = &amp;stratBandMutex; <span class="comment">//overwritten if VRT dataset</span></div>
 <div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span> </div>
 <div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>        <span class="comment">//update dataset with new band information</span></div>
@@ -272,7 +272,7 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span> </div>
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    <span class="comment">//set multipliers if mapped stratification  </span></div>
 <div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>    std::vector&lt;size_t&gt; multipliers(<a class="code hl_function" href="group__breaks.html#ga6e9e93a996334f510d13f070d69f0781">breaks</a>.size(), 1);</div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1map.html">map</a>) {</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1map.html">map</a>) {</div>
 <div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>        <span class="comment">//determine the stratification band index multipliers of the mapped band</span></div>
 <div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; bandCount - 1; i++) {</div>
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>            multipliers[i + 1] = multipliers[i] * (bandBreaks[i].size() + 1);</div>
@@ -340,7 +340,7 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>        pybind11::gil_scoped_acquire acquire;</div>
 <div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>        boost::asio::thread_pool pool(threads);</div>
 <div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span> </div>
-<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>        <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1map.html">map</a>) {</div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>        <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1map.html">map</a>) {</div>
 <div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>            <span class="comment">//use the first raster band to determine block size</span></div>
 <div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>            <span class="keywordtype">int</span> xBlockSize = dataBands[0].xBlockSize;</div>
 <div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>            <span class="keywordtype">int</span> yBlockSize = dataBands[0].yBlockSize;</div>
@@ -535,7 +535,7 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>    }</div>
 <div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>    <span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>        <span class="keywordtype">size_t</span> pixelCount = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(p_raster-&gt;<a class="code hl_function" href="classsgs_1_1raster_1_1GDALRasterWrapper.html#a32ab3aa40e19103ede85b3fe890c532f">getWidth</a>()) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(p_raster-&gt;<a class="code hl_function" href="classsgs_1_1raster_1_1GDALRasterWrapper.html#a8708cbca84988e6580878f5b7b06d070">getHeight</a>());</div>
-<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>        <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1map.html">map</a>) {</div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>        <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1map.html">map</a>) {</div>
 <div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> index = 0; index &lt; pixelCount; index++) {</div>
 <div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>                <span class="keywordtype">bool</span> mapNan = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>                <span class="keywordtype">size_t</span> mapStrat = 0;</div>
@@ -651,9 +651,9 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <div class="ttc" id="agroup__helper_html_gad011bc1abc9e8fba449ca933ccec4898"><div class="ttname"><a href="group__helper.html#gad011bc1abc9e8fba449ca933ccec4898">sgs::helper::createVirtualDataset</a></div><div class="ttdeci">GDALDataset * createVirtualDataset(std::string driverName, int width, int height, double *geotransform, std::string projection)</div><div class="ttdef"><b>Definition</b> helper.h:284</div></div>
 <div class="ttc" id="agroup__helper_html_gafb4301348d605db2ce92d141063af00b"><div class="ttname"><a href="group__helper.html#gafb4301348d605db2ce92d141063af00b">sgs::helper::setStratBandTypeAndSize</a></div><div class="ttdeci">void setStratBandTypeAndSize(size_t maxStrata, GDALDataType *p_type, size_t *p_size)</div><div class="ttdef"><b>Definition</b> helper.h:130</div></div>
 <div class="ttc" id="ahelper_8h_html"><div class="ttname"><a href="helper_8h.html">helper.h</a></div></div>
-<div class="ttc" id="anamespacesgs_1_1sample_1_1strat_html"><div class="ttname"><a href="namespacesgs_1_1sample_1_1strat.html">sgs.sample.strat</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
-<div class="ttc" id="anamespacesgs_1_1stratify_1_1map_html"><div class="ttname"><a href="namespacesgs_1_1stratify_1_1map.html">sgs.stratify.map</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
-<div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
+<div class="ttc" id="anamespacesgs_1_1map_html"><div class="ttname"><a href="namespacesgs_1_1map.html">sgs::map</a></div><div class="ttdef"><b>Definition</b> map.h:22</div></div>
+<div class="ttc" id="anamespacesgs_1_1strat_html"><div class="ttname"><a href="namespacesgs_1_1strat.html">sgs::strat</a></div><div class="ttdef"><b>Definition</b> strat.h:27</div></div>
+<div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> pca.h:23</div></div>
 <div class="ttc" id="araster_8h_html"><div class="ttname"><a href="raster_8h.html">raster.h</a></div></div>
 <div class="ttc" id="astructsgs_1_1helper_1_1RasterBandMetaData_html"><div class="ttname"><a href="structsgs_1_1helper_1_1RasterBandMetaData.html">sgs::helper::RasterBandMetaData</a></div><div class="ttdef"><b>Definition</b> helper.h:77</div></div>
 <div class="ttc" id="astructsgs_1_1helper_1_1RasterBandMetaData_html_a1d9115aee6f24bfbcfee91bb34a4b0c2"><div class="ttname"><a href="structsgs_1_1helper_1_1RasterBandMetaData.html#a1d9115aee6f24bfbcfee91bb34a4b0c2">sgs::helper::RasterBandMetaData::xBlockSize</a></div><div class="ttdeci">int xBlockSize</div><div class="ttdef"><b>Definition</b> helper.h:84</div></div>
@@ -671,7 +671,7 @@ $(function(){initNavTree('breaks_8h_source.html','',''); });
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a href="dir_a71931f04cf03ee3498574a950d092ec.html">sgs</a></li><li class="navelem"><a href="dir_3a5ba067f72889851a23ac7f7111a850.html">stratify</a></li><li class="navelem"><a href="dir_ba535ff3f78ce6aa34ac1aa11b72aa4a.html">breaks</a></li><li class="navelem"><a href="breaks_8h.html">breaks.h</a></li>
+    <li class="navelem"><a href="dir_b2b908aa7d723e841b9e3e9e449c68c4.html">sgspy</a></li><li class="navelem"><a href="dir_1e0a00ae9ed7af33bd69c3c2e2624058.html">stratify</a></li><li class="navelem"><a href="dir_8d0a52a2c9ef2c113b1e8558f200417d.html">breaks</a></li><li class="navelem"><a href="breaks_8h.html">breaks.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.14.0 </li>
   </ul>
 </div>

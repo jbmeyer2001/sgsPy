@@ -1,4 +1,4 @@
 var strat_8py =
 [
-    [ "sgs.sample.strat.strat.strat", "group__user__strat.html#ga70b7b3b6b978ab85c9a5df9c7ec25fef", null ]
+    [ "sgspy.sample.strat.strat.strat", "group__user__strat.html#gada2204f7b879077755feb09ad3bbda4b", null ]
 ];

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.14.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>sgsPy: Overview</title>
+<title>sgsPy: sgsPy - Structurally Guided Sampling</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -89,33 +89,104 @@ $(function(){initNavTree('index.html','',''); });
 </div>
 
 <div><div class="header">
-  <div class="headertitle"><div class="title">Overview </div></div>
+  <div class="headertitle"><div class="title">sgsPy - Structurally Guided Sampling <img src="logo/sgspy_logo.svg" alt="" align="right" width="300" style="pointer-events: none;" class="inline"/> </div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p><a class="anchor" id="md_README"></a></p>
-<p>The sgsPy Python pacakge (Structurally Guided Sampling) is a package in development.</p>
-<p>While the package has not yet been officially distributed or released, beta testers are highly encouraged! See the lower sections of this readme for installation and running instructions.</p>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md1"></a>
-How to stay up to date?</h3>
-<p>Either by watching this repository, or if you would like to recieve more detailed information on larger updates, you may email me at jmeyer03 'at' mail.ubc.ca asking to join the sgs mailing list.</p>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md2"></a>
-How to contribute?</h3>
-<p>The easiest way to contribute is by logging any errors, or posting any ideas as an issue on this github repository.</p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md3"></a>
+<p>sgsPy is a toolbox package of stratification and sampling methods for use on ALS metrics, designed to be fast and efficient on very large raster images.</p>
+<ul>
+<li><b>Documentation:</b> <a href="https://jbmeyer2001.github.io/sgsPy/">https://jbmeyer2001.github.io/sgsPy/</a></li>
+<li><b>Source Code:</b> <a href="https://github.com/jbmeyer2001/sgsPy/tree/main/sgspy">https://github.com/jbmeyer2001/sgsPy/tree/main/sgspy</a></li>
+<li><b>Bug reports / Feature requests:</b> <a href="https://github.com/jbmeyer2001/sgsPy/issues">https://github.com/jbmeyer2001/sgsPy/issues</a></li>
+</ul>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md1"></a>
 Installation</h1>
+<p>sgsPy can be downloaded on either Windows or Linux from the Python Package Index (PyPI) with the following command:</p>
+<div class="fragment"><div class="line">pip install sgspy </div>
+</div><!-- fragment --><h1 class="doxsection"><a class="anchor" id="autotoc_md2"></a>
+Overview</h1>
+<p><span class="tt">sgsPy</span> is based on the widely-used <span class="tt">sgsR</span> package, intended originally to help develop representative ground sample networks using auxiliary information like ALS data. <span class="tt">sgsPy</span> takes much of the existing functionality of the R package and improves upon it's performance, allowing Python users to integrate structurally guided sampling approaches to their workflows.</p>
+<p>While the original intention for the package was to be used with ALS metrics, any form of raster data can be used in lieu of ALS metrics.</p>
+<p>If you encounter any bugs, unclear documentation, or have any feature ideas then please contribute by posting an issue. <a href="https://github.com/jbmeyer2001/sgsPy/issues">https://github.com/jbmeyer2001/sgsPy/issues</a></p>
+<p>The currently implemented functionality includes:</p><ul>
+<li><b>[calculating] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__pca.html">principal component analysis</a></b></li>
+<li><b>[sampling] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__clhs.html">conditioned latin hypercube sampling</a></b></li>
+<li><b>[sampling] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__srs.html">simple random sampling</a></b></li>
+<li><b>[sampling] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__strat.html">stratified random sampling</a></b></li>
+<li><b>[sampling] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__systematic.html">systematic sampling</a></b></li>
+<li><b>[stratification] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__breaks.html">breaks</a></b></li>
+<li><b>[stratification] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__map.html">map</a></b></li>
+<li><b>[stratification] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__poly.html">poly</a></b></li>
+<li><b>[stratification] <a href="https://jbmeyer2001.github.io/sgsPy/group__user__quantiles.html">quantiles</a></b></li>
+</ul>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md3"></a>
+Quickstart guide</h1>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md4"></a>
-NOTE: when distributed, the package will be available through PyPI and thus a quick 'pip install sgs'. For now, the package can be installed and built as follows depending on operating system.</h2>
+files</h2>
+<p>Some helpful files to get started with can be found in the <a href="https://github.com/jbmeyer2001/sgsPy/tree/main/tests/files">https://github.com/jbmeyer2001/sgsPy/tree/main/tests/files</a> folder. Specifically <a href="https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/mraster.tif">mraster.tif</a>, <a href="https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/inventory_polygons.shp">inventory_polygons.shp</a> along with its associated .dbf, .prj, and .shx files, <a href="https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/access.shp">access.shp</a> along with its associated .dbf, .prj, and .shx files, <a href="https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/existing.shp">existing.shp</a> along with its associated .dbf, .prj, and .shx files.</p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md5"></a>
-Linux:</h2>
+raster and vector data</h2>
+<p>The two data structures used by the stratification, sampling, and calculating methods are the <span class="tt">sgspy.SpatialRaster</span> [<a href="https://jbmeyer2001.github.io/sgsPy/classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster documentation</a>] and <span class="tt">sgspy.SpatialVector</span> [<a href="https://jbmeyer2001.github.io/sgsPy/classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector documentation</a>]. The beginning of any process using the sgspy package will involve creating one or more of these data structurse. This can be done by providing a file path. It can also be done by converting from a data structure used by popular geospatial packages.</p>
+<div class="fragment"><div class="line">import sgspy</div>
+<div class="line"> </div>
+<div class="line">#creating SpatialRaster and SpatialVector using file paths</div>
+<div class="line">rast = sgspy.SpatialRaster(&quot;mraster.tif&quot;)</div>
+<div class="line">vect = sgspy.SpatialVector(&quot;access.shp&quot;)</div>
+<div class="line"> </div>
+<div class="line">#plotting</div>
+<div class="line">rast.plot(band=0)</div>
+<div class="line">rast.plot(band=&quot;pzabove2&quot;)</div>
+<div class="line"> </div>
+<div class="line">#accessing underlying data as a numpy array</div>
+<div class="line">zq90_arr = rast.band(&quot;zq90&quot;)</div>
+<div class="line">first_band_arr = rast.band(0)</div>
+<div class="line"> </div>
+<div class="line">#to/from GDAL raster dataset</div>
+<div class="line">ds = gdal.Open(&quot;mraster.tif&quot;)</div>
+<div class="line">rast = sgspy.SpatialRaster.from_gdal(ds)</div>
+<div class="line">new_ds = rast.to_gdal()</div>
+<div class="line"> </div>
+<div class="line">#to/from rasterio dataset</div>
+<div class="line">ds = rasterio.open(&quot;mraster.tif&quot;)</div>
+<div class="line">rast = sgspy.SpatialRaster.from_rasterio(ds)</div>
+<div class="line">new_ds = rast.to_rasterio()</div>
+<div class="line"> </div>
+<div class="line">#to/from geopandas</div>
+<div class="line">gdf = gpd.read_file(&quot;inventory_polygons.shp&quot;)</div>
+<div class="line">vect = sgspy.SpatialVector.from_geopandas(gdf)</div>
+<div class="line">new_gdf = gpd.to_geopandas(vect)</div>
+</div><!-- fragment --><h2 class="doxsection"><a class="anchor" id="autotoc_md6"></a>
+example</h2>
+<p>More extensive examples on how to use each method is available in the <a href="https://jbmeyer2001.github.io/sgsPy/group__user.html">user documentation</a>. The following shows how one might use three of the different methods available in sgspy to create a new sampling network.</p>
+<div class="fragment"><div class="line">import sgspy</div>
+<div class="line"> </div>
+<div class="line"># create SpatialRaster object from desired tif file</div>
+<div class="line">rast = sgspy.SpatialRaster(&quot;mraster.tif&quot;)</div>
+<div class="line"> </div>
+<div class="line"># use principal component analysis for dimensionality reduction (to two components or raster layers)</div>
+<div class="line">pca = sgspy.calculate.pca(rast, num_comp=2)</div>
+<div class="line"> </div>
+<div class="line"># stratifiy the two components into 5 equally sized quantiles, and map the two layers into a single mapped output</div>
+<div class="line">srast = sgspy.stratify.quantiles(pca, num_strata={&quot;comp_1&quot;:5, &quot;comp2&quot;:5}, map=True)</div>
+<div class="line"> </div>
+<div class="line"># use stratified random sampling to sample each (of the 25 total) mapped strata proportional to it&#39;s number of pixels in the raster band</div>
+<div class="line"># additionaly, plot the output and write it to samples.shp</div>
+<div class="line">samples = sgspy.sample.strat(srast, band=&quot;map_strat&quot;, num_samples=200, num_strata=25, allocation=&quot;prop&quot;, plot=True, filename=&quot;samples.shp&quot;)</div>
+</div><!-- fragment --><h1 class="doxsection"><a class="anchor" id="autotoc_md7"></a>
+Funding</h1>
+<p>The development of the sgsPy package was funded by the Ontario Future Forests (KTTD 2B-2024) grant.</p>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md8"></a>
+Developer information</h1>
+<p>This section includes installation steps for both Windows and Linux, in addition to notes on running the code. See the <a href="https://jbmeyer2001.github.io/sgsPy/group__dev.html">Developer Documentation</a> for information on the underlying C++ implementations.</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md9"></a>
+Linux installation:</h2>
 <ol type="1">
 <li>Ensure you have Python with pip installed, and git.</li>
 <li>clone the repository with the following command: <div class="fragment"><div class="line">git clone https://github.com/jbmeyer2001/sgsPy.git</div>
 </div><!-- fragment --></li>
-<li>create a python virtual environment (required) <div class="fragment"><div class="line">python -m venv .venv</div>
+<li>create and activate a python virtual environment (<b>highly</b> recommended) <div class="fragment"><div class="line">python -m venv .venv</div>
+<div class="line">source ./.venv/bin/activate</div>
 </div><!-- fragment --></li>
-</ol>
-<p>the virtual environment then resides in the .venv folder, and can be activated with the following command: </p><div class="fragment"><div class="line">source ./.venv/bin/activate</div>
-</div><!-- fragment --><ol type="1">
 <li>install dependency requirements. If you do not already have these, the dependency installation will fail.<ul>
 <li>build-essential (if you don't already have a C++ compiler)</li>
 <li>pkg-config</li>
@@ -135,70 +206,38 @@ Linux:</h2>
 <div class="line">sudo apt install flex</div>
 <div class="line">sudo apt install patchelf</div>
 </div><!-- fragment --><ol type="1">
-<li>Run the following command to install remaining dependencies and build the project. <div class="fragment"><div class="line">./build.sh</div>
+<li>Run the following command to install and build project C++ dependencies. <div class="fragment"><div class="line">bash scripts/install.sh</div>
 </div><!-- fragment --></li>
-<li>If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow: <div class="fragment"><div class="line">pip install pytest</div>
+<li>Run the following command to build the project <div class="fragment"><div class="line">bash scripts/build.sh</div>
+</div><!-- fragment --></li>
+<li>If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follows: <div class="fragment"><div class="line">pip install pytest</div>
 <div class="line">pip install geopandas</div>
 </div><!-- fragment --></li>
 </ol>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md6"></a>
-Windows:</h2>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md10"></a>
+Windows installation:</h2>
+<p>NOTE: The commands given are for a Windows Powershell command prompt.</p>
 <ol type="1">
 <li>ensure you have Python with pip, git, and a C++ compiler.</li>
 <li>If you do not already have a C++ compiler, one can installed by installing the Microsoft Visual Studio IDE with C++ build tools.</li>
 <li>clone the repository with the following command. <div class="fragment"><div class="line">git clone https://github.com/jbmeyer2001/sgsPy.git</div>
 </div><!-- fragment --></li>
-<li>create a Python virtual environment (highly recommended). <div class="fragment"><div class="line">python -m venv .venv</div>
+<li>create and activate a Python virtual environment (<b>highly</b> recommended). <div class="fragment"><div class="line">python -m venv .venv</div>
+<div class="line">./.venv/Scripts/activate</div>
 </div><!-- fragment --></li>
-</ol>
-<p>if you are usign powershell, the activation command is shown below, the activation command for command prompt may be different. </p><div class="fragment"><div class="line">./.venv/Scripts/activate</div>
-</div><!-- fragment --><ol type="1">
-<li>Run the following commands to install remaining dependencies and build the project. <div class="fragment"><div class="line">./build</div>
+<li>Run the following command to install and build project C++ dependencies. remaining dependencies <div class="fragment"><div class="line">./scripts/install</div>
+</div><!-- fragment --></li>
+<li>Run the following command to build the project <div class="fragment"><div class="line">./scripts/build</div>
 </div><!-- fragment --></li>
 <li>If you intend to run the tests (using pytest), both pytest and geopandas are required and can be installed as follow: <div class="fragment"><div class="line">pip install pytest</div>
 <div class="line">pip install geopandas</div>
 </div><!-- fragment --></li>
 </ol>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md7"></a>
-How to run sgsPy</h1>
-<p>Tests may be ran by running the following command from within the folder containing this file. Both pytest and geopandas must be installed to run the tests. </p><div class="fragment"><div class="line">pytest</div>
-</div><!-- fragment --><p>To run sgs on your own data, the best resource to look to is the tests, which are in the 'tests/' directory. Additionally, preliminary documentation for each function is available within the Python file that contains that function. For example, for information on how to run quantiles stratification on a raster, look to the comments within 'sgs/stratify/quantiles/quantiles.py'. Alternatively, you may contact me directly at jmeyer03 'at' mail.ubc.ca .</p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md8"></a>
-Develoment progress</h1>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md9"></a>
-stratification:</h2>
-<ul>
-<li>breaks (including large raster processing)</li>
-<li>quantiles (including large raster processing)</li>
-<li>map (including large raster processing)</li>
-<li>poly (including large raster processing)</li>
-</ul>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md10"></a>
-sampling:</h2>
-<ul>
-<li>stratified sampling (including large raster processing)</li>
-<li>simple random sampling (including large raster processing)</li>
-<li>systematic sampling (including large raster processing)</li>
-<li>implement clhs sampling method (including large raster processing)</li>
-</ul>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md11"></a>
-calculating:</h2>
-<ul>
-<li>principal component analysis (including large raster processing)</li>
-</ul>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md12"></a>
-Projected future development priorities:</h2>
-<ul>
-<li>publish on PyPi</li>
-<li>implement strat_kmeans</li>
-<li>implement sample_ahels</li>
-<li>implement calc_representation</li>
-<li>various performance improvements</li>
-</ul>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md13"></a>
-Licensing</h1>
-<p>the sgsPy package is licensed under the MIT license. the LICENSE.txt file contains full licensing information for all dependencies. None of the licenses are copyleft licenses sush as GPL. However, it's worth noting that two dependencies, oneMKL and oneTBB, are licensed under the Intel Simplified Software License (ISSL). The ISSL allows use and redistribution, but is not technically open source since the code is propriatery. As such, this software cannot be distributed alongside other software which uses a copyleft license such as GPL, since oneMKL and oneTBB are not technically open source. </p>
-</div></div><!-- PageDoc -->
+How to run sgsPy:</h2>
+<p><b>NOTE: if you try to open a Python instance in the command prompt, or run a Python file residing in this project directory, there may be issues importing the project. This is because the folder name 'sgspy' is the same as the packages name, and the Python files rely on compiled binaries within the environment. This also means that the build command should be run before testing any new Python code written!</b></p>
+<p>Tests may be ran by running the following command from within the folder containing this file. Both pytest and geopandas must be installed to run the tests. </p><div class="fragment"><div class="line">pytest</div>
+</div><!-- fragment --> </div></div><!-- PageDoc -->
 <a href="doxygen_crawl.html"></a>
 </div><!-- contents -->
 </div><!-- doc-content -->

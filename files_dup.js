@@ -1,4 +1,4 @@
 var files_dup =
 [
-    [ "sgs", "dir_a71931f04cf03ee3498574a950d092ec.html", "dir_a71931f04cf03ee3498574a950d092ec" ]
+    [ "sgspy", "dir_b2b908aa7d723e841b9e3e9e449c68c4.html", "dir_b2b908aa7d723e841b9e3e9e449c68c4" ]
 ];

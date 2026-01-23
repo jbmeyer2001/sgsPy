@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.14.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>sgsPy: sgs/utils/raster.h Source File</title>
+<title>sgsPy: sgspy/utils/raster.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -156,7 +156,7 @@ $(function(){initNavTree('raster_8h_source.html','',''); });
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>                <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;raster too large to fit in memory.&quot;</span>);</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        }</div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span> </div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>        <span class="keywordflow">if</span> (<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(height) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(width) * size &gt; <a class="code hl_variable" href="namespacesgs.html#ad2193ceb21d596971666202360363cbc">GIGABYTE</a>) {</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>        <span class="keywordflow">if</span> (<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(height) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(width) * size &gt; <a class="code hl_define" href="raster_8h.html#a9f2ff53f161af0fcb8ca32bc6245493c">GIGABYTE</a>) {</div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>                <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;sgs does not allow allocation of a raster into memory for direct pixel access purposes if it would be larger than 1 gigabyte.&quot;</span>);</div>
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        }</div>
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
@@ -741,8 +741,8 @@ $(function(){initNavTree('raster_8h_source.html','',''); });
 <div class="ttc" id="agroup__helper_html_gad011bc1abc9e8fba449ca933ccec4898"><div class="ttname"><a href="group__helper.html#gad011bc1abc9e8fba449ca933ccec4898">sgs::helper::createVirtualDataset</a></div><div class="ttdeci">GDALDataset * createVirtualDataset(std::string driverName, int width, int height, double *geotransform, std::string projection)</div><div class="ttdef"><b>Definition</b> helper.h:284</div></div>
 <div class="ttc" id="ahelper_8h_html"><div class="ttname"><a href="helper_8h.html">helper.h</a></div></div>
 <div class="ttc" id="anamespacesgs_1_1raster_html"><div class="ttname"><a href="namespacesgs_1_1raster.html">sgs::raster</a></div><div class="ttdef"><b>Definition</b> raster.h:30</div></div>
-<div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
-<div class="ttc" id="anamespacesgs_html_ad2193ceb21d596971666202360363cbc"><div class="ttname"><a href="namespacesgs.html#ad2193ceb21d596971666202360363cbc">sgs.GIGABYTE</a></div><div class="ttdeci">int GIGABYTE</div><div class="ttdef"><b>Definition</b> __init__.py:45</div></div>
+<div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> pca.h:23</div></div>
+<div class="ttc" id="araster_8h_html_a9f2ff53f161af0fcb8ca32bc6245493c"><div class="ttname"><a href="raster_8h.html#a9f2ff53f161af0fcb8ca32bc6245493c">GIGABYTE</a></div><div class="ttdeci">#define GIGABYTE</div><div class="ttdef"><b>Definition</b> raster.h:27</div></div>
 <div class="ttc" id="astructsgs_1_1helper_1_1RasterBandMetaData_html"><div class="ttname"><a href="structsgs_1_1helper_1_1RasterBandMetaData.html">sgs::helper::RasterBandMetaData</a></div><div class="ttdef"><b>Definition</b> helper.h:77</div></div>
 <div class="ttc" id="astructsgs_1_1helper_1_1RasterBandMetaData_html_a76269b6394d498fa72c415a64bec5e8d"><div class="ttname"><a href="structsgs_1_1helper_1_1RasterBandMetaData.html#a76269b6394d498fa72c415a64bec5e8d">sgs::helper::RasterBandMetaData::p_buffer</a></div><div class="ttdeci">void * p_buffer</div><div class="ttdef"><b>Definition</b> helper.h:79</div></div>
 <div class="ttc" id="astructsgs_1_1helper_1_1RasterBandMetaData_html_abb1d2c0736db801f4643ee5fc733eeeb"><div class="ttname"><a href="structsgs_1_1helper_1_1RasterBandMetaData.html#abb1d2c0736db801f4643ee5fc733eeeb">sgs::helper::RasterBandMetaData::size</a></div><div class="ttdeci">size_t size</div><div class="ttdef"><b>Definition</b> helper.h:81</div></div>
@@ -755,7 +755,7 @@ $(function(){initNavTree('raster_8h_source.html','',''); });
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a href="dir_a71931f04cf03ee3498574a950d092ec.html">sgs</a></li><li class="navelem"><a href="dir_81e7df667c973a05b942438eadb08043.html">utils</a></li><li class="navelem"><a href="raster_8h.html">raster.h</a></li>
+    <li class="navelem"><a href="dir_b2b908aa7d723e841b9e3e9e449c68c4.html">sgspy</a></li><li class="navelem"><a href="dir_d50f924f8906ce015b2b07c987a75d81.html">utils</a></li><li class="navelem"><a href="raster_8h.html">raster.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.14.0 </li>
   </ul>
 </div>

@@ -1,4 +1,4 @@
 var group__user__breaks =
 [
-    [ "sgs.stratify.breaks.breaks.breaks", "group__user__breaks.html#ga49ede3c4dc929ef0f26c98c6d8bf6411", null ]
+    [ "sgspy.stratify.breaks.breaks.breaks", "group__user__breaks.html#gaf31317624567833fe09d31e001fca189", null ]
 ];

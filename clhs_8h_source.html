@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.14.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>sgsPy: sgs/sample/clhs/clhs.h Source File</title>
+<title>sgsPy: sgspy/sample/clhs/clhs.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -134,11 +134,11 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span><span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="keyword">inline</span> <span class="keywordtype">size_t</span> </div>
 <div class="foldopen" id="foldopen00057" data-start="{" data-end="}">
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno"><a class="line" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">   57</a></span><a class="code hl_function" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">getQuantile</a>(T val, std::vector&lt;T&gt;&amp; <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>) {</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keyword">auto</span> it = std::lower_bound(<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>.begin(), <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>.end(), val);</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keywordflow">return</span> (it == <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>.end()) ?</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>.size() :</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>        std::distance(<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>.begin(), it);</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno"><a class="line" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">   57</a></span><a class="code hl_function" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">getQuantile</a>(T val, std::vector&lt;T&gt;&amp; <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>) {</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keyword">auto</span> it = std::lower_bound(<a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>.begin(), <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>.end(), val);</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keywordflow">return</span> (it == <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>.end()) ?</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>.size() :</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>        std::distance(<a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>.begin(), it);</div>
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>}</div>
 </div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span></div>
@@ -251,8 +251,8 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00241" name="l00241"></a><span class="lineno"><a class="line" href="classsgs_1_1clhs_1_1CLHSDataManager.html#aad37b5113bc8816b81ba136c68462e90">  241</a></span>    <a class="code hl_function" href="classsgs_1_1clhs_1_1CLHSDataManager.html#aad37b5113bc8816b81ba136c68462e90">quantileObjectiveFunc</a>(std::vector&lt;std::vector&lt;int&gt;&gt;&amp; sampleCountPerQuantile) {</div>
 <div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        <span class="keywordtype">int</span> retval = 0;</div>
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span> </div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> std::vector&lt;int&gt;&amp; <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a> : sampleCountPerQuantile) {</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keywordtype">int</span>&amp; count : <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>) {</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> std::vector&lt;int&gt;&amp; <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a> : sampleCountPerQuantile) {</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keywordtype">int</span>&amp; count : <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>) {</div>
 <div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>                retval += std::abs(count - 1);</div>
 <div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>            }</div>
 <div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>        }</div>
@@ -287,7 +287,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <a class="code hl_struct" href="structsgs_1_1access_1_1Access.html">access::Access</a>&amp; <a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>,</div>
 <div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <a class="code hl_class" href="classsgs_1_1helper_1_1RandValController.html">helper::RandValController</a>&amp; rand,</div>
 <div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    GDALDataType type,</div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    std::vector&lt;std::vector&lt;T&gt;&gt;&amp; <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>,</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    std::vector&lt;std::vector&lt;T&gt;&gt;&amp; <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>,</div>
 <div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="keywordtype">size_t</span> size,</div>
 <div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="keywordtype">int</span> width,</div>
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>    <span class="keywordtype">int</span> height,</div>
@@ -295,11 +295,11 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="keywordtype">int</span> nSamp)</div>
 <div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>{</div>
 <div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>    std::vector&lt;std::vector&lt;T&gt;&gt; probabilities(count);</div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>.resize(count);</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>.resize(count);</div>
 <div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span> </div>
 <div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; count; i++) {</div>
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>        probabilities[i].resize(nSamp - 1);</div>
-<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>        <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>[i].resize(nSamp - 1);</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>        <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>[i].resize(nSamp - 1);</div>
 <div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span> </div>
 <div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> j = 0; j &lt; nSamp - 1; j++) {</div>
 <div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>            probabilities[i][j] = <span class="keyword">static_cast&lt;</span>T<span class="keyword">&gt;</span>(j + 1) / <span class="keyword">static_cast&lt;</span>T<span class="keyword">&gt;</span>(nSamp);</div>
@@ -332,7 +332,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>    <span class="comment">//create tasks for quantile streaming calculation with MKL</span></div>
 <div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    std::vector&lt;VSLSSTaskPtr&gt; quantileTasks(count);</div>
 <div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    <span class="keywordtype">int</span> status;</div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    MKL_INT quant_order_n = <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>[0].size();</div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    MKL_INT quant_order_n = <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>[0].size();</div>
 <div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>    MKL_INT p = 1;</div>
 <div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    MKL_INT n = xBlockSize * yBlockSize;</div>
 <div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>    MKL_INT nparams = VSL_SS_SQUANTS_ZW_PARAMS_N;</div>
@@ -455,7 +455,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>                            quantileTasks[i],</div>
 <div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>                            &amp;quant_order_n,</div>
 <div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>                            <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">double</span> *<span class="keyword">&gt;</span>(probabilities[i].data()),</div>
-<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>                            <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">double</span> *<span class="keyword">&gt;</span>(<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>[i].data()),</div>
+<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>                            <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">double</span> *<span class="keyword">&gt;</span>(<a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>[i].data()),</div>
 <div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>                            &amp;nparams,</div>
 <div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>                            &amp;deps</div>
 <div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>                        );</div>
@@ -478,7 +478,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>                            quantileTasks[i],</div>
 <div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>                            &amp;quant_order_n,</div>
 <div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>                            <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">float</span> *<span class="keyword">&gt;</span>(probabilities[i].data()),</div>
-<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>                            <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">float</span> *<span class="keyword">&gt;</span>(<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>[i].data()),</div>
+<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>                            <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">float</span> *<span class="keyword">&gt;</span>(<a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>[i].data()),</div>
 <div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>                            &amp;nparams,</div>
 <div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>                            &amp;seps</div>
 <div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>                        );</div>
@@ -534,7 +534,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span><span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;</div>
 <div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span><span class="keyword">inline</span> <span class="keywordtype">void</span></div>
 <div class="foldopen" id="foldopen00629" data-start="{" data-end="}">
-<div class="line"><a id="l00629" name="l00629"></a><span class="lineno"><a class="line" href="group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a">  629</a></span><a class="code hl_function" href="group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a">selectSamples</a>(std::vector&lt;std::vector&lt;T&gt;&gt;&amp; <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>,</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno"><a class="line" href="group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a">  629</a></span><a class="code hl_function" href="group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a">selectSamples</a>(std::vector&lt;std::vector&lt;T&gt;&gt;&amp; <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>,</div>
 <div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>          <a class="code hl_class" href="classsgs_1_1clhs_1_1CLHSDataManager.html">CLHSDataManager&lt;T&gt;</a>&amp; <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>,</div>
 <div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>          xso::xoshiro_4x64_plus&amp; rng,</div>
 <div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>          <span class="keywordtype">int</span> iterations,</div>
@@ -590,7 +590,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>                T val = p.<a class="code hl_variable" href="structsgs_1_1clhs_1_1Point.html#a4753f62884a2da11a28bac30b215a7f3">p_features</a>[f];</div>
 <div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>                features[fi + f] = val;</div>
 <div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span> </div>
-<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>                <span class="keywordtype">int</span> q = <a class="code hl_function" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">getQuantile&lt;T&gt;</a>(val, <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>[f]);</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>                <span class="keywordtype">int</span> q = <a class="code hl_function" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">getQuantile&lt;T&gt;</a>(val, <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>[f]);</div>
 <div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>                sampleCountPerQuantile[f][q]++;</div>
 <div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>                samplesPerQuantile[f][q].insert(index);</div>
 <div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>            }</div>
@@ -675,11 +675,11 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>        std::vector&lt;int&gt; oldq(nFeat);</div>
 <div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>        std::vector&lt;int&gt; newq(nFeat);</div>
 <div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> f = 0; f &lt; nFeat; f++) {</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>            <span class="keywordtype">int</span> q = <a class="code hl_function" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">getQuantile</a>(oldf[f], <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>[f]);</div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>            <span class="keywordtype">int</span> q = <a class="code hl_function" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">getQuantile</a>(oldf[f], <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>[f]);</div>
 <div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>            oldq[f] = q;</div>
 <div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>            sampleCountPerQuantile[f][q]--;</div>
 <div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span> </div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>            q = <a class="code hl_function" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">getQuantile</a>(p.<a class="code hl_variable" href="structsgs_1_1clhs_1_1Point.html#a4753f62884a2da11a28bac30b215a7f3">p_features</a>[f], <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>[f]);</div>
+<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>            q = <a class="code hl_function" href="group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb">getQuantile</a>(p.<a class="code hl_variable" href="structsgs_1_1clhs_1_1Point.html#a4753f62884a2da11a28bac30b215a7f3">p_features</a>[f], <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>[f]);</div>
 <div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>            newq[f] = q;</div>
 <div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>            sampleCountPerQuantile[f][q]++;</div>
 <div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>        }</div>
@@ -842,28 +842,28 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>    }</div>
 <div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span> </div>
 <div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>    <span class="keywordflow">if</span> (type == GDT_Float64) {  </div>
-<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>        std::vector&lt;std::vector&lt;double&gt;&gt; <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>;</div>
+<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>        std::vector&lt;std::vector&lt;double&gt;&gt; <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>;</div>
 <div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span>        </div>
 <div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>        <span class="comment">//create instance of data management class</span></div>
 <div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>        <a class="code hl_class" href="classsgs_1_1clhs_1_1CLHSDataManager.html">CLHSDataManager&lt;double&gt;</a> <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>(nFeat, nSamp, &amp;rng);</div>
 <div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span> </div>
 <div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>        <span class="comment">//read raster, calculating quantiles, correlation matrix, and adding points to sample from.</span></div>
-<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>        <a class="code hl_function" href="group__clhs.html#ga5578eb2a134133eb8289e36da694f172">readRaster&lt;double&gt;</a>(bands, <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>, <a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>, rand, type, <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>, <span class="keyword">sizeof</span>(<span class="keywordtype">double</span>), width, height, nFeat, nSamp);</div>
+<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>        <a class="code hl_function" href="group__clhs.html#ga5578eb2a134133eb8289e36da694f172">readRaster&lt;double&gt;</a>(bands, <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>, <a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>, rand, type, <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>, <span class="keyword">sizeof</span>(<span class="keywordtype">double</span>), width, height, nFeat, nSamp);</div>
 <div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span> </div>
 <div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>        <span class="comment">//select samples and add them to output layer</span></div>
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>        <a class="code hl_function" href="group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a">selectSamples&lt;double&gt;</a>(<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>, <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);</div>
+<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>        <a class="code hl_function" href="group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a">selectSamples&lt;double&gt;</a>(<a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>, <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);</div>
 <div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>    }</div>
 <div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>    <span class="keywordflow">else</span> { <span class="comment">//type == GDT_Float32    </span></div>
-<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>        std::vector&lt;std::vector&lt;float&gt;&gt; <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>;</div>
+<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>        std::vector&lt;std::vector&lt;float&gt;&gt; <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>;</div>
 <div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span> </div>
 <div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>        <span class="comment">//create instance of data management class</span></div>
 <div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>        <a class="code hl_class" href="classsgs_1_1clhs_1_1CLHSDataManager.html">CLHSDataManager&lt;float&gt;</a> <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>(nFeat, nSamp, &amp;rng);</div>
 <div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span> </div>
 <div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>        <span class="comment">//read raster, calculating quantiles, correlation matrix, and adding points to sample from.</span></div>
-<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>        <a class="code hl_function" href="group__clhs.html#ga5578eb2a134133eb8289e36da694f172">readRaster&lt;float&gt;</a>(bands, <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>, <a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>, rand, type, <a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>, <span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), width, height, nFeat, nSamp);</div>
+<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>        <a class="code hl_function" href="group__clhs.html#ga5578eb2a134133eb8289e36da694f172">readRaster&lt;float&gt;</a>(bands, <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>, <a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>, rand, type, <a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>, <span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), width, height, nFeat, nSamp);</div>
 <div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span> </div>
 <div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>        <span class="comment">//select samples and add them to output layer</span></div>
-<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>        <a class="code hl_function" href="group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a">selectSamples&lt;float&gt;</a>(<a class="code hl_namespace" href="namespacesgs_1_1stratify_1_1quantiles.html">quantiles</a>, <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);</div>
+<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>        <a class="code hl_function" href="group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a">selectSamples&lt;float&gt;</a>(<a class="code hl_namespace" href="namespacesgs_1_1quantiles.html">quantiles</a>, <a class="code hl_function" href="group__clhs.html#ga99b0ad3266f6145d1ebef60b799c2c1c">clhs</a>, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);</div>
 <div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>    }</div>
 <div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span> </div>
 <div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span>    <span class="keywordflow">if</span> (filename != <span class="stringliteral">&quot;&quot;</span>) {</div>
@@ -917,8 +917,8 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="ttc" id="agroup__helper_html_gad9b163a0d424fce8f9d2c5744ac48754"><div class="ttname"><a href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">sgs::helper::addPoint</a></div><div class="ttdeci">void addPoint(OGRPoint *p_point, OGRLayer *p_layer)</div><div class="ttdef"><b>Definition</b> helper.h:690</div></div>
 <div class="ttc" id="ahelper_8h_html"><div class="ttname"><a href="helper_8h.html">helper.h</a></div></div>
 <div class="ttc" id="anamespacesgs_1_1access_html"><div class="ttname"><a href="namespacesgs_1_1access.html">sgs::access</a></div><div class="ttdef"><b>Definition</b> access.h:23</div></div>
-<div class="ttc" id="anamespacesgs_1_1stratify_1_1quantiles_html"><div class="ttname"><a href="namespacesgs_1_1stratify_1_1quantiles.html">sgs.stratify.quantiles</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
-<div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
+<div class="ttc" id="anamespacesgs_1_1quantiles_html"><div class="ttname"><a href="namespacesgs_1_1quantiles.html">sgs::quantiles</a></div><div class="ttdef"><b>Definition</b> quantiles.h:24</div></div>
+<div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> pca.h:23</div></div>
 <div class="ttc" id="araster_8h_html"><div class="ttname"><a href="raster_8h.html">raster.h</a></div></div>
 <div class="ttc" id="astructsgs_1_1access_1_1Access_html"><div class="ttname"><a href="structsgs_1_1access_1_1Access.html">sgs::access::Access</a></div><div class="ttdef"><b>Definition</b> access.h:30</div></div>
 <div class="ttc" id="astructsgs_1_1clhs_1_1Point_html"><div class="ttname"><a href="structsgs_1_1clhs_1_1Point.html">sgs::clhs::Point</a></div><div class="ttdef"><b>Definition</b> clhs.h:40</div></div>
@@ -933,7 +933,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a href="dir_a71931f04cf03ee3498574a950d092ec.html">sgs</a></li><li class="navelem"><a href="dir_fe8fbde3c1b8a8d3ccc4df51255a970c.html">sample</a></li><li class="navelem"><a href="dir_3801239448335a393e3aedbae1fbff01.html">clhs</a></li><li class="navelem"><a href="clhs_8h.html">clhs.h</a></li>
+    <li class="navelem"><a href="dir_b2b908aa7d723e841b9e3e9e449c68c4.html">sgspy</a></li><li class="navelem"><a href="dir_8ce7f2122c34aeab9f2871e0dd558a6b.html">sample</a></li><li class="navelem"><a href="dir_85de1d23048db2fa88dd01b0bc296156.html">clhs</a></li><li class="navelem"><a href="clhs_8h.html">clhs.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.14.0 </li>
   </ul>
 </div>

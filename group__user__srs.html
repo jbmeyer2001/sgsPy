@@ -95,21 +95,21 @@ $(function(){initNavTree('group__user__srs.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:gaded1eed9cea3780769496585eac946a7" id="r_gaded1eed9cea3780769496585eac946a7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaded1eed9cea3780769496585eac946a7">sgs.sample.srs.srs.srs</a> (<a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_samples, [int|float] mindist=0, Optional[<a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] existing=None, Optional[<a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, str filename='')</td></tr>
-<tr class="memdesc:gaded1eed9cea3780769496585eac946a7"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts simple random sampling on the raster given.  <br /></td></tr>
+<tr class="memitem:gacf590a35ba38671607918a88d3194f17" id="r_gacf590a35ba38671607918a88d3194f17"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gacf590a35ba38671607918a88d3194f17">sgspy.sample.srs.srs.srs</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_samples, [int|float] mindist=0, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] existing=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, str filename='')</td></tr>
+<tr class="memdesc:gacf590a35ba38671607918a88d3194f17"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts simple random sampling on the raster given.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="gaded1eed9cea3780769496585eac946a7" name="gaded1eed9cea3780769496585eac946a7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaded1eed9cea3780769496585eac946a7">&#9670;&#160;</a></span>srs()</h2>
+<a id="gacf590a35ba38671607918a88d3194f17" name="gacf590a35ba38671607918a88d3194f17"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gacf590a35ba38671607918a88d3194f17">&#9670;&#160;</a></span>srs()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgs.sample.srs.srs.srs </td>
+          <td class="memname">sgspy.sample.srs.srs.srs </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -124,12 +124,12 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Optional[<a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] </td>          <td class="paramname"><span class="paramname"><em>existing</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
+          <td class="paramtype">Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] </td>          <td class="paramname"><span class="paramname"><em>existing</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Optional[<a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] </td>          <td class="paramname"><span class="paramname"><em>access</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
+          <td class="paramtype">Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] </td>          <td class="paramname"><span class="paramname"><em>access</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -163,23 +163,24 @@ Functions</h2></td></tr>
 <p>Sample points are randomly selected from data pixels (can't be nodata). All sample points are at least mindist distance away from eachother. If unable to get the full number of sample points, a message is printed.</p>
 <p>An access vector of LineString or MultiLineString type can be provided. buff_outer specifies the buffer distance around the geometry which is allowed to be included in the sampling, buff_inner specifies the buffer distance around the geometry which is not allowed to be included in the sampling. buff_outer must be larger than buff_inner. For a multi layer vector, layer_name must be specified.</p>
 <p>A vector containing existing sample points can be provided. If this is the case then all of the points in the existing sample are automatically added and random samples are chosen as required until num_samples number of samples are chosen.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md20"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md18"></a>
 Examples</h2>
-<p>rast = sgs.SpatialRaster("raster.tif") <br  />
-samples = <a class="el" href="namespacesgs_1_1sample_1_1srs.html">sgs.sample.srs</a>(rast, num_samples=250)</p>
-<p>rast = sgs.SpatialRaster("raster.tif") samples = <a class="el" href="namespacesgs_1_1sample_1_1srs.html">sgs.sample.srs</a>(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp") <br  />
- rast = sgs.SpatialRaster("raster.tif") <br  />
-access = sgs.SpatialVector("access_network.shp") <br  />
-samples = <a class="el" href="namespacesgs_1_1sample_1_1srs.html">sgs.sample.srs</a>(rast, num_samples=200, mindist=100, access=access, buff_outer=300)</p>
-<p>rast = sgs.SpatialRaster("raster.tif") <br  />
-access = sgs.SpatialVector("access_network.shp") <br  />
-samples = <a class="el" href="namespacesgs_1_1sample_1_1srs.html">sgs.sample.srs</a>(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)</p>
-<p>rast = sgs.SpatialRaster("raster.tif") <br  />
-existing = sgs.SpatialVector("existing_samples.shp") <br  />
-samples = <a class="el" href="namespacesgs_1_1sample_1_1srs.html">sgs.sample.srs</a>(rast, num_samples=200, existing=existing)</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md21"></a>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1srs.html">sgspy.sample.srs</a>(rast, num_samples=250)</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1srs.html">sgspy.sample.srs</a>(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp") <br  />
+ rast = sgspy.SpatialRaster("raster.tif") <br  />
+access = sgspy.SpatialVector("access_network.shp") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1srs.html">sgspy.sample.srs</a>(rast, num_samples=200, mindist=100, access=access, buff_outer=300)</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+access = sgspy.SpatialVector("access_network.shp") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1srs.html">sgspy.sample.srs</a>(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+existing = sgspy.SpatialVector("existing_samples.shp") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1srs.html">sgspy.sample.srs</a>(rast, num_samples=200, existing=existing)</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md19"></a>
 Parameters</h2>
-<p>rast : <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
+<p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  raster data structure containing the raster to sample <br  />
  <br  />
 num_samples : int <br  />
@@ -188,10 +189,10 @@ num_samples : int <br  />
 mindist : float <br  />
  the minimum distance each sample point must be from each other <br  />
  <br  />
-existing : <a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
+existing : <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
  a vector specifying existing sample points <br  />
  <br  />
-access : <a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
+access : <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
  a vector specifying access network <br  />
  <br  />
 layer_name : str <br  />
@@ -210,9 +211,9 @@ filename : str <br  />
  the filename to write to, or '' if file should not be written <br  />
  <br  />
 </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md22"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md20"></a>
 Returns</h2>
-<p>a <a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> object containing point geometries of sample locations </p>
+<p>a <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> object containing point geometries of sample locations </p>
 
 </div>
 </div>

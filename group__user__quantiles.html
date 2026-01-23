@@ -95,21 +95,21 @@ $(function(){initNavTree('group__user__quantiles.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga195765631e05107d1fdb43cee85b83db" id="r_ga195765631e05107d1fdb43cee85b83db"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga195765631e05107d1fdb43cee85b83db">sgs.stratify.quantiles.quantiles.quantiles</a> (<a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int|list[float]|list[int|list[float]]|dict[str, int|list[float]] num_strata, bool map=False, str filename='', int thread_count=8, dict driver_options=None, float eps=.001)</td></tr>
-<tr class="memdesc:ga195765631e05107d1fdb43cee85b83db"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts stratification on the raster given by generating quantile probabilities according to the 'num_strata' argument given by the user.  <br /></td></tr>
+<tr class="memitem:ga98c2e3dad92ceba628f5788a477c8809" id="r_ga98c2e3dad92ceba628f5788a477c8809"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga98c2e3dad92ceba628f5788a477c8809">sgspy.stratify.quantiles.quantiles.quantiles</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int|list[float]|list[int|list[float]]|dict[str, int|list[float]] num_strata, bool map=False, str filename='', int thread_count=8, dict driver_options=None, float eps=.001)</td></tr>
+<tr class="memdesc:ga98c2e3dad92ceba628f5788a477c8809"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts stratification on the raster given by generating quantile probabilities according to the 'num_strata' argument given by the user.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="ga195765631e05107d1fdb43cee85b83db" name="ga195765631e05107d1fdb43cee85b83db"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga195765631e05107d1fdb43cee85b83db">&#9670;&#160;</a></span>quantiles()</h2>
+<a id="ga98c2e3dad92ceba628f5788a477c8809" name="ga98c2e3dad92ceba628f5788a477c8809"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga98c2e3dad92ceba628f5788a477c8809">&#9670;&#160;</a></span>quantiles()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgs.stratify.quantiles.quantiles.quantiles </td>
+          <td class="memname">sgspy.stratify.quantiles.quantiles.quantiles </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -152,19 +152,19 @@ Functions</h2></td></tr>
 <p>The thread_count parameter specifies the number of threads which this function will utilize the the case where the raster is large and may not fit in memory. If the full raster can fit in memory and does not need to be processed in blocks, this argument will be ignored. The default is 8 threads, although the optimal number will depend significantly on the hardware being used and may be more or less than 8.</p>
 <p>the driver_options parameter is used to specify creation options for the output raster. See options for the Gtiff driver here: <a href="https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options">https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options</a> The keys in the driver_options dict must be strings, the values are converted to string. THe options must be valid for the driver corresponding to the filename, and if filename is not given they must be valid for the GTiff format, as that is the format used to store temporary raster files. Note that if this parameter is given, but filename is not and the raster fits entirely in memory, the driver_options parameter will be ignored.</p>
 <p>the eps parameter is used only if batch processing is used to calculate the quantiles for a raster. Quantile streaming algorithms cannot be perfectly accurate, as this would necessitate having the entire raster in memory at once. A good approximation can be made, and the error is controlled by this epsilon (eps) value. The Quantile streaming method is the method introduced by Zhang et al. and utilized by MKL: <a href="https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf">https://web.cs.ucla.edu/~weiwang/paper/SSDBM07_2.pdf</a> <a href="https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html">https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-summary-statistics-notes/2021-1/computing-quantiles-with-vsl-ss-method-squants-zw.html</a></p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md38"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md36"></a>
 Examples</h2>
-<p>rast = sgs.SpatialRaster('rast.tif') <br  />
-srast = <a class="el" href="namespacesgs_1_1stratify_1_1quantiles.html">sgs.stratify.quantiles</a>(rast, num_strata=5)</p>
-<p>srast = sgs.SpatialRaster('rast.tif') <br  />
-srast = <a class="el" href="namespacesgs_1_1stratify_1_1quantiles.html">sgs.stratify.quantiles</a>(rast, num_strata=[.1, .2, .3, .5, .7], filename="srast.tif")</p>
-<p>rast = sgs.SpatialRaster('multi_band_rast.tif') <br  />
-srast = <a class="el" href="namespacesgs_1_1stratify_1_1quantiles.html">sgs.stratify.quantiles</a>(rast, num_strata=[5, 5, [.5, .75]], map=True)</p>
-<p>rast = sgs.SpatialRaster('multi_band_rast.tif') <br  />
-srast = <a class="el" href="namespacesgs_1_1stratify_1_1quantiles.html">sgs.stratify.quantiles</a>(rast, num_strata={'zq90': 5})</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md39"></a>
+<p>rast = sgspy.SpatialRaster('rast.tif') <br  />
+srast = <a class="el" href="namespacesgspy_1_1stratify_1_1quantiles.html">sgspy.stratify.quantiles</a>(rast, num_strata=5)</p>
+<p>rast = sgspy.SpatialRaster('rast.tif') <br  />
+srast = <a class="el" href="namespacesgspy_1_1stratify_1_1quantiles.html">sgspy.stratify.quantiles</a>(rast, num_strata=[.1, .2, .3, .5, .7], filename="srast.tif")</p>
+<p>rast = sgspy.SpatialRaster('multi_band_rast.tif') <br  />
+srast = <a class="el" href="namespacesgspy_1_1stratify_1_1quantiles.html">sgspy.stratify.quantiles</a>(rast, num_strata=[5, 5, [.5, .75]], map=True)</p>
+<p>rast = sgspy.SpatialRaster('multi_band_rast.tif') <br  />
+srast = <a class="el" href="namespacesgspy_1_1stratify_1_1quantiles.html">sgspy.stratify.quantiles</a>(rast, num_strata={'zq90': 5})</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md37"></a>
 Parameters</h2>
-<p>rast : <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
+<p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  raster data structure containing the raster to stratify <br  />
  <br  />
 num_strata : int | list[float] | list[int|list[float]] | dict[str,int|list[float]] <br  />
@@ -186,9 +186,9 @@ eps : float <br  />
  the epsilon value, controlling the error of stream-processed quantiles <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md40"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md38"></a>
 Returns</h2>
-<p>a <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing stratified raster bands. </p>
+<p>a <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing stratified raster bands. </p>
 
 </div>
 </div>

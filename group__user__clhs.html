@@ -95,21 +95,21 @@ $(function(){initNavTree('group__user__clhs.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga5e8763d734e0ec1a8dcdfaa430db86ee" id="r_ga5e8763d734e0ec1a8dcdfaa430db86ee"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga5e8763d734e0ec1a8dcdfaa430db86ee">sgs.sample.clhs.clhs.clhs</a> (<a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_samples, int iterations=10000, Optional[<a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, str filename='')</td></tr>
-<tr class="memdesc:ga5e8763d734e0ec1a8dcdfaa430db86ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts Conditioned Latin Hypercube Sampling, see the following article for an in depth description of the method itself:  <br /></td></tr>
+<tr class="memitem:ga8a941cf43d3d3eb4dc291b15755a414b" id="r_ga8a941cf43d3d3eb4dc291b15755a414b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8a941cf43d3d3eb4dc291b15755a414b">sgspy.sample.clhs.clhs.clhs</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_samples, int iterations=10000, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, str filename='')</td></tr>
+<tr class="memdesc:ga8a941cf43d3d3eb4dc291b15755a414b"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts Conditioned Latin Hypercube Sampling, see the following article for an in depth description of the method itself:  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="ga5e8763d734e0ec1a8dcdfaa430db86ee" name="ga5e8763d734e0ec1a8dcdfaa430db86ee"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga5e8763d734e0ec1a8dcdfaa430db86ee">&#9670;&#160;</a></span>clhs()</h2>
+<a id="ga8a941cf43d3d3eb4dc291b15755a414b" name="ga8a941cf43d3d3eb4dc291b15755a414b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga8a941cf43d3d3eb4dc291b15755a414b">&#9670;&#160;</a></span>clhs()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgs.sample.clhs.clhs.clhs </td>
+          <td class="memname">sgspy.sample.clhs.clhs.clhs </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -124,7 +124,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Optional[<a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] </td>          <td class="paramname"><span class="paramname"><em>access</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
+          <td class="paramtype">Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] </td>          <td class="paramname"><span class="paramname"><em>access</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -158,17 +158,22 @@ Functions</h2></td></tr>
 <p>Minasny, B. and McBratney, A.B. 2006. A conditioned Latin hypercube method for sampling in the presence of ancillary information. Computers and Geosciences, 32:1378-1388.</p>
 <p>The number of output samples is decided by the 'num_samples' parameter. The 'iterations' parameter indicates the number of iterations the simulated annealing portion of the clhs algorithm will undertake in the case where a perfect latin hypercube is not found. A higher number of iterations may result in a more representative sample, although the standard value recommended by Misany and McBratney is 10000.</p>
 <p>The access parameter may be given to restrict the areas where sampling may occur. The algorithm will still attempt to find a latin hypercube representative across the entire feature space, not just the accessible pixels. The access vector may contain geometries of type LineString or MultiLineString. buff_outer specifies the buffer distance around the geometry which is allowed to be included in the sampling. buff_inner specifies the buffer distance around the geometry which is not allwoed to be included in the sampling. buff_outer must be larger than buff_inner. For a multi layer vector, layer_name must be specified.</p>
-<p>The output is an object of type sgs.SpatialVector which contains the chosen sample points.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md17"></a>
+<p>The output is an object of type sgspy.SpatialVector which contains the chosen sample points.</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md15"></a>
 Examples</h2>
-<p>rast = sgs.SpatialRaster("raster.tif") samples = <a class="el" href="namespacesgs_1_1sample_1_1clhs.html">sgs.sample.clhs</a>(rast, num_samples=250) <br  />
- rast = sgs.SpatialRaster("raster.tif") samples = <a class="el" href="namespacesgs_1_1sample_1_1clhs.html">sgs.sample.clhs</a>(rast, num_samples=250, plot=True, filename="clhs_samples.shp") <br  />
- rast = sgs.SpatialRaster("raster.tif") access = sgs.SpatialVector("access_network.shp") samples = <a class="el" href="namespacesgs_1_1sample_1_1clhs.html">sgs.sample.clhs</a>(rast, num_samples=200, access=access, buff_outer=300) <br  />
- rast = sgs.SpatialRaster("raster.tif") access = sgs.SpatialVector("access_network.shp") samples = <a class="el" href="namespacesgs_1_1sample_1_1clhs.html">sgs.sample.clhs</a>(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300) <br  />
- </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md18"></a>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1clhs.html">sgspy.sample.clhs</a>(rast, num_samples=250)</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1clhs.html">sgspy.sample.clhs</a>(rast, num_samples=250, plot=True, filename="clhs_samples.shp")</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+access = sgspy.SpatialVector("access_network.shp") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1clhs.html">sgspy.sample.clhs</a>(rast, num_samples=200, access=access, buff_outer=300)</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+access = sgspy.SpatialVector("access_network.shp") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1clhs.html">sgspy.sample.clhs</a>(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md16"></a>
 Parameters</h2>
-<p>rast : <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
+<p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  raster data structure containing input raster bands <br  />
  <br  />
 num_samples : int <br  />
@@ -177,7 +182,7 @@ num_samples : int <br  />
 iterations : int <br  />
  the number of iterations in the clhs algorithms <br  />
  <br  />
-access : <a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
+access : <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
  a vector specifying an access network <br  />
  <br  />
 layer_name : str <br  />
@@ -196,9 +201,9 @@ filename : str <br  />
  the filename to write to, or '' if file should not be written <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md19"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md17"></a>
 Returns</h2>
-<p>a <a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> object containing point geometries of sample locations </p>
+<p>a <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> object containing point geometries of sample locations </p>
 
 </div>
 </div>

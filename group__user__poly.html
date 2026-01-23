@@ -95,26 +95,26 @@ $(function(){initNavTree('group__user__poly.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:gae6aaba8128fa5203f2af8932e46e6441" id="r_gae6aaba8128fa5203f2af8932e46e6441"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae6aaba8128fa5203f2af8932e46e6441">sgs.stratify.poly.poly.poly</a> (<a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, <a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a> vect, str layer_name, str attribute, list[str|list[str]] features, str filename='', dict driver_options=None)</td></tr>
-<tr class="memdesc:gae6aaba8128fa5203f2af8932e46e6441"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts stratification on a polygon by rasterizing a polygon layer, and using its values to determine stratifications.  <br /></td></tr>
+<tr class="memitem:gae855f7aeb0caa30f6fd432a7435c1045" id="r_gae855f7aeb0caa30f6fd432a7435c1045"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae855f7aeb0caa30f6fd432a7435c1045">sgspy.stratify.poly.poly.poly</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a> vect, str layer_name, str attribute, list[str|list[str]] features, str filename='', dict driver_options=None)</td></tr>
+<tr class="memdesc:gae855f7aeb0caa30f6fd432a7435c1045"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts stratification on a vector dataset by rasterizing a polygon layer, and using its attribute values to determine stratifications.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="gae6aaba8128fa5203f2af8932e46e6441" name="gae6aaba8128fa5203f2af8932e46e6441"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gae6aaba8128fa5203f2af8932e46e6441">&#9670;&#160;</a></span>poly()</h2>
+<a id="gae855f7aeb0caa30f6fd432a7435c1045" name="gae855f7aeb0caa30f6fd432a7435c1045"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gae855f7aeb0caa30f6fd432a7435c1045">&#9670;&#160;</a></span>poly()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgs.stratify.poly.poly.poly </td>
+          <td class="memname">sgspy.stratify.poly.poly.poly </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a></td>          <td class="paramname"><span class="paramname"><em>vect</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a></td>          <td class="paramname"><span class="paramname"><em>vect</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -144,27 +144,27 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>This function conducts stratification on a polygon by rasterizing a polygon layer, and using its values to determine stratifications. </p>
+<p>This function conducts stratification on a vector dataset by rasterizing a polygon layer, and using its attribute values to determine stratifications. </p>
 <p>the layer_name parameter is the layer to be rasterized, and the attribute is the attribute within the layer to check. The features parameter specifies the which feature value corresponds to which stratification.</p>
 <p>The features parameter is a list containing strings and lists of strings. The index within this list determines the stratification value. For example:</p>
 <p>features = ["low", "medium", "high"] <br  />
  would result in 3 stratifications (0, 1, 2) where 'low' would correspond to stratification 0, medium to 1, and hight to 2.</p>
 <p>features = ["low", ["medium", "high"]] <br  />
  would result in 2 stratifications (0, 1) where 'low' would correspond to stratification 0, and both medium and high to stratification 1.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md35"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md33"></a>
 Examples</h2>
-<p>rast = sgs.SpatialRaster('rast.tif') <br  />
-vect = sgs.SpatialVector('inventory_polygons.shp') <br  />
-srast = <a class="el" href="namespacesgs_1_1stratify_1_1poly.html">sgs.stratify.poly</a>(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', features=['poor', 'medium', 'rich'])</p>
-<p>rast = sgs.SpatialRaster('rast.tif') <br  />
-vect = sgs.SpatialVector('inventory_polygons.shp') <br  />
-srast = <a class="el" href="namespacesgs_1_1stratify_1_1poly.html">sgs.stratify.poly</a>(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', 'features=['poor', ['medium', 'rich']], filename='nutrient_stratification.shp')</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md36"></a>
+<p>rast = sgspy.SpatialRaster('rast.tif') <br  />
+vect = sgspy.SpatialVector('inventory_polygons.shp') <br  />
+srast = <a class="el" href="namespacesgspy_1_1stratify_1_1poly.html">sgspy.stratify.poly</a>(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', features=['poor', 'medium', 'rich'])</p>
+<p>rast = sgspy.SpatialRaster('rast.tif') <br  />
+vect = sgspy.SpatialVector('inventory_polygons.shp') <br  />
+srast = <a class="el" href="namespacesgspy_1_1stratify_1_1poly.html">sgspy.stratify.poly</a>(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', 'features=['poor', ['medium', 'rich']], filename='nutrient_stratification.shp')</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md34"></a>
 Parameters</h2>
-<p>rast : <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
+<p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  raster data structure which will determine height, width, geotransform, and projection <br  />
  <br  />
-vect : <a class="el" href="classsgs_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
+vect : <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
  the vector of polygons to stratify <br  />
  <br  />
 layer_name : str <br  />
@@ -180,9 +180,9 @@ filename : str <br  />
  the output filename to write to, if desired <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md37"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md35"></a>
 Returns</h2>
-<p>a <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing the rasterized polygon. </p>
+<p>a <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing the rasterized polygon. </p>
 
 </div>
 </div>

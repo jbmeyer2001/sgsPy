@@ -1,5 +1,6 @@
 var raster_8py =
 [
-    [ "sgs.utils.raster.GDAL", "namespacesgs_1_1utils_1_1raster.html#ad835754ac03b23204a38ef544ffbd2b9", null ],
-    [ "sgs.utils.raster.RASTERIO", "namespacesgs_1_1utils_1_1raster.html#a5d87187067e4a11c48c7116e53a61422", null ]
+    [ "sgspy.utils.raster.GDAL", "namespacesgspy_1_1utils_1_1raster.html#afbebdb9c364441db71c3ab5312535520", null ],
+    [ "sgspy.utils.raster.PROJDB_PATH", "namespacesgspy_1_1utils_1_1raster.html#abf6b52825c179e27e4ee3ef14372c6b9", null ],
+    [ "sgspy.utils.raster.RASTERIO", "namespacesgspy_1_1utils_1_1raster.html#ab4dabcfbc7773b9f2f82a07da51c5aa8", null ]
 ];

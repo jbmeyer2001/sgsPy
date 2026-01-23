@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['calculating_3a_0',['calculating:',['../index.html#autotoc_md11',1,'']]],
-  ['can_20be_20installed_20and_20built_20as_20follows_20depending_20on_20operating_20system_1',['NOTE: when distributed, the package will be available through PyPI and thus a quick &apos;pip install sgs&apos;. For now, the package can be installed and built as follows depending on operating system.',['../index.html#autotoc_md4',1,'']]],
-  ['contribute_2',['How to contribute?',['../index.html#autotoc_md2',1,'']]]
+  ['example_0',['example',['../index.html#autotoc_md6',1,'']]],
+  ['examples_1',['Examples',['../group__user__pca.html#autotoc_md12',1,'Examples'],['../group__user__clhs.html#autotoc_md15',1,'Examples'],['../group__user__srs.html#autotoc_md18',1,'Examples'],['../group__user__strat.html#autotoc_md21',1,'Examples'],['../group__user__systematic.html#autotoc_md24',1,'Examples'],['../group__user__breaks.html#autotoc_md27',1,'Examples'],['../group__user__map.html#autotoc_md30',1,'Examples'],['../group__user__poly.html#autotoc_md33',1,'Examples'],['../group__user__quantiles.html#autotoc_md36',1,'Examples']]]
 ];

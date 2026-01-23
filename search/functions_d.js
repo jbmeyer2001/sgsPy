@@ -1,12 +1,12 @@
 var searchData=
 [
-  ['pca_0',['pca',['../group__pca.html#ga37835a150a0b66ce17be0dac0fc77d82',1,'sgs::pca::pca()'],['../group__user__pca.html#ga5b461005dd5d64549c761e9172d47d02',1,'sgs.calculate.pca.pca.pca()']]],
-  ['plot_1',['plot',['../classsgs_1_1utils_1_1raster_1_1SpatialRaster.html#aa29b00b9188f2da9f71957bf8383dbef',1,'sgs.utils.raster.SpatialRaster.plot()'],['../classsgs_1_1utils_1_1vector_1_1SpatialVector.html#a18d9dda29aed248aaad78f3384896f6d',1,'sgs.utils.vector.SpatialVector.plot()']]],
-  ['plot_5fraster_2',['plot_raster',['../namespacesgs_1_1utils_1_1plot.html#a6263e1b85a2ff7bdfaa2c89054385ec9',1,'sgs::utils::plot']]],
-  ['plot_5fvector_3',['plot_vector',['../namespacesgs_1_1utils_1_1plot.html#af1188a9cb77c009434278131b80f26d6',1,'sgs::utils::plot']]],
+  ['pca_0',['pca',['../group__pca.html#ga37835a150a0b66ce17be0dac0fc77d82',1,'sgs::pca::pca()'],['../group__user__pca.html#ga090df71ee7ba54f7bef8e125138a63cb',1,'sgspy.calculate.pca.pca.pca()']]],
+  ['plot_1',['plot',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#aef1633460e735bbc87ae264f37d54d63',1,'sgspy.utils.raster.SpatialRaster.plot()'],['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#a4455b80937875493efc0c2930f0ee819',1,'sgspy.utils.vector.SpatialVector.plot()']]],
+  ['plot_5fraster_2',['plot_raster',['../namespacesgspy_1_1utils_1_1plot.html#a752b2362ea2230640a47affeb820553a',1,'sgspy::utils::plot']]],
+  ['plot_5fvector_3',['plot_vector',['../namespacesgspy_1_1utils_1_1plot.html#af45c49c3ff1ba6fbb4dccd9b0f956821',1,'sgspy::utils::plot']]],
   ['point2index_4',['point2index',['../group__helper.html#gac3201c5b20c0eb30d8039ed3c1284d4b',1,'sgs::helper']]],
-  ['poly_5',['poly',['../group__poly.html#ga45174d78c166a330571728081ea49163',1,'sgs::poly::poly()'],['../group__user__poly.html#gae6aaba8128fa5203f2af8932e46e6441',1,'sgs.stratify.poly.poly.poly()']]],
-  ['print_5finfo_6',['print_info',['../classsgs_1_1utils_1_1vector_1_1SpatialVector.html#ac8b77e5c26afb81e55924e731d72e609',1,'sgs::utils::vector::SpatialVector']]],
+  ['poly_5',['poly',['../group__poly.html#ga45174d78c166a330571728081ea49163',1,'sgs::poly::poly()'],['../group__user__poly.html#gae855f7aeb0caa30f6fd432a7435c1045',1,'sgspy.stratify.poly.poly.poly()']]],
+  ['print_5finfo_6',['print_info',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#ad4415daa4b1b100de02820c0f473e56c',1,'sgspy::utils::vector::SpatialVector']]],
   ['printtypewarningsforint32conversion_7',['printTypeWarningsForInt32Conversion',['../group__helper.html#gaaa47ccb56a071380c840029f71aef8e1',1,'sgs::helper']]],
   ['processblock_8',['processBlock',['../group__srs.html#gacdc25256ccd62049b664df2f7b1ce35b',1,'sgs::srs']]],
   ['processblocksstratqueinnec_9',['processBlocksStratQueinnec',['../group__strat.html#ga403d17022991838519ee8e759ee1eb78',1,'sgs::strat']]],

@@ -1,5 +1,9 @@
 var searchData=
 [
-  ['note_3a_20when_20distributed_20the_20package_20will_20be_20available_20through_20pypi_20and_20thus_20a_20quick_20pip_20install_20sgs_20for_20now_20the_20package_20can_20be_20installed_20and_20built_20as_20follows_20depending_20on_20operating_20system_0',['NOTE: when distributed, the package will be available through PyPI and thus a quick &apos;pip install sgs&apos;. For now, the package can be installed and built as follows depending on operating system.',['../index.html#autotoc_md4',1,'']]],
-  ['now_20the_20package_20can_20be_20installed_20and_20built_20as_20follows_20depending_20on_20operating_20system_1',['NOTE: when distributed, the package will be available through PyPI and thus a quick &apos;pip install sgs&apos;. For now, the package can be installed and built as follows depending on operating system.',['../index.html#autotoc_md4',1,'']]]
+  ['parameters_0',['Parameters',['../group__user__pca.html#autotoc_md13',1,'Parameters'],['../group__user__clhs.html#autotoc_md16',1,'Parameters'],['../group__user__srs.html#autotoc_md19',1,'Parameters'],['../group__user__strat.html#autotoc_md22',1,'Parameters'],['../group__user__systematic.html#autotoc_md25',1,'Parameters'],['../group__user__breaks.html#autotoc_md28',1,'Parameters'],['../group__user__map.html#autotoc_md31',1,'Parameters'],['../group__user__poly.html#autotoc_md34',1,'Parameters'],['../group__user__quantiles.html#autotoc_md37',1,'Parameters']]],
+  ['plotting_20raster_1',['Plotting raster',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#autotoc_md41',1,'']]],
+  ['public_20attributes_2',['Public Attributes',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#autotoc_md42',1,'']]],
+  ['public_20attributes_3a_3',['Public Attributes:',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#autotoc_md44',1,'']]],
+  ['public_20methods_4',['Public Methods',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#autotoc_md43',1,'']]],
+  ['public_20methods_3a_5',['Public Methods:',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#autotoc_md45',1,'']]]
 ];

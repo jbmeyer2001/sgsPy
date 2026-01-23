@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['how_20to_20contribute_0',['How to contribute?',['../index.html#autotoc_md2',1,'']]],
-  ['how_20to_20run_20sgspy_1',['How to run sgsPy',['../index.html#autotoc_md7',1,'']]],
-  ['how_20to_20stay_20up_20to_20date_2',['How to stay up to date?',['../index.html#autotoc_md1',1,'']]]
+  ['information_0',['information',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#autotoc_md40',1,'Accessing raster information'],['../index.html#autotoc_md8',1,'Developer information']]],
+  ['installation_1',['Installation',['../index.html#autotoc_md1',1,'']]],
+  ['installation_3a_2',['installation:',['../index.html#autotoc_md9',1,'Linux installation:'],['../index.html#autotoc_md10',1,'Windows installation:']]]
 ];

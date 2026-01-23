@@ -95,21 +95,21 @@ $(function(){initNavTree('group__user__map.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:gaad5d5012d1a79613956ba8cbf09b5c0c" id="r_gaad5d5012d1a79613956ba8cbf09b5c0c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaad5d5012d1a79613956ba8cbf09b5c0c">sgs.stratify.map.map_stratifications.map</a> (*tuple[<a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a>, int|str|list[int]|list[str], int|list[int]] args, str filename='', int thread_count=8, dict driver_options=None)</td></tr>
-<tr class="memdesc:gaad5d5012d1a79613956ba8cbf09b5c0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts mapping on existing stratifications.  <br /></td></tr>
+<tr class="memitem:ga6665ad19a101a221ed1945f5bcba3c4a" id="r_ga6665ad19a101a221ed1945f5bcba3c4a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga6665ad19a101a221ed1945f5bcba3c4a">sgspy.stratify.map.map_stratifications.map</a> (*tuple[<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a>, int|str|list[int]|list[str], int|list[int]] args, str filename='', int thread_count=8, dict driver_options=None)</td></tr>
+<tr class="memdesc:ga6665ad19a101a221ed1945f5bcba3c4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts mapping on existing stratifications.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="gaad5d5012d1a79613956ba8cbf09b5c0c" name="gaad5d5012d1a79613956ba8cbf09b5c0c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaad5d5012d1a79613956ba8cbf09b5c0c">&#9670;&#160;</a></span>map()</h2>
+<a id="ga6665ad19a101a221ed1945f5bcba3c4a" name="ga6665ad19a101a221ed1945f5bcba3c4a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga6665ad19a101a221ed1945f5bcba3c4a">&#9670;&#160;</a></span>map()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgs.stratify.map.map_stratifications.map </td>
+          <td class="memname">sgspy.stratify.map.map_stratifications.map </td>
           <td>(</td>
-          <td class="paramtype">*tuple[<a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a>, int|str|list[int]|list[str], int|list[int]]</td>          <td class="paramname"><span class="paramname"><em>args</em></span>, </td>
+          <td class="paramtype">*tuple[<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a>, int|str|list[int]|list[str], int|list[int]]</td>          <td class="paramname"><span class="paramname"><em>args</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -132,10 +132,10 @@ Functions</h2></td></tr>
 <p>This function conducts mapping on existing stratifications. </p>
 <p>The pre-existing stratifications are passed in the form of a raster, band, and num_stratum. The bands argument specifies which bands within the raster should be used, the num_stratum argument specifies the number of stratum within one particular band.</p>
 <p>the arguments are passed in the form of a tuple, of which there can be any number. For example, both of the following are valid:</p><ul>
-<li><a class="el" href="namespacesgs_1_1stratify_1_1map.html">map((rast1, bands1, num_stratum1))</a></li>
+<li><a class="el" href="namespacesgspy_1_1stratify_1_1map.html">map((rast1, bands1, num_stratum1))</a></li>
 <li>map((rast1, bands1, num_stratum1), (rast1, bands2, num_stratum2))</li>
 </ul>
-<p>the raster within the tuple MUST be of type <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">sgs.utils.SpatialRaster</a>. The bands argument MUST be:</p><ul>
+<p>the raster within the tuple MUST be of type sgs.utils.SpatialRaster. The bands argument MUST be:</p><ul>
 <li>an int, specifying a single band.</li>
 <li>a str, specifying a single band.</li>
 <li>a list of ints, specifying the indexes of bands.</li>
@@ -148,20 +148,20 @@ Functions</h2></td></tr>
 <p>the filename parameter specifies an output file name. Right now the only file format accepted is GTiff (.tiff).</p>
 <p>The thread_count parameter specifies the number of threads which this function will utilize in the case where the raster is large an may not fit in memory. If the full raster can fit in memory and does not need to be processed in blocks, this argument will be ignored. The default is 8 threads, although the optimal number will depend significantly on the hardware being used and may be more or less than 8.</p>
 <p>the driver_options parameter is used to specifiy creation options for the output raster, such as compression. See options fro GTiff driver here: <a href="https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options">https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options</a> The keys in the driver_options dict must be strings, the values are converted to string. THe options must be valid for the driver corresponding to the filename, and if filename is not given they must be valid for the GTiff format, as that is the format used to store temporary raster files. Note that if this parameter is given, but filename is not and the raster fits entirely in memory, the driver_options parameter will be ignored.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md32"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md30"></a>
 Examples</h2>
-<p>rast = sgs.SpatialRaster("rast.tif") <br  />
-breaks = <a class="el" href="namespacesgs_1_1stratify_1_1breaks.html">sgs.stratify.breaks</a>(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) <br  />
-quantiles = <a class="el" href="namespacesgs_1_1stratify_1_1quantiles.html">sgs.stratify.quantiles</a>(rast, num_strata={'zsd': 25}) <br  />
-srast = <a class="el" href="namespacesgs_1_1stratify_1_1map.html">sgs.stratify.map</a>((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))</p>
-<p>rast = sgs.SpatialRaster("rast.tif") <br  />
-inventory = sgs.SpatialVector("inventory_polygons.shp") <br  />
-breaks = <a class="el" href="namespacesgs_1_1stratify_1_1breaks.html">sgs.stratify.breaks</a>(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) <br  />
-poly = <a class="el" href="namespacesgs_1_1stratify_1_1poly.html">sgs.stratify.poly</a>(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich']) <br  />
-srast = <a class="el" href="namespacesgs_1_1stratify_1_1map.html">sgs.stratify.map</a>((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md33"></a>
+<p>rast = sgspy.SpatialRaster("rast.tif") <br  />
+breaks = <a class="el" href="namespacesgspy_1_1stratify_1_1breaks.html">sgspy.stratify.breaks</a>(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) <br  />
+quantiles = <a class="el" href="namespacesgspy_1_1stratify_1_1quantiles.html">sgspy.stratify.quantiles</a>(rast, num_strata={'zsd': 25}) <br  />
+srast = <a class="el" href="namespacesgspy_1_1stratify_1_1map.html">sgspy.stratify.map</a>((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))</p>
+<p>rast = sgspy.SpatialRaster("rast.tif") <br  />
+inventory = sgspy.SpatialVector("inventory_polygons.shp") <br  />
+breaks = <a class="el" href="namespacesgspy_1_1stratify_1_1breaks.html">sgspy.stratify.breaks</a>(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) <br  />
+poly = <a class="el" href="namespacesgspy_1_1stratify_1_1poly.html">sgspy.stratify.poly</a>(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich']) <br  />
+srast = <a class="el" href="namespacesgspy_1_1stratify_1_1map.html">sgspy.stratify.map</a>((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md31"></a>
 Parameters</h2>
-<p>*args : tuple[<a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a>, int|list[int]|list[str], int|list[int]] <br  />
+<p>*args : tuple[<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a>, int|list[int]|list[str], int|list[int]] <br  />
  tuples specifying raster bands and their number of stratifications <br  />
  <br  />
 filename : str <br  />
@@ -174,9 +174,9 @@ driver_options : dict[str] <br  />
  the creation options as defined by GDAL which will be passed when creating output files <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md34"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md32"></a>
 Returns</h2>
-<p>a <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing a band of mapped stratifications from the input <a class="el" href="namespacesgs_1_1raster.html">raster(s)</a>. </p>
+<p>a <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing a band of mapped stratifications from the input raster(s). </p>
 
 </div>
 </div>

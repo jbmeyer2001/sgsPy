@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.14.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>sgsPy: sgs/stratify/map/map.h Source File</title>
+<title>sgsPy: sgspy/stratify/map/map.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -133,8 +133,8 @@ $(function(){initNavTree('map_8h_source.html','',''); });
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;could not get projection from the first raster argument.&quot;</span>);</div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    }</div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span> </div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    OGRSpatialReference <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1srs.html">srs</a>;</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1srs.html">srs</a>.importFromWkt(projection.c_str());</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    OGRSpatialReference <a class="code hl_namespace" href="namespacesgs_1_1srs.html">srs</a>;</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <a class="code hl_namespace" href="namespacesgs_1_1srs.html">srs</a>.importFromWkt(projection.c_str());</div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span> </div>
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 1; i &lt; rasters.size(); i++) {</div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>        <span class="keywordflow">if</span> (rasters[i]-&gt;getHeight() != height) {</div>
@@ -157,7 +157,7 @@ $(function(){initNavTree('map_8h_source.html','',''); });
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span> </div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>        OGRSpatialReference checkSrs;</div>
 <div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        checkSrs.importFromWkt(rasters[i]-&gt;getDataset()-&gt;GetProjectionRef());</div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        <span class="keywordflow">if</span> (!<a class="code hl_namespace" href="namespacesgs_1_1sample_1_1srs.html">srs</a>.IsSame(&amp;checkSrs)) {</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        <span class="keywordflow">if</span> (!<a class="code hl_namespace" href="namespacesgs_1_1srs.html">srs</a>.IsSame(&amp;checkSrs)) {</div>
 <div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>            std::string err = <span class="stringliteral">&quot;raster with index &quot;</span> + std::to_string(i) + <span class="stringliteral">&quot; has a different projection from the raster at index 0.&quot;</span>;</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>            <span class="keywordflow">throw</span> std::runtime_error(err);</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        }</div>
@@ -326,11 +326,11 @@ $(function(){initNavTree('map_8h_source.html','',''); });
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>                                <span class="keywordtype">int</span> mappedStrat = 0;</div>
 <div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span> </div>
 <div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>                                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> band = 0; band &lt; bandCount; band++) {</div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>                                    <span class="keywordtype">int</span> <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> = <a class="code hl_function" href="group__helper.html#ga95dc1909d81ef037ed598e69436c8dda">helper::getPixelValueDependingOnType&lt;int&gt;</a>(stratBands[band].type, stratBuffers[band], index);</div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>                                    isNan = <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> == intNoDataValues[band];</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>                                    <span class="keywordtype">int</span> <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> = <a class="code hl_function" href="group__helper.html#ga95dc1909d81ef037ed598e69436c8dda">helper::getPixelValueDependingOnType&lt;int&gt;</a>(stratBands[band].type, stratBuffers[band], index);</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>                                    isNan = <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> == intNoDataValues[band];</div>
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span> </div>
 <div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>                                    <span class="keywordflow">if</span> (!isNan) {</div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>                                        mappedStrat += <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> * multipliers[band];</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>                                        mappedStrat += <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> * multipliers[band];</div>
 <div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>                                    }</div>
 <div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>                                    <span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>                                        <span class="keywordflow">break</span>;</div>
@@ -377,10 +377,10 @@ $(function(){initNavTree('map_8h_source.html','',''); });
 <div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>            <span class="keywordtype">int</span> mappedStrat = 0;</div>
 <div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span> </div>
 <div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> band = 0; (band &lt; bandCount) &amp;&amp; !isNan; band++) {</div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>                <span class="keywordtype">int</span> <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> = <a class="code hl_function" href="group__helper.html#ga95dc1909d81ef037ed598e69436c8dda">helper::getPixelValueDependingOnType&lt;int&gt;</a>(stratBands[band].type, stratBands[band].p_buffer, index);</div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>                isNan = <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> == intNoDataValues[band];</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>                <span class="keywordtype">int</span> <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> = <a class="code hl_function" href="group__helper.html#ga95dc1909d81ef037ed598e69436c8dda">helper::getPixelValueDependingOnType&lt;int&gt;</a>(stratBands[band].type, stratBands[band].p_buffer, index);</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>                isNan = <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> == intNoDataValues[band];</div>
 <div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>                <span class="keywordflow">if</span> (!isNan) {</div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>                    mappedStrat += <a class="code hl_namespace" href="namespacesgs_1_1sample_1_1strat.html">strat</a> * multipliers[band];</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>                    mappedStrat += <a class="code hl_namespace" href="namespacesgs_1_1strat.html">strat</a> * multipliers[band];</div>
 <div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>                }</div>
 <div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>            }</div>
 <div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span> </div>
@@ -439,9 +439,9 @@ $(function(){initNavTree('map_8h_source.html','',''); });
 <div class="ttc" id="agroup__helper_html_gafb4301348d605db2ce92d141063af00b"><div class="ttname"><a href="group__helper.html#gafb4301348d605db2ce92d141063af00b">sgs::helper::setStratBandTypeAndSize</a></div><div class="ttdeci">void setStratBandTypeAndSize(size_t maxStrata, GDALDataType *p_type, size_t *p_size)</div><div class="ttdef"><b>Definition</b> helper.h:130</div></div>
 <div class="ttc" id="agroup__map_html_ga79f53a8841ab578378d515e7c8114c02"><div class="ttname"><a href="group__map.html#ga79f53a8841ab578378d515e7c8114c02">sgs::map::map</a></div><div class="ttdeci">raster::GDALRasterWrapper * map(std::vector&lt; raster::GDALRasterWrapper * &gt; rasters, std::vector&lt; std::vector&lt; int &gt; &gt; bands, std::vector&lt; std::vector&lt; int &gt; &gt; strataCounts, std::string filename, bool largeRaster, int threadCount, std::string tempFolder, std::map&lt; std::string, std::string &gt; driverOptions)</div><div class="ttdef"><b>Definition</b> map.h:109</div></div>
 <div class="ttc" id="ahelper_8h_html"><div class="ttname"><a href="helper_8h.html">helper.h</a></div></div>
-<div class="ttc" id="anamespacesgs_1_1sample_1_1srs_html"><div class="ttname"><a href="namespacesgs_1_1sample_1_1srs.html">sgs.sample.srs</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
-<div class="ttc" id="anamespacesgs_1_1sample_1_1strat_html"><div class="ttname"><a href="namespacesgs_1_1sample_1_1strat.html">sgs.sample.strat</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
-<div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> __init__.py:1</div></div>
+<div class="ttc" id="anamespacesgs_1_1srs_html"><div class="ttname"><a href="namespacesgs_1_1srs.html">sgs::srs</a></div><div class="ttdef"><b>Definition</b> srs.h:27</div></div>
+<div class="ttc" id="anamespacesgs_1_1strat_html"><div class="ttname"><a href="namespacesgs_1_1strat.html">sgs::strat</a></div><div class="ttdef"><b>Definition</b> strat.h:27</div></div>
+<div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> pca.h:23</div></div>
 <div class="ttc" id="araster_8h_html"><div class="ttname"><a href="raster_8h.html">raster.h</a></div></div>
 <div class="ttc" id="astructsgs_1_1helper_1_1RasterBandMetaData_html"><div class="ttname"><a href="structsgs_1_1helper_1_1RasterBandMetaData.html">sgs::helper::RasterBandMetaData</a></div><div class="ttdef"><b>Definition</b> helper.h:77</div></div>
 <div class="ttc" id="astructsgs_1_1helper_1_1RasterBandMetaData_html_a1d9115aee6f24bfbcfee91bb34a4b0c2"><div class="ttname"><a href="structsgs_1_1helper_1_1RasterBandMetaData.html#a1d9115aee6f24bfbcfee91bb34a4b0c2">sgs::helper::RasterBandMetaData::xBlockSize</a></div><div class="ttdeci">int xBlockSize</div><div class="ttdef"><b>Definition</b> helper.h:84</div></div>
@@ -459,7 +459,7 @@ $(function(){initNavTree('map_8h_source.html','',''); });
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a href="dir_a71931f04cf03ee3498574a950d092ec.html">sgs</a></li><li class="navelem"><a href="dir_3a5ba067f72889851a23ac7f7111a850.html">stratify</a></li><li class="navelem"><a href="dir_5d2a35cbfb6a73a6e0abb55d16161b89.html">map</a></li><li class="navelem"><a href="map_8h.html">map.h</a></li>
+    <li class="navelem"><a href="dir_b2b908aa7d723e841b9e3e9e449c68c4.html">sgspy</a></li><li class="navelem"><a href="dir_1e0a00ae9ed7af33bd69c3c2e2624058.html">stratify</a></li><li class="navelem"><a href="dir_861d3bc101e9c3e69429f32c69ebbfb8.html">map</a></li><li class="navelem"><a href="map_8h.html">map.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.14.0 </li>
   </ul>
 </div>

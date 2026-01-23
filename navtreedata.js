@@ -25,7 +25,7 @@
 var NAVTREE =
 [
   [ "sgsPy", "index.html", [
-    [ "Overview", "index.html", "index" ],
+    [ "sgsPy - Structurally Guided Sampling <img src=\"logo/sgspy_logo.svg\" alt=\"\" align=\"right\" width=\"300\" style=\"pointer-events: none;\" class=\"inline\"/>", "index.html", "index" ],
     [ "Topics", "topics.html", "topics" ],
     [ "developer docs", "group__dev.html", null ],
     [ "user documentation", "group__user.html", null ],
@@ -43,7 +43,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "____init_____8py.html",
-"index.html#autotoc_md5"
+"index.html#autotoc_md4"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

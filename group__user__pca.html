@@ -95,21 +95,21 @@ $(function(){initNavTree('group__user__pca.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga5b461005dd5d64549c761e9172d47d02" id="r_ga5b461005dd5d64549c761e9172d47d02"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga5b461005dd5d64549c761e9172d47d02">sgs.calculate.pca.pca.pca</a> (<a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_comp, str filename='', bool display_info=False, dict driver_options=None)</td></tr>
-<tr class="memdesc:ga5b461005dd5d64549c761e9172d47d02"><td class="mdescLeft">&#160;</td><td class="mdescRight">This functions conducts principal component analysis on the given raster.  <br /></td></tr>
+<tr class="memitem:ga090df71ee7ba54f7bef8e125138a63cb" id="r_ga090df71ee7ba54f7bef8e125138a63cb"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga090df71ee7ba54f7bef8e125138a63cb">sgspy.calculate.pca.pca.pca</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_comp, str filename='', bool display_info=False, dict driver_options=None)</td></tr>
+<tr class="memdesc:ga090df71ee7ba54f7bef8e125138a63cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">This functions conducts principal component analysis on the given raster.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="ga5b461005dd5d64549c761e9172d47d02" name="ga5b461005dd5d64549c761e9172d47d02"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga5b461005dd5d64549c761e9172d47d02">&#9670;&#160;</a></span>pca()</h2>
+<a id="ga090df71ee7ba54f7bef8e125138a63cb" name="ga090df71ee7ba54f7bef8e125138a63cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga090df71ee7ba54f7bef8e125138a63cb">&#9670;&#160;</a></span>pca()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgs.calculate.pca.pca.pca </td>
+          <td class="memname">sgspy.calculate.pca.pca.pca </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a></td>          <td class="paramname"><span class="paramname"><em>rast</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -137,17 +137,17 @@ Functions</h2></td></tr>
 <p>This functions conducts principal component analysis on the given raster. </p>
 <p>A number of output components must be provided as an integer. This integer must be less than or equal to the total number of bands in the input raster, and will be the number of bands in the output raster. A filename may be given to specify an output file location, otherwise a virtual file type will be used. The driver_options parameter is used to specify creation options for a the output raster. See options for the Gtiff driver here: <a href="https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options">https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options</a></p>
 <p>Principal components are calculated across all raster bands, along with mean and standard deviation of each raster band. The raster is both centered and scaled, then output values are calculated for each principal component.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md14"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md12"></a>
 Examples</h2>
-<p>rast = sgs.SpatialRaster("raster.tif") <br  />
-pcomp = <a class="el" href="namespacesgs_1_1calculate_1_1pca.html">sgs.calculate.pca(rast, 3)</a></p>
-<p>rast = sgs.SpatialRaster("raster.tif") <br  />
-pcomp = <a class="el" href="namespacesgs_1_1calculate_1_1pca.html">sgs.calculate.pca</a>(rast, 2, filename="pca.tif", display_info=True)</p>
-<p>rast = sgs.SpatialRaster("raster.tif") <br  />
-pcomp = <a class="el" href="namespacesgs_1_1calculate_1_1pca.html">sgs.calculate.pca</a>(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"})</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md15"></a>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+pcomp = <a class="el" href="namespacesgspy_1_1calculate_1_1pca.html">sgspy.calculate.pca(rast, 3)</a></p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+pcomp = <a class="el" href="namespacesgspy_1_1calculate_1_1pca.html">sgspy.calculate.pca</a>(rast, 2, filename="pca.tif", display_info=True)</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+pcomp = <a class="el" href="namespacesgspy_1_1calculate_1_1pca.html">sgspy.calculate.pca</a>(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"})</p>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md13"></a>
 Parameters</h2>
-<p>rast : <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
+<p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  raster data structure containing input raster bands <br  />
  <br  />
 num_comp : int <br  />
@@ -163,9 +163,9 @@ driver_options : dict <br  />
  the creation options as defined by GDAL which will be passed when creating output files <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md16"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md14"></a>
 Returns</h2>
-<p>a <a class="el" href="classsgs_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing principal component bands </p>
+<p>a <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing principal component bands </p>
 
 </div>
 </div>

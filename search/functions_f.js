@@ -6,6 +6,6 @@ var searchData=
   ['readnewblock_3',['readNewBlock',['../structsgs_1_1strat_1_1OptimAllocationDataManager.html#a9a49e0c1fcbe139febdf52e0507e3577',1,'sgs::strat::OptimAllocationDataManager']]],
   ['readraster_4',['readRaster',['../group__clhs.html#ga5578eb2a134133eb8289e36da694f172',1,'sgs::clhs']]],
   ['releasebandbuffers_5',['releaseBandBuffers',['../classsgs_1_1raster_1_1GDALRasterWrapper.html#a46b31cc2b7a0dcc8a40f49f9a941a937',1,'sgs::raster::GDALRasterWrapper']]],
-  ['representation_6',['representation',['../namespacesgs_1_1calculate_1_1representation_1_1representation.html#a5e0cf89bfc79ca0363a7f5ec05880f6e',1,'sgs::calculate::representation::representation']]],
+  ['representation_6',['representation',['../namespacesgspy_1_1calculate_1_1representation_1_1representation.html#a3ac430ee6686715805b8c1243cfae4fb',1,'sgspy::calculate::representation::representation']]],
   ['reset_7',['reset',['../structsgs_1_1strat_1_1FocalWindow.html#ab70040fea726bc01c925e552f026f58b',1,'sgs::strat::FocalWindow']]]
 ];
