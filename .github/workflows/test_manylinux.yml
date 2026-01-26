@@ -1,0 +1,44 @@
+on:
+  push:
+    branches:
+      - test-manylinux_2_35
+permissions:
+  contents:
+    write
+
+jobs:
+  build-linux:
+    needs: 
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+        
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          
+      - name: Install and build C++ dependencies
+        run: bash scripts/install.sh
+        
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build auditwheel
+        
+      - name: Build wheel
+        run: bash scripts/build_dist.sh
+
+      - name: Save wheel artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: linux-python${{ matrix.python }}-wheel
+          path: dist/*.whl
+
