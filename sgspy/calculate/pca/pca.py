@@ -125,6 +125,8 @@ def pca(
     large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
 
     temp_dir = tempfile.mkdtemp()
+    rast.have_temp_dir = True
+    rast.temp_dir = temp_dir
 
     [pcomp, eigenvectors, eigenvalues] = pca_cpp(
         rast.cpp_raster,
@@ -144,8 +146,8 @@ def pca(
         print()
 
     pcomp_rast = SpatialRaster(pcomp)
-    pcomp_rast.have_temp_dir = True
-    pcomp_rast.temp_dir = temp_dir
+    pcomp_rast.cpp_raster.set_temp_dir(temp_dir)
+    rast.have_temp_dir = False
     pcomp_rast.temp_dataset = filename == "" and large_raster
     pcomp_rast.filename = filename
 
