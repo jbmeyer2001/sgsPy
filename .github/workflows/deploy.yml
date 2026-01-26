@@ -43,7 +43,7 @@ jobs:
         run: pytest
 
   test-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -119,7 +119,7 @@ jobs:
     needs: 
       - test-windows
       - test-linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
