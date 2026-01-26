@@ -217,7 +217,7 @@ class CLHSDataManager {
 	 * @param uint64_t index
 	 */
 	inline void
-	getPoint(Point<T>& point, uint64_t index) {		
+	getPoint(Point<T>& point, uint64_t index) {
 		point.p_features = this->features.data() + (index * nFeat);
 		point.x = x[index];
 		point.y = y[index];
@@ -475,8 +475,9 @@ readRaster(
 				int index = y * xBlockSize;
 				for (int x = 0; x < xValid; x++) {
 					bool isNan = false;
+					T *p_buff = corrBuffer.data() + (index * count);
 					for (int b = 0; b < count; b++) {
-						T val = corrBuffer[index * count + b];
+						T val = p_buff[b];
 						isNan = std::isnan(val) || val == bands[b].nan;
 
 						if (isNan) {
@@ -493,7 +494,7 @@ readRaster(
 						bool accessible = !access.used || p_access[index] != 1;
 						if (accessible && rand.next()) {
 							clhs.addPoint(
-								corrBuffer.data() + (n * count),
+								p_buff,
 								xBlock * xBlockSize + x,
 								yBlock * yBlockSize + y		
 							);
@@ -692,7 +693,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	}
 
 	//define covariance calculation 
-	DALHomogenTable table = DALHomogenTable(features.data(), nFeat, nSamp, [](const T *){}, oneapi::dal::data_layout::row_major);
+	DALHomogenTable table = DALHomogenTable(features.data(), nSamp, nFeat, [](const T *){}, oneapi::dal::data_layout::row_major);
 	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(oneapi::dal::covariance::result_options::cor_matrix);		
 	const auto result = oneapi::dal::compute(cor_desc, table);
 	oneapi::dal::row_accessor<const T> acc {result.get_cor_matrix()};
@@ -796,7 +797,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		T newObj = newObjQ + newObjC;
 		T delta = newObj - obj;
 
-		bool keep = dist(rng) < std::exp(-1 * delta * temp);
+		bool keep = dist(rng) < std::exp(-1 * delta / temp);
 
 		if (keep) {
 			//update the new changes
@@ -936,7 +937,7 @@ clhs(
 		bands[0].yBlockSize
 	);
 
-	//fast random number generator using xoshiro256+
+	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng;
 	uint64_t multiplier = helper::getProbabilityMultiplier(
@@ -945,7 +946,7 @@ clhs(
 		p_raster->getPixelWidth(), 
 		p_raster->getPixelHeight(), 
 		4, 
-		MILLION * 10, 
+		MILLION * 100, 
 		false, 
 		access.area
 	);
