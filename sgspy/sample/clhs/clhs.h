@@ -836,8 +836,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 	//add samples to output layer
 	for (int i = 0 ; i < nSamp; i++) {
-		double xCoord = GT[0] + x[i] * GT[1] + y[i] * GT[2];
-		double yCoord = GT[3] + x[i] * GT[4] + y[i] * GT[5];
+		const auto [xCoord, yCoord] = helper::sample_to_point(GT, x[i], y[i]);
 		OGRPoint point = OGRPoint(xCoord, yCoord);
 		helper::addPoint(&point, p_layer);
 

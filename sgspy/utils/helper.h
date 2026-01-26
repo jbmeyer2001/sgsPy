@@ -1013,5 +1013,38 @@ inline bool is_valid_sample(double x, double y, NeighborMap& neighbor_map, float
 	return true;
 }
 
+/**
+ * @ingroup helper
+ * Convert a sample into a coordinate pair (x, y) from an Index
+ * @param double* GT
+ * @param Index index
+ */
+
+inline std::pair<double, double> sample_to_point(double *GT, Index &index) {
+	double px = index.x + 0.5;
+	double py = index.y + 0.5;
+	double x = GT[0] + px * GT[1] + py * GT[2];
+	double y = GT[3] + px * GT[4] + py * GT[5];
+
+	return {x, y};
+}
+
+/**
+ * @ingroup helper
+ * Convert a sample into a coordinate pair (x, y) from a x/y index
+ * @param double* GT
+ * @param int xs
+ * @param int ys
+ */
+
+inline std::pair<double, double> sample_to_point(double *GT, int xs, int ys) {
+	double px = xs + 0.5;
+	double py = ys + 0.5;
+	double x = GT[0] + px * GT[1] + py * GT[2];
+	double y = GT[3] + px * GT[4] + py * GT[5];
+
+	return {x, y};
+}
+
 } //namespace helper
 } //namespace sgs
