@@ -189,8 +189,6 @@ pip install geopandas
 ```
 
 ### How to run sgsPy:
-**NOTE: if you try to open a Python instance in the command prompt, or run a Python file residing in this project directory, there may be issues importing the project. This is because the folder name 'sgspy' is the same as the packages name, and the Python files rely on compiled binaries within the environment. This also means that the build command should be run before testing any new Python code written!**
-
 
 Tests may be ran by running the following command from within the folder containing this file. Both pytest and geopandas must be installed to run the tests.
 ```

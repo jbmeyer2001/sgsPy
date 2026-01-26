@@ -13,10 +13,14 @@
 
 import os
 import sys
+import site
 import tempfile
 from sgspy.utils import SpatialRaster
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+#ensure _sgs binary can be found
+site_packages = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]
+sys.path.append(os.path.join(site_packages, "sgspy"))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from _sgs import pca_cpp
 
 GIGABYTE = 1073741824
