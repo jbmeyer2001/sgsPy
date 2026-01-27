@@ -28,11 +28,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install gcc13
+      - name: Setup C/C++ Compiler
+        id: setup-compiler
+        uses: rlalik/setup-cpp-compiler@master
+        with:
+          compiler: gcc-latest
+
+      - name: Check gcc version
         run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt-get update -y
-          sudo apt-get install gcc-13
+          gcc --version
+          g++ --version
           
       - name: Install and build C++ dependencies
         run: bash scripts/install.sh
