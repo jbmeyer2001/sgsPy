@@ -10,8 +10,8 @@ jobs:
   build-linux:
     runs-on: ${{ matrix.os.version }}
     env:
-      CC: gcc-13
-      CXX: g++-13
+      CC: /usr/bin/gcc-13
+      CXX: /usr/bin/g++-13
     strategy:
       matrix:
         python: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
@@ -36,6 +36,7 @@ jobs:
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update -y
           sudo apt-get install gcc-13
+          ls /usr/bin/
           
       - name: Install and build C++ dependencies
         run: bash scripts/install.sh
