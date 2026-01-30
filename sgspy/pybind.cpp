@@ -56,6 +56,7 @@
 
 #include "utils/raster.h"
 #include "utils/vector.h"
+#include "utils/dist.h"
 #include "calculate/pca/pca.h"
 #include "sample/clhs/clhs.h"
 #include "sample/srs/srs.h"
@@ -70,7 +71,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 PYBIND11_MODULE(_sgs, m) {
-	// source code in sgs/utils/raster.h
+	// source code in sgspy/utils/raster.h
 	py::class_<sgs::raster::GDALRasterWrapper>(m, "GDALRasterWrapper")
 		.def(py::init<std::string, std::string>())
 		.def(py::init<py::buffer, std::vector<double>, std::string, std::vector<double>, std::vector<std::string>, std::string>())
@@ -97,7 +98,7 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("release_band_buffers", &sgs::raster::GDALRasterWrapper::releaseBandBuffers)
 		.def("close", &sgs::raster::GDALRasterWrapper::close);
 
-	// source code in sgs/utils/vector.h
+	// source code in sgspy/utils/vector.h
 	py::class_<sgs::vector::GDALVectorWrapper>(m, "GDALVectorWrapper")
 		.def(py::init<std::string, std::string>())
 		.def(py::init<py::bytes, std::string, std::string, std::string>())
@@ -109,10 +110,19 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("write", &sgs::vector::GDALVectorWrapper::write)
 		.def("get_projection", &sgs::vector::GDALVectorWrapper::getFullProjectionInfo);
 
-	// source code in sgs/calculate/pca/pca.h
+	// source code in sgspy/utils/dist.h
+	m.def("dist_cpp", &sgs::dist::dist,
+		pybind11::arg("p_raster"),
+		pybind11::arg("band"),
+		pybind11::arg("p_vector").none(true),
+		pybind11::arg("layer"),
+		pybind11::arg("nBuckets"),
+		pybind11::arg("nThreads"));
+
+	// source code in sgspy/calculate/pca/pca.h
 	m.def("pca_cpp", &sgs::pca::pca);
 
-	// source code in sgs/sample/clhs/clhs.h
+	// source code in sgspy/sample/clhs/clhs.h
 	m.def("clhs_cpp", &sgs::clhs::clhs,
 		pybind11::arg("p_raster"),
 		pybind11::arg("nSamp"),
@@ -125,7 +135,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("tempFolder"),
 		pybind11::arg("filename"));
 
-	// source code in sgs/sample/srs/srs.h
+	// source code in sgspy/sample/srs/srs.h
 	m.def("srs_cpp", &sgs::srs::srs, 
 		pybind11::arg("p_raster"),
 		pybind11::arg("numSamples"),
@@ -139,7 +149,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("tempFolder"),
 		pybind11::arg("filename"));
 
-	// source code in sgs/sample/strat/strat.h
+	// source code in sgspy/sample/strat/strat.h
 	m.def("strat_cpp", &sgs::strat::strat,
 		pybind11::arg("p_raster"),
 		pybind11::arg("bandNum"),
@@ -163,7 +173,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("filename"),
 		pybind11::arg("tempFolder"));
 
-	// source code in sgs/sample/systematic/systematic.h
+	// source code in sgspy/sample/systematic/systematic.h
 	m.def("systematic_cpp", &sgs::systematic::systematic,
 		pybind11::arg("p_raster"),
 		pybind11::arg("cellSize"),
@@ -178,15 +188,15 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("plot"),
 		pybind11::arg("filename"));
 
-	// source code in sgs/stratify/breaks/breaks.h
+	// source code in sgspy/stratify/breaks/breaks.h
 	m.def("breaks_cpp", &sgs::breaks::breaks);
 
-	// source code in sgs/stratify/map/map_stratifications.h
+	// source code in sgspy/stratify/map/map_stratifications.h
 	m.def("map_cpp", &sgs::map::map);
 
-	// source code in sgs/stratify/poly/poly.h
+	// source code in sgspy/stratify/poly/poly.h
 	m.def("poly_cpp", &sgs::poly::poly);
 
-	// source code in sgs/stratify/quantiles/quantiles.h
+	// source code in sgspy/stratify/quantiles/quantiles.h
 	m.def("quantiles_cpp", &sgs::quantiles::quantiles);
 }
