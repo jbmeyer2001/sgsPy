@@ -9,11 +9,14 @@ permissions:
 jobs:
   build-linux:
     runs-on: ${{ matrix.os.version }}
+    env:
+      CC: gcc-13
+      CXX: g++-13
     strategy:
       matrix:
         python: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         os: [
-          { version: ubuntu-latest, platform: manylinux_2_39_x86_64 },
+          //{ version: ubuntu-latest, platform: manylinux_2_39_x86_64 },
           { version: ubuntu-22.04, platform: manylinux_2_35_x86_64 }
         ]
 
@@ -28,16 +31,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup C/C++ Compiler
-        id: setup-compiler
-        uses: rlalik/setup-cpp-compiler@master
-        with:
-          compiler: gcc-latest
-
-      - name: Check gcc version
+      - name: Install gcc13
         run: |
-          gcc --version
-          g++ --version
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update -y
+          sudo apt-get install gcc-13
           
       - name: Install and build C++ dependencies
         run: bash scripts/install.sh
@@ -50,7 +48,7 @@ jobs:
       - name: Build wheel
         run: bash scripts/build_dist.sh
 
-      - name: Repair wheel ubuntu-latest
+      - name: Repair wheel to manylinux
         run: |
          auditwheel repair dist/*.whl -w dist --plat ${{ matrix.os.platform }} --exclude libmkl_core.so.2 --exclude libmkl_tbb_thread.so.2 --exclude libmkl_intel_ilp64.so.2 --exclude libonedal_parameters.so.3 --exclude libonedal_core.so.3 --exclude libonedal_thread.so.3 --exclude libonedal.so.3
          rm dist/*linux_x86_64.whl
@@ -60,4 +58,3 @@ jobs:
         with:
           name: linux-python${{ matrix.python }}-wheel
           path: dist/*.whl
-
