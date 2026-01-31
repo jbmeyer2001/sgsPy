@@ -232,13 +232,11 @@ calculateDist(
 		//release mutex for adjusting these	
 	}
 
-	std::string key = std::string("population_") + std::string(band.p_band->GetDescription());
-	retval.insert({key, {dbuckets, totalCounts}});
+	retval.insert({std::string("population"), {dbuckets, totalCounts}});
 
 	if (sampled.size() != 0) {
 		std::vector<int64_t> sampleCounts = sampleDistribution<T>(band, sampled, tbuckets, nBuckets);
-		key = std::string("sample_") + std::string(band.p_band->GetDescription());
-		retval.insert({key, {dbuckets, sampleCounts}});
+		retval.insert({std::string("sample"), {dbuckets, sampleCounts}});
 	}
 }
 
