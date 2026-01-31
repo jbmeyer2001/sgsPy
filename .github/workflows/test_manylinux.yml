@@ -29,14 +29,14 @@ jobs:
           pip install build auditwheel cibuildwheel
         
       - name: Build wheels
-        run: |
-          export PKG_CONFIG="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/tools/pkgconf/pkgconf"
-          export PKG_CONFIG_PATH="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig"
-          python -m cibuildwheel --output-dir dist
+        run: python -m cibuildwheel --output-dir dist
         env:
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
+          CIBW_ENVIRONMENT: |
+            PKG_CONFIG="/project/sgspy/extern/vcpkg/installed/x64-linux/tools/pkgconf/pkgconf"
+            PKG_CONFIG_PATH="$/project/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig"
 
       - name: Save wheel artifact
         uses: actions/upload-artifact@v5
