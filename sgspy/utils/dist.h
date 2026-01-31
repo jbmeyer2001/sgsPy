@@ -104,7 +104,7 @@ setBuckets(
 }
 
 template <typename T>
-std::vector<int64_t>
+void
 populationDistribution(
 	helper::RasterBandMetaData& band,
 	int width,
@@ -131,7 +131,7 @@ populationDistribution(
 				int index = y * width;
 				for (int x = 0; x < xValid; x++) {
 					T val = reinterpret_cast<T *>(p_data)[index];
-					
+
 					if (val != nan && !std::isnan(val)) {
 						for (int i = nBuckets - 1; i >= 0; i--) {
 							if (bucketVals[i] <= val) {
@@ -139,12 +139,13 @@ populationDistribution(
 								break;
 							}
 						}
-					}	
+					}
+					index++;
 				}
-			}	
+			}
 		}
 	}
-
+	
 	VSIFree(p_data);
 }
 
@@ -216,7 +217,7 @@ calculateDist(
 	std::vector<T> tbuckets = setBuckets<T>(min, max, nBuckets, band.type, dbuckets);
 
 	//determine the population distribution of the raster band
-	std::vector<int64_t> totalCounts;
+	std::vector<int64_t> totalCounts(nBuckets, 0);
 	for (int chunk = 0; chunk < nChunks; chunk++) {
 		int yStartBlock = chunk * chunksize;
 		int yEndBlock = std::min(yStartBlock + chunksize, yBlocks);
@@ -306,22 +307,22 @@ dist(
 			calculateDist<int8_t>(band, sampled, height, width, nBuckets, retval, nThreads);
 			break;
 		case GDT_UInt16: 
-			calculateDist<int8_t>(band, sampled, height, width, nBuckets, retval, nThreads);
+			calculateDist<uint16_t>(band, sampled, height, width, nBuckets, retval, nThreads);
 			break;
 		case GDT_Int16: 
-			calculateDist<int8_t>(band, sampled, height, width, nBuckets, retval, nThreads);
+			calculateDist<int16_t>(band, sampled, height, width, nBuckets, retval, nThreads);
 			break;
 		case GDT_UInt32:
-			calculateDist<int8_t>(band, sampled, height, width, nBuckets, retval, nThreads);
+			calculateDist<uint32_t>(band, sampled, height, width, nBuckets, retval, nThreads);
 			break;
 		case GDT_Int32:
-			calculateDist<int8_t>(band, sampled, height, width, nBuckets, retval, nThreads);
+			calculateDist<int32_t>(band, sampled, height, width, nBuckets, retval, nThreads);
 			break;
 		case GDT_Float32:
-			calculateDist<int8_t>(band, sampled, height, width, nBuckets, retval, nThreads);
+			calculateDist<float>(band, sampled, height, width, nBuckets, retval, nThreads);
 			break;
 		case GDT_Float64:
-			calculateDist<int8_t>(band, sampled, height, width, nBuckets, retval, nThreads);	
+			calculateDist<double>(band, sampled, height, width, nBuckets, retval, nThreads);	
 			break;
 		default:
 			throw std::runtime_error("raster pixel data type not supported.");
