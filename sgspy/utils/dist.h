@@ -205,7 +205,7 @@ calculateDist(
 	int nThreads)
 {
 	pybind11::gil_scoped_acquire acquire;
-	boost::asio::thread_pool pool(threads);
+	boost::asio::thread_pool pool(nThreads);
 
 	//determine number of chunks and chunks size for each thread. A chunk is a group of blocks.
 	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
@@ -216,7 +216,7 @@ calculateDist(
 	std::condition_variable cv;
 
 	//don't use std::vector<bool> because can't reference individual bools from it
-	bool *chunksFinished = reinterpret_cast<bool *>(VSIMalloc2(nChunks, sizeof(bool));
+	bool *chunksFinished = reinterpret_cast<bool *>(VSIMalloc2(nChunks, sizeof(bool)));
 
 	//determine min and max values in the raster
 	std::vector<T> mins(nChunks);
@@ -267,7 +267,7 @@ calculateDist(
 	std::vector<T> tbins = setBins<T>(min, max, nBins, band.type, dbins);
 
 	//determine the population distribution of the raster band
-	std::vector<std::vector<<int64_t>> chunkCounts(nBins);
+	std::vector<std::vector<int64_t>> chunkCounts(nBins);
 	for (int chunk = 0; chunk < nChunks; chunk++) {
 		int yStartBlock = chunk * chunksize;
 		int yEndBlock = std::min(yStartBlock + chunksize, yBlocks);
@@ -284,7 +284,7 @@ calculateDist(
 			yEndBlock,
 			nBins,
 			std::ref(tbins),
-			std::ref(allCounts[chunk]),
+			std::ref(chunkCounts[chunk]),
 			std::ref(mutex),
 			std::ref(cv),
 			std::ref(chunksFinished[chunk])
@@ -373,7 +373,7 @@ dist(
 		}
 	}
 
-	std::mutex bandButex;
+	std::mutex bandMutex;
 
 	helper::RasterBandMetaData band;
 	band.p_band = p_raster->getRasterBand(index);
