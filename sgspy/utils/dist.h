@@ -166,7 +166,7 @@ populationDistribution(
 	mutex.lock();
 	finished = true;
 	mutex.unlock();
-	cv.notify_all;
+	cv.notify_all();
 }
 
 template <typename T>
@@ -294,7 +294,7 @@ calculateDist(
 	//using cv, wait for all of the threads to finish calculating their chunk before
 	//calculating the final counts in each bin
 	std::unique_lock lock2(mutex);
-	bool allChunksFinished = true;
+	allChunksFinished = true;
 	for (int chunk = 0; chunk < nChunks; chunk++) {
 		allChunksFinished &= chunksFinished[chunk];
 	}
