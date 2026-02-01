@@ -74,13 +74,13 @@ setBuckets(
 	T max,
 	int nBuckets,
 	GDALDataType type,
-	std::vector<double>& buckets)
+	std::vector<double>& bins)
 {
 	//determine bucket values as doubles to display to the user.
 	double step = ((double)max - (double)min) / ((double)nBuckets);
 	double cur = (double)min;
 	for (int i = 0; i <= nBuckets; i++) {
-		buckets.push_back(cur);
+		bins.push_back(cur);
 		cur += step;
 	}
 
@@ -88,7 +88,7 @@ setBuckets(
 	std::vector<T> retval(nBuckets);
 	if (type == GDT_Float32 || type == GDT_Float64) {
 		for (int i = 0; i < nBuckets; i++) {
-			retval[i] = static_cast<T>(buckets[i]);
+			retval[i] = static_cast<T>(bins[i]);
 		}
 	}
 	else {
@@ -209,12 +209,12 @@ calculateDist(
 	T min = *std::min_element(mins.begin(), mins.end());
 	T max = *std::max_element(maxs.begin(), maxs.end());
 
-	//call the setBuckets function which sets the vector<double> buckets to return to the user,
-	//and the vector<T> buckets to use to create the distribution. There is a seperate vector<T>
-	//buckets object so that while iterating through every pixel, they don't have to be case to
+	//call the setBuckets function which sets the vector<double> bins to return to the user,
+	//and the vector<T> bins to use to create the distribution. There is a seperate vector<T>
+	//bins object so that while iterating through every pixel, they don't have to be case to
 	//type double to check.
-	std::vector<double> dbuckets;
-	std::vector<T> tbuckets = setBuckets<T>(min, max, nBuckets, band.type, dbuckets);
+	std::vector<double> dbins;
+	std::vector<T> tbins = setBuckets<T>(min, max, nBuckets, band.type, dbins);
 
 	//determine the population distribution of the raster band
 	std::vector<int64_t> totalCounts(nBuckets, 0);
@@ -223,7 +223,7 @@ calculateDist(
 		int yEndBlock = std::min(yStartBlock + chunksize, yBlocks);
 
 		std::vector<int64_t> counts(nBuckets, 0);
-		populationDistribution<T>(band, width, yStartBlock, yEndBlock, nBuckets, tbuckets, counts);
+		populationDistribution<T>(band, width, yStartBlock, yEndBlock, nBuckets, tbins, counts);
 
 		//acquire mutex for adjusting these
 		for (int i = 0; i < nBuckets; i++) {
@@ -232,11 +232,11 @@ calculateDist(
 		//release mutex for adjusting these	
 	}
 
-	retval.insert({std::string("population"), {dbuckets, totalCounts}});
+	retval.insert({std::string("population"), {dbins, totalCounts}});
 
 	if (sampled.size() != 0) {
-		std::vector<int64_t> sampleCounts = sampleDistribution<T>(band, sampled, tbuckets, nBuckets);
-		retval.insert({std::string("sample"), {dbuckets, sampleCounts}});
+		std::vector<int64_t> sampleCounts = sampleDistribution<T>(band, sampled, tbins, nBuckets);
+		retval.insert({std::string("sample"), {dbins, sampleCounts}});
 	}
 }
 
