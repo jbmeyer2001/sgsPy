@@ -872,7 +872,7 @@ raster::GDALRasterWrapper *quantiles(
 		//initialize synchronization variables
 		std::vector<std::mutex> mutexes(map ? 1 : bandCount);
 		std::vector<std::condition_variable> cvs(map ? 1 : bandCount);
-		bool *quantilesCalculated = reinterpret_cast<bool *>(VSIMalloc2(bandCount, sizeof(bool)));
+		bool *quantilesCalculated = reinterpret_cast<bool *>(VSIMalloc2(bandCount, sizeof(bool))); //don't use std::vector<bool> because can't reference individual bools from it
 
 		//call batch processing quantiles function depending on data type
 		for (int i = 0; i < bandCount; i++) {
