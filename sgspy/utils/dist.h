@@ -86,7 +86,7 @@ setBins(
 	GDALDataType type,
 	std::vector<double>& bins)
 {
-	//determine bucket values as doubles to display to the user.
+	//determine bin values as doubles to display to the user.
 	double step = ((double)max - (double)min) / ((double)nBins);
 	double cur = (double)min;
 	for (int i = 0; i <= nBins; i++) {
@@ -94,7 +94,7 @@ setBins(
 		cur += step;
 	}
 
-	//set bucket values as the data type used so less data type conversion is necessary in later code
+	//set bin values as the data type used so less data type conversion is necessary in later code
 	std::vector<T> retval(nBins);
 	if (type == GDT_Float32 || type == GDT_Float64) {
 		for (int i = 0; i < nBins; i++) {
@@ -121,8 +121,8 @@ populationDistribution(
 	int yBlockStart,
 	int yBlockEnd,
 	int nBins,
-	std::vector<T>& bucketVals,
-	std::vector<int64_t>& bucketCounts,
+	std::vector<T>& binVals,
+	std::vector<int64_t>& counts,
 	std::mutex& mutex,
 	std::condition_variable& cv,
 	bool& finished)
@@ -132,6 +132,7 @@ populationDistribution(
 	T nan = static_cast<T>(band.nan);
 	void *p_data = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
 
+	std::vector<int64_t> chunkCounts(counts.size(), 0);
 	for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
@@ -149,8 +150,8 @@ populationDistribution(
 
 					if (val != nan && !std::isnan(val)) {
 						for (int i = nBins - 1; i >= 0; i--) {
-							if (bucketVals[i] <= val) {
-								bucketCounts[i]++;	
+							if (binVals[i] <= val) {
+								chunkCounts[i]++;	
 								break;
 							}
 						}
@@ -165,6 +166,9 @@ populationDistribution(
 
 	mutex.lock();
 	finished = true;
+	for (int i = 0; i < nBins; i++) {
+		counts[i] += chunkCounts[i];
+	}
 	mutex.unlock();
 	cv.notify_all();
 }
@@ -174,7 +178,7 @@ std::vector<int64_t>
 sampleDistribution(
 	helper::RasterBandMetaData& band,
 	std::vector<helper::Index>& samples,
-	std::vector<T> bucketVals,
+	std::vector<T> binVals,
 	int nBins)
 {
 	std::vector<int64_t> retval(nBins, 0);
@@ -183,7 +187,7 @@ sampleDistribution(
 	for (const helper::Index& index : samples) {
 		band.p_band->RasterIO(GF_Read, index.x, index.y, 1, 1, &val, 1, 1, band.type, 0, 0);
 		for (int i = nBins - 1; i >= 0; i--) {
-			if (bucketVals[i] <= val) {
+			if (binVals[i] <= val) {
 				retval[i]++;
 				break;
 			}
@@ -267,13 +271,10 @@ calculateDist(
 	std::vector<T> tbins = setBins<T>(min, max, nBins, band.type, dbins);
 
 	//determine the population distribution of the raster band
-	std::vector<std::vector<int64_t>> chunkCounts(nBins);
+	std::vector<int64_t> counts(nBins, 0);
 	for (int chunk = 0; chunk < nChunks; chunk++) {
 		int yStartBlock = chunk * chunksize;
 		int yEndBlock = std::min(yStartBlock + chunksize, yBlocks);
-
-		std::vector<int64_t> counts(nBins, 0);
-		chunkCounts[chunk] = counts;
 
 		chunksFinished[chunk] = false;
 
@@ -284,7 +285,7 @@ calculateDist(
 			yEndBlock,
 			nBins,
 			std::ref(tbins),
-			std::ref(chunkCounts[chunk]),
+			std::ref(counts),
 			std::ref(mutex),
 			std::ref(cv),
 			std::ref(chunksFinished[chunk])
@@ -306,14 +307,8 @@ calculateDist(
 		}
 	}
 
-	//calculate the counts in each bin
-	std::vector<int64_t> counts(nBins, 0);
-	for (int i = 0; i < nBins; i++) {
-		for (int j = 0; j < nChunks; j++) {
-			counts[i] += chunkCounts[j][i];
-		}
-	}
-
+	VSIFree(chunksFinished);
+	
 	retval.insert({std::string("population"), {dbins, counts}});
 
 	if (sampled.size() != 0) {
