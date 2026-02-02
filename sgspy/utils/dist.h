@@ -23,7 +23,43 @@
 namespace sgs {
 namespace dist {
 
-//no threading to start out
+/**
+ * @ingroup dist
+ * This is a helper function for finding the minimum and maximum values
+ * within a given raster band.
+ *
+ * The min and max variables are passed as references, and the min value
+ * is initialized to the largest value the data type can have, and the max
+ * value is initialized to the smallest value the data type can have.
+ *
+ * This function is provided with a particular chunk of the raster to process
+ * in blocks. Different threads are given different chunks. This function
+ * iterates through the blocks, reads them into memory, then iterates
+ * through each pixel in the block. If a pixel is nan (noData) it isn't 
+ * counted, otherwise the miniumum and maximum values are updated.
+ *
+ * Because the raster band is processed in chunks where each chunk
+ * is processed by a different thread, we need to ensure the main thread
+ * doesn't continue execution before one of the child threads has finished
+ * looking at every pixel in it's chunk. For this reason, a conditional variable
+ * is used alongside an array of values which keeps track of which chunks are
+ * completed. When this thread has finished checking every pixel, it acquires
+ * the lock (mutex) associated with the condition variable, updates the boolean
+ * value to indicate completion, releases the lock, then notifies all waiting threads
+ * in the condition variable. The main thread will wait at the condition variable,
+ * checking the array every time it wakes up to see whether the thread which awoke
+ * it was the final chunk completed. 
+ *
+ * @param RasterBandMetaData& band
+ * @param int width
+ * @param int yStartBlock
+ * @param int yEndBlock
+ * @param T& min
+ * @param T& max
+ * @param std::mutex& mutex
+ * @param std::condition_variable& cv
+ * @param bool& finished
+ */
 template <typename T>
 void 
 findMinMax(
@@ -77,42 +113,115 @@ findMinMax(
 	cv.notify_all();
 }
 
+/**
+ * @ingroup dist
+ * This function calculates the bin values for the distribution.
+ *
+ * It takes miniumum and maximum values as parameters. A vector of double
+ * values is created to represent the bins, in addition to a vector of 
+ * the data type of the raster pixels. The vector of doubles is the one
+ * returned to the user, the vector of the raster pixel type is used
+ * to calculate which bin a particular pixel goes into while iterating
+ * through the raster. 
+ *
+ * The reason why there is an additional vector with the rasters data type 
+ * is that it will reduce the potentialy overhead of requiring the program to cast 
+ * the pixel type to double to calculate the bin for every pixel. However, it also
+ * means that for integer values a simple static cast will not work, because it will
+ * always truncate the value. If the actual bin stops at 10.1, but the vin says 10 instead
+ * of 11, then pixels with value 10 will be placed into the wrong bin. The bin value
+ * represents the START value of the bin. The final parameter of the double bin 
+ * is the 'cap' and represents the end of the last bini, as is customary. 
+ * The raster pixel type bin vector does not have this cap value, as it is not necessary.
+ *
+ * @param T min
+ * @param T max
+ * @param int nBins
+ * @param GDALDataType type
+ * @param std::vector<double>& bins
+ * @param std::vector<T>& bins
+ */
 template <typename T>
-std::vector<T>
+void
 setBins(
 	T min,
 	T max,
 	int nBins,
 	GDALDataType type,
-	std::vector<double>& bins)
+	std::vector<double>& dbins,
+	std::vector<T>& tbins)
 {
+	dbins.resize(nBins + 1);
+	tbins.resize(nBins);
+
 	//determine bin values as doubles to display to the user.
 	double step = ((double)max - (double)min) / ((double)nBins);
 	double cur = (double)min;
 	for (int i = 0; i <= nBins; i++) {
-		bins.push_back(cur);
+		dbins[i] = cur;
 		cur += step;
 	}
 
 	//set bin values as the data type used so less data type conversion is necessary in later code
-	std::vector<T> retval(nBins);
 	if (type == GDT_Float32 || type == GDT_Float64) {
 		for (int i = 0; i < nBins; i++) {
-			retval[i] = static_cast<T>(bins[i]);
+			tbins[i] = static_cast<T>(dbins[i]);
 		}
 	}
 	else {
-		retval[0] = min;
+		tbins[0] = min;
 		cur += step;
 		for (int i = 1; i < nBins; i++) {
-			retval[i] = std::ceil(cur);
+			tbins[i] = std::ceil(cur);
 			cur += step;
 		}
 	}
-
-	return retval;
 }
 
+/**
+ * @ingroup dist
+ * This function calculates the distribution of pixels across the entire population
+ * (the whole raster band).
+ *
+ * The chunk of the raster assigned to this call of the function is iterated through
+ * in blocks. All of the pixels in each block are then iterated through, the nan values
+ * are ignored.
+ *
+ * The bin values are passed as a parameter, and the value in the vector represents the
+ * start of a particular bin. This means that the first index in the bins vector which
+ * is less than or equal to a particular pixel, is that pixles bin. For each pixel,
+ * the iteration starts at the largest bin and iterates down until it reaches a bin
+ * value less than or equal to a particular pixel.
+ *
+ * Because the raster band is processed in chunks where each chunk
+ * is processed by a different thread, we need to ensure the main thread
+ * doesn't continue execution before one of the child threads has finished
+ * looking at every pixel in it's chunk. For this reason, a conditional variable
+ * is used alongside an array of values which keeps track of which chunks are
+ * completed. When this thread has finished checking every pixel, it acquires
+ * the lock (mutex) associated with the condition variable, updates the boolean
+ * value to indicate completion, releases the lock, then notifies all waiting threads
+ * in the condition variable. The main thread will wait at the condition variable,
+ * checking the array every time it wakes up to see whether the thread which awoke
+ * it was the final chunk completed. 
+ *
+ * The global vector of counts is passed as a reference to this function. This global
+ * 'counts' parameter is not updated when iterating through the raster to avoid
+ * race conditions. Rather, a separate 'chunkCounts' vector which is local to 
+ * a particular call of this function is updated constantly. Then, when the lock
+ * is acquired the global count vector is updated befor releasing the lock.
+ *
+ * @param RasterBandMetaData& band
+ * @param int width
+ * @param int yBlockStart
+ * @param int yBlockEnd
+ * @param int nBins
+ * @param std::vector<T>& binVals
+ * @param std::vector<int64_t>& counts
+ * @param std::mutex& mutex
+ * @param std::condition_variable& cv
+ * @param bool& finished
+ */
 template <typename T>
 void
 populationDistribution(
@@ -173,6 +282,19 @@ populationDistribution(
 	cv.notify_all();
 }
 
+/**
+ * @ingroup dist
+ *
+ * This function calculates the probability distribution of a sample network, if a vector layer
+ * of samples was provided. It takes the same bin values as the population, and iterates through
+ * each sample index. The sample index is read from the raster band using the GDALRasterBand::RasterIO
+ * function. The bins counts are updated accordingly. 
+ *
+ * @param RasterBandMetaData& band
+ * @param std::vector<Index>* samples
+ * @param std::vector<T> binVals
+ * @param int nBins
+ */
 template <typename T>
 std::vector<int64_t>
 sampleDistribution(
@@ -197,6 +319,32 @@ sampleDistribution(
 	return retval;
 }
 
+/**
+ * @ingroup dist
+ *
+ * This is the function which does most of calculations for the distribution calculation.
+ * First the findMinMax() function is called to find the minimum and maximum pixel values
+ * within the raster. Then the setBins() function is called to set the bin values
+ * depending on the minumum and maximum values within the raster. Next, the populationDistribution()
+ * function is ran to determine the population distribution within the calculated raster bins. Finally,
+ * if the user provided a sample layer to compare against, the sampleDistribution() function is called
+ * to determine the distribution within that particular sample.
+ *
+ * Both the findMinMax() and populationDistribution() function are called multiple times, each with
+ * a different chunk (where the chunk count and chunk size is determined by the number of threads).
+ *
+ * To synchronize the calculations within both of those functions, a condition variable is used.
+ * The condition variable ensures the function does not continue calculation before ALL chunks of the
+ * raster have been checked.
+ *
+ * @param RasterBandMetaData& band
+ * @param std::vector<Index>& sampled
+ * @param int height
+ * @param int width
+ * @param int nBins
+ * @param std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<int64_t>>>& retval
+ * @param int nThreads
+ */
 template <typename T>
 void 
 calculateDist(
@@ -268,7 +416,8 @@ calculateDist(
 	//bins object so that while iterating through every pixel, they don't have to be cast to
 	//type double to check.
 	std::vector<double> dbins;
-	std::vector<T> tbins = setBins<T>(min, max, nBins, band.type, dbins);
+	std::vector<T> tbins;
+	setBins<T>(min, max, nBins, band.type, dbins, tbins);
 
 	//determine the population distribution of the raster band
 	std::vector<int64_t> counts(nBins, 0);
@@ -319,6 +468,29 @@ calculateDist(
 	pybind11::gil_scoped_release release;
 }
 
+/**
+ * @ingroup dist
+ * This function calculates the distribution of a particular raster band, and potentially
+ * the distribution of a provided sample network of the same raster band.
+ *
+ * First, if there is a sample network provided, all of the points are iterated through
+ * and converted to x/y index values usign the inverse geotransform (GDALInvGeoTransform()).
+ *
+ * After that, band metadata is acquired, and the calculateDistribution() function is called
+ * with a template parameter depending on the raster type. After which, the return variable
+ * (which was populated in calculateDistribution()) is returned. This variable is a map
+ * where the key is either 'population' or 'sample' to specify whether the distribution of
+ * the population or a sample distribution. The pair of vectors represent the bins and counts
+ * per bin.
+ *
+ * @param GDALRasterWrapper *p_raster
+ * @param int index
+ * @param GDALVectorWrapper *p_vector
+ * @param std::string layer
+ * @param int nBins
+ * @param int nThreads
+ * @returns std::unordered_map<std::string, std::pari<std::vector<double>, std::vector<int64_t>>>
+ */
 std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<int64_t>>>
 dist(
 	raster::GDALRasterWrapper *p_raster,
