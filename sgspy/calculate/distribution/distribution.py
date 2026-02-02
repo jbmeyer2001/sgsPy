@@ -29,14 +29,85 @@ from _sgs import dist_cpp
 ##
 # @ingroup user_distribution
 #
-# DOCUMENTATION
+# This function calculates the distribution of a given raster band.
+# The distribution is plotted by default, it is also returned.
+#
+# A number of bins can be given (the default is 50), the bins will be
+# sized equally depending on the minimum and maximum values within
+# the raster band. If the raster is a multi-band raster, the 'band'
+# parameter must be passed.
+#
+# Additionally, a SpatialVector may be passed to the samples parameter
+# which must contain a sample plot network (only geometry types Point or 
+# MultiPoint). If a SpatialVector is passed this way, the distribution
+# of the samples will also be calculated, using the same bins as the layer distribution.
+# if the SpatialVector has more than one layer, the 'layer' parameter must
+# be passed.
+#
+# This function returns a dict, the keys of the dict will be either 'population' or
+# 'sample'. If the 'samples' parameter is not given, only the 'population' key will exist.
+# If the 'samples' parameter IS given, both 'population' and 'sample' will exist as keys.
+# The values of the dict will be two arrays, one is the array of bins of type float64, the
+# other is the array of counts of type int64. The array of bins will be one value longer
+# than the array of counts, as it countains not just the minimum value but also the maximum value.
+#
+# For example, if the minimum pixel value in the raster is 1, and the maximum pixel value in the
+# raster is 3, 3 and the bin size is 4, then the bin array would be [1.0, 1.5, 2.0, 2.5, 3.0]. 
+# The array of counts would then be of length 4, where the first element (index 0) would be
+# the count of pixels which have a pixel value that satisfies the following 1.0 <= val < 1.5.
+# The second element (index 1) would then be 1.5 <= val < 2.0, and so on until the final 
+# element with 2.5 <= val <= 3. This is typical, and matches the way that the numpy 
+# histogram function works.
+#
+# The 'threads' parameter specifies the number of threads which this function will utilize.
+# The default value is 8. The optimal number will depend significantly on both the
+# hardware being used and the raster data, and may be more or less than 8.
+#
+# Examples
+# --------------------
+# rast = sgspy.SpatialRaster("rast.tif") #single band raster @n
+# sgspy.calculate.distribution(rast) #plotting is default
+#
+# rast = sgspy.SpatialRaster("mraster.tif") @n
+# sgspy.calculate.distribution(rast, band='pzabove2', bins=10)
+#
+# rast = sgspy.SpatialRaster("mraster.tif") @n
+# samples = sgspy.sample.clhs(rast, num_samples=250) @n
+# sgspy.calculate.distribution(rast, band='zsd', samples=samples)
+#
+# rast = sgspy.SpatialRaster("mraster.tif") @n
+# samples = sgpsy.sample.clhs(rast, num_samples=240) @n
+# result = sgspy.calculate.distribution(rast, band='zq90', samples=samples, bins=100, plot=False) @n
+# [pop_bins, pop_counts] = result['population'] @n
+# [samp_bins, samp_counts] = result['sample']
+#
+# Parameters
+# --------------------
+# rast : SpatialRaster @n
+#   raster data structure containing input raster band @n @n
+# band : Optional[str | int] @n
+#   the band to use within 'rast' if 'rast' has more than one band @n @n
+# samples : Optional[SpatialVector]
+#   the option data structure containing an input sample network @n @n
+# layer : Optional[str] @n
+#   the layer name of the sample network if 'samples' contains more than one layer @n @n
+# bins : int @n 
+#   the number of bins in the histogram distribution @n @n 
+# threads : int @n 
+#   the number of threads to use @n @n 
+# plot : bool @n 
+#   whether to plot a histogram of the distribution @n @n 
+#
+# Returns
+# --------------------
+# a dict[str, (array, array)] containing the bin values and counts, with dict keys 'population' and potentially 'sample'
 def distribution(
     rast: SpatialRaster,
     band: Optional[str | int] = None,
     samples: Optional[SpatialVector] = None,
     layer: Optional[str] = None,
     bins: int = 50,
-    threads: int = 8,#this is automatically set to 1 on the back end right now
+    threads: int = 8,
     plot: bool = True):
 
     if type(rast) is not SpatialRaster:
