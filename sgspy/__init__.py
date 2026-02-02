@@ -21,20 +21,29 @@
 
 import os
 import sys
+import site
 import platform
 import ctypes
 
 if (platform.system() == 'Windows'):
-    vendored_lib_path = os.path.join(sys.prefix, "sgspy")
-    lib_path = os.path.join(sys.prefix, "Library", "bin")
-    os.add_dll_directory(vendored_lib_path)
-    os.add_dll_directory(lib_path)
+    for path in sys.path:
+        if path.endswith('site-packages'):
+            path = os.path.split(os.path.split(path)[0])[0]
 
-    if vendored_lib_path not in os.environ['PATH']:
-        os.environ['PATH'] = vendored_lib_path + os.pathsep + os.environ['PATH']
+            vendored_lib_path = os.path.join(path, "sgspy")
+            lib_path = os.path.join(path, "Library", "bin")
 
-    if lib_path not in os.environ['PATH']:
-        os.environ['PATH'] = lib_path + os.pathsep + os.environ['PATH']
+            if os.path.exists(vendored_lib_path):
+                os.add_dll_directory(vendored_lib_path)
+
+                if vendored_lib_path not in os.environ['PATH']:
+                    os.environ['PATH'] = vendored_lib_path + os.pathsep + os.environ['PATH']
+
+            if os.path.exists(lib_path):
+                os.add_dll_directory(lib_path)
+
+                if lib_path not in os.environ['PATH']:
+                    os.environ['PATH'] = lib_path + os.pathsep + os.environ['PATH']
 
 else: #linux 
     #this library goes missing at runtime if we don't do this

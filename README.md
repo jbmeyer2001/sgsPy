@@ -14,7 +14,7 @@ sgsPy can be downloaded on either Windows or Linux from the Python Package Index
 
 ``` pip install sgspy ```
 
-At the moment, the import `import sgspy` may fail if you are not using a virtual environment, OR you are using a package manager other than PyPi (pip).
+At the moment, the import `import sgspy` may fail if you are using a package manager other than PyPi (pip).
 
 ## Overview
 `sgsPy` is based on the widely-used `sgsR` package, intended originally to help develop representative ground sample networks using auxiliary 
