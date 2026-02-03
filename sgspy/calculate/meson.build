@@ -5,5 +5,6 @@ py.install_sources(
   subdir: 'sgspy/calculate',
 )
 
+subdir('distribution')
 subdir('pca')
 subdir('representation')

@@ -26,6 +26,7 @@ While the original intention for the package was to be used with ALS metrics, an
 If you encounter any bugs, unclear documentation, or have any feature ideas then please contribute by posting an issue. https://github.com/jbmeyer2001/sgsPy/issues
 
 The currently implemented functionality includes:
+ - **[calculating] [distribution](https://jbmeyer2001.github.io/sgsPy/group__user__distribution.html)**
  - **[calculating] [principal component analysis](https://jbmeyer2001.github.io/sgsPy/group__user__pca.html)**
  - **[sampling] [conditioned latin hypercube sampling](https://jbmeyer2001.github.io/sgsPy/group__user__clhs.html)**
  - **[sampling] [simple random sampling](https://jbmeyer2001.github.io/sgsPy/group__user__srs.html)**
