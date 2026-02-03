@@ -76,7 +76,7 @@ class TestStrat:
         return allocation
 
     def test_random_allocation_equal(self):
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 5})
 
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
@@ -156,7 +156,7 @@ class TestStrat:
             assert percentage - 0.2 == pytest.approx(0, abs=0.03)
 
     def test_random_allocation_proportional(self):
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 8})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 8})
 
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
@@ -237,7 +237,7 @@ class TestStrat:
 
     def test_random_allocation_manual(self):
         #without mindist or access
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 4})
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
             'strat_zq90',
@@ -328,7 +328,7 @@ class TestStrat:
 
     def test_random_allocation_optim(self):
         #test with mrast band = 0
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 10})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 10})
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
             'strat_zq90',
@@ -385,7 +385,7 @@ class TestStrat:
         assert percentages[9] - .07 == pytest.approx(0, abs=0.02)
 
     def test_queinnec_allocation_equal(self):
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 5})
 
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
@@ -465,7 +465,7 @@ class TestStrat:
             assert percentage - 0.2 == pytest.approx(0, abs=0.03)
 
     def test_queinnec_allocation_proportional(self):
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 8})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 8})
 
         #without mindist or access
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
@@ -546,7 +546,7 @@ class TestStrat:
 
     def test_queinnec_allocation_manual(self):
         #without mindist or access
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 4})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 4})
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
             'strat_zq90',
@@ -637,7 +637,7 @@ class TestStrat:
 
     def test_queinnec_allocation_optim(self):
         #test with mrast band = 0
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 10})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 10})
         samples = gpd.GeoSeries.from_wkt(sgs.sample.strat(
             srast,
             'strat_zq90',
@@ -695,7 +695,7 @@ class TestStrat:
 
     def test_existing_samples(self):
         #with force=True, test a couple different combinations of input parameters
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 10})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 10})
         existing = gpd.read_file(existing_shapefile_path)['geometry']
         existing_sample_count = len(existing)
 
@@ -776,7 +776,7 @@ class TestStrat:
         assert existing_in_final != existing_sample_count
 
     def test_queinnec_focal_window(self):
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 5})
 
         #queinnec sampling works by first adding pixels which have a focal
         #window containing the same pixels, then automatically moving to 
@@ -841,7 +841,7 @@ class TestStrat:
             self.check_focal_window(srast, samples, wrow=5, wcol=3)
  
     def test_function_inputs(self):
-        srast = sgs.stratify.quantiles(self.rast, num_strata={"zq90": 5})
+        srast = sgs.stratify.quantiles(self.rast, quantiles={"zq90": 5})
 
         #test wrow inputs
         for wrow in [-1, 0, 2]:

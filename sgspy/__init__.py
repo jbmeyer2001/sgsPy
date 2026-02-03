@@ -62,6 +62,7 @@ from .utils import (
 )
 
 from .calculate import (
+    distribution,
     pca,
     representation,
 )

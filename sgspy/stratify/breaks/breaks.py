@@ -15,14 +15,18 @@ import os
 import sys
 import site
 import tempfile
+from typing import Optional
+
 import numpy as np
+import matplotlib.pyplot as plt
+
 from sgspy.utils import SpatialRaster
 
 #ensure _sgs binary can be found
 site_packages = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]
 sys.path.append(os.path.join(site_packages, "sgspy"))
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from _sgs import breaks_cpp
+from _sgs import breaks_cpp, dist_cpp
 
 GIGABYTE = 1073741824
 
@@ -58,6 +62,11 @@ GIGABYTE = 1073741824
 # they must be valid for the GTiff format, as that is the format used to store temporary raster files.
 # Note that if this parameter is given, but filename is not and the raster fits entirely in memory, the
 # driver_options parameter will be ignored.
+#
+# Additionally, the 'plot' parameter determines whether a histogram plot will be made of the
+# stratified bands. The histogram will be the distribution of each of the raster bands which
+# had stratified bands made from them, with indicators on the break values. The 'histogram_bins'
+# parameter indicates the number of bands in each of the plotted histograms.
 # 
 # Examples
 # --------------------
@@ -71,7 +80,7 @@ GIGABYTE = 1073741824
 # srast = sgspy.stratify.breaks(rast, breaks={"band_name1": [3, 5, 11, 10], "band_name2": [20, 40, 60, 80]}, map=True)
 # 
 # rast = sgspy.SpatialRaster("multi_band_rast.tif") @n
-# srast = sgspy.stratify.breaks(rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]])
+# srast = sgspy.stratify.breaks(rast, breaks=[[3, 5, 11, 18], [40, 60, 80], [2, 5]], plot=True)
 # 
 # Parameters
 # --------------------
@@ -87,7 +96,11 @@ GIGABYTE = 1073741824
 #     the number of threads to use when multithreading large images @n @n
 # driver_options : dict[] @n
 #     the creation options as defined by GDAL which will be passed when creating output files @n @n
-# 
+# plot : optional[bool] @n
+#     whether or not to plot a histogram of the values in the bands with indicators on the breaks @n @n
+# histogram_bins : Optional[int] @n
+#     The number of bins in the plotted histogram. @n @n
+#
 # Returns
 # --------------------
 # a SpatialRaster object containing stratified raster bands.
@@ -97,7 +110,9 @@ def breaks(
     map: bool = False,
     filename: str = '',
     thread_count: int = 8,
-    driver_options: dict = None
+    driver_options: dict = None,
+    plot: Optional[bool] = False,
+    histogram_bins: Optional[int] = None
     ):
 
     MAX_STRATA_VAL = 2147483647 #maximum value stored within a 32-bit signed integer to ensure no overflow
@@ -119,6 +134,12 @@ def breaks(
 
     if driver_options is not None and type(driver_options) is not dict:
         raise TypeError("'driver_options' parameter, if givne, must be of type dict.")
+
+    if plot is not None and type(plot) is not bool:
+        raise TypeError("'plot_histogram' parameter, if given, must be of type bool.")
+
+    if histogram_bins is not None and type(histogram_bins) is not int:
+        raise TypeError("'histogram_bins' parameter, if given, must be of type int.")
 
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
@@ -218,5 +239,22 @@ def breaks(
     srast.cpp_raster.set_temp_dir(temp_dir)
     srast.temp_dataset = filename == "" and large_raster
     srast.filename = filename
+
+    if plot:
+        cpp_vector = None
+        layer = ""
+        bin_count = histogram_bins if histogram_bins is not None else 50 
+
+        for (band, break_vals) in breaks_dict.items():
+            result = dist_cpp(rast.cpp_raster, band, cpp_vector, layer, bin_count, thread_count)
+            [bins, counts] = result["population"]
+            freq = counts / np.sum(counts)
+            bin_size = bins[1] - bins[0]
+
+            plt.bar(bins[0:bin_count], freq, alpha=0.5, width=bin_size, label="frequencies")
+            for val in break_vals: plt.axvline(x=val, color='r')
+            plt.legend(loc='upper right')
+            plt.title(rast.bands[band])
+            plt.show()
 
     return srast

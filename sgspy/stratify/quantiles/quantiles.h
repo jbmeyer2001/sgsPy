@@ -709,7 +709,8 @@ processPixel(
  * @param double eps
  * @returns GDALRasterWrapper *pointer to newly created stratified raster
  */
-raster::GDALRasterWrapper *quantiles(
+std::pair<raster::GDALRasterWrapper *, std::unordered_map<std::string, std::vector<double>>>
+quantiles(
 	raster::GDALRasterWrapper *p_raster,
 	std::map<int, std::vector<double>> userProbabilites,
 	bool map,
@@ -872,7 +873,7 @@ raster::GDALRasterWrapper *quantiles(
 		//initialize synchronization variables
 		std::vector<std::mutex> mutexes(map ? 1 : bandCount);
 		std::vector<std::condition_variable> cvs(map ? 1 : bandCount);
-		bool *quantilesCalculated = reinterpret_cast<bool *>(VSIMalloc2(bandCount, sizeof(bool)));
+		bool *quantilesCalculated = reinterpret_cast<bool *>(VSIMalloc2(bandCount, sizeof(bool))); //don't use std::vector<bool> because can't reference individual bools from it
 
 		//call batch processing quantiles function depending on data type
 		for (int i = 0; i < bandCount; i++) {
@@ -1225,9 +1226,17 @@ raster::GDALRasterWrapper *quantiles(
 		}
 	}
 
-	return largeRaster ? 
-		new raster::GDALRasterWrapper(p_dataset) :
-		new raster::GDALRasterWrapper(p_dataset, buffers);
+	std::unordered_map<std::string, std::vector<double>> quantileValues;
+	for (size_t i = 0; i < dataBands.size(); i++) {
+		quantileValues.insert({std::string(dataBands[i].p_band->GetDescription()), quantiles[i]});
+	}
+		
+	if (largeRaster) {
+		return {new raster::GDALRasterWrapper(p_dataset), quantileValues};
+	}
+	else {
+		return {new raster::GDALRasterWrapper(p_dataset, buffers), quantileValues};
+	}
 }
 
 } //namespace quantiles
