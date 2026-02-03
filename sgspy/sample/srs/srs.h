@@ -338,9 +338,7 @@ srs(
 	while (samplesAdded < numSamples && i < indices.size()) {
 		helper::Index index = indices[i];
 		bool valid = true;
-
-		double x = GT[0] + index.x * GT[1] + index.y * GT[2];
-		double y = GT[3] + index.x * GT[4] + index.y * GT[5];
+		const auto [x, y] = helper::sample_to_point(GT, index);
 
 		if (useMindist) {
 			valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
