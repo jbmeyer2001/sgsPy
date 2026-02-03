@@ -1234,6 +1234,7 @@ strat(
 	std::vector<std::vector<OGRPoint>> existingSamples(numStrata);	
 	existing::Existing existing(
 		p_existing,
+		p_raster,
 		GT,
 		width,
 		p_layer,

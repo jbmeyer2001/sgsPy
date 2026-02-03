@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "raster.h"
 #include "vector.h"
 #include "helper.h"
 
@@ -64,7 +65,8 @@ struct Existing {
 	 * @param std::vector<double>& yCoords
 	 */
 	Existing(
-		vector::GDALVectorWrapper *p_vect, 
+		vector::GDALVectorWrapper *p_vect,
+	       	raster::GDALRasterWrapper *p_rast,	
 		double *GT, 
 		int64_t width, 
 		OGRLayer *p_samples, 
@@ -76,8 +78,8 @@ struct Existing {
 		if (!p_vect) {
 			this->used = false;
 			return;
-		}
-		
+		}	
+
 		OGRFieldDefn existingField("existing", OFTInteger);
 		OGRErr err = p_samples->CreateField(&existingField);
 		if (err) {
@@ -89,6 +91,15 @@ struct Existing {
 		std::vector<std::string> layerNames = p_vect->getLayerNames();
 		if (layerNames.size() > 1) {
 			throw std::runtime_error("the file containing existing sample points must have only a single layer.");
+		}
+
+		//check to ensure spatial reference system of raster and vector match
+		std::string rastProj = p_rast->getDataset()->GetProjectionRef();
+		OGRSpatialReference rastSRS;
+		rastSRS.importFromWkt(rastProj.c_str());
+		OGRSpatialReference *p_sampSRS = p_samples->GetSpatialRef();
+		if (!rastSRS.IsSame(p_sampSRS)) {
+			throw std::runtime_error("existing sample vector and raster do not have the same spatial reference system.");	
 		}
 
 		//invert geotransform so we can use IGT to convert from point to indexes

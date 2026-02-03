@@ -40,7 +40,7 @@ from _sgs import strat_cpp
 #  - The 'random' method randomly selects pixels within a given strata.
 #  - The 'Queinnec' method prioritizes pixels which are surrounded by other pixels of the same strata.
 # The 'wrow' and 'wcol' parameters determine the size of the surrounding area required for a pixel to be
-# prioritized.
+# prioritized, and must be one of the following integers: 3, 5, 7.
 # 
 # The desired number of samples is given by num_samples.
 #
@@ -109,8 +109,8 @@ from _sgs import strat_cpp
 # --------------------
 # strat_rast : SpatialRaster
 #     the raster to sample
-# band : int | str @n
-#     the band within the strat_rast to use, either a 0-indexed int value or the name of the band @n @n
+# band : Optional[int | str] @n
+#     the band within the strat_rast to use, required if strat_rast has more than 1 band, either a 0-indexed int value or the name of the band @n @n
 # num_samples : int @n
 #     the desired number of samples @n @n
 # num_strata : int @n
@@ -155,11 +155,11 @@ from _sgs import strat_cpp
 # a SpatialVector object containing point geometries of sample locations
 def strat(
     strat_rast: SpatialRaster,
-    band: int | str,
     num_samples: int,
     num_strata: int,
     wrow: int = 3,
     wcol: int = 3,
+    band: Optional[int | str] = None,
     allocation: str = "prop",
     weights: Optional[list[float]] = None,
     mrast: Optional[SpatialRaster] = None,
@@ -179,8 +179,8 @@ def strat(
     if type(strat_rast) is not SpatialRaster:
         raise TypeError("'strat_rast' parameter must be of type sgspy.SpatialRaster.")
 
-    if type(band) not in [int, str]:
-        raise TypeError("'band' parameter must be of type int or str.")
+    if band is not None and type(band) not in [int, str]:
+        raise TypeError("'band' parameter, if given, must be of type int or str.")
 
     if type(num_samples) is not int:
         raise TypeError("'num_samples' parameter must be of type int.")
@@ -242,7 +242,9 @@ def strat(
     if mrast is not None and mrast.closed:
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
-    if type(band) is str:
+    if band is None:
+        band = 0
+    elif type(band) is str:
         if band not in strat_rast.bands:
             msg = "band " + str(band) + " not in given raster."
             raise ValueError(msg);

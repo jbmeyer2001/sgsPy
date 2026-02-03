@@ -241,6 +241,7 @@ srs(
 	//generate existing structure
 	existing::Existing existing(
 		p_existing,
+		p_raster,
 		GT,
 		p_raster->getWidth(),
 		p_layer,
