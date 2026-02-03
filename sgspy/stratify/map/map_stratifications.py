@@ -29,14 +29,22 @@ GIGABYTE = 1073741824
 # @ingroup user_map
 # This function conducts mapping on existing stratifications.
 # 
-# The pre-existing stratifications are passed in the form of a raster, band, and num_stratum.
-# The bands argument specifies which bands within the raster should be used, the num_stratum
-# argument specifies the number of stratum within one particular band.
+# The pre-existing stratifications are passed in the form of a raster, band.
+# The bands argument specifies which bands within the raster should be used.
+# 
+# **IMPORTANT**
+# If the strat raster WAS NOT created as a result of running one of the other sgspy
+# stratification functions, and additional argument MUST be passed, the number of
+# strata. The num_strata argument corresponds to the number of strata within the
+# band mentioned, and every value within that band which isn't nan MUST BE less than
+# this num_strata value.
 # 
 # the arguments are passed in the form of a tuple, of which there can be any number.
 # For example, both of the following are valid:
-#  - map((rast1, bands1, num_stratum1))
-#  - map((rast1, bands1, num_stratum1), (rast1, bands2, num_stratum2))
+#  - map((srast1, bands1))
+#  - map((srast1, bands1), (rast1, bands2))
+#  - map((srast1, bands1, num_strata1)) #if rast1 was not created as the result of running an sgspy function.
+#  - map((srast1, bands1, num_strata1), (srast2, bands2, num_strata2)) #if rast1 and rast2 were not created as the result of running an sgspy function
 # 
 # the raster within the tuple MUST be of type sgs.utils.SpatialRaster. 
 # The bands argument MUST be: 
@@ -45,7 +53,7 @@ GIGABYTE = 1073741824
 #  - a list of ints, specifying the indexes of bands.
 #  - a list of strings, specifying the names of bands.
 # 
-# The num_stratum argument MUST be
+# The num_strata argument, if required, MUST be:
 #  - an int, if bands is an int or string, specifiying the exact number of stratum in the 
 #         selected band.
 #  - a list of ints of the same length of bands, specifying the exact number of stratum in 
@@ -75,17 +83,30 @@ GIGABYTE = 1073741824
 # rast = sgspy.SpatialRaster("rast.tif") @n
 # breaks = sgspy.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
 # quantiles = sgspy.stratify.quantiles(rast, num_strata={'zsd': 25}) @n
-# srast = sgspy.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
+# srast = sgspy.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2']), (quantiles, 'strat_zsd'))
 # 
 # rast = sgspy.SpatialRaster("rast.tif") @n
 # inventory = sgspy.SpatialVector("inventory_polygons.shp") @n
 # breaks = sgspy.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
 # poly = sgspy.stratify.poly(rast, inventory, attribute="NUTRIENTS", layer_name="inventory_polygons", features=['poor', 'medium', 'rich']) @n
-# srast = sgspy.stratify.map((breaks, [0, 1], [5, 5]), (poly, 0, 3), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})
-# 
+# srast = sgspy.stratify.map((breaks, [0, 1]), (poly, 0), filename="mapped_srast.tif", driver_options={"COMPRESS", "LZW"})
+#
+# #Some pre-existing strat raster(s) @n
+# breaks = sgspy.SpatialRaster("breaks.tif") @n
+# quantiles = sgspy.SpatialRaster("quantiles.tif") @n
+# #give an extra argument, the number of strata, for each strat raster, because sgspy does not know from previously creating that sraster. @n
+# mapped = sgspy.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5, 5]), (quantiles, 'strat_zsd', 25))
+#
+# #Another example with pre-existing strat raster(s)
+# rast = sgspy.SpatialRaster("rast.tif") @n
+# breaks = sgspy.SpatialRaster("breaks.tif") @n
+# poly = sgspy.SpatialRaster("poly.tif") @n
+# #give an extra argument, the number of strata, for each strat raster, because sgspy does not know from previously creating that sraster. @n
+# srast = sgspy.stratify.map((breaks, [0, 1], [5, 5]), (poly, 0, 3))
+#
 # Parameters
 # --------------------
-# *args : tuple[SpatialRaster, int|list[int]|list[str], int|list[int]] @n
+# *args : tuple[SpatialRaster, int|list[int]|list[str], Optional[int|list[int]]] @n
 #     tuples specifying raster bands and their number of stratifications @n @n
 # filename : str @n
 #     filename to write to or '' if not file should be written @n @n
@@ -97,7 +118,7 @@ GIGABYTE = 1073741824
 # Returns
 # --------------------
 # a SpatialRaster object containing a band of mapped stratifications from the input raster(s).
-def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
+def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|list[int]]],
         filename: str = '',
         thread_count: int = 8,
         driver_options: dict = None):
@@ -117,36 +138,49 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
     band_lists = []
     strata_lists = []
 
-    height = args[0][0].height
-    width = args[0][0].width
+    height = None
+    width = None
 
     raster_size_bytes = 0
     large_raster = False
-    for (raster, bands, num_stratum) in args:
+    mapped_band_metadata = []
+    mapped_strata_count = 1
+    for (raster, bands, num_strata) in args:
         if type(raster) is not SpatialRaster:
-            raise TypeError("first value in each tuple argument must be of type sgspy.SpatialRaster.")
+            raise TypeError("first value in each tuple argument, which represents the strat raster, must be of type sgspy.SpatialRaster.")
 
         if type(bands) not in [int, str, list]:
-            raise TypeError("second value in each tuple argument must be of type int, str, or list.")
+            raise TypeError("second value in each tuple argument, which represents the band(s) to use within the strat raster, must be of type int, str, or list.")
 
-        if type(num_stratum) not in [int, list]:
-            raise TypeError("third value in each tuple argument must be of type int or list.")
+        if !raster.is_strat_rast and num_strata is None:
+            raise TypeError("if one of the strat rasters specified is not the direct result of running one of the sgspy stratification functions, the additional 'num_strata' argument must be given.")
+
+        #use the num strata we know to be true, not the user input value
+        if raster.is_strat_rast:
+            num_strata = None
+
+        if num_strata is not None and type(num_strata) not in [int, list]:
+            raise TypeError("if the num_strata argument is required, it must be of type int or list.")
 
         if raster.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
+        if not height:
+            height = raster.height
         if raster.height != height:
             raise ValueError("height is not the same across all rasters.")
 
+        if not width:
+            width = raster.width
         if raster.width != width:
             raise ValueError("width is not the same across all rasters.")
 
-        #error checking on bands and num_stratum lists
-        if type(bands) is list and type(num_stratum) is list and len(bands) != len(num_stratum):
-            raise ValueError("if bands and num_stratum arguments are lists, they must have the same length.")
+        #error checking on bands and num_strata lists
+        if num_strata is not None and type(bands) is list and type(num_strata) is list and len(bands) != len(num_strata):
+            raise ValueError("if bands and num_strata arguments are lists, they must have the same length.")
         
-        if (type(bands) is list) ^ (type(num_stratum) is list): #XOR
-            raise TypeError("if one of bands and num_stratum is list, the other one must be a list of the same length.")
+        if num_strata is not None and ((type(bands) is list) ^ (type(num_strata) is list)): #XOR
+            raise TypeError("if the 'num_strata' argument is given, and one of the 'bands' argument and 'num_strata' argument is a list, the other one must also be a list of the same length.")
 
         if type(bands) is list and len(bands) > raster.band_count:
             raise ValueError("bands list cannot have more bands than raster contains.")
@@ -157,13 +191,16 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
             if type(band) is int:
                 if band not in range(raster.band_count):
                     raise ValueError("band {} is out of range.".format(band))
-                return band
 
             #if a string is passed, check and return corresponding int
-            if band not in raster.bands:
-                msg = "band {} is not a band within the raster.".format(band)
+            elif type(band) is str:
+                if band not in raster.bands:
+                    msg = "band {} is not a band within the raster.".format(band)
                 raise ValueError(msg)
-            return raster.band_name_dict[band]
+
+            else:
+                raise TypeError("if the band argument is a list, every value within it must be of type int or str.")
+            return raster.get_band_index(band)
 
         #error checking on band int/string values
         band_list = []
@@ -172,7 +209,11 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
             for i in range(len(bands)):
                 band_int = get_band_int(bands[i])
                 band_list.append(band_int)
-                stratum_list.append(num_stratum[i])
+                if raster.is_strat_rast:
+                    num_strata = raster.srast_metadata_info[band_int].get_num_strata()
+                    stratum_list.append(num_strata)
+                else:
+                    stratum_list.append(num_strata[i])
                 
                 #check for large raster
                 pixel_size = raster.cpp_raster.get_raster_band_type_size(band_int)
@@ -183,7 +224,11 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], int|list[int]],
         else:
             band_int = get_band_int(bands)
             band_list.append(band_int)
-            stratum_list.append(num_stratum)
+            if raster.is_strat_rast:
+                num_strata = raster.srast_metadata_info[band_int].get_num_strata()
+                stratum_list.append(num_strata)
+            else:
+                stratum_list.append(num_strata)
             
             #check for large raster
             pixel_size = raster.cpp_raster.get_raster_band_type_size(band_int)

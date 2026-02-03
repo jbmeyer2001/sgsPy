@@ -19,6 +19,7 @@ import tempfile
 from sgspy.utils import (
     SpatialRaster,
     SpatialVector,
+    StratRasterBandMetadata,
 )
 
 #ensure _sgs binary can be found
@@ -120,14 +121,24 @@ def poly(
         raise ValueError("the number of features (and resulting max strata) will cause an overflow error because the max strata number is too large.")
 
     #generate query cases and where clause using features and attribute
+    metadata = []
     for i in range(len(features)):
-        if type(features[i]) is not list:
+        if type(features[i]) is str:
             cases += "WHEN '{}' THEN {} ".format(str(features[i]), i)
             where_entries.append("{}='{}'".format(attribute, str(features[i])))
-        else:
+            metadata.append("{} is {}".format(attribute, str(features[i])))
+        
+        elif type(features[i]) is list:
             for j in range(len(features[i])):
+                if type(features[i][j]) is not str:
+                    raise TypeError("every entry in the 'features' must be of type str or list[str].")
+                
                 cases += "WHEN '{}' THEN {} ".format(str(features[i][j]), i)
                 where_entries.append("{}='{}'".format(attribute, str(features[i][j])))
+            
+            metadata.append("{} is one of {}".format(attribute, str(features[i])))
+        else:
+            raise TypeError("every entry in the 'features' parameter must be of type str or list[str].")
 
     where_clause = " OR ".join(where_entries)
 
@@ -166,5 +177,8 @@ def poly(
     srast.temp_dataset = filename == "" and large_raster
     srast.filename = filename
 
-    return srast
+    metadata_info = SpatialRasterBandMetadata(mapped=False, strata=len(features), band_metadata=metadata)
+    srast.srast_metadata_info = [metadata_info]
+    srast.is_strat_rast = True
 
+    return srast

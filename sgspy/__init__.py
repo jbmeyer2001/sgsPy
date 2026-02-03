@@ -59,6 +59,7 @@ from . import stratify
 from .utils import (
     SpatialRaster,
     SpatialVector,
+    StratRasterBandMetadata
 )
 
 from .calculate import (

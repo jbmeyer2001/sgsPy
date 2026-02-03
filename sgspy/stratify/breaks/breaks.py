@@ -257,4 +257,26 @@ def breaks(
             plt.title(rast.bands[band])
             plt.show()
 
+    metadata_info = [] 
+    mapped_band_metadata = []
+    mapped_strata_count = 1
+    for (band, break_vals) in breaks_dict.items():
+        name = rast.bands[band]
+        strata_count = len(break_vals) + 1
+
+        metadata = ["{} < {}".format(name, break_vals[0])]
+        for i in range(1, len(break_vals) - 1):
+            metadata.append("{} <= {} < {}".format(break_vals[i - 1], name, break_vals[i]))
+        metadata.append("{} <= {}".format(break_vals[-1], name))
+        metadata_info.append(StratRasterBandMetadata(mapped=False, strata_count=strata_count, band_metadata = metadata))
+        
+        if map:
+            mapped_band.append((srast.bands[band], strata_count))
+            mapped_strata_count = mapped_strata_count * strata_count
+
+    if map:
+        metadata_info.append(StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
+
+    srast.srast_metadata_info = metadata_info
+    srast.is_strat_rast = True
     return srast

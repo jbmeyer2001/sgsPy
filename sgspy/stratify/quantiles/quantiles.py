@@ -327,4 +327,26 @@ def quantiles(
             plt.title(band)
             plt.show()
 
+    metadata_info = []
+    mapped_band_metadata = []
+    mapped_strata_count = 1
+    for band, vals in quantile_vals.items():
+        name = rast.bands[band]
+        strata_count = len(vals) + 1
+
+        metadata = ["{} < {}".format(name, vals[0])]
+        for i in range(1, len(vals) - 1):
+            metadata.append("{} <= {} < {}".(vals[i - 1], name, vals[i]))
+        metadata.append("{} <= {}".format(vals[-1], name))
+        metadata_info.append(StratRasterBandMetadata(mapped=False, strata_count=strata_count, band_metadata = metadata))
+        
+        if map:
+            mapped_band.append((srast.bands[band], strata_count))
+            mapped_strata_count = mapped_strata_count * strata_count
+
+    if map:
+        metadata_info.append(StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
+
+    srast.srast_metadata_info = metadata_info
+    srast.is_strat_rast = True
     return srast
