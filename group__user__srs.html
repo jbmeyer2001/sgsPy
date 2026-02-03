@@ -163,7 +163,7 @@ Functions</h2></td></tr>
 <p>Sample points are randomly selected from data pixels (can't be nodata). All sample points are at least mindist distance away from eachother. If unable to get the full number of sample points, a message is printed.</p>
 <p>An access vector of LineString or MultiLineString type can be provided. buff_outer specifies the buffer distance around the geometry which is allowed to be included in the sampling, buff_inner specifies the buffer distance around the geometry which is not allowed to be included in the sampling. buff_outer must be larger than buff_inner. For a multi layer vector, layer_name must be specified.</p>
 <p>A vector containing existing sample points can be provided. If this is the case then all of the points in the existing sample are automatically added and random samples are chosen as required until num_samples number of samples are chosen.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md18"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md21"></a>
 Examples</h2>
 <p>rast = sgspy.SpatialRaster("raster.tif") <br  />
 samples = <a class="el" href="namespacesgspy_1_1sample_1_1srs.html">sgspy.sample.srs</a>(rast, num_samples=250)</p>
@@ -178,7 +178,7 @@ samples = <a class="el" href="namespacesgspy_1_1sample_1_1srs.html">sgspy.sample
 <p>rast = sgspy.SpatialRaster("raster.tif") <br  />
 existing = sgspy.SpatialVector("existing_samples.shp") <br  />
 samples = <a class="el" href="namespacesgspy_1_1sample_1_1srs.html">sgspy.sample.srs</a>(rast, num_samples=200, existing=existing)</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md19"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md22"></a>
 Parameters</h2>
 <p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  raster data structure containing the raster to sample <br  />
@@ -211,7 +211,7 @@ filename : str <br  />
  the filename to write to, or '' if file should not be written <br  />
  <br  />
 </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md20"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md23"></a>
 Returns</h2>
 <p>a <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> object containing point geometries of sample locations </p>
 

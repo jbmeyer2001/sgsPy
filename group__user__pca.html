@@ -137,7 +137,7 @@ Functions</h2></td></tr>
 <p>This functions conducts principal component analysis on the given raster. </p>
 <p>A number of output components must be provided as an integer. This integer must be less than or equal to the total number of bands in the input raster, and will be the number of bands in the output raster. A filename may be given to specify an output file location, otherwise a virtual file type will be used. The driver_options parameter is used to specify creation options for a the output raster. See options for the Gtiff driver here: <a href="https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options">https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options</a></p>
 <p>Principal components are calculated across all raster bands, along with mean and standard deviation of each raster band. The raster is both centered and scaled, then output values are calculated for each principal component.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md12"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md15"></a>
 Examples</h2>
 <p>rast = sgspy.SpatialRaster("raster.tif") <br  />
 pcomp = <a class="el" href="namespacesgspy_1_1calculate_1_1pca.html">sgspy.calculate.pca(rast, 3)</a></p>
@@ -145,7 +145,7 @@ pcomp = <a class="el" href="namespacesgspy_1_1calculate_1_1pca.html">sgspy.calcu
 pcomp = <a class="el" href="namespacesgspy_1_1calculate_1_1pca.html">sgspy.calculate.pca</a>(rast, 2, filename="pca.tif", display_info=True)</p>
 <p>rast = sgspy.SpatialRaster("raster.tif") <br  />
 pcomp = <a class="el" href="namespacesgspy_1_1calculate_1_1pca.html">sgspy.calculate.pca</a>(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"})</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md13"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md16"></a>
 Parameters</h2>
 <p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  raster data structure containing input raster bands <br  />
@@ -163,7 +163,7 @@ driver_options : dict <br  />
  the creation options as defined by GDAL which will be passed when creating output files <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md14"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md17"></a>
 Returns</h2>
 <p>a <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing principal component bands </p>
 

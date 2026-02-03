@@ -219,7 +219,7 @@ Functions</h2></td></tr>
 <p>The allocation parameter specifies the proportion of total samples will be distributed between each strata. The 'prop' method is the default, and attempts to allocate the samples proportionally according to their prevalence in the overall raster. The 'equal' method attempts to distribute the samples equally among strata. the 'manual' method requires that the weights parameter be given, and attempts to allocate according to the proportions given in the weights parameter. In the case where 'optim' allocation is used, an additional raster must be passed to the mrast parameter, and if that raster contains more than 1 band the mrast_band parameter must be given specifying which band. The optim method is specified by Gregoire and Valentine, and optimizes the desired proportions based on the proportion of each strata AND the within-strata variance in the specified raster band. <a href="https://doi.org/10.1201/9780203498880">https://doi.org/10.1201/9780203498880</a> Section 5.4.4.</p>
 <p>The 'existing' parameter, if passed, must be a SpatialVector of type Point or MultiPoint. These points specify samples within an already-existing network. The SpatialVector may only have one layer. If the force parameter is set to True, every pixel in the existing sample will be added no matter what. if the force parameter is false, then the existing samples will be prioritized over other pixels in the same strata.</p>
 <p>The 'access' parameter, if passed, must be a SpatialVector of type LineString or MultiLineString. buff_outer specifies the buffer distance around the geometry which is allowed to be included in the sampling, buff_inner specifies the geometry which is not allowed to be included in the sampling. buff_outer must be larger than buff_inner. For a multi-layer vector, layer_name must be specified.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md21"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md24"></a>
 Examples</h2>
 <p>rast = sgspy.SpatialRaster("raster.tif") <br  />
 srast = <a class="el" href="namespacesgspy_1_1stratify_1_1quantiles.html">sgspy.stratify.quantiles</a>(rast, num_strata=5) <br  />
@@ -241,7 +241,7 @@ samples = <a class="el" href="namespacesgspy_1_1sample_1_1strat.html">sgspy.samp
 existng = sgspy.SpatialVector("existing_samples.shp") <br  />
 srast =<a class="el" href="namespacesgspy_1_1stratify_1_1quantiles.html">sgspy.stratify.quantiles</a>(rast, num_strata=5) <br  />
 samples = <a class="el" href="namespacesgspy_1_1sample_1_1strat.html">sgspy.sample.strat</a>(rast, band=0, num_samples=200, num_strata=5, allocation="prop", existing=existing, force=True)</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md22"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md25"></a>
 Parameters</h2>
 <p>strat_rast : SpatialRaster the raster to sample band : int | str <br  />
  the band within the strat_rast to use, either a 0-indexed int value or the name of the band <br  />
@@ -302,7 +302,7 @@ filename : str <br  />
  the output filename to write to if desired <br  />
  <br  />
 </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md23"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md26"></a>
 Returns</h2>
 <p>a SpatialVector object containing point geometries of sample locations </p>
 

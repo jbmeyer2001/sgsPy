@@ -151,7 +151,7 @@ Functions</h2></td></tr>
  would result in 3 stratifications (0, 1, 2) where 'low' would correspond to stratification 0, medium to 1, and hight to 2.</p>
 <p>features = ["low", ["medium", "high"]] <br  />
  would result in 2 stratifications (0, 1) where 'low' would correspond to stratification 0, and both medium and high to stratification 1.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md33"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md36"></a>
 Examples</h2>
 <p>rast = sgspy.SpatialRaster('rast.tif') <br  />
 vect = sgspy.SpatialVector('inventory_polygons.shp') <br  />
@@ -159,7 +159,7 @@ srast = <a class="el" href="namespacesgspy_1_1stratify_1_1poly.html">sgspy.strat
 <p>rast = sgspy.SpatialRaster('rast.tif') <br  />
 vect = sgspy.SpatialVector('inventory_polygons.shp') <br  />
 srast = <a class="el" href="namespacesgspy_1_1stratify_1_1poly.html">sgspy.stratify.poly</a>(rast, vect, attribute='NUTRIENTS', layer_name='inventory_polygons', 'features=['poor', ['medium', 'rich']], filename='nutrient_stratification.shp')</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md34"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md37"></a>
 Parameters</h2>
 <p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  raster data structure which will determine height, width, geotransform, and projection <br  />
@@ -180,7 +180,7 @@ filename : str <br  />
  the output filename to write to, if desired <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md35"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md38"></a>
 Returns</h2>
 <p>a <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> object containing the rasterized polygon. </p>
 

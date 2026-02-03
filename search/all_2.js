@@ -7,7 +7,7 @@ var searchData=
   ['bands_4',['bands',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#ac16affe501888a5dfbfdab627607f678',1,'sgspy::utils::raster::SpatialRaster']]],
   ['batchcalcdpquantiles_5',['batchCalcDPQuantiles',['../group__quantiles.html#ga5ac57f4334d44e69f37b99c2e266a041',1,'sgs::quantiles']]],
   ['batchcalcspquantiles_6',['batchCalcSPQuantiles',['../group__quantiles.html#ga8c03e74553ad5fde985a243dae5a39a7',1,'sgs::quantiles']]],
-  ['breaks_7',['breaks',['../group__breaks.html#ga6e9e93a996334f510d13f070d69f0781',1,'sgs::breaks::breaks()'],['../group__user__breaks.html#gaf31317624567833fe09d31e001fca189',1,'sgspy.stratify.breaks.breaks.breaks()'],['../group__breaks.html',1,'breaks'],['../group__user__breaks.html',1,'breaks']]],
+  ['breaks_7',['breaks',['../group__breaks.html#ga6e9e93a996334f510d13f070d69f0781',1,'sgs::breaks::breaks()'],['../group__user__breaks.html#ga250337bdf3649e2164baa5a9685d98ef',1,'sgspy.stratify.breaks.breaks.breaks()'],['../group__breaks.html',1,'breaks'],['../group__user__breaks.html',1,'breaks']]],
   ['breaks_2eh_8',['breaks.h',['../breaks_8h.html',1,'']]],
   ['breaks_2epy_9',['breaks.py',['../breaks_8py.html',1,'']]]
 ];

@@ -140,7 +140,7 @@ Static Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>This class represents a spatial raster, and is used as an input to many sgs functions. </p>
 <p>It has a number of additional uses, including accessing the raster data within as a numpy array, plotting with matplotlib, as well as converting to a GDAL or Rasterio dataset object. This class also has various attributes representing metadata of the raster which may be useful and can be seen in the 'Public Attributes' section.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md39"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md42"></a>
 Accessing raster data</h2>
 <p>raster data can be accessed in the form of a NumPy array per band. This can be done using the 'band' function. The band function takes a single parameter, which must be either an integer or a string. If it is an integer, it must refer to a valid zero-indexed band number. If it is a string, it must refer to a valid band name within the raster. This function may fail if the band is too large to fit in memory.</p>
 <p>rast = sgspy.SpatialRaster('test.tif') <a class="el" href="namespacesgspy_1_1utils_1_1raster.html">raster</a> with three layers</p>
@@ -151,12 +151,12 @@ b2 = rast.band(band=2) <br  />
 pzabove2 = rast.band(band='pzabove2') <br  />
 zstd = rast.band(band='zstd') <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md40"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md43"></a>
 Accessing raster information</h2>
 <p>raster metadata can be displayed using the <a class="el" href="#a602b077049fb56729003ff17c3aae70c">info()</a> function. Info inclues: raster driver, band names, dimensions, pixel size, and bounds.</p>
 <p>rast = sgspy.SpatialRaster('test.tif') <br  />
 rast.info()</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md41"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md44"></a>
 Plotting raster</h2>
 <p>the <a class="el" href="namespacesgspy_1_1utils_1_1plot.html">plot()</a> function provides a wrapper around matplotlibs imshow functionality (matplotlib.pyplot.imshow). Only a single band can be plotted, and for multi-band rasters an indication must be given for which band to plot.</p>
 <p>Target width and heights can be given in the parameters target_width and target_height. Default parameters are 1000 pixels for both. Information on the actual downsampling can be found here: <a href="https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec">https://gdal.org/en/stable/api/gdaldataset_cpp.html#classGDALDataset_1ae66e21b09000133a0f4d99baabf7a0ec</a></p>
@@ -172,7 +172,7 @@ rast.plot(band=1)</p>
 <p>#plots the 'zq90' band <br  />
 rast = sgspy.SpatialRaster('test_multi_band_raster.tif') <br  />
 rast.plot(band='zq90')</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md42"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md45"></a>
 Public Attributes</h2>
 <p>driver : str <br  />
  gdal dataset driver, for info/display purposes <br  />
@@ -214,7 +214,7 @@ pixel_width : double <br  />
  pixel width as defined by the gdal geotransform <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md43"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md46"></a>
 Public Methods</h2>
 <p><a class="el" href="#a602b077049fb56729003ff17c3aae70c">info()</a> <br  />
  takes no arguments, prints raster information to the console <br  />

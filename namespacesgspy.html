@@ -102,8 +102,9 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-var-members" class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:a309ce1860bb041ce9f5db75848cea3c9" id="r_a309ce1860bb041ce9f5db75848cea3c9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a309ce1860bb041ce9f5db75848cea3c9">vendored_lib_path</a> = os.path.join(sys.prefix, &quot;sgspy&quot;)</td></tr>
-<tr class="memitem:a9dd4ee8f57f6e3a4d8e33d371d0a489e" id="r_a9dd4ee8f57f6e3a4d8e33d371d0a489e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9dd4ee8f57f6e3a4d8e33d371d0a489e">lib_path</a> = os.path.join(sys.prefix, &quot;Library&quot;, &quot;bin&quot;)</td></tr>
+<tr class="memitem:acb37226677876982c86b0f53db20209d" id="r_acb37226677876982c86b0f53db20209d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb37226677876982c86b0f53db20209d">path</a> = os.path.split(os.path.split(path)[0])[0]</td></tr>
+<tr class="memitem:a309ce1860bb041ce9f5db75848cea3c9" id="r_a309ce1860bb041ce9f5db75848cea3c9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a309ce1860bb041ce9f5db75848cea3c9">vendored_lib_path</a> = os.path.join(<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, &quot;sgspy&quot;)</td></tr>
+<tr class="memitem:a9dd4ee8f57f6e3a4d8e33d371d0a489e" id="r_a9dd4ee8f57f6e3a4d8e33d371d0a489e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9dd4ee8f57f6e3a4d8e33d371d0a489e">lib_path</a> = os.path.join(<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, &quot;Library&quot;, &quot;bin&quot;)</td></tr>
 <tr class="memitem:adcb84c5ca03ad7f9a20fdc2a3d468a4f" id="r_adcb84c5ca03ad7f9a20fdc2a3d468a4f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adcb84c5ca03ad7f9a20fdc2a3d468a4f">GIGABYTE</a> = 1073741824</td></tr>
 </table>
 <a name="doc-var-members" id="doc-var-members"></a><h2 id="header-doc-var-members" class="groupheader">Variable Documentation</h2>
@@ -128,7 +129,21 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgspy.lib_path = os.path.join(sys.prefix, &quot;Library&quot;, &quot;bin&quot;)</td>
+          <td class="memname">sgspy.lib_path = os.path.join(<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, &quot;Library&quot;, &quot;bin&quot;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="acb37226677876982c86b0f53db20209d" name="acb37226677876982c86b0f53db20209d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb37226677876982c86b0f53db20209d">&#9670;&#160;</a></span>path</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">sgspy.path = os.path.split(os.path.split(path)[0])[0]</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -142,7 +157,7 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgspy.vendored_lib_path = os.path.join(sys.prefix, &quot;sgspy&quot;)</td>
+          <td class="memname">sgspy.vendored_lib_path = os.path.join(<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, &quot;sgspy&quot;)</td>
         </tr>
       </table>
 </div><div class="memdoc">

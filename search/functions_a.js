@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['map_0',['map',['../group__map.html#ga79f53a8841ab578378d515e7c8114c02',1,'sgs::map::map()'],['../group__user__map.html#ga6665ad19a101a221ed1945f5bcba3c4a',1,'sgspy.stratify.map.map_stratifications.map()']]]
+  ['load_5farr_0',['load_arr',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#aaa6312838de2d8ab38532d82af8e3b0f',1,'sgspy::utils::raster::SpatialRaster']]]
 ];

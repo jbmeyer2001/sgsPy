@@ -547,7 +547,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>          std::vector&lt;double&gt;&amp; xCoords,</div>
 <div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>          std::vector&lt;double&gt;&amp; yCoords)</div>
 <div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>{</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    std::uniform_real_distribution&lt;T&gt; dist(0.0, 1.0);</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    std::uniform_real_distribution&lt;T&gt; <a class="code hl_namespace" href="namespacesgs_1_1dist.html">dist</a>(0.0, 1.0);</div>
 <div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>    std::uniform_int_distribution&lt;int&gt; indexDist(0, nSamp - 1);</div>
 <div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span> </div>
 <div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    std::vector&lt;std::vector&lt;T&gt;&gt; corr(nFeat);</div>
@@ -626,7 +626,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    <span class="keywordflow">while</span> (temp &gt; 0 &amp;&amp; objQ != 0) {</div>
 <div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>        uint64_t swpIndex; <span class="comment">//the index of the sample</span></div>
 <div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>        <span class="keywordtype">int</span> i; <span class="comment">//the index within the indices, x, y, and features vector so we know what to swap without searching</span></div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>        <span class="keywordflow">if</span> (dist(rng) &lt; 0.5) {</div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>        <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1dist.html">dist</a>(rng) &lt; 0.5) {</div>
 <div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>            <span class="comment">//50% of the time, choose a random sample to replace</span></div>
 <div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>            i = indexDist(rng);</div>
 <div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>            swpIndex = indices[i];</div>
@@ -705,7 +705,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>        T newObj = newObjQ + newObjC;</div>
 <div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>        T delta = newObj - obj;</div>
 <div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span> </div>
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>        <span class="keywordtype">bool</span> keep = dist(rng) &lt; std::exp(-1 * delta / temp);</div>
+<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>        <span class="keywordtype">bool</span> keep = <a class="code hl_namespace" href="namespacesgs_1_1dist.html">dist</a>(rng) &lt; std::exp(-1 * delta / temp);</div>
 <div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span> </div>
 <div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>        <span class="keywordflow">if</span> (keep) {</div>
 <div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>            <span class="comment">//update the new changes</span></div>
@@ -918,6 +918,7 @@ $(function(){initNavTree('clhs_8h_source.html','',''); });
 <div class="ttc" id="agroup__helper_html_gad9b163a0d424fce8f9d2c5744ac48754"><div class="ttname"><a href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">sgs::helper::addPoint</a></div><div class="ttdeci">void addPoint(OGRPoint *p_point, OGRLayer *p_layer)</div><div class="ttdef"><b>Definition</b> helper.h:690</div></div>
 <div class="ttc" id="ahelper_8h_html"><div class="ttname"><a href="helper_8h.html">helper.h</a></div></div>
 <div class="ttc" id="anamespacesgs_1_1access_html"><div class="ttname"><a href="namespacesgs_1_1access.html">sgs::access</a></div><div class="ttdef"><b>Definition</b> access.h:23</div></div>
+<div class="ttc" id="anamespacesgs_1_1dist_html"><div class="ttname"><a href="namespacesgs_1_1dist.html">sgs::dist</a></div><div class="ttdef"><b>Definition</b> dist.h:24</div></div>
 <div class="ttc" id="anamespacesgs_1_1quantiles_html"><div class="ttname"><a href="namespacesgs_1_1quantiles.html">sgs::quantiles</a></div><div class="ttdef"><b>Definition</b> quantiles.h:24</div></div>
 <div class="ttc" id="anamespacesgs_html"><div class="ttname"><a href="namespacesgs.html">sgs</a></div><div class="ttdef"><b>Definition</b> pca.h:23</div></div>
 <div class="ttc" id="araster_8h_html"><div class="ttname"><a href="raster_8h.html">raster.h</a></div></div>

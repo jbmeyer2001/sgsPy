@@ -175,7 +175,7 @@ Functions</h2></td></tr>
 <p>An access vector of LineString or MultiLineString type can be provided. buff_outer specifies the buffer distance around the geometry which is allowed to be included in the sampling, buff_inner specifies the geometry which is not allowed to be included in the sampling. buff_outer must be larger than buff_inner. For a multi-layer vector, layer_name must be provided.</p>
 <p>A vector containing existing sample points can be provided. If this is the case then all of the points in the existing sample are automatically added and random samples are then chosen as required until num_samples number of samples are chosen.</p>
 <p>If the force parameter is True, then the the samples are forced to fall on an index which is NOT a no data value. This may result in some grids not being sampled.</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md24"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md27"></a>
 Examples</h2>
 <p>rast = sgspy.SpatialRaster("raster.tif") <br  />
 samples = <a class="el" href="namespacesgspy_1_1sample_1_1systematic.html">sgspy.sample.systematic</a>(rast, 500, "hexagon", "centers")</p>
@@ -189,7 +189,7 @@ samples = <a class="el" href="namespacesgspy_1_1sample_1_1systematic.html">sgspy
 <p>rast = sgspy.SpatialRaster("raster.tif") <br  />
 access = sgspy.SpatialVector("existing_samples.shp") <br  />
 samples = <a class="el" href="namespacesgspy_1_1sample_1_1systematic.html">sgspy.sample.systematic</a>(rast, 500, "hexagon", "corners", existing=existing)</p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md25"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md28"></a>
 Parameters</h2>
 <p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
  the raster to be sampled <br  />
@@ -228,7 +228,7 @@ filename : str <br  />
  the filename to write to or "" if not to write <br  />
  <br  />
  </p>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md26"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md29"></a>
 Returns</h2>
 <p>a <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> object containing point geometries of sample locations </p>
 
