@@ -1161,110 +1161,108 @@ $(function(){initNavTree('strat_8h_source.html','',''); });
 <div class="line"><a id="l01429" name="l01429"></a><span class="lineno"> 1429</span>            nextIndexes[curStrata]++;</div>
 <div class="line"><a id="l01430" name="l01430"></a><span class="lineno"> 1430</span> </div>
 <div class="line"><a id="l01431" name="l01431"></a><span class="lineno"> 1431</span>            <span class="keywordtype">bool</span> valid = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l01432" name="l01432"></a><span class="lineno"> 1432</span>            <span class="keywordtype">double</span> x = GT[0] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#a40dfdffc1135dfb71166a5d66ee2676b">x</a> * GT[1] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#ab490a46a7689325093d244f9a9ec7f93">y</a> * GT[2];</div>
-<div class="line"><a id="l01433" name="l01433"></a><span class="lineno"> 1433</span>            <span class="keywordtype">double</span> y = GT[3] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#a40dfdffc1135dfb71166a5d66ee2676b">x</a> * GT[4] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#ab490a46a7689325093d244f9a9ec7f93">y</a> * GT[5];</div>
-<div class="line"><a id="l01434" name="l01434"></a><span class="lineno"> 1434</span>            OGRPoint newPoint = OGRPoint(x, y);</div>
-<div class="line"><a id="l01435" name="l01435"></a><span class="lineno"> 1435</span> </div>
-<div class="line"><a id="l01436" name="l01436"></a><span class="lineno"> 1436</span>            <span class="keywordflow">if</span> (useMindist) {</div>
-<div class="line"><a id="l01437" name="l01437"></a><span class="lineno"> 1437</span>                valid = <a class="code hl_function" href="group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481">helper::is_valid_sample</a>(x, y, neighbor_map, mindist, mindist_sq);</div>
-<div class="line"><a id="l01438" name="l01438"></a><span class="lineno"> 1438</span>            }</div>
-<div class="line"><a id="l01439" name="l01439"></a><span class="lineno"> 1439</span>            </div>
-<div class="line"><a id="l01440" name="l01440"></a><span class="lineno"> 1440</span>            <span class="keywordflow">if</span> (valid) {    </div>
-<div class="line"><a id="l01441" name="l01441"></a><span class="lineno"> 1441</span>                <a class="code hl_function" href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">helper::addPoint</a>(&amp;newPoint, p_layer);</div>
-<div class="line"><a id="l01442" name="l01442"></a><span class="lineno"> 1442</span>                </div>
-<div class="line"><a id="l01443" name="l01443"></a><span class="lineno"> 1443</span>                addedSamples++;</div>
-<div class="line"><a id="l01444" name="l01444"></a><span class="lineno"> 1444</span>                samplesAddedPerStrata[curStrata]++;</div>
-<div class="line"><a id="l01445" name="l01445"></a><span class="lineno"> 1445</span>                </div>
-<div class="line"><a id="l01446" name="l01446"></a><span class="lineno"> 1446</span>                <span class="keywordflow">if</span> (plot) {</div>
-<div class="line"><a id="l01447" name="l01447"></a><span class="lineno"> 1447</span>                    xCoords.push_back(x);</div>
-<div class="line"><a id="l01448" name="l01448"></a><span class="lineno"> 1448</span>                    yCoords.push_back(y);</div>
-<div class="line"><a id="l01449" name="l01449"></a><span class="lineno"> 1449</span>                }</div>
-<div class="line"><a id="l01450" name="l01450"></a><span class="lineno"> 1450</span>            }</div>
-<div class="line"><a id="l01451" name="l01451"></a><span class="lineno"> 1451</span> </div>
-<div class="line"><a id="l01452" name="l01452"></a><span class="lineno"> 1452</span>            curStrata++;</div>
-<div class="line"><a id="l01453" name="l01453"></a><span class="lineno"> 1453</span>        }</div>
-<div class="line"><a id="l01454" name="l01454"></a><span class="lineno"> 1454</span>    }</div>
-<div class="line"><a id="l01455" name="l01455"></a><span class="lineno"> 1455</span>        </div>
-<div class="line"><a id="l01456" name="l01456"></a><span class="lineno"> 1456</span>    strataIndexVectors = indices.<a class="code hl_function" href="classsgs_1_1strat_1_1IndexStorageVectors.html#a9be0b48c7067d2b10e90b87572c62ca1">getStrataIndexVectors</a>(samplesAddedPerStrata, strataSampleCounts, rng);    </div>
-<div class="line"><a id="l01457" name="l01457"></a><span class="lineno"> 1457</span>    <span class="keywordflow">for</span> (int64_t i = 0; i &lt; numStrata; i++) {</div>
-<div class="line"><a id="l01458" name="l01458"></a><span class="lineno"> 1458</span>        <span class="comment">//set next indexes to 0 because the vectors are different than the queinnec vectors</span></div>
-<div class="line"><a id="l01459" name="l01459"></a><span class="lineno"> 1459</span>        nextIndexes[i] = 0;</div>
-<div class="line"><a id="l01460" name="l01460"></a><span class="lineno"> 1460</span>    }</div>
-<div class="line"><a id="l01461" name="l01461"></a><span class="lineno"> 1461</span>    curStrata = 0;</div>
-<div class="line"><a id="l01462" name="l01462"></a><span class="lineno"> 1462</span>    </div>
-<div class="line"><a id="l01463" name="l01463"></a><span class="lineno"> 1463</span>    <span class="comment">//step 8: generate coordinate points for each sample index.</span></div>
-<div class="line"><a id="l01464" name="l01464"></a><span class="lineno"> 1464</span>    <span class="keywordflow">while</span> (numCompletedStrata &lt; numStrata &amp;&amp; addedSamples &lt; numSamples) {</div>
-<div class="line"><a id="l01465" name="l01465"></a><span class="lineno"> 1465</span>        <span class="keywordflow">if</span> (curStrata == numStrata) {</div>
-<div class="line"><a id="l01466" name="l01466"></a><span class="lineno"> 1466</span>            curStrata = 0;</div>
-<div class="line"><a id="l01467" name="l01467"></a><span class="lineno"> 1467</span>        }</div>
-<div class="line"><a id="l01468" name="l01468"></a><span class="lineno"> 1468</span>        <span class="keywordflow">if</span> (completedStrata[curStrata]) {</div>
-<div class="line"><a id="l01469" name="l01469"></a><span class="lineno"> 1469</span>            curStrata++;</div>
-<div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l01471" name="l01471"></a><span class="lineno"> 1471</span>        }</div>
-<div class="line"><a id="l01472" name="l01472"></a><span class="lineno"> 1472</span> </div>
-<div class="line"><a id="l01473" name="l01473"></a><span class="lineno"> 1473</span>        int64_t sampleCount = strataSampleCounts[curStrata];</div>
-<div class="line"><a id="l01474" name="l01474"></a><span class="lineno"> 1474</span>        int64_t samplesAdded = samplesAddedPerStrata[curStrata];</div>
-<div class="line"><a id="l01475" name="l01475"></a><span class="lineno"> 1475</span>        <span class="keywordflow">if</span> (samplesAdded == sampleCount) {</div>
-<div class="line"><a id="l01476" name="l01476"></a><span class="lineno"> 1476</span>            numCompletedStrata++;</div>
-<div class="line"><a id="l01477" name="l01477"></a><span class="lineno"> 1477</span>            completedStrata[curStrata] = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l01478" name="l01478"></a><span class="lineno"> 1478</span>            curStrata++;</div>
-<div class="line"><a id="l01479" name="l01479"></a><span class="lineno"> 1479</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l01480" name="l01480"></a><span class="lineno"> 1480</span>        }</div>
-<div class="line"><a id="l01481" name="l01481"></a><span class="lineno"> 1481</span> </div>
-<div class="line"><a id="l01482" name="l01482"></a><span class="lineno"> 1482</span>        std::vector&lt;helper::Index&gt; *strataIndexes = strataIndexVectors[curStrata];</div>
-<div class="line"><a id="l01483" name="l01483"></a><span class="lineno"> 1483</span>        <span class="keywordtype">size_t</span> nextIndex = nextIndexes[curStrata];</div>
-<div class="line"><a id="l01484" name="l01484"></a><span class="lineno"> 1484</span>        <span class="keywordflow">if</span> (strataIndexes-&gt;size() == nextIndex) {</div>
-<div class="line"><a id="l01485" name="l01485"></a><span class="lineno"> 1485</span>            numCompletedStrata++;</div>
-<div class="line"><a id="l01486" name="l01486"></a><span class="lineno"> 1486</span>            completedStrata[curStrata] = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l01487" name="l01487"></a><span class="lineno"> 1487</span>            curStrata++;</div>
-<div class="line"><a id="l01488" name="l01488"></a><span class="lineno"> 1488</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l01489" name="l01489"></a><span class="lineno"> 1489</span>        }</div>
-<div class="line"><a id="l01490" name="l01490"></a><span class="lineno"> 1490</span> </div>
-<div class="line"><a id="l01491" name="l01491"></a><span class="lineno"> 1491</span>        <a class="code hl_struct" href="structsgs_1_1helper_1_1Index.html">helper::Index</a> index = strataIndexes-&gt;at(nextIndex);</div>
-<div class="line"><a id="l01492" name="l01492"></a><span class="lineno"> 1492</span>        nextIndexes[curStrata]++;</div>
-<div class="line"><a id="l01493" name="l01493"></a><span class="lineno"> 1493</span>        </div>
-<div class="line"><a id="l01494" name="l01494"></a><span class="lineno"> 1494</span>        <span class="keywordtype">bool</span> valid = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l01495" name="l01495"></a><span class="lineno"> 1495</span>        <span class="keywordtype">double</span> x = GT[0] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#a40dfdffc1135dfb71166a5d66ee2676b">x</a> * GT[1] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#ab490a46a7689325093d244f9a9ec7f93">y</a> * GT[2];</div>
-<div class="line"><a id="l01496" name="l01496"></a><span class="lineno"> 1496</span>        <span class="keywordtype">double</span> y = GT[3] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#a40dfdffc1135dfb71166a5d66ee2676b">x</a> * GT[4] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#ab490a46a7689325093d244f9a9ec7f93">y</a> * GT[5];</div>
-<div class="line"><a id="l01497" name="l01497"></a><span class="lineno"> 1497</span>        OGRPoint newPoint = OGRPoint(x, y);</div>
-<div class="line"><a id="l01498" name="l01498"></a><span class="lineno"> 1498</span> </div>
-<div class="line"><a id="l01499" name="l01499"></a><span class="lineno"> 1499</span>        <span class="keywordflow">if</span> (useMindist) {</div>
-<div class="line"><a id="l01500" name="l01500"></a><span class="lineno"> 1500</span>            valid = <a class="code hl_function" href="group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481">helper::is_valid_sample</a>(x, y, neighbor_map, mindist, mindist_sq);</div>
-<div class="line"><a id="l01501" name="l01501"></a><span class="lineno"> 1501</span>        }</div>
-<div class="line"><a id="l01502" name="l01502"></a><span class="lineno"> 1502</span> </div>
-<div class="line"><a id="l01503" name="l01503"></a><span class="lineno"> 1503</span>        <span class="keywordflow">if</span> (valid) {</div>
-<div class="line"><a id="l01504" name="l01504"></a><span class="lineno"> 1504</span>            <a class="code hl_function" href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">helper::addPoint</a>(&amp;newPoint, p_layer);</div>
-<div class="line"><a id="l01505" name="l01505"></a><span class="lineno"> 1505</span>        </div>
-<div class="line"><a id="l01506" name="l01506"></a><span class="lineno"> 1506</span>            addedSamples++;</div>
-<div class="line"><a id="l01507" name="l01507"></a><span class="lineno"> 1507</span>            samplesAddedPerStrata[curStrata]++;</div>
-<div class="line"><a id="l01508" name="l01508"></a><span class="lineno"> 1508</span> </div>
-<div class="line"><a id="l01509" name="l01509"></a><span class="lineno"> 1509</span>            <span class="keywordflow">if</span> (plot) {</div>
-<div class="line"><a id="l01510" name="l01510"></a><span class="lineno"> 1510</span>                xCoords.push_back(x);</div>
-<div class="line"><a id="l01511" name="l01511"></a><span class="lineno"> 1511</span>                yCoords.push_back(y);</div>
-<div class="line"><a id="l01512" name="l01512"></a><span class="lineno"> 1512</span>            }</div>
-<div class="line"><a id="l01513" name="l01513"></a><span class="lineno"> 1513</span>        }</div>
-<div class="line"><a id="l01514" name="l01514"></a><span class="lineno"> 1514</span> </div>
-<div class="line"><a id="l01515" name="l01515"></a><span class="lineno"> 1515</span>        curStrata++;</div>
-<div class="line"><a id="l01516" name="l01516"></a><span class="lineno"> 1516</span>    }</div>
-<div class="line"><a id="l01517" name="l01517"></a><span class="lineno"> 1517</span>    </div>
-<div class="line"><a id="l01518" name="l01518"></a><span class="lineno"> 1518</span>    <span class="comment">//step 10: write vector if filename is not &quot;&quot;.</span></div>
-<div class="line"><a id="l01519" name="l01519"></a><span class="lineno"> 1519</span>    <span class="keywordflow">if</span> (filename != <span class="stringliteral">&quot;&quot;</span>) {</div>
-<div class="line"><a id="l01520" name="l01520"></a><span class="lineno"> 1520</span>        <span class="keywordflow">try</span> {</div>
-<div class="line"><a id="l01521" name="l01521"></a><span class="lineno"> 1521</span>            p_wrapper-&gt;<a class="code hl_function" href="classsgs_1_1vector_1_1GDALVectorWrapper.html#a3ea26aba721351c0b03eb4d0c7023480">write</a>(filename);</div>
-<div class="line"><a id="l01522" name="l01522"></a><span class="lineno"> 1522</span>        }</div>
-<div class="line"><a id="l01523" name="l01523"></a><span class="lineno"> 1523</span>        <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp; e) {</div>
-<div class="line"><a id="l01524" name="l01524"></a><span class="lineno"> 1524</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Exception thrown trying to write file: &quot;</span> &lt;&lt; e.what() &lt;&lt; std::endl;</div>
-<div class="line"><a id="l01525" name="l01525"></a><span class="lineno"> 1525</span>        }</div>
-<div class="line"><a id="l01526" name="l01526"></a><span class="lineno"> 1526</span>    }</div>
-<div class="line"><a id="l01527" name="l01527"></a><span class="lineno"> 1527</span> </div>
-<div class="line"><a id="l01528" name="l01528"></a><span class="lineno"> 1528</span>    <span class="keywordtype">size_t</span> actualSampleCount = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(p_layer-&gt;GetFeatureCount());</div>
-<div class="line"><a id="l01529" name="l01529"></a><span class="lineno"> 1529</span>    <span class="keywordflow">return</span> {{xCoords, yCoords}, p_wrapper, actualSampleCount};</div>
-<div class="line"><a id="l01530" name="l01530"></a><span class="lineno"> 1530</span>}</div>
+<div class="line"><a id="l01432" name="l01432"></a><span class="lineno"> 1432</span>            <span class="keyword">const</span> <span class="keyword">auto</span> [x, y] = <a class="code hl_function" href="group__helper.html#ga8c28588e4655f055df73943b5540f21f">helper::sample_to_point</a>(GT, index);</div>
+<div class="line"><a id="l01433" name="l01433"></a><span class="lineno"> 1433</span>            OGRPoint newPoint = OGRPoint(x, y);</div>
+<div class="line"><a id="l01434" name="l01434"></a><span class="lineno"> 1434</span> </div>
+<div class="line"><a id="l01435" name="l01435"></a><span class="lineno"> 1435</span>            <span class="keywordflow">if</span> (useMindist) {</div>
+<div class="line"><a id="l01436" name="l01436"></a><span class="lineno"> 1436</span>                valid = <a class="code hl_function" href="group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481">helper::is_valid_sample</a>(x, y, neighbor_map, mindist, mindist_sq);</div>
+<div class="line"><a id="l01437" name="l01437"></a><span class="lineno"> 1437</span>            }</div>
+<div class="line"><a id="l01438" name="l01438"></a><span class="lineno"> 1438</span>            </div>
+<div class="line"><a id="l01439" name="l01439"></a><span class="lineno"> 1439</span>            <span class="keywordflow">if</span> (valid) {    </div>
+<div class="line"><a id="l01440" name="l01440"></a><span class="lineno"> 1440</span>                <a class="code hl_function" href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">helper::addPoint</a>(&amp;newPoint, p_layer);</div>
+<div class="line"><a id="l01441" name="l01441"></a><span class="lineno"> 1441</span>                </div>
+<div class="line"><a id="l01442" name="l01442"></a><span class="lineno"> 1442</span>                addedSamples++;</div>
+<div class="line"><a id="l01443" name="l01443"></a><span class="lineno"> 1443</span>                samplesAddedPerStrata[curStrata]++;</div>
+<div class="line"><a id="l01444" name="l01444"></a><span class="lineno"> 1444</span>                </div>
+<div class="line"><a id="l01445" name="l01445"></a><span class="lineno"> 1445</span>                <span class="keywordflow">if</span> (plot) {</div>
+<div class="line"><a id="l01446" name="l01446"></a><span class="lineno"> 1446</span>                    xCoords.push_back(x);</div>
+<div class="line"><a id="l01447" name="l01447"></a><span class="lineno"> 1447</span>                    yCoords.push_back(y);</div>
+<div class="line"><a id="l01448" name="l01448"></a><span class="lineno"> 1448</span>                }</div>
+<div class="line"><a id="l01449" name="l01449"></a><span class="lineno"> 1449</span>            }</div>
+<div class="line"><a id="l01450" name="l01450"></a><span class="lineno"> 1450</span> </div>
+<div class="line"><a id="l01451" name="l01451"></a><span class="lineno"> 1451</span>            curStrata++;</div>
+<div class="line"><a id="l01452" name="l01452"></a><span class="lineno"> 1452</span>        }</div>
+<div class="line"><a id="l01453" name="l01453"></a><span class="lineno"> 1453</span>    }</div>
+<div class="line"><a id="l01454" name="l01454"></a><span class="lineno"> 1454</span>        </div>
+<div class="line"><a id="l01455" name="l01455"></a><span class="lineno"> 1455</span>    strataIndexVectors = indices.<a class="code hl_function" href="classsgs_1_1strat_1_1IndexStorageVectors.html#a9be0b48c7067d2b10e90b87572c62ca1">getStrataIndexVectors</a>(samplesAddedPerStrata, strataSampleCounts, rng);    </div>
+<div class="line"><a id="l01456" name="l01456"></a><span class="lineno"> 1456</span>    <span class="keywordflow">for</span> (int64_t i = 0; i &lt; numStrata; i++) {</div>
+<div class="line"><a id="l01457" name="l01457"></a><span class="lineno"> 1457</span>        <span class="comment">//set next indexes to 0 because the vectors are different than the queinnec vectors</span></div>
+<div class="line"><a id="l01458" name="l01458"></a><span class="lineno"> 1458</span>        nextIndexes[i] = 0;</div>
+<div class="line"><a id="l01459" name="l01459"></a><span class="lineno"> 1459</span>    }</div>
+<div class="line"><a id="l01460" name="l01460"></a><span class="lineno"> 1460</span>    curStrata = 0;</div>
+<div class="line"><a id="l01461" name="l01461"></a><span class="lineno"> 1461</span>    </div>
+<div class="line"><a id="l01462" name="l01462"></a><span class="lineno"> 1462</span>    <span class="comment">//step 8: generate coordinate points for each sample index.</span></div>
+<div class="line"><a id="l01463" name="l01463"></a><span class="lineno"> 1463</span>    <span class="keywordflow">while</span> (numCompletedStrata &lt; numStrata &amp;&amp; addedSamples &lt; numSamples) {</div>
+<div class="line"><a id="l01464" name="l01464"></a><span class="lineno"> 1464</span>        <span class="keywordflow">if</span> (curStrata == numStrata) {</div>
+<div class="line"><a id="l01465" name="l01465"></a><span class="lineno"> 1465</span>            curStrata = 0;</div>
+<div class="line"><a id="l01466" name="l01466"></a><span class="lineno"> 1466</span>        }</div>
+<div class="line"><a id="l01467" name="l01467"></a><span class="lineno"> 1467</span>        <span class="keywordflow">if</span> (completedStrata[curStrata]) {</div>
+<div class="line"><a id="l01468" name="l01468"></a><span class="lineno"> 1468</span>            curStrata++;</div>
+<div class="line"><a id="l01469" name="l01469"></a><span class="lineno"> 1469</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span>        }</div>
+<div class="line"><a id="l01471" name="l01471"></a><span class="lineno"> 1471</span> </div>
+<div class="line"><a id="l01472" name="l01472"></a><span class="lineno"> 1472</span>        int64_t sampleCount = strataSampleCounts[curStrata];</div>
+<div class="line"><a id="l01473" name="l01473"></a><span class="lineno"> 1473</span>        int64_t samplesAdded = samplesAddedPerStrata[curStrata];</div>
+<div class="line"><a id="l01474" name="l01474"></a><span class="lineno"> 1474</span>        <span class="keywordflow">if</span> (samplesAdded == sampleCount) {</div>
+<div class="line"><a id="l01475" name="l01475"></a><span class="lineno"> 1475</span>            numCompletedStrata++;</div>
+<div class="line"><a id="l01476" name="l01476"></a><span class="lineno"> 1476</span>            completedStrata[curStrata] = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l01477" name="l01477"></a><span class="lineno"> 1477</span>            curStrata++;</div>
+<div class="line"><a id="l01478" name="l01478"></a><span class="lineno"> 1478</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l01479" name="l01479"></a><span class="lineno"> 1479</span>        }</div>
+<div class="line"><a id="l01480" name="l01480"></a><span class="lineno"> 1480</span> </div>
+<div class="line"><a id="l01481" name="l01481"></a><span class="lineno"> 1481</span>        std::vector&lt;helper::Index&gt; *strataIndexes = strataIndexVectors[curStrata];</div>
+<div class="line"><a id="l01482" name="l01482"></a><span class="lineno"> 1482</span>        <span class="keywordtype">size_t</span> nextIndex = nextIndexes[curStrata];</div>
+<div class="line"><a id="l01483" name="l01483"></a><span class="lineno"> 1483</span>        <span class="keywordflow">if</span> (strataIndexes-&gt;size() == nextIndex) {</div>
+<div class="line"><a id="l01484" name="l01484"></a><span class="lineno"> 1484</span>            numCompletedStrata++;</div>
+<div class="line"><a id="l01485" name="l01485"></a><span class="lineno"> 1485</span>            completedStrata[curStrata] = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l01486" name="l01486"></a><span class="lineno"> 1486</span>            curStrata++;</div>
+<div class="line"><a id="l01487" name="l01487"></a><span class="lineno"> 1487</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l01488" name="l01488"></a><span class="lineno"> 1488</span>        }</div>
+<div class="line"><a id="l01489" name="l01489"></a><span class="lineno"> 1489</span> </div>
+<div class="line"><a id="l01490" name="l01490"></a><span class="lineno"> 1490</span>        <a class="code hl_struct" href="structsgs_1_1helper_1_1Index.html">helper::Index</a> index = strataIndexes-&gt;at(nextIndex);</div>
+<div class="line"><a id="l01491" name="l01491"></a><span class="lineno"> 1491</span>        nextIndexes[curStrata]++;</div>
+<div class="line"><a id="l01492" name="l01492"></a><span class="lineno"> 1492</span>        </div>
+<div class="line"><a id="l01493" name="l01493"></a><span class="lineno"> 1493</span>        <span class="keywordtype">bool</span> valid = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l01494" name="l01494"></a><span class="lineno"> 1494</span>        <span class="keyword">const</span> <span class="keyword">auto</span> [x, y] = <a class="code hl_function" href="group__helper.html#ga8c28588e4655f055df73943b5540f21f">helper::sample_to_point</a>(GT, index);</div>
+<div class="line"><a id="l01495" name="l01495"></a><span class="lineno"> 1495</span>        OGRPoint newPoint = OGRPoint(x, y);</div>
+<div class="line"><a id="l01496" name="l01496"></a><span class="lineno"> 1496</span> </div>
+<div class="line"><a id="l01497" name="l01497"></a><span class="lineno"> 1497</span>        <span class="keywordflow">if</span> (useMindist) {</div>
+<div class="line"><a id="l01498" name="l01498"></a><span class="lineno"> 1498</span>            valid = <a class="code hl_function" href="group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481">helper::is_valid_sample</a>(x, y, neighbor_map, mindist, mindist_sq);</div>
+<div class="line"><a id="l01499" name="l01499"></a><span class="lineno"> 1499</span>        }</div>
+<div class="line"><a id="l01500" name="l01500"></a><span class="lineno"> 1500</span> </div>
+<div class="line"><a id="l01501" name="l01501"></a><span class="lineno"> 1501</span>        <span class="keywordflow">if</span> (valid) {</div>
+<div class="line"><a id="l01502" name="l01502"></a><span class="lineno"> 1502</span>            <a class="code hl_function" href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">helper::addPoint</a>(&amp;newPoint, p_layer);</div>
+<div class="line"><a id="l01503" name="l01503"></a><span class="lineno"> 1503</span>        </div>
+<div class="line"><a id="l01504" name="l01504"></a><span class="lineno"> 1504</span>            addedSamples++;</div>
+<div class="line"><a id="l01505" name="l01505"></a><span class="lineno"> 1505</span>            samplesAddedPerStrata[curStrata]++;</div>
+<div class="line"><a id="l01506" name="l01506"></a><span class="lineno"> 1506</span> </div>
+<div class="line"><a id="l01507" name="l01507"></a><span class="lineno"> 1507</span>            <span class="keywordflow">if</span> (plot) {</div>
+<div class="line"><a id="l01508" name="l01508"></a><span class="lineno"> 1508</span>                xCoords.push_back(x);</div>
+<div class="line"><a id="l01509" name="l01509"></a><span class="lineno"> 1509</span>                yCoords.push_back(y);</div>
+<div class="line"><a id="l01510" name="l01510"></a><span class="lineno"> 1510</span>            }</div>
+<div class="line"><a id="l01511" name="l01511"></a><span class="lineno"> 1511</span>        }</div>
+<div class="line"><a id="l01512" name="l01512"></a><span class="lineno"> 1512</span> </div>
+<div class="line"><a id="l01513" name="l01513"></a><span class="lineno"> 1513</span>        curStrata++;</div>
+<div class="line"><a id="l01514" name="l01514"></a><span class="lineno"> 1514</span>    }</div>
+<div class="line"><a id="l01515" name="l01515"></a><span class="lineno"> 1515</span>    </div>
+<div class="line"><a id="l01516" name="l01516"></a><span class="lineno"> 1516</span>    <span class="comment">//step 10: write vector if filename is not &quot;&quot;.</span></div>
+<div class="line"><a id="l01517" name="l01517"></a><span class="lineno"> 1517</span>    <span class="keywordflow">if</span> (filename != <span class="stringliteral">&quot;&quot;</span>) {</div>
+<div class="line"><a id="l01518" name="l01518"></a><span class="lineno"> 1518</span>        <span class="keywordflow">try</span> {</div>
+<div class="line"><a id="l01519" name="l01519"></a><span class="lineno"> 1519</span>            p_wrapper-&gt;<a class="code hl_function" href="classsgs_1_1vector_1_1GDALVectorWrapper.html#a3ea26aba721351c0b03eb4d0c7023480">write</a>(filename);</div>
+<div class="line"><a id="l01520" name="l01520"></a><span class="lineno"> 1520</span>        }</div>
+<div class="line"><a id="l01521" name="l01521"></a><span class="lineno"> 1521</span>        <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp; e) {</div>
+<div class="line"><a id="l01522" name="l01522"></a><span class="lineno"> 1522</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Exception thrown trying to write file: &quot;</span> &lt;&lt; e.what() &lt;&lt; std::endl;</div>
+<div class="line"><a id="l01523" name="l01523"></a><span class="lineno"> 1523</span>        }</div>
+<div class="line"><a id="l01524" name="l01524"></a><span class="lineno"> 1524</span>    }</div>
+<div class="line"><a id="l01525" name="l01525"></a><span class="lineno"> 1525</span> </div>
+<div class="line"><a id="l01526" name="l01526"></a><span class="lineno"> 1526</span>    <span class="keywordtype">size_t</span> actualSampleCount = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(p_layer-&gt;GetFeatureCount());</div>
+<div class="line"><a id="l01527" name="l01527"></a><span class="lineno"> 1527</span>    <span class="keywordflow">return</span> {{xCoords, yCoords}, p_wrapper, actualSampleCount};</div>
+<div class="line"><a id="l01528" name="l01528"></a><span class="lineno"> 1528</span>}</div>
 </div>
-<div class="line"><a id="l01531" name="l01531"></a><span class="lineno"> 1531</span> </div>
-<div class="line"><a id="l01532" name="l01532"></a><span class="lineno"> 1532</span>} <span class="comment">//namespace strat</span></div>
+<div class="line"><a id="l01529" name="l01529"></a><span class="lineno"> 1529</span> </div>
+<div class="line"><a id="l01530" name="l01530"></a><span class="lineno"> 1530</span>} <span class="comment">//namespace strat</span></div>
 </div>
-<div class="line"><a id="l01533" name="l01533"></a><span class="lineno"> 1533</span>} <span class="comment">//namespace sgs</span></div>
+<div class="line"><a id="l01531" name="l01531"></a><span class="lineno"> 1531</span>} <span class="comment">//namespace sgs</span></div>
 <div class="ttc" id="aaccess_8h_html"><div class="ttname"><a href="access_8h.html">access.h</a></div></div>
 <div class="ttc" id="aclasssgs_1_1helper_1_1RandValController_html"><div class="ttname"><a href="classsgs_1_1helper_1_1RandValController.html">sgs::helper::RandValController</a></div><div class="ttdef"><b>Definition</b> helper.h:891</div></div>
 <div class="ttc" id="aclasssgs_1_1helper_1_1RandValController_html_a4389c4f4540bb6a02974a1408e417f0a"><div class="ttname"><a href="classsgs_1_1helper_1_1RandValController.html#a4389c4f4540bb6a02974a1408e417f0a">sgs::helper::RandValController::calculateRandValues</a></div><div class="ttdeci">void calculateRandValues(void)</div><div class="ttdef"><b>Definition</b> helper.h:934</div></div>
@@ -1294,6 +1292,7 @@ $(function(){initNavTree('strat_8h_source.html','',''); });
 <div class="ttc" id="agroup__helper_html_ga04c6841cb69b3c6d7659fcbb074be606"><div class="ttname"><a href="group__helper.html#ga04c6841cb69b3c6d7659fcbb074be606">sgs::helper::NeighborMap</a></div><div class="ttdeci">std::unordered_map&lt; std::pair&lt; int, int &gt;, std::vector&lt; std::pair&lt; double, double &gt; &gt;, PointHash &gt; NeighborMap</div><div class="ttdef"><b>Definition</b> helper.h:976</div></div>
 <div class="ttc" id="agroup__helper_html_ga0d0279d6c6a0e14e9f14d56681b59c8c"><div class="ttname"><a href="group__helper.html#ga0d0279d6c6a0e14e9f14d56681b59c8c">sgs::helper::getProbabilityMultiplier</a></div><div class="ttdeci">uint64_t getProbabilityMultiplier(double width, double height, double pixelWidth, double pixelHeight, int startMult, int numSamples, bool useMindist, double accessibleArea)</div><div class="ttdef"><b>Definition</b> helper.h:855</div></div>
 <div class="ttc" id="agroup__helper_html_ga1c4d72b3f0746579954ad713174c51b6"><div class="ttname"><a href="group__helper.html#ga1c4d72b3f0746579954ad713174c51b6">sgs::helper::rasterBandIO</a></div><div class="ttdeci">void rasterBandIO(RasterBandMetaData &amp;band, void *p_buffer, int xBlockSize, int yBlockSize, int xBlock, int yBlock, int xValid, int yValid, bool read, bool threaded=true)</div><div class="ttdef"><b>Definition</b> helper.h:633</div></div>
+<div class="ttc" id="agroup__helper_html_ga8c28588e4655f055df73943b5540f21f"><div class="ttname"><a href="group__helper.html#ga8c28588e4655f055df73943b5540f21f">sgs::helper::sample_to_point</a></div><div class="ttdeci">std::pair&lt; double, double &gt; sample_to_point(double *GT, Index &amp;index)</div><div class="ttdef"><b>Definition</b> helper.h:1023</div></div>
 <div class="ttc" id="agroup__helper_html_ga95dc1909d81ef037ed598e69436c8dda"><div class="ttname"><a href="group__helper.html#ga95dc1909d81ef037ed598e69436c8dda">sgs::helper::getPixelValueDependingOnType</a></div><div class="ttdeci">T getPixelValueDependingOnType(GDALDataType type, void *p_data, size_t index)</div><div class="ttdef"><b>Definition</b> helper.h:163</div></div>
 <div class="ttc" id="agroup__helper_html_gaaa47ccb56a071380c840029f71aef8e1"><div class="ttname"><a href="group__helper.html#gaaa47ccb56a071380c840029f71aef8e1">sgs::helper::printTypeWarningsForInt32Conversion</a></div><div class="ttdeci">void printTypeWarningsForInt32Conversion(GDALDataType type)</div><div class="ttdef"><b>Definition</b> helper.h:241</div></div>
 <div class="ttc" id="agroup__helper_html_gaabf4cc4024eeaa1e451f1f6812926481"><div class="ttname"><a href="group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481">sgs::helper::is_valid_sample</a></div><div class="ttdeci">bool is_valid_sample(double x, double y, NeighborMap &amp;neighbor_map, float mindist, float mindist_sq)</div><div class="ttdef"><b>Definition</b> helper.h:987</div></div>

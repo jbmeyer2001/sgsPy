@@ -346,50 +346,48 @@ $(function(){initNavTree('srs_8h_source.html','',''); });
 <div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <span class="keywordflow">while</span> (samplesAdded &lt; numSamples &amp;&amp; i &lt; indices.size()) {</div>
 <div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>        <a class="code hl_struct" href="structsgs_1_1helper_1_1Index.html">helper::Index</a> index = indices[i];</div>
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>        <span class="keywordtype">bool</span> valid = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span> </div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>        <span class="keywordtype">double</span> x = GT[0] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#a40dfdffc1135dfb71166a5d66ee2676b">x</a> * GT[1] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#ab490a46a7689325093d244f9a9ec7f93">y</a> * GT[2];</div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>        <span class="keywordtype">double</span> y = GT[3] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#a40dfdffc1135dfb71166a5d66ee2676b">x</a> * GT[4] + index.<a class="code hl_variable" href="structsgs_1_1helper_1_1Index.html#ab490a46a7689325093d244f9a9ec7f93">y</a> * GT[5];</div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span> </div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        <span class="keywordflow">if</span> (useMindist) {</div>
-<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>            valid = <a class="code hl_function" href="group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481">helper::is_valid_sample</a>(x, y, neighbor_map, mindist, mindist_sq);</div>
-<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>        }</div>
-<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span> </div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>        <span class="keywordflow">if</span> (valid) {</div>
-<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>            OGRPoint point = OGRPoint(x, y);</div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>            <a class="code hl_function" href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">helper::addPoint</a>(&amp;point, p_layer);</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>        <span class="keyword">const</span> <span class="keyword">auto</span> [x, y] = <a class="code hl_function" href="group__helper.html#ga8c28588e4655f055df73943b5540f21f">helper::sample_to_point</a>(GT, index);</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span> </div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>        <span class="keywordflow">if</span> (useMindist) {</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>            valid = <a class="code hl_function" href="group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481">helper::is_valid_sample</a>(x, y, neighbor_map, mindist, mindist_sq);</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        }</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span> </div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>        <span class="keywordflow">if</span> (valid) {</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>            OGRPoint point = OGRPoint(x, y);</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>            <a class="code hl_function" href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">helper::addPoint</a>(&amp;point, p_layer);</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span> </div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>            samplesAdded++;</div>
 <div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span> </div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>            samplesAdded++;</div>
-<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
-<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>            <span class="keywordflow">if</span> (plot) {</div>
-<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>                xCoords.push_back(x);</div>
-<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>                yCoords.push_back(y);</div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>            }</div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>        }</div>
-<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>        i++;</div>
-<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    }</div>
-<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span> </div>
-<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>    <span class="keywordflow">if</span> (filename != <span class="stringliteral">&quot;&quot;</span>) {</div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>        <span class="keywordflow">try</span> {</div>
-<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>            p_wrapper-&gt;<a class="code hl_function" href="classsgs_1_1vector_1_1GDALVectorWrapper.html#a3ea26aba721351c0b03eb4d0c7023480">write</a>(filename);</div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>        }</div>
-<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>        <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp; e) {</div>
-<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Exception thrown trying to write file: &quot;</span> &lt;&lt; e.what() &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>        }</div>
-<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    }</div>
-<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span> </div>
-<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    <span class="comment">//free allocated memory</span></div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>    VSIFree(band.<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#a76269b6394d498fa72c415a64bec5e8d">p_buffer</a>);</div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>.used) {</div>
-<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>        VSIFree(<a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>.band.p_buffer);</div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>    }</div>
-<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span> </div>
-<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>    <span class="keywordflow">return</span> {{xCoords, yCoords}, p_wrapper, samplesAdded};</div>
-<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>}</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>            <span class="keywordflow">if</span> (plot) {</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>                xCoords.push_back(x);</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>                yCoords.push_back(y);</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>            }</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>        }</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>        i++;</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    }</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span> </div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    <span class="keywordflow">if</span> (filename != <span class="stringliteral">&quot;&quot;</span>) {</div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>        <span class="keywordflow">try</span> {</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>            p_wrapper-&gt;<a class="code hl_function" href="classsgs_1_1vector_1_1GDALVectorWrapper.html#a3ea26aba721351c0b03eb4d0c7023480">write</a>(filename);</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>        }</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>        <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp; e) {</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;Exception thrown trying to write file: &quot;</span> &lt;&lt; e.what() &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>        }</div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>    }</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span> </div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    <span class="comment">//free allocated memory</span></div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    VSIFree(band.<a class="code hl_variable" href="structsgs_1_1helper_1_1RasterBandMetaData.html#a76269b6394d498fa72c415a64bec5e8d">p_buffer</a>);</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    <span class="keywordflow">if</span> (<a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>.used) {</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>        VSIFree(<a class="code hl_namespace" href="namespacesgs_1_1access.html">access</a>.band.p_buffer);</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    }</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span> </div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>    <span class="keywordflow">return</span> {{xCoords, yCoords}, p_wrapper, samplesAdded};</div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>}</div>
 </div>
-<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span> </div>
-<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>} <span class="comment">//namespace srs</span></div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span> </div>
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>} <span class="comment">//namespace srs</span></div>
 </div>
-<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>} <span class="comment">//namespace sgs</span></div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>} <span class="comment">//namespace sgs</span></div>
 <div class="ttc" id="aaccess_8h_html"><div class="ttname"><a href="access_8h.html">access.h</a></div></div>
 <div class="ttc" id="aclasssgs_1_1helper_1_1RandValController_html"><div class="ttname"><a href="classsgs_1_1helper_1_1RandValController.html">sgs::helper::RandValController</a></div><div class="ttdef"><b>Definition</b> helper.h:891</div></div>
 <div class="ttc" id="aclasssgs_1_1helper_1_1RandValController_html_a4389c4f4540bb6a02974a1408e417f0a"><div class="ttname"><a href="classsgs_1_1helper_1_1RandValController.html#a4389c4f4540bb6a02974a1408e417f0a">sgs::helper::RandValController::calculateRandValues</a></div><div class="ttdeci">void calculateRandValues(void)</div><div class="ttdef"><b>Definition</b> helper.h:934</div></div>
@@ -411,6 +409,7 @@ $(function(){initNavTree('srs_8h_source.html','',''); });
 <div class="ttc" id="agroup__helper_html_ga04c6841cb69b3c6d7659fcbb074be606"><div class="ttname"><a href="group__helper.html#ga04c6841cb69b3c6d7659fcbb074be606">sgs::helper::NeighborMap</a></div><div class="ttdeci">std::unordered_map&lt; std::pair&lt; int, int &gt;, std::vector&lt; std::pair&lt; double, double &gt; &gt;, PointHash &gt; NeighborMap</div><div class="ttdef"><b>Definition</b> helper.h:976</div></div>
 <div class="ttc" id="agroup__helper_html_ga0d0279d6c6a0e14e9f14d56681b59c8c"><div class="ttname"><a href="group__helper.html#ga0d0279d6c6a0e14e9f14d56681b59c8c">sgs::helper::getProbabilityMultiplier</a></div><div class="ttdeci">uint64_t getProbabilityMultiplier(double width, double height, double pixelWidth, double pixelHeight, int startMult, int numSamples, bool useMindist, double accessibleArea)</div><div class="ttdef"><b>Definition</b> helper.h:855</div></div>
 <div class="ttc" id="agroup__helper_html_ga1c4d72b3f0746579954ad713174c51b6"><div class="ttname"><a href="group__helper.html#ga1c4d72b3f0746579954ad713174c51b6">sgs::helper::rasterBandIO</a></div><div class="ttdeci">void rasterBandIO(RasterBandMetaData &amp;band, void *p_buffer, int xBlockSize, int yBlockSize, int xBlock, int yBlock, int xValid, int yValid, bool read, bool threaded=true)</div><div class="ttdef"><b>Definition</b> helper.h:633</div></div>
+<div class="ttc" id="agroup__helper_html_ga8c28588e4655f055df73943b5540f21f"><div class="ttname"><a href="group__helper.html#ga8c28588e4655f055df73943b5540f21f">sgs::helper::sample_to_point</a></div><div class="ttdeci">std::pair&lt; double, double &gt; sample_to_point(double *GT, Index &amp;index)</div><div class="ttdef"><b>Definition</b> helper.h:1023</div></div>
 <div class="ttc" id="agroup__helper_html_ga95dc1909d81ef037ed598e69436c8dda"><div class="ttname"><a href="group__helper.html#ga95dc1909d81ef037ed598e69436c8dda">sgs::helper::getPixelValueDependingOnType</a></div><div class="ttdeci">T getPixelValueDependingOnType(GDALDataType type, void *p_data, size_t index)</div><div class="ttdef"><b>Definition</b> helper.h:163</div></div>
 <div class="ttc" id="agroup__helper_html_gaabf4cc4024eeaa1e451f1f6812926481"><div class="ttname"><a href="group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481">sgs::helper::is_valid_sample</a></div><div class="ttdeci">bool is_valid_sample(double x, double y, NeighborMap &amp;neighbor_map, float mindist, float mindist_sq)</div><div class="ttdef"><b>Definition</b> helper.h:987</div></div>
 <div class="ttc" id="agroup__helper_html_gad9b163a0d424fce8f9d2c5744ac48754"><div class="ttname"><a href="group__helper.html#gad9b163a0d424fce8f9d2c5744ac48754">sgs::helper::addPoint</a></div><div class="ttdeci">void addPoint(OGRPoint *p_point, OGRLayer *p_layer)</div><div class="ttdef"><b>Definition</b> helper.h:690</div></div>

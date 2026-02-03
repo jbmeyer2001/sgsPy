@@ -124,6 +124,8 @@ Functions</h2></td></tr>
 <tr class="memitem:gac3201c5b20c0eb30d8039ed3c1284d4b template"><td class="memItemLeft" align="right" valign="top">T&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gac3201c5b20c0eb30d8039ed3c1284d4b">sgs::helper::point2index</a> (double xCoord, double yCoord, double *IGT, T width)</td></tr>
 <tr class="memitem:ga0d0279d6c6a0e14e9f14d56681b59c8c" id="r_ga0d0279d6c6a0e14e9f14d56681b59c8c"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga0d0279d6c6a0e14e9f14d56681b59c8c">sgs::helper::getProbabilityMultiplier</a> (double width, double height, double pixelWidth, double pixelHeight, int startMult, int numSamples, bool useMindist, double accessibleArea)</td></tr>
 <tr class="memitem:gaabf4cc4024eeaa1e451f1f6812926481" id="r_gaabf4cc4024eeaa1e451f1f6812926481"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaabf4cc4024eeaa1e451f1f6812926481">sgs::helper::is_valid_sample</a> (double x, double y, <a class="el" href="#ga04c6841cb69b3c6d7659fcbb074be606">NeighborMap</a> &amp;neighbor_map, float mindist, float mindist_sq)</td></tr>
+<tr class="memitem:ga8c28588e4655f055df73943b5540f21f" id="r_ga8c28588e4655f055df73943b5540f21f"><td class="memItemLeft" align="right" valign="top">std::pair&lt; double, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8c28588e4655f055df73943b5540f21f">sgs::helper::sample_to_point</a> (double *GT, <a class="el" href="structsgs_1_1helper_1_1Index.html">Index</a> &amp;index)</td></tr>
+<tr class="memitem:ga286eeac1c49ac1df6b37b1d704ce5c3f" id="r_ga286eeac1c49ac1df6b37b1d704ce5c3f"><td class="memItemLeft" align="right" valign="top">std::pair&lt; double, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga286eeac1c49ac1df6b37b1d704ce5c3f">sgs::helper::sample_to_point</a> (double *GT, int xs, int ys)</td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-typedef-members" id="doc-typedef-members"></a><h2 id="header-doc-typedef-members" class="groupheader">Typedef Documentation</h2>
@@ -855,6 +857,84 @@ template&lt;typename T&gt; </div>
     <tr><td class="paramname">int</td><td>yValid </td></tr>
     <tr><td class="paramname">bool</td><td>read </td></tr>
     <tr><td class="paramname">bool</td><td>threaded </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga8c28588e4655f055df73943b5540f21f" name="ga8c28588e4655f055df73943b5540f21f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga8c28588e4655f055df73943b5540f21f">&#9670;&#160;</a></span>sample_to_point() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::pair&lt; double, double &gt; sgs::helper::sample_to_point </td>
+          <td>(</td>
+          <td class="paramtype">double *</td>          <td class="paramname"><span class="paramname"><em>GT</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structsgs_1_1helper_1_1Index.html">Index</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Convert a sample into a coordinate pair (x, y) from an <a class="el" href="structsgs_1_1helper_1_1Index.html">Index</a> </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">double*</td><td>GT </td></tr>
+    <tr><td class="paramname"><a class="el" href="structsgs_1_1helper_1_1Index.html">Index</a></td><td>index </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga286eeac1c49ac1df6b37b1d704ce5c3f" name="ga286eeac1c49ac1df6b37b1d704ce5c3f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga286eeac1c49ac1df6b37b1d704ce5c3f">&#9670;&#160;</a></span>sample_to_point() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::pair&lt; double, double &gt; sgs::helper::sample_to_point </td>
+          <td>(</td>
+          <td class="paramtype">double *</td>          <td class="paramname"><span class="paramname"><em>GT</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>xs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>ys</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Convert a sample into a coordinate pair (x, y) from a x/y index </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">double*</td><td>GT </td></tr>
+    <tr><td class="paramname">int</td><td>xs </td></tr>
+    <tr><td class="paramname">int</td><td>ys </td></tr>
   </table>
   </dd>
 </dl>

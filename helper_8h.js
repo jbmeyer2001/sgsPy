@@ -17,6 +17,8 @@ var helper_8h =
     [ "sgs::helper::point2index", "group__helper.html#gac3201c5b20c0eb30d8039ed3c1284d4b", null ],
     [ "sgs::helper::printTypeWarningsForInt32Conversion", "group__helper.html#gaaa47ccb56a071380c840029f71aef8e1", null ],
     [ "sgs::helper::rasterBandIO", "group__helper.html#ga1c4d72b3f0746579954ad713174c51b6", null ],
+    [ "sgs::helper::sample_to_point", "group__helper.html#ga8c28588e4655f055df73943b5540f21f", null ],
+    [ "sgs::helper::sample_to_point", "group__helper.html#ga286eeac1c49ac1df6b37b1d704ce5c3f", null ],
     [ "sgs::helper::setStrataPixelDependingOnType", "group__helper.html#ga8c6740d2de7f4a24ba4784ed92ad2ca0", null ],
     [ "sgs::helper::setStratBandTypeAndSize", "group__helper.html#gafb4301348d605db2ce92d141063af00b", null ]
 ];
