@@ -18,7 +18,7 @@ At the moment, the import `import sgspy` may fail if you are using a package man
 
 ## Overview
 `sgsPy` is based on the widely-used `sgsR` package, intended originally to help develop representative ground sample networks using auxiliary 
-information like ALS data. `sgsPy` takes much of the existing functionality of the R package and improves upon it's performance, 
+information like ALS data. `sgsPy` takes much of the existing functionality of the R package and improves upon its performance, 
 allowing Python users to integrate structurally guided sampling approaches to their workflows.
 
 While the original intention for the package was to be used with ALS metrics, any form of raster data can be used in lieu of ALS metrics.
@@ -26,6 +26,7 @@ While the original intention for the package was to be used with ALS metrics, an
 If you encounter any bugs, unclear documentation, or have any feature ideas then please contribute by posting an issue. https://github.com/jbmeyer2001/sgsPy/issues
 
 The currently implemented functionality includes:
+ - **[calculating] [distribution](https://jbmeyer2001.github.io/sgsPy/group__user__distribution.html)**
  - **[calculating] [principal component analysis](https://jbmeyer2001.github.io/sgsPy/group__user__pca.html)**
  - **[sampling] [conditioned latin hypercube sampling](https://jbmeyer2001.github.io/sgsPy/group__user__clhs.html)**
  - **[sampling] [simple random sampling](https://jbmeyer2001.github.io/sgsPy/group__user__srs.html)**
@@ -45,9 +46,9 @@ Some helpful files to get started with can be found in the https://github.com/jb
 [existing.shp](https://github.com/jbmeyer2001/sgsPy/blob/main/tests/files/existing.shp) along with its associated .dbf, .prj, and .shx files.
 
 ### raster and vector data
-The two data structures used by the stratification, sampling, and calculating methods are the `sgspy.SpatialRaster` [[SpatialRaster documentation](https://jbmeyer2001.github.io/sgsPy/classsgs_1_1utils_1_1raster_1_1SpatialRaster.html)] and `sgspy.SpatialVector` [[SpatialVector documentation](https://jbmeyer2001.github.io/sgsPy/classsgs_1_1utils_1_1vector_1_1SpatialVector.html)]. 
-The beginning of any process using the sgspy package will involve creating one or more of these data structurse. This can be done by providing
-a file path. It can also be done by converting from a data structure used by popular geospatial packages.
+The two classes used by the stratification, sampling, and calculating methods are the `sgspy.SpatialRaster` [[SpatialRaster documentation](https://jbmeyer2001.github.io/sgsPy/classsgs_1_1utils_1_1raster_1_1SpatialRaster.html)] and `sgspy.SpatialVector` [[SpatialVector documentation](https://jbmeyer2001.github.io/sgsPy/classsgs_1_1utils_1_1vector_1_1SpatialVector.html)]. 
+The beginning of any process using the sgspy package will involve creating an instance of one or more of these classes. This can be done by providing
+a file path. It can also be done by converting an object from a popular geospatial package.
 
 ```
 import sgspy
@@ -94,7 +95,7 @@ rast = sgspy.SpatialRaster("mraster.tif")
 pca = sgspy.calculate.pca(rast, num_comp=2)
 
 # stratifiy the two components into 5 equally sized quantiles, and map the two layers into a single mapped output
-srast = sgspy.stratify.quantiles(pca, num_strata={"comp_1":5, "comp2":5}, map=True)
+srast = sgspy.stratify.quantiles(pca, quantiles={"comp_1":5, "comp2":5}, map=True)
 
 # use stratified random sampling to sample each (of the 25 total) mapped strata proportional to it's number of pixels in the raster band
 # additionaly, plot the output and write it to samples.shp
