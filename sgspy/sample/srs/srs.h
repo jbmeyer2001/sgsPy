@@ -349,7 +349,7 @@ srs(
 	  		OGRPoint point = OGRPoint(x, y);
 
 			existing.used ?
-				helper::addPoint(&point, p_layer, fieldExistingFalse) :
+				helper::addPoint(&point, p_layer, &fieldExistingFalse) :
 				helper::addPoint(&point, p_layer);
 
 			samplesAdded++;

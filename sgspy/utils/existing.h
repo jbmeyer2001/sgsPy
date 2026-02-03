@@ -70,16 +70,18 @@ struct Existing {
 		OGRLayer *p_samples, 
 		bool plot,
 	       	std::vector<double>& xCoords,
-		std::vector<double>& yCoords) 
+		std::vector<double>& yCoords,
+		bool addAllPoints = true) 
 	{
 		if (!p_vect) {
 			this->used = false;
 			return;
 		}
 		
-		if (p_samples) {
-			OGRFieldDefn existingField("existing", OFTInteger);
-			p_samples->CreateField(&existingField);
+		OGRFieldDefn existingField("existing", OFTInteger);
+		OGRErr err = p_samples->CreateField(&existingField);
+		if (err) {
+			throw std::runtime_error("cannot create 'existing' field in output layer.");
 		}
 
 		this->width = width;
@@ -94,7 +96,7 @@ struct Existing {
 
 		std::string name = layerNames[0];
 		OGRLayer *p_layer = p_vect->getLayer(name);
-		helper::Field fieldExistingTrue("existing", 0);
+		helper::Field fieldExistingTrue("existing", 1);
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
@@ -103,8 +105,8 @@ struct Existing {
 					OGRPoint *p_point = p_geometry->toPoint();
 					int64_t index = helper::point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 					this->samples.emplace(index, *p_point);
-					if (p_samples) {
-						helper::addPoint(p_point, p_samples, fieldExistingTrue);
+					if (addAllPoints) {
+						helper::addPoint(p_point, p_samples, &fieldExistingTrue);
 						if (plot) {
 							xCoords.push_back(p_point->getX());
 							yCoords.push_back(p_point->getY());
@@ -116,8 +118,8 @@ struct Existing {
 					for (const auto& p_point : *p_geometry->toMultiPoint()) {
 						int64_t index = helper::point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 						this->samples.emplace(index, *p_point);
-						if (p_samples) {
-							helper::addPoint(p_point, p_samples, fieldExistingTrue);
+						if (addAllPoints) {
+							helper::addPoint(p_point, p_samples, &fieldExistingTrue);
 							if (plot) {
 								xCoords.push_back(p_point->getX());
 								yCoords.push_back(p_point->getY());

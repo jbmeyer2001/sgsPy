@@ -721,6 +721,41 @@ addPoint(const OGRPoint *p_point, OGRLayer *p_layer) {
 
 /**
  * @ingroup helper
+ * Helper function to add a point to a layer, with an additional field value.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ * @param std::vector<Field>
+ */
+inline void
+addPoint(OGRPoint *p_point, OGRLayer *p_layer, Field *p_field) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_feature->SetField(p_field->fname.c_str(), p_field->fval);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * @ingroup helper
+ * Helper function to add a point to a layer, with an additional field value.
+ * This is the version which will be called when there is a const OGRPoint *.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ * @param std::vector<Field>
+ */
+inline void
+addPoint(const OGRPoint *p_point, OGRLayer *p_layer, Field *p_field) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_feature->SetField(p_field->fname.c_str(), p_field->fval);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * @ingroup helper
  * Helper function to add a point to a layer, with additional field values.
  *
  * @param OGRPoint *p_point
@@ -728,11 +763,11 @@ addPoint(const OGRPoint *p_point, OGRLayer *p_layer) {
  * @param std::vector<Field>
  */
 inline void
-addPoint(OGRPoint *p_point, OGRLayer *p_layer, std::vector<Field>& fields) {
+addPoint(OGRPoint *p_point, OGRLayer *p_layer, std::vector<Field *> *p_fields) {
 	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
 	p_feature->SetGeometry(p_point);
-	for (const Field& field : fields) {
-		p_feature->SetField(field.fname.c_str(), field.fval);
+	for (size_t i = 0; i < p_fields->size(); i++) {
+		p_feature->SetField((*p_fields)[i]->fname.c_str(), (*p_fields)[i]->fval);
 	}
 	p_layer->CreateFeature(p_feature);
 	OGRFeature::DestroyFeature(p_feature);	
@@ -740,41 +775,6 @@ addPoint(OGRPoint *p_point, OGRLayer *p_layer, std::vector<Field>& fields) {
 
 /**
  * @ingroup helper
- * Helper function to add a point to a layer, with an additional field value.
- * This is the version which will be called when there is a const OGRPoint *.
- *
- * @param OGRPoint *p_point
- * @param OGRLayer *p_layer
- * @param std::vector<Field>
- */
-inline void
-addPoint(const OGRPoint *p_point, OGRLayer *p_layer, Field& field) {
-	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
-	p_feature->SetGeometry(p_point);
-	p_feature->SetField(field.fname.c_str(), field.fval);
-	p_layer->CreateFeature(p_feature);
-	OGRFeature::DestroyFeature(p_feature);	
-}
-
-/**
- * @ingroup helper
- * Helper function to add a point to a layer, with an additional field value.
- *
- * @param OGRPoint *p_point
- * @param OGRLayer *p_layer
- * @param std::vector<Field>
- */
-inline void
-addPoint(OGRPoint *p_point, OGRLayer *p_layer, Field& field) {
-	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
-	p_feature->SetGeometry(p_point);
-	p_feature->SetField(field.fname.c_str(), field.fval);
-	p_layer->CreateFeature(p_feature);
-	OGRFeature::DestroyFeature(p_feature);	
-}
-
-/**
- * @ingroup helper
  * Helper function to add a point to a layer, with additional field values.
  * This is the version which will be called when there is a const OGRPoint *.
  *
@@ -783,11 +783,11 @@ addPoint(OGRPoint *p_point, OGRLayer *p_layer, Field& field) {
  * @param std::vector<Field>
  */
 inline void
-addPoint(const OGRPoint *p_point, OGRLayer *p_layer, std::vector<Field>& fields) {
+addPoint(const OGRPoint *p_point, OGRLayer *p_layer, std::vector<Field *> *p_fields) {
 	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
 	p_feature->SetGeometry(p_point);
-	for (const Field& field : fields) {
-		p_feature->SetField(field.fname.c_str(), field.fval);
+	for (size_t i = 0; i < p_fields->size(); i++) {
+		p_feature->SetField((*p_fields)[i]->fname.c_str(), (*p_fields)[i]->fval);
 	}
 	p_layer->CreateFeature(p_feature);
 	OGRFeature::DestroyFeature(p_feature);	

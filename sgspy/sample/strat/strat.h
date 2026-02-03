@@ -1211,6 +1211,13 @@ strat(
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
 
+	std::string strataName = band.p_band->GetDescription();
+	OGRFieldDefn strataField(strataName.c_str(), OFTInteger);
+	OGRErr err = p_layer->CreateField(&strataField);
+	if (err) {
+		throw std::runtime_error("cannot create field for strata name.");
+	}
+
 	access::Access access(
 		p_access, 
 		p_raster, 
@@ -1229,13 +1236,14 @@ strat(
 		p_existing,
 		GT,
 		width,
-		nullptr,
+		p_layer,
 		false,
 		xCoords,
-		yCoords	
+		yCoords,
+		false	
 	);
 
-	//fast random number generator using xoshiro256+
+	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng; 
 	uint64_t multiplier = helper::getProbabilityMultiplier(
@@ -1324,15 +1332,93 @@ strat(
 	int64_t curStrata = 0;
 	int64_t addedSamples = 0;
 
+	//the following looks complicated. The reason for all of the fields, vectors, and pointers 
+	//is to lower the ammount of times Fields and vectors are copied or created. Fields are
+	//used to contain metadata on each sample, for example whether that sample is part of
+	//an existing sample plot network, or the strata from which that field originated.
+	//
+	//PROBLEMS:
+	//One option, would be to create a new Field or a vector of Fields EVERY iteration when a point
+	//is added. Obviously, this incurs a large overhead.
+	//
+	//Another option would be to do without the pointers and have a set vector of fields or a set
+	//vector of field vectors. However, whenever a vector is indexed it returns a copy of the element.
+	//So, rather than creating a new Field or vector of fields, it would copy an existing field or
+	//vector of fields EVERY iteration when a point is added. Obviously, this also incurs a large
+	//overhead. 
+	//
+	//SOLUTION:
+	//in order to get around these problems, ONLY the exact fields which will be used are ever 
+	//created, which includes the 'fieldExistingTrue', 'fieldExistingFalse', and 'strataFields'
+	//variables.
+	//
+	//THEN, since we may need to add multiple fields for each point, in addition to those fields
+	//we also create every combination of fields that would ever be required in the form of
+	//std::vector<Field *> (so the field is not copied). This is the 'fieldVectors' vector which
+	//has the type std::vector<std::vector<Field *>>.
+	//
+	//Essentially: 'fieldExistingTrue', 'fieldExistingFalse', and 'strataFields' store the ONLY
+	//copies of the fields (and are accessed via pointers.) 'fieldVectors' stores all the COMBINATIONS
+	//of (pointers to) fields that might be relevant to a pixel (and are accessed via pointers.)
+	//
+	//Finally, to make the COMBINATIONS of fields easily indexible without copying, there are
+	//additional vectors storing POINTERS to combinations within 'fieldVectors'. These are
+	//'fieldVectorPointersExistingTrue', 'fieldVectorPointersExistingFalse', and 'fieldVectorPointersNoExisting',
+	//and have the type std::vector<std::vector<Field *> *> in order to point to a particular
+	//entry in the 'fieldVectors' vector.
+	
+	helper::Field fieldExistingTrue("existing", 1);
+	helper::Field fieldExistingFalse("existing", 0);
+	std::vector<helper::Field> strataFields(numStrata);
+	for (int i = 0; i < numStrata; i++) {
+		strataFields[i].fname = strataName;
+		strataFields[i].fval = i;
+	}
+
+	int fieldVectorCount = existing.used ? numStrata * 2 : numStrata;
+	std::vector<std::vector<helper::Field *>> fieldVectors(fieldVectorCount);
+	
+	int fieldVectorIndex = 0;
+	std::vector<std::vector<helper::Field *> *> fieldVectorPointersExistingTrue(existing.used ? numStrata : 0);
+	std::vector<std::vector<helper::Field *> *> fieldVectorPointersExistingFalse(existing.used ? numStrata : 0);
+	std::vector<std::vector<helper::Field *> *> fieldVectorPointersNoExisting(existing.used ? 0 : numStrata);
+
+	if (existing.used) {
+		for (int strata = 0; strata < numStrata; strata++) {
+			//create combination of fields for current strata when existing is used and true
+			fieldVectors[fieldVectorIndex].resize(2);
+			fieldVectors[fieldVectorIndex][0] = &fieldExistingTrue;
+			fieldVectors[fieldVectorIndex][1] = strataFields.data() + strata;
+			fieldVectorPointersExistingTrue[strata] = fieldVectors.data() + fieldVectorIndex;
+
+			fieldVectorIndex++;
+
+			//create combination of fields for current strata when existing is used and false
+			fieldVectors[fieldVectorIndex].resize(2);
+			fieldVectors[fieldVectorIndex][0] = &fieldExistingFalse;
+			fieldVectors[fieldVectorIndex][1] = strataFields.data() + strata;
+			fieldVectorPointersExistingFalse[strata] = fieldVectors.data() + fieldVectorIndex;
+		}
+	}
+	else {
+		for (int strata = 0; strata < numStrata; strata++) {
+			fieldVectors[fieldVectorIndex].resize(1);
+			fieldVectors[fieldVectorIndex][0] = strataFields.data() + strata;
+			fieldVectorPointersNoExisting[strata] = fieldVectors.data() + fieldVectorIndex;
+			
+			fieldVectorIndex++;
+		}
+	}
+
 	//add existing sample plots
 	helper::NeighborMap neighbor_map;
 	if (existing.used) {
 		if (force) {
 			//if force is used, add all samples no matter what
-			for (size_t i = 0; i < existingSamples.size(); i++) {
+			for (int i = 0; i < numStrata; i++) {
 				std::vector<OGRPoint> samples = existingSamples[i];
 			       	for (const OGRPoint& point : samples) {
-					helper::addPoint(&point, p_layer);
+					helper::addPoint(&point, p_layer, fieldVectorPointersExistingTrue[i]);
 
 					addedSamples++;
 					samplesAddedPerStrata[i]++;
@@ -1352,7 +1438,7 @@ strat(
 			}
 		}
 		else { //force == false
-			for (size_t i = 0; i < existingSamples.size(); i++) {
+			for (size_t i = 0; i < numStrata; i++) {
 				std::vector<OGRPoint> samples = existingSamples[i];
 				std::shuffle(samples.begin(), samples.end(), rng);
 				
@@ -1367,8 +1453,8 @@ strat(
 						valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
 					}
 
-					if (valid) {
-						helper::addPoint(&point, p_layer);
+					if (valid) { 
+						helper::addPoint(&point, p_layer, fieldVectorPointersExistingTrue[i]);
 
 						addedSamples++;
 						samplesAddedPerStrata[i]++;
@@ -1436,8 +1522,10 @@ strat(
 				valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
 			}
 			
-			if (valid) {    
-				helper::addPoint(&newPoint, p_layer);
+			if (valid) { 
+			       	existing.used ?	
+					helper::addPoint(&newPoint, p_layer, fieldVectorPointersExistingFalse[curStrata]) :
+					helper::addPoint(&newPoint, p_layer, fieldVectorPointersNoExisting[curStrata]);
 				
 				addedSamples++;
 				samplesAddedPerStrata[curStrata]++;
@@ -1499,7 +1587,10 @@ strat(
 		}
 
 		if (valid) {
-			helper::addPoint(&newPoint, p_layer);
+			existing.used ?	
+				helper::addPoint(&newPoint, p_layer, fieldVectorPointersExistingFalse[curStrata]) :
+				helper::addPoint(&newPoint, p_layer, fieldVectorPointersNoExisting[curStrata]);
+				
 		
 			addedSamples++;
 			samplesAddedPerStrata[curStrata]++;

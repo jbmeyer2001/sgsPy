@@ -372,7 +372,7 @@ systematic(
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
 					existing.used ?
-						helper::addPoint(&point, p_sampleLayer, fieldExistingFalse) :
+						helper::addPoint(&point, p_sampleLayer, &fieldExistingFalse) :
 						helper::addPoint(&point, p_sampleLayer);
 
 					if (plot) {
@@ -393,7 +393,7 @@ systematic(
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
 					existing.used ?
-						helper::addPoint(&point, p_sampleLayer, fieldExistingFalse) :
+						helper::addPoint(&point, p_sampleLayer, &fieldExistingFalse) :
 						helper::addPoint(&point, p_sampleLayer);
 
 					if (plot) {
@@ -410,7 +410,7 @@ systematic(
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
 					existing.used ?
-						helper::addPoint(&point, p_sampleLayer, fieldExistingFalse) :
+						helper::addPoint(&point, p_sampleLayer, &fieldExistingFalse) :
 						helper::addPoint(&secondPoint, p_sampleLayer);
 
 					if (plot) {
@@ -450,7 +450,7 @@ systematic(
 					{
 						found = true;
 						existing.used ?
-							helper::addPoint(&point, p_sampleLayer, fieldExistingFalse) :
+							helper::addPoint(&point, p_sampleLayer, &fieldExistingFalse) :
 							helper::addPoint(&point, p_sampleLayer);
 
 						if (plot) {
