@@ -335,7 +335,7 @@ srs(
   	helper::NeighborMap neighbor_map;
 	double mindist_sq = mindist * mindist;
 
-	Field fieldExistingFalse("existing", 0);
+	helper::Field fieldExistingFalse("existing", 0);
 	while (samplesAdded < numSamples && i < indices.size()) {
 		helper::Index index = indices[i];
 		bool valid = true;

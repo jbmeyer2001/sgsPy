@@ -349,7 +349,7 @@ systematic(
 
 	//create existing struct
 	existing::Existing existing(p_existing, GT, p_raster->getWidth(), p_sampleLayer, plot, xCoords, yCoords);
-	Field fieldExistingFalse("existing", 0);
+	helper::Field fieldExistingFalse("existing", 0);
 
 	//grid represents the grid used to create the sampels only if PLOT is true, and is returned to the (Python) caller
 	std::vector<std::vector<std::vector<double>>> grid;

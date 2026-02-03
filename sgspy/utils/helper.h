@@ -42,10 +42,10 @@ struct Index {
  * @ingroup helper
  * This struct represents the feature value of a field in an OGRLayer for an OGRFieldType of OFTInteger.
  */
-Field {
+struct Field {
 	std::string fname; //field name
 	int fval; //field value
-}
+};
 
 /**
  * @ingroup helper

@@ -78,7 +78,7 @@ struct Existing {
 		}
 		
 		if (p_samples) {
-			GRFieldDefn existingField("existing", OFTInteger);
+			OGRFieldDefn existingField("existing", OFTInteger);
 			p_samples->CreateField(&existingField);
 		}
 
@@ -94,7 +94,7 @@ struct Existing {
 
 		std::string name = layerNames[0];
 		OGRLayer *p_layer = p_vect->getLayer(name);
-		Field fieldExistingTrue("existing", 0);
+		helper::Field fieldExistingTrue("existing", 0);
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
