@@ -349,6 +349,7 @@ systematic(
 
 	//create existing struct
 	existing::Existing existing(p_existing, GT, p_raster->getWidth(), p_sampleLayer, plot, xCoords, yCoords);
+	Field fieldExistingFalse("existing", 0);
 
 	//grid represents the grid used to create the sampels only if PLOT is true, and is returned to the (Python) caller
 	std::vector<std::vector<std::vector<double>>> grid;
@@ -370,7 +371,9 @@ systematic(
 				    checkExisting(x, y, existing) &&
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
-					helper::addPoint(&point, p_sampleLayer);
+					existing.used ?
+						helper::addPoint(&point, p_sampleLayer, fieldExistingFalse) :
+						helper::addPoint(&point, p_sampleLayer);
 
 					if (plot) {
 						xCoords.push_back(x);
@@ -389,7 +392,9 @@ systematic(
 				    checkExisting(x, y, existing) &&
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
-					helper::addPoint(&point, p_sampleLayer);
+					existing.used ?
+						helper::addPoint(&point, p_sampleLayer, fieldExistingFalse) :
+						helper::addPoint(&point, p_sampleLayer);
 
 					if (plot) {
 						xCoords.push_back(x);
@@ -404,7 +409,9 @@ systematic(
 				    checkExisting(x, y, existing) &&
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
-					helper::addPoint(&secondPoint, p_sampleLayer);
+					existing.used ?
+						helper::addPoint(&point, p_sampleLayer, fieldExistingFalse) :
+						helper::addPoint(&secondPoint, p_sampleLayer);
 
 					if (plot) {
 						xCoords.push_back(x);
@@ -442,7 +449,9 @@ systematic(
 					    checkNotNan(p_raster, IGT, x, y, force)) 
 					{
 						found = true;
-						helper::addPoint(&point, p_sampleLayer);
+						existing.used ?
+							helper::addPoint(&point, p_sampleLayer, fieldExistingFalse) :
+							helper::addPoint(&point, p_sampleLayer);
 
 						if (plot) {
 							xCoords.push_back(x);

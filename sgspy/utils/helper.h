@@ -40,6 +40,15 @@ struct Index {
 
 /**
  * @ingroup helper
+ * This struct represents the feature value of a field in an OGRLayer for an OGRFieldType of OFTInteger.
+ */
+Field {
+	std::string fname; //field name
+	int fval; //field value
+}
+
+/**
+ * @ingroup helper
  * The RasterBandMetaData struct stores information
  * on a particular raster band. It stores:
  *
@@ -709,6 +718,81 @@ addPoint(const OGRPoint *p_point, OGRLayer *p_layer) {
 	p_layer->CreateFeature(p_feature);
 	OGRFeature::DestroyFeature(p_feature);	
 }
+
+/**
+ * @ingroup helper
+ * Helper function to add a point to a layer, with additional field values.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ * @param std::vector<Field>
+ */
+inline void
+addPoint(OGRPoint *p_point, OGRLayer *p_layer, std::vector<Field>& fields) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	for (const Field& field : fields) {
+		p_feature->SetField(field.fname.c_str(), field.fval);
+	}
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * @ingroup helper
+ * Helper function to add a point to a layer, with an additional field value.
+ * This is the version which will be called when there is a const OGRPoint *.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ * @param std::vector<Field>
+ */
+inline void
+addPoint(const OGRPoint *p_point, OGRLayer *p_layer, Field& field) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_feature->SetField(field.fname.c_str(), field.fval);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * @ingroup helper
+ * Helper function to add a point to a layer, with an additional field value.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ * @param std::vector<Field>
+ */
+inline void
+addPoint(OGRPoint *p_point, OGRLayer *p_layer, Field& field) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	p_feature->SetField(field.fname.c_str(), field.fval);
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
+/**
+ * @ingroup helper
+ * Helper function to add a point to a layer, with additional field values.
+ * This is the version which will be called when there is a const OGRPoint *.
+ *
+ * @param OGRPoint *p_point
+ * @param OGRLayer *p_layer
+ * @param std::vector<Field>
+ */
+inline void
+addPoint(const OGRPoint *p_point, OGRLayer *p_layer, std::vector<Field>& fields) {
+	OGRFeature *p_feature = OGRFeature::CreateFeature(p_layer->GetLayerDefn());
+	p_feature->SetGeometry(p_point);
+	for (const Field& field : fields) {
+		p_feature->SetField(field.fname.c_str(), field.fval);
+	}
+	p_layer->CreateFeature(p_feature);
+	OGRFeature::DestroyFeature(p_feature);	
+}
+
 
 /**
  * @ingroup helper

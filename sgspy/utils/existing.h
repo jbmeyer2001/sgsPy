@@ -77,6 +77,11 @@ struct Existing {
 			return;
 		}
 		
+		if (p_samples) {
+			GRFieldDefn existingField("existing", OFTInteger);
+			p_samples->CreateField(&existingField);
+		}
+
 		this->width = width;
 
 		std::vector<std::string> layerNames = p_vect->getLayerNames();
@@ -89,6 +94,7 @@ struct Existing {
 
 		std::string name = layerNames[0];
 		OGRLayer *p_layer = p_vect->getLayer(name);
+		Field fieldExistingTrue("existing", 0);
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
@@ -98,7 +104,7 @@ struct Existing {
 					int64_t index = helper::point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 					this->samples.emplace(index, *p_point);
 					if (p_samples) {
-						helper::addPoint(p_point, p_samples);
+						helper::addPoint(p_point, p_samples, fieldExistingTrue);
 						if (plot) {
 							xCoords.push_back(p_point->getX());
 							yCoords.push_back(p_point->getY());
@@ -111,7 +117,7 @@ struct Existing {
 						int64_t index = helper::point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 						this->samples.emplace(index, *p_point);
 						if (p_samples) {
-							helper::addPoint(p_point, p_samples);
+							helper::addPoint(p_point, p_samples, fieldExistingTrue);
 							if (plot) {
 								xCoords.push_back(p_point->getX());
 								yCoords.push_back(p_point->getY());
