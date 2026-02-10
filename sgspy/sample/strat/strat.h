@@ -517,7 +517,7 @@ processBlocksStratRandom(
 					}
 
 					if (val < 0) {
-						std::string errmsg "a negative value of " + std::to_string(val) + " was found in the strat raster, and has not been marked as a nodata value.";
+						std::string errmsg = "a negative value of " + std::to_string(val) + " was found in the strat raster, and has not been marked as a nodata value.";
 						throw std::runtime_error(errmsg);
 					}
 

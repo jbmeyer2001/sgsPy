@@ -195,7 +195,7 @@ raster::GDALRasterWrapper *map(
 			int strataCount = strataCounts[i][j];
 			numStrataPerBand.push_back(strataCount);
 
-			stratBand = helper::rasterBandMetaData;
+			helper::RasterBandMetaData stratBand;
 
 			GDALRasterBand *p_band = p_raster->getRasterBand(band);
 			stratBand.p_band = p_band;
@@ -207,7 +207,7 @@ raster::GDALRasterWrapper *map(
 			p_band->GetBlockSize(&stratBand.xBlockSize, &stratBand.yBlockSize);
 			stratBands.push_back(stratBand);
 
-			helper::printTypeWarningsForInt32Conversion(p_stratBand->type);
+			helper::printTypeWarningsForInt32Conversion(stratBand.type);
 			multipliers.push_back(multipliers.back() * strataCount);
 		}
 	}
@@ -278,6 +278,7 @@ raster::GDALRasterWrapper *map(
 				yBlockEnd,
 				xBlocks,
 				&stratBands,
+				&numStrataPerBand,
 				&mapBand,
 				&multipliers	
 			] {
@@ -326,12 +327,14 @@ raster::GDALRasterWrapper *map(
 	
 									if (!isNan) {
 										if (strat >= numStrataPerBand[band]) {
-											std::string errmsg = "the num_strata indicated for band " + dataBands[band].p_band->GetDescription() " is less than or equal to one of the values in that band.";
+											std::string bandName = stratBands[band].p_band->GetDescription();
+											std::string errmsg = "the num_strata indicated for band " + bandName + " is less than or equal to one of the values in that band.";
 											throw std::runtime_error(errmsg);
 										}
 
 										if (strat < 0) {
-											std::string errmsg = "a negative strata value of " + std::to_string(strat) + " was found in band " + dataBands[band].p_band->GetDescription() ", and is not marked as a nodata value.";
+											std::string bandName = stratBands[band].p_band->GetDescription();
+											std::string errmsg = "a negative strata value of " + std::to_string(strat) + " was found in band " + bandName + ", and is not marked as a nodata value.";
 											throw std::runtime_error(errmsg);
 										}
 
