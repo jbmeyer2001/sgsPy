@@ -157,6 +157,7 @@ raster::GDALRasterWrapper *map(
 	}
 	
 	std::vector<helper::RasterBandMetaData> stratBands;
+	std::vector<int> numStrataPerBand;	
 	helper::RasterBandMetaData mapBand;
 	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo(1);
 
@@ -185,25 +186,26 @@ raster::GDALRasterWrapper *map(
 	}
 
 	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
-	std::vector<size_t> multipliers(1, 1);	
+	std::vector<size_t> multipliers(1, 1);
 	for (size_t i = 0; i < rasters.size(); i++) {
 		raster::GDALRasterWrapper *p_raster = rasters[i];
 
 		for (size_t j = 0; j < bands[i].size(); j++) {
-			stratBands.resize(stratBands.size() + 1);
-			helper::RasterBandMetaData *p_stratBand = &stratBands.back();
-			
 			int band = bands[i][j];
 			int strataCount = strataCounts[i][j];
+			numStrataPerBand.push_back(strataCount);
+
+			stratBand = helper::rasterBandMetaData;
 
 			GDALRasterBand *p_band = p_raster->getRasterBand(band);
-			p_stratBand->p_band = p_band;
-			p_stratBand->type = p_raster->getRasterBandType(band);
-			p_stratBand->size = p_raster->getRasterBandTypeSize(band);
-			p_stratBand->p_buffer = largeRaster ? nullptr : p_raster->getRasterBandBuffer(band);
-			p_stratBand->nan = p_band->GetNoDataValue();
-			p_stratBand->p_mutex = &stratDatasetMutexes[i];
-			p_band->GetBlockSize(&p_stratBand->xBlockSize, &p_stratBand->yBlockSize);
+			stratBand.p_band = p_band;
+			stratBand.type = p_raster->getRasterBandType(band);
+			stratBand.size = p_raster->getRasterBandTypeSize(band);
+			stratBand.p_buffer = largeRaster ? nullptr : p_raster->getRasterBandBuffer(band);
+			stratBand.nan = p_band->GetNoDataValue();
+			stratBand.p_mutex = &stratDatasetMutexes[i];
+			p_band->GetBlockSize(&stratBand.xBlockSize, &stratBand.yBlockSize);
+			stratBands.push_back(stratBand);
 
 			helper::printTypeWarningsForInt32Conversion(p_stratBand->type);
 			multipliers.push_back(multipliers.back() * strataCount);
@@ -321,8 +323,18 @@ raster::GDALRasterWrapper *map(
 								for (size_t band = 0; band < bandCount; band++) {
 									int strat = helper::getPixelValueDependingOnType<int>(stratBands[band].type, stratBuffers[band], index);
 									isNan = strat == intNoDataValues[band];
-
+	
 									if (!isNan) {
+										if (strat >= numStrataPerBand[band]) {
+											std::string errmsg = "the num_strata indicated for band " + dataBands[band].p_band->GetDescription() " is less than or equal to one of the values in that band.";
+											throw std::runtime_error(errmsg);
+										}
+
+										if (strat < 0) {
+											std::string errmsg = "a negative strata value of " + std::to_string(strat) + " was found in band " + dataBands[band].p_band->GetDescription() ", and is not marked as a nodata value.";
+											throw std::runtime_error(errmsg);
+										}
+
 										mappedStrat += strat * multipliers[band];
 									}
 									else {

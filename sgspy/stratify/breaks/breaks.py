@@ -271,7 +271,7 @@ def breaks(
         metadata_info.append(StratRasterBandMetadata(mapped=False, strata_count=strata_count, band_metadata = metadata))
         
         if map:
-            mapped_band.append((srast.bands[band], strata_count))
+            mapped_band_metadata.append((srast.bands[band], strata_count))
             mapped_strata_count = mapped_strata_count * strata_count
 
     if map:

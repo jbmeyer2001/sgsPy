@@ -512,6 +512,15 @@ processBlocksStratRandom(
 						continue;
 					}
 
+					if (val >= numStrata) {
+						throw std::runtime_error("the num_strata indicated for the strat raster band is less than or equal to one of the value sin that band.");
+					}
+
+					if (val < 0) {
+						std::string errmsg "a negative value of " + std::to_string(val) + " was found in the strat raster, and has not been marked as a nodata value.";
+						throw std::runtime_error(errmsg);
+					}
+
 					//update optim allocation variance calculations
 					if (optim.used) {
 						optim.update(blockIndex, val);
