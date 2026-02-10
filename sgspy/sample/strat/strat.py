@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from sgspy.utils import(
     SpatialRaster,
     SpatialVector,
+    StratRasterBandMetadata,
     plot,
 )
 
@@ -188,7 +189,7 @@ def strat(
     if num_strata is not None and type(num_strata) is not int:
         raise TypeError("'num_strata' parameter, if given, must be of type int.")
 
-    if !strat_rast.is_strat_rast and num_strata is None:
+    if not strat_rast.is_strat_rast and num_strata is None:
         raise ValueError("'if 'strat_rast' parameter is not the return value of an sgspy.stratify function, 'num_strata' is a required parameter.")
 
     if type(wrow) is not int:
@@ -245,8 +246,6 @@ def strat(
     if mrast is not None and mrast.closed:
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
-    num_strata = 
-
     if band is None:
         if len(strat_rast.bands) > 1:
             raise ValueError("'band' parameter must be given if there is more than 1 band in the strat_raster")
@@ -262,7 +261,7 @@ def strat(
             msg = "0-indexed band of " + str(band) + " given, but raster only has " + str(len(raster.bands)) + " bands."
             raise ValueError(msg)
 
-    if strat_band.is_strat_band:
+    if strat_rast.is_strat_rast:
         num_strata = strat_rast.srast_metadata_info[band].get_num_strata() 
 
     if num_samples < 1:

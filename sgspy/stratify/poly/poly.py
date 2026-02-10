@@ -177,7 +177,7 @@ def poly(
     srast.temp_dataset = filename == "" and large_raster
     srast.filename = filename
 
-    metadata_info = SpatialRasterBandMetadata(mapped=False, strata=len(features), band_metadata=metadata)
+    metadata_info = StratRasterBandMetadata(mapped=False, strata_count=len(features), band_metadata=metadata)
     srast.srast_metadata_info = [metadata_info]
     srast.is_strat_rast = True
 

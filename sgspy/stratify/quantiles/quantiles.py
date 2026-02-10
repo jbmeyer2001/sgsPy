@@ -20,7 +20,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sgspy.utils import SpatialRaster
+from sgspy.utils import SpatialRaster, StratRasterBandMetadata
 
 #ensure _sgs binary can be found
 site_packages = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]
@@ -330,22 +330,25 @@ def quantiles(
     metadata_info = []
     mapped_band_metadata = []
     mapped_strata_count = 1
+    index = 0
     for band, vals in quantile_vals.items():
-        name = rast.bands[band]
+        name = band
         strata_count = len(vals) + 1
 
         metadata = ["{} < {}".format(name, vals[0])]
         for i in range(1, len(vals) - 1):
-            metadata.append("{} <= {} < {}".(vals[i - 1], name, vals[i]))
+            metadata.append("{} <= {} < {}".format(vals[i - 1], name, vals[i]))
         metadata.append("{} <= {}".format(vals[-1], name))
         metadata_info.append(StratRasterBandMetadata(mapped=False, strata_count=strata_count, band_metadata = metadata))
         
         if map:
-            mapped_band_metadata.append((srast.bands[band], strata_count))
+            mapped_band_metadata.append((srast.bands[index], strata_count))
             mapped_strata_count = mapped_strata_count * strata_count
 
+        index = index + 1
+
     if map:
-        metadata_info.append(StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
+        metadata_info.append(StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata))
 
     srast.srast_metadata_info = metadata_info
     srast.is_strat_rast = True

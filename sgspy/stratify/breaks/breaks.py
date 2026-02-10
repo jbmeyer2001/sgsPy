@@ -20,7 +20,7 @@ from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sgspy.utils import SpatialRaster
+from sgspy.utils import SpatialRaster, StratRasterBandMetadata
 
 #ensure _sgs binary can be found
 site_packages = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]
@@ -275,7 +275,7 @@ def breaks(
             mapped_strata_count = mapped_strata_count * strata_count
 
     if map:
-        metadata_info.append(StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
+        metadata_info.append(StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata))
 
     srast.srast_metadata_info = metadata_info
     srast.is_strat_rast = True

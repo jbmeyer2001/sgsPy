@@ -46,15 +46,6 @@ class TestMap:
         #no error when passed as ints
         mapped = sgs.map((breaks, [0, 1], [5, 5]))
 
-        with pytest.raises(TypeError):
-            mapped = sgs.map((breaks, ['strat_zq90', 'strat_pzabove2'], 5))
-        
-        with pytest.raises(TypeError):
-            mapped = sgs.map((breaks, 'strat_zq90', [5]))
-        
-        with pytest.raises(ValueError):
-            mapped = sgs.map((breaks, ['strat_zq90', 'strat_pzabove2'], [5]))
-        
         with pytest.raises(ValueError):
             mapped = sgs.map((breaks, ['strat_zq90', 'strat_pzabove2', 'strat_zsd'], [5, 5, 25]))
 

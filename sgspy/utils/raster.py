@@ -607,7 +607,7 @@ class SpatialRaster:
         else:
             return ds
 
-    def srast_info(self, band: Optional[int, str] = None):
+    def srast_info(self, band: Optional[int|str] = None):
         if srast_metadata_info is None:
             raise ValueError("this function can only be called on a strat raster created through one of the sgs stratification functions.")
 

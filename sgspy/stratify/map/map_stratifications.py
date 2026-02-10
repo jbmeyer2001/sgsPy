@@ -15,7 +15,8 @@ import os
 import sys
 import site
 import tempfile
-from sgspy.utils import SpatialRaster
+from typing import Optional
+from sgspy.utils import SpatialRaster, StratRasterBandMetadata
 
 #ensure _sgs binary can be found
 site_packages = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]
@@ -135,15 +136,13 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
 
     raster_list = []
     band_lists = []
-    strata_lists = []
+    strata_count_lists = []
 
     height = None
     width = None
 
     raster_size_bytes = 0
     large_raster = False
-    mapped_band_metadata = []
-    mapped_strata_count = 1
     for (raster, bands, num_strata) in args:
         #error checking on input args
         if type(raster) is not SpatialRaster:
@@ -152,7 +151,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
         if type(bands) not in [int, str, list]:
             raise TypeError("second value in each tuple argument, which represents the band(s) to use within the strat raster, must be of type int, str, or list.")
 
-        if !raster.is_strat_rast and num_strata is None:
+        if not raster.is_strat_rast and num_strata is None:
             raise TypeError("if one of the strat rasters specified is not the return value of running one of the sgspy stratification functions, the additional 'num_strata' argument must be given.")
 
         if raster.is_strat_rast:
@@ -194,13 +193,16 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
             elif type(band) is str:
                 if band not in raster.bands:
                     msg = "band {} is not a band within the raster.".format(band)
-                raise ValueError(msg)
+                    raise ValueError(msg)
 
             else:
                 raise TypeError("if the band argument is a list, every value within it must be of type int or str.")
             return raster.get_band_index(band)
 
         #add raster, bands, and num_strata to lists which will be passed to the C++ function
+        band_list = []
+        strata_count_list = []
+
         if type(bands) is list:
             for i in range(len(bands)):
                 band_int = get_band_int(bands[i])
@@ -217,14 +219,14 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
                 raster_size_bytes += band_size
                 if band_size > GIGABYTE:
                     large_raster = True
+
         else:
             band_int = get_band_int(bands)
             band_list.append(band_int)
             if raster.is_strat_rast:
                 num_strata = raster.srast_metadata_info[band_int].get_num_strata()
-                strata_count_list.append(num_strata)
-            else:
-                strata_count_list.append(num_strata)
+            
+            strata_count_list.append(num_strata)
             
             #check for large raster
             pixel_size = raster.cpp_raster.get_raster_band_type_size(band_int)
@@ -236,7 +238,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
         #prepare cpp function arguments
         raster_list.append(raster.cpp_raster)
         band_lists.append(band_list)
-        strata_lists.append(strata_count_list)
+        strata_count_lists.append(strata_count_list)
 
     #if any 1 band is larger than a gigabyte, or all bands together are larger than 4, large_raster is true
     #
@@ -246,8 +248,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
 
     #error check max value for potential overflow error 
     max_mapped_strata = 1
-    for strata_list in strata_lists:
-        for strata_count in strata_list:
+    for strata_count_list in strata_count_lists:
+        for strata_count in strata_count_list:
             max_mapped_strata = max_mapped_strata * strata_count
     if max_mapped_strata > MAX_STRATA_VAL:
         raise ValueError("the mapped strata will cause an overflow error because the max strata number is too large.")
@@ -269,7 +271,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
     srast = SpatialRaster(map_cpp(
         raster_list, 
         band_lists, 
-        strata_lists, 
+        strata_count_lists, 
         filename, 
         large_raster,
         thread_count,
@@ -285,17 +287,17 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
 
     mapped_band_metadata = []
     mapped_strata_count = 1
-    for i in len(range(raster_list)):
-        rast = raster_list[i]
+    for i in range(len(raster_list)):
+        rast, _, _ = args[i]
         bands = band_lists[i]
-        stratas = strata_lists[i]
+        strata_counts = strata_count_lists[i]
 
-        for j in len(range(bands))
+        for j in range(len(bands)):
             band = bands[j]
-            strata = stratas[j]
+            strata_count = strata_counts[j]
 
-            mapped_band_metadata.append(rast.bands[band], strata)
-            mapped_strata_count = mapped_strata_count * strata
+            mapped_band_metadata.append((rast.bands[band], strata_count))
+            mapped_strata_count = mapped_strata_count * strata_count
 
     srast.srast_metadata_info = [
         StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
