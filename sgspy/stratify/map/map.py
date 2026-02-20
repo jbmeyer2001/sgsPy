@@ -154,14 +154,13 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
             bands = raster.bands
             num_strata = None
         elif len(arg) == 3:
-            (raster, bands, num_strata) = raster_tuple
+            (raster, bands, num_strata) = arg
         elif len(arg) == 2:
-            (raster, bands) = raster_tuple
+            (raster, bands) = arg
             num_strata = None
         else:
             raise ValueError("all input rasters/bands/strata must have exactly 1, 2, or 3 variables.")
 
-        #first_rast is used later
         first_rast = raster if first_rast is None else first_rast
 
         #error checking on input args
@@ -226,12 +225,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
         if type(bands) is list:
             for i in range(len(bands)):
                 if type(bands[i]) not in [str, int]: raise TypeError("every value in a bands list must be of type int or str.")
-                if type(bands[i]) is str:
-                    band_str = bands[i]
-                    band_int = get_band_int(band_str)
-                else:
-                    band_int = bands[i]
-                    band_str = raster.bands[band_int]
+                band_int = get_band_int(bands[i])
+                band_str = raster.bands[band_int]
 
                 band_list.append(band_int)
                 if raster.is_strat_rast:
