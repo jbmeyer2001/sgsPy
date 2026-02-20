@@ -1,4 +1,4 @@
 var group__user__map =
 [
-    [ "sgspy.stratify.map.map_stratifications.map", "group__user__map.html#ga6665ad19a101a221ed1945f5bcba3c4a", null ]
+    [ "sgspy.stratify.map.map.map", "group__user__map.html#ga8cd8b89c9cb1135b900fe8ce5d1796d0", null ]
 ];

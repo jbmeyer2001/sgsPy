@@ -97,7 +97,7 @@ $(function(){initNavTree('structsgs_1_1existing_1_1Existing.html','','structsgs_
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:af2343b80b294e70887a6dd3fc797aa6b" id="r_af2343b80b294e70887a6dd3fc797aa6b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af2343b80b294e70887a6dd3fc797aa6b">Existing</a> (<a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *p_vect, double *GT, int64_t <a class="el" href="#a25489bb1cdeee8f7ed04b6fb8c2fd439">width</a>, OGRLayer *p_samples, bool plot, std::vector&lt; double &gt; &amp;xCoords, std::vector&lt; double &gt; &amp;yCoords)</td></tr>
+<tr class="memitem:ae842254971bd19e41c60ff34991c3c96" id="r_ae842254971bd19e41c60ff34991c3c96"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae842254971bd19e41c60ff34991c3c96">Existing</a> (<a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *p_vect, <a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *p_rast, double *GT, int64_t <a class="el" href="#a25489bb1cdeee8f7ed04b6fb8c2fd439">width</a>, OGRLayer *p_samples, bool plot, std::vector&lt; double &gt; &amp;xCoords, std::vector&lt; double &gt; &amp;yCoords, bool addAllPoints=true)</td></tr>
 <tr class="memitem:aa3502948d9db1decd29d89cae551517b" id="r_aa3502948d9db1decd29d89cae551517b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa3502948d9db1decd29d89cae551517b">containsIndex</a> (int64_t x, int64_t y)</td></tr>
 <tr class="memitem:a65fdab2ea9461d14e3a98d0ebc41b71e" id="r_a65fdab2ea9461d14e3a98d0ebc41b71e"><td class="memItemLeft" align="right" valign="top">OGRPoint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a65fdab2ea9461d14e3a98d0ebc41b71e">getPoint</a> (int64_t x, int64_t y)</td></tr>
 <tr class="memitem:a060c2062cb2a3445637bf20f5248a16f" id="r_a060c2062cb2a3445637bf20f5248a16f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a060c2062cb2a3445637bf20f5248a16f">containsCoordinates</a> (double xCoord, double yCoord)</td></tr>
@@ -114,8 +114,8 @@ Public Attributes</h2></td></tr>
 <div class="textblock"><p>This struct handles existing sample plot points. It has a constructor which takes a GDALVectorWrapper, geotransform, and width of the raster as parameters.</p>
 <p>The points are stored within an unordered map. This map can then be checked to see if it contains particular index values. </p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="af2343b80b294e70887a6dd3fc797aa6b" name="af2343b80b294e70887a6dd3fc797aa6b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af2343b80b294e70887a6dd3fc797aa6b">&#9670;&#160;</a></span>Existing()</h2>
+<a id="ae842254971bd19e41c60ff34991c3c96" name="ae842254971bd19e41c60ff34991c3c96"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae842254971bd19e41c60ff34991c3c96">&#9670;&#160;</a></span>Existing()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -127,6 +127,11 @@ Public Attributes</h2></td></tr>
           <td class="memname">sgs::existing::Existing::Existing </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *</td>          <td class="paramname"><span class="paramname"><em>p_vect</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *</td>          <td class="paramname"><span class="paramname"><em>p_rast</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -156,7 +161,12 @@ Public Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::vector&lt; double &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>yCoords</em></span>&#160;)</td>
+          <td class="paramtype">std::vector&lt; double &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>yCoords</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>addAllPoints</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span>&#160;)</td>
         </tr>
       </table>
   </td>

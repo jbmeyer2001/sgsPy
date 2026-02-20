@@ -43,7 +43,7 @@ var searchData=
   ['sgspy_3a_3astratify_3a_3akmeans_40',['kmeans',['../namespacesgspy_1_1stratify_1_1kmeans.html',1,'sgspy::stratify']]],
   ['sgspy_3a_3astratify_3a_3akmeans_3a_3akmeans_41',['kmeans',['../namespacesgspy_1_1stratify_1_1kmeans_1_1kmeans.html',1,'sgspy::stratify::kmeans']]],
   ['sgspy_3a_3astratify_3a_3amap_42',['map',['../namespacesgspy_1_1stratify_1_1map.html',1,'sgspy::stratify']]],
-  ['sgspy_3a_3astratify_3a_3amap_3a_3amap_5fstratifications_43',['map_stratifications',['../namespacesgspy_1_1stratify_1_1map_1_1map__stratifications.html',1,'sgspy::stratify::map']]],
+  ['sgspy_3a_3astratify_3a_3amap_3a_3amap_43',['map',['../namespacesgspy_1_1stratify_1_1map_1_1map.html',1,'sgspy::stratify::map']]],
   ['sgspy_3a_3astratify_3a_3apoly_44',['poly',['../namespacesgspy_1_1stratify_1_1poly.html',1,'sgspy::stratify']]],
   ['sgspy_3a_3astratify_3a_3apoly_3a_3apoly_45',['poly',['../namespacesgspy_1_1stratify_1_1poly_1_1poly.html',1,'sgspy::stratify::poly']]],
   ['sgspy_3a_3astratify_3a_3aquantiles_46',['quantiles',['../namespacesgspy_1_1stratify_1_1quantiles.html',1,'sgspy::stratify']]],

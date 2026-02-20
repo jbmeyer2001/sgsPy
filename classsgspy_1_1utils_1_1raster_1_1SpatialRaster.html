@@ -109,6 +109,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac026c17c288f6a38b07c77eb141a369a" id="r_ac026c17c288f6a38b07c77eb141a369a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac026c17c288f6a38b07c77eb141a369a">to_rasterio</a> (self, with_arr=False)</td></tr>
 <tr class="memitem:a2a10efce7feb2b5837f84f282f189634" id="r_a2a10efce7feb2b5837f84f282f189634"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a10efce7feb2b5837f84f282f189634">from_gdal</a> (cls, ds, arr=None)</td></tr>
 <tr class="memitem:ab75aa5bb0513622bc381c024db66dd1a" id="r_ab75aa5bb0513622bc381c024db66dd1a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab75aa5bb0513622bc381c024db66dd1a">to_gdal</a> (self, with_arr=False)</td></tr>
+<tr class="memitem:aa8b5dfa6d67a95f008ad04659614166b" id="r_aa8b5dfa6d67a95f008ad04659614166b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa8b5dfa6d67a95f008ad04659614166b">srast_info</a> (self, Optional[int|str] <a class="el" href="#a68632ff60c926266d3b78a84c81ca4ee">band</a>=None)</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -128,6 +129,8 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a8124c3522fc7a5d2aff3b24178ba1397" id="r_a8124c3522fc7a5d2aff3b24178ba1397"><td class="memItemLeft" align="right" valign="top">dict&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8124c3522fc7a5d2aff3b24178ba1397">band_name_dict</a> = {}</td></tr>
 <tr class="memitem:af5d38789256b2e0cd7f3d698825816d4" id="r_af5d38789256b2e0cd7f3d698825816d4"><td class="memItemLeft" align="right" valign="top">dict&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af5d38789256b2e0cd7f3d698825816d4">band_data_dict</a> = {}</td></tr>
 <tr class="memitem:ac16affe501888a5dfbfdab627607f678" id="r_ac16affe501888a5dfbfdab627607f678"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac16affe501888a5dfbfdab627607f678">bands</a> = self.cpp_raster.get_bands()</td></tr>
+<tr class="memitem:a62b4dd5a403a1a20887d671ceff1954b" id="r_a62b4dd5a403a1a20887d671ceff1954b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a62b4dd5a403a1a20887d671ceff1954b">srast_metadata_info</a> = None</td></tr>
+<tr class="memitem:ac31ca5948859308b0fa2349f765ac274" id="r_ac31ca5948859308b0fa2349f765ac274"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac31ca5948859308b0fa2349f765ac274">is_strat_rast</a> = False</td></tr>
 <tr class="memitem:aaf04aa83f95696372adfb6019b53d473" id="r_aaf04aa83f95696372adfb6019b53d473"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaf04aa83f95696372adfb6019b53d473">temp_dir</a></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-static-attribs" class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
@@ -522,6 +525,27 @@ band : int or str
 </pre> 
 </div>
 </div>
+<a id="aa8b5dfa6d67a95f008ad04659614166b" name="aa8b5dfa6d67a95f008ad04659614166b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8b5dfa6d67a95f008ad04659614166b">&#9670;&#160;</a></span>srast_info()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">sgspy.utils.raster.SpatialRaster.srast_info </td>
+          <td>(</td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>self</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Optional[int|str] </td>          <td class="paramname"><span class="paramname"><em>band</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="ab75aa5bb0513622bc381c024db66dd1a" name="ab75aa5bb0513622bc381c024db66dd1a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab75aa5bb0513622bc381c024db66dd1a">&#9670;&#160;</a></span>to_gdal()</h2>
 
@@ -763,6 +787,20 @@ ds, arr = sgs.to_rasterio(with_arr=True)
 
 </div>
 </div>
+<a id="ac31ca5948859308b0fa2349f765ac274" name="ac31ca5948859308b0fa2349f765ac274"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac31ca5948859308b0fa2349f765ac274">&#9670;&#160;</a></span>is_strat_rast</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool sgspy.utils.raster.SpatialRaster.is_strat_rast = False</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a91809b6e883a12a4a6dde28eee580124" name="a91809b6e883a12a4a6dde28eee580124"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a91809b6e883a12a4a6dde28eee580124">&#9670;&#160;</a></span>pixel_height</h2>
 
@@ -799,6 +837,20 @@ ds, arr = sgs.to_rasterio(with_arr=True)
       <table class="memname">
         <tr>
           <td class="memname">sgspy.utils.raster.SpatialRaster.projection = self.cpp_raster.get_projection().encode('ascii', 'ignore').decode('unicode_escape')</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a62b4dd5a403a1a20887d671ceff1954b" name="a62b4dd5a403a1a20887d671ceff1954b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a62b4dd5a403a1a20887d671ceff1954b">&#9670;&#160;</a></span>srast_metadata_info</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">sgspy.utils.raster.SpatialRaster.srast_metadata_info = None</td>
         </tr>
       </table>
 </div><div class="memdoc">

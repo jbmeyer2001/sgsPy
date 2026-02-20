@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.14.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>sgsPy: sgspy.sample.strat.strat</title>
+<title>sgsPy: sgs::helper::Field</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -63,7 +63,7 @@ $(function() {
   </div>
 </div>
 <script type="text/javascript">
-$(function(){initNavTree('namespacesgspy_1_1sample_1_1strat_1_1strat.html','',''); });
+$(function(){initNavTree('structsgs_1_1helper_1_1Field.html','','structsgs_1_1helper_1_1Field-members'); });
 </script>
 <div id="container">
 <div id="doc-content">
@@ -89,34 +89,51 @@ $(function(){initNavTree('namespacesgspy_1_1sample_1_1strat_1_1strat.html','',''
 </div>
 
 <div class="header">
-  <div class="headertitle"><div class="title">sgspy.sample.strat.strat</div></div>
+  <div class="headertitle"><div class="title">sgs::helper::Field<div class="ingroups"><a class="el" href="group__dev.html">Developer Documentation</a> &raquo; <a class="el" href="group__utils.html">utils</a> &raquo; <a class="el" href="group__helper.html">helper functions</a></div></div></div>
 </div><!--header-->
 <div class="contents">
+
+<p><code>#include &lt;<a class="el" href="helper_8h_source.html">helper.h</a>&gt;</code></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
-Functions</h2></td></tr>
-<tr class="memitem:ga0b66cd41b6fccdb4f0b933fa281bae53" id="r_ga0b66cd41b6fccdb4f0b933fa281bae53"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__user__strat.html#ga0b66cd41b6fccdb4f0b933fa281bae53">strat</a> (SpatialRaster strat_rast, int num_samples, Optional[int] num_strata=None, int wrow=3, int wcol=3, Optional[int|str] band=None, str allocation=&quot;prop&quot;, Optional[list[float]] weights=None, Optional[SpatialRaster] mrast=None, Optional[int|str] mrast_band=None, str method=&quot;Queinnec&quot;, Optional[int|float] mindist=None, Optional[SpatialVector] existing=None, bool force=False, Optional[SpatialVector] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, str filename=&quot;&quot;)</td></tr>
-<tr class="memdesc:ga0b66cd41b6fccdb4f0b933fa281bae53"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts stratified sampling using the stratified raster given.  <br /></td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-var-members" class="groupheader"><a id="var-members" name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:a79f30c3c48c927898fdbff45d797d4b1" id="r_a79f30c3c48c927898fdbff45d797d4b1"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a79f30c3c48c927898fdbff45d797d4b1">site_packages</a> = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]</td></tr>
+<tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:adba8667b6530586797c3d28319e4276d" id="r_adba8667b6530586797c3d28319e4276d"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adba8667b6530586797c3d28319e4276d">fname</a></td></tr>
+<tr class="memitem:ab81fbcfed56c8a20828dd28ed3912a10" id="r_ab81fbcfed56c8a20828dd28ed3912a10"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab81fbcfed56c8a20828dd28ed3912a10">fval</a></td></tr>
 </table>
-<a name="doc-var-members" id="doc-var-members"></a><h2 id="header-doc-var-members" class="groupheader">Variable Documentation</h2>
-<a id="a79f30c3c48c927898fdbff45d797d4b1" name="a79f30c3c48c927898fdbff45d797d4b1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a79f30c3c48c927898fdbff45d797d4b1">&#9670;&#160;</a></span>site_packages</h2>
+<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>This struct represents the feature value of a field in an OGRLayer for an OGRFieldType of OFTInteger. </p>
+</div><a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+<a id="adba8667b6530586797c3d28319e4276d" name="adba8667b6530586797c3d28319e4276d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adba8667b6530586797c3d28319e4276d">&#9670;&#160;</a></span>fname</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgspy.sample.strat.strat.site_packages = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]</td>
+          <td class="memname">std::string sgs::helper::Field::fname</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
+<a id="ab81fbcfed56c8a20828dd28ed3912a10" name="ab81fbcfed56c8a20828dd28ed3912a10"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab81fbcfed56c8a20828dd28ed3912a10">&#9670;&#160;</a></span>fval</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int sgs::helper::Field::fval</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
+<li>sgspy/utils/<a class="el" href="helper_8h_source.html">helper.h</a></li>
+</ul>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div id="page-nav" class="page-nav-panel">
@@ -130,7 +147,7 @@ Variables</h2></td></tr>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a href="namespacesgspy.html">sgspy</a></li><li class="navelem"><a href="namespacesgspy_1_1sample.html">sample</a></li><li class="navelem"><a href="namespacesgspy_1_1sample_1_1strat.html">strat</a></li><li class="navelem"><a href="namespacesgspy_1_1sample_1_1strat_1_1strat.html">strat</a></li>
+    <li class="navelem"><a href="namespacesgs.html">sgs</a></li><li class="navelem"><a href="namespacesgs_1_1helper.html">helper</a></li><li class="navelem"><a href="structsgs_1_1helper_1_1Field.html">Field</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.14.0 </li>
   </ul>
 </div>

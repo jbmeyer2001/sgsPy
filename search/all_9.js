@@ -8,5 +8,6 @@ var searchData=
   ['init_5',['init',['../structsgs_1_1strat_1_1OptimAllocationDataManager.html#a4f913355efc2c97c44d19ad0f8afd125',1,'sgs::strat::OptimAllocationDataManager']]],
   ['installation_6',['Installation',['../index.html#autotoc_md1',1,'']]],
   ['installation_3a_7',['installation:',['../index.html#autotoc_md9',1,'Linux installation:'],['../index.html#autotoc_md10',1,'Windows installation:']]],
-  ['is_5fvalid_5fsample_8',['is_valid_sample',['../group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481',1,'sgs::helper']]]
+  ['is_5fstrat_5frast_8',['is_strat_rast',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#ac31ca5948859308b0fa2349f765ac274',1,'sgspy::utils::raster::SpatialRaster']]],
+  ['is_5fvalid_5fsample_9',['is_valid_sample',['../group__helper.html#gaabf4cc4024eeaa1e451f1f6812926481',1,'sgs::helper']]]
 ];
