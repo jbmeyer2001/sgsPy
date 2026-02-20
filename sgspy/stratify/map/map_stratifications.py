@@ -134,6 +134,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
     if driver_options is not None and type(driver_options) is not dict:
         raise TypeError("'driver_options' parameter, if given, must be of type dict.")
 
+    first_rast = None
     raster_list = []
     band_lists = []
     strata_count_lists = []
@@ -143,7 +144,26 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
 
     raster_size_bytes = 0
     large_raster = False
-    for (raster, bands, num_strata) in args:
+    for arg in args:
+        if not isinstance(arg, tuple) and type(arg) is not SpatialRaster:
+            raise TypeError("all input raster/band/strata arguments must be of type tuple or SpatialRaster")
+
+        if type(arg) is SpatialRaster:
+            #if just the raster is given, assume all bands within it should be mapped
+            raster = arg
+            bands = raster.bands
+            num_strata = None
+        elif len(arg) == 3:
+            (raster, bands, num_strata) = raster_tuple
+        elif len(arg) == 2:
+            (raster, bands) = raster_tuple
+            num_strata = None
+        else:
+            raise ValueError("all input rasters/bands/strata must have exactly 1, 2, or 3 variables.")
+
+        #first_rast is used later
+        first_rast = raster if first_rast is None else first_rast
+
         #error checking on input args
         if type(raster) is not SpatialRaster:
             raise TypeError("first value in each tuple argument, which represents the strat raster, must be of type sgspy.SpatialRaster.")
@@ -205,10 +225,17 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
 
         if type(bands) is list:
             for i in range(len(bands)):
-                band_int = get_band_int(bands[i])
+                if type(bands[i]) not in [str, int]: raise TypeError("every value in a bands list must be of type int or str.")
+                if type(bands[i]) is str:
+                    band_str = bands[i]
+                    band_int = get_band_int(band_str)
+                else:
+                    band_int = bands[i]
+                    band_str = raster.bands[band_int]
+
                 band_list.append(band_int)
                 if raster.is_strat_rast:
-                    num_strata = raster.srast_metadata_info[band_int].get_num_strata()
+                    num_strata = raster.srast_metadata_info[band_str].get_num_strata()
                     strata_count_list.append(num_strata)
                 else:
                     strata_count_list.append(num_strata[i])
@@ -222,9 +249,11 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
 
         else:
             band_int = get_band_int(bands)
+            band_str = raster.bands[band_int]
+            
             band_list.append(band_int)
             if raster.is_strat_rast:
-                num_strata = raster.srast_metadata_info[band_int].get_num_strata()
+                num_strata = raster.srast_metadata_info[band_str].get_num_strata()
             
             strata_count_list.append(num_strata)
             
@@ -259,13 +288,14 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
     if driver_options:
         for (key, val) in driver_options.items():
             if type(key) is not str:
-                raise ValueError("the key for all key/value pairs in teh driver_options dict must be a string")
+                raise ValueError("the key for all key/value pairs in th driver_options dict must be a string")
             driver_options_str[key] = str(val)
 
     #make a temp directory which will be deleted if there is any problem when calling the cpp function
+    #in the case of an error, during the cleanup of 'first_rast' the directory labeled 'temp_dir' will be deleted
     temp_dir = tempfile.mkdtemp()
-    args[0][0].have_temp_dir = True
-    args[0][0].temp_dir = temp_dir
+    first_rast.have_temp_dir = True
+    first_rast.temp_dir = temp_dir
 
     #call cpp map function
     srast = SpatialRaster(map_cpp(
@@ -279,8 +309,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
         driver_options_str
     ))
 
-    #now that it's created, give the cpp raster object ownership of the temporary directory
-    args[0][0].have_temp_dir = False
+    #now that the srast has been created by the cpp function, give the new srast cpp raster ownership of the temporary directory
+    first_rast.have_temp_dir = False
     srast.cpp_raster.set_temp_dir(temp_dir)
     srast.temp_dataset = filename == "" and large_raster
     srast.filename = filename
@@ -288,7 +318,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
     mapped_band_metadata = []
     mapped_strata_count = 1
     for i in range(len(raster_list)):
-        rast, _, _ = args[i]
+        rast = args[i] if type(args[i]) is SpatialRaster else args[i][0]
         bands = band_lists[i]
         strata_counts = strata_count_lists[i]
 
@@ -299,9 +329,13 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
             mapped_band_metadata.append((rast.bands[band], strata_count))
             mapped_strata_count = mapped_strata_count * strata_count
 
-    srast.srast_metadata_info = [
-        StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
-    ]
+    srast.srast_metadata_info = {
+        "strat_map": StratRasterBandMetadata(
+            mapped=True, 
+            strata_count=mapped_strata_count, 
+            mapped_band_metadata=mapped_band_metadata
+        )
+    }
     srast.is_strat_rast = True
     
     return srast

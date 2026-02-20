@@ -608,17 +608,31 @@ class SpatialRaster:
             return ds
 
     def srast_info(self, band: Optional[int|str] = None):
-        if srast_metadata_info is None:
+        if self.srast_metadata_info is None:
             raise ValueError("this function can only be called on a strat raster created through one of the sgs stratification functions.")
 
-        if band is not None and band not in [int, str]:
+        if band is not None and type(band) not in [int, str]:
             raise TypeError("'band' parameter, if given, must be of type int or str.")
 
-        if band is None and len(self.bands) > 1:
-            raise ValueError("'band' parameter must be given if there is more than 1 band in the strat raster.")
-    
+        if band is None:
+            if len(self.bands) > 1:
+                raise ValueError("'band' parameter must be given if there is more than 1 band in the strat raster.")
+            band = self.bands[0]
+
+        if type(band) is int:
+            if band > len(self.bands):
+                raise ValueError("'band' parameter, if an int, must correspond to a valid index in the srast (starting at 0).")
+
+            band = self.bands[band]
+
+        if band not in self.bands and str("strat_" + band) in self.bands:
+            band = "strat_" + band
+
+        if band not in self.bands:
+            raise ValueError("'band' parameter, if a string, must correspond to a band in the 'bands' member variable.")
+
         #each entry in the srast_metadata_info list should contain a StratRasterBandMetadata object
-        srast_metadata_info[self.get_band_index(band)].print_info()
+        self.srast_metadata_info[band].print_info()
 
 class StratRasterBandMetadata:
     """
@@ -642,15 +656,30 @@ class StratRasterBandMetadata:
 
         """
         if self.mapped:
-            for i in range(self.strata_count):
-                msg = f"strata {i}:" 
-                strata = i
+            equation = "strata = "
+            tot = 1
+            for i in range(len(self.mapped_band_metadata)):
+                name = self.mapped_band_metadata[i][0]
+                count = self.mapped_band_metadata[i][1]
+                if i != 0 : equation += " + "
+                equation = equation + f"{name} * {tot}"
+                tot = tot * count
+            print("mapping equation:")
+            print(equation)
+            print()
+
+            print("mappings:")
+            for strata in range(self.strata_count):
+                msg = f"strata {strata}:" 
+
                 for i in range(len(self.mapped_band_metadata)):
                     band_name = self.mapped_band_metadata[i][0]
                     band_strata_count = self.mapped_band_metadata[i][1]
                     band_strata = strata % band_strata_count
                     msg = msg + f" ({band_name} == {band_strata})"
-                    strata = strata // band_strata
+                    strata = strata // band_strata_count
+       
+                print(msg)
         
         else:
             for strata in range(self.strata_count):

@@ -327,28 +327,26 @@ def quantiles(
             plt.title(band)
             plt.show()
 
-    metadata_info = []
+    metadata_info = {}
     mapped_band_metadata = []
-    mapped_strata_count = 1
     index = 0
-    for band, vals in quantile_vals.items():
-        name = band
+    mapped_strata_count = 1
+    for index, vals in probabilities_dict.items():
+        name = rast.bands[index]
         strata_count = len(vals) + 1
 
-        metadata = ["{} < {}".format(name, vals[0])]
-        for i in range(1, len(vals) - 1):
-            metadata.append("{} <= {} < {}".format(vals[i - 1], name, vals[i]))
-        metadata.append("{} <= {}".format(vals[-1], name))
-        metadata_info.append(StratRasterBandMetadata(mapped=False, strata_count=strata_count, band_metadata = metadata))
+        metadata = [f"{name} < {vals[0]:.5f}"]
+        for i in range(1, len(vals)):
+            metadata.append(f"{vals[i-1]:.5f} <= {name} < {vals[i]:.5f}")
+        metadata.append(f"{vals[-1]:.5f} <= {name}")
+        metadata_info["strat_" + name] = StratRasterBandMetadata(mapped=False, strata_count=strata_count, band_metadata = metadata)
         
         if map:
-            mapped_band_metadata.append((srast.bands[index], strata_count))
+            mapped_band_metadata.append(("strat_" + name, strata_count))
             mapped_strata_count = mapped_strata_count * strata_count
 
-        index = index + 1
-
     if map:
-        metadata_info.append(StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata))
+        metadata_info["strat_map"] = StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
 
     srast.srast_metadata_info = metadata_info
     srast.is_strat_rast = True
