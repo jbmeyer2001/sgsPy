@@ -261,8 +261,11 @@ def strat(
             msg = "0-indexed band of " + str(band) + " given, but raster only has " + str(len(raster.bands)) + " bands."
             raise ValueError(msg)
 
+    map_strat_mapping = {}
     if strat_rast.is_strat_rast:
-        num_strata = strat_rast.srast_metadata_info[strat_rast.bands[band]].get_num_strata() 
+        num_strata = strat_rast.srast_metadata_info[strat_rast.bands[band]].get_num_strata()
+        if strat_rast.srast_metadata_info[strat_rast.bands[band]].mapped:
+            map_strat_mapping = strat_rast.srast_metadata_info[strat_rast.bands[band]].mapped_band_metadata
 
     if num_samples < 1:
         raise ValueError("num_samples must be greater than 0")
@@ -377,6 +380,7 @@ def strat(
         layer_name,
         buff_inner,
         buff_outer,
+        map_strat_mapping,
         plot,
         filename,
         temp_dir

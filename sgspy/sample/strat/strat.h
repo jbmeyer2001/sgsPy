@@ -1144,6 +1144,7 @@ processBlocksStratQueinnec(
  * @param std::string layerName
  * @param double buffInner
  * @param double buffOuter
+ * @param std::vector<std::pair<std:string, int>> mapStratMapping
  * @param bool plot
  * @param std::string filename
  * @param std::string tempFolder
@@ -1174,6 +1175,7 @@ strat(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
+	std::vector<std::pair<std::string, int>> mapStratMapping,
 	bool plot,
 	std::string filename,
 	std::string tempFolder)
@@ -1185,6 +1187,7 @@ strat(
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
 	double *GT = p_raster->getGeotransform();
+	bool mapped = mapStratMapping.size() == 0;		
 
 	std::mutex bandMutex;
 	std::mutex rngMutex;
@@ -1193,14 +1196,13 @@ strat(
 	//step 1: get raster band
 	helper::RasterBandMetaData band;
 
-	GDALRasterBand *p_band = p_raster->getRasterBand(bandNum);
-	band.p_band = p_band;
+	band.p_band = p_raster->getRasterBand(bandNum);
 	band.type = p_raster->getRasterBandType(bandNum);
 	band.size = p_raster->getRasterBandTypeSize(bandNum);
 	band.p_buffer = nullptr;
-	band.nan = p_band->GetNoDataValue();
+	band.nan = band.p_band->GetNoDataValue();
 	band.p_mutex = &bandMutex;
-	p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
+	band.p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 
 	helper::printTypeWarningsForInt32Conversion(band.type);
 	
@@ -1220,11 +1222,21 @@ strat(
 		throw std::runtime_error("unable to create output dataset layer.");
 	}
 
-	std::string strataName = band.p_band->GetDescription();
-	OGRFieldDefn strataField(strataName.c_str(), OFTInteger);
-	OGRErr err = p_layer->CreateField(&strataField);
-	if (err) {
-		throw std::runtime_error("cannot create field for strata name.");
+	if (!mapped) {
+		OGRFieldDefn strataField(band.p_band->GetDescription(), OFTInteger);
+		OGRErr err = p_layer->CreateField(&strataField);
+		if (err) {
+			throw std::runtime_error("cannot create field for strata name.");
+		}
+	}
+	else {
+		for (size_t i = 0; i < mapStratMapping.size(); i++) {
+			OGRFieldDefn strataField(mapStratMapping[i].first.c_str(), OFTInteger);
+			OGRErr err = p_layer->CreateField(&strataField);
+			if (err) {
+				throw std::runtime_error("cannot create create field for strata name.");
+			}
+		}
 	}
 
 	access::Access access(
@@ -1375,48 +1387,103 @@ strat(
 	//additional vectors storing POINTERS to combinations within 'fieldVectors'. These are
 	//'fieldVectorPointersExistingTrue', 'fieldVectorPointersExistingFalse', and 'fieldVectorPointersNoExisting',
 	//and have the type std::vector<std::vector<Field *> *> in order to point to a particular
-	//entry in the 'fieldVectors' vector.
-	
+	//entry in the 'fieldVectors' vector.	
 	helper::Field fieldExistingTrue("existing", 1);
 	helper::Field fieldExistingFalse("existing", 0);
-	std::vector<helper::Field> strataFields(numStrata);
-	for (int i = 0; i < numStrata; i++) {
-		strataFields[i].fname = strataName;
-		strataFields[i].fval = i;
+	std::vector<helper::Field> strataFields(mapped ? 0 : numStrata);
+	std::vector<std::vector<helper::Field>> mappedStrataFields(mapped ? mapStratMapping.size() : 0);
+	if (!mapped) {
+		strataFields.resize(numStrata);
+		for (int i = 0; i < numStrata; i++) {
+			strataFields[i].fname = std::string(band.p_band->GetDescription());
+			strataFields[i].fval = i;
+		}
 	}
-
+	else { //mapped
+		for (size_t i = 0; i < mapStratMapping.size(); i++) {
+			mappedStrataFields[i].resize(mapStratMapping[i].second);
+			for (int strat = 0; strat < mapStratMapping[i].second; strat++) {
+				mappedStrataFields[i][strat].fname = mapStratMapping[i].first;
+				mappedStrataFields[i][strat].fval = strat;
+			}
+		}
+	}
+	
 	int fieldVectorCount = existing.used ? numStrata * 2 : numStrata;
 	std::vector<std::vector<helper::Field *>> fieldVectors(fieldVectorCount);
 	
-	int fieldVectorIndex = 0;
+	int fvi = 0; //field vectors index
 	std::vector<std::vector<helper::Field *> *> fieldVectorPointersExistingTrue(existing.used ? numStrata : 0);
 	std::vector<std::vector<helper::Field *> *> fieldVectorPointersExistingFalse(existing.used ? numStrata : 0);
 	std::vector<std::vector<helper::Field *> *> fieldVectorPointersNoExisting(existing.used ? 0 : numStrata);
 
-	if (existing.used) {
+	if (existing.used && !mapped) {
 		for (int strata = 0; strata < numStrata; strata++) {
-			//create combination of fields for current strata when existing is used and true
-			fieldVectors[fieldVectorIndex].resize(2);
-			fieldVectors[fieldVectorIndex][0] = &fieldExistingTrue;
-			fieldVectors[fieldVectorIndex][1] = strataFields.data() + strata;
-			fieldVectorPointersExistingTrue[strata] = fieldVectors.data() + fieldVectorIndex;
+			//resize entries for both existing==true and existing==false
+			fieldVectors[fvi].resize(2);
+			fieldVectors[fvi + 1].resize(2);
 
-			fieldVectorIndex++;
+			//update field vector pointers for strata and existing
+			fieldVectors[fvi][0] = &fieldExistingTrue;
+			fieldVectors[fvi + 1][0] = &fieldExistingFalse;
+			fieldVectors[fvi][1] = strataFields.data() + strata;
+			fieldVectors[fvi + 1][1] = strataFields.data() + strata;
 
-			//create combination of fields for current strata when existing is used and false
-			fieldVectors[fieldVectorIndex].resize(2);
-			fieldVectors[fieldVectorIndex][0] = &fieldExistingFalse;
-			fieldVectors[fieldVectorIndex][1] = strataFields.data() + strata;
-			fieldVectorPointersExistingFalse[strata] = fieldVectors.data() + fieldVectorIndex;
+			//update pointers to field vectors
+			fieldVectorPointersExistingTrue[strata] = fieldVectors.data() + fvi;
+			fieldVectorPointersExistingFalse[strata] = fieldVectors.data() + fvi + 1;
+
+			//increment field vector index
+			fvi += 2;
 		}
 	}
-	else {
+	else if (existing.used && mapped) {
+		for (int i = 0; i < numStrata; i++) {
+			int strata = i;
+
+			//resize entries for both existing==true and existing==false
+			fieldVectors[fvi].resize(mapStratMapping.size() + 1);
+			fieldVectors[fvi + 1].resize(mapStratMapping.size() + 1);
+
+			//update field vector pointers for strata and existing
+			for (size_t j = 0; j < mapStratMapping.size(); j++) {
+				int bandStrata = strata % mapStratMapping[j].second;
+				fieldVectors[fvi][j] = mappedStrataFields[j].data() + bandStrata;
+				fieldVectors[fvi + 1][j] = mappedStrataFields[j].data() + bandStrata;
+				strata = strata / bandStrata;
+			}
+			fieldVectors[fvi][mapStratMapping.size()] = &fieldExistingTrue;
+			fieldVectors[fvi + 1][mapStratMapping.size()] = &fieldExistingFalse;
+
+			//update pointers to field vectors
+			fieldVectorPointersExistingTrue[i] = fieldVectors.data() + fvi;
+			fieldVectorPointersExistingFalse[i] = fieldVectors.data() + fvi + 1;
+
+			//increment field vector index
+			fvi += 2;
+		}	
+	}
+	else if (!existing.used && !mapped) {
 		for (int strata = 0; strata < numStrata; strata++) {
-			fieldVectors[fieldVectorIndex].resize(1);
-			fieldVectors[fieldVectorIndex][0] = strataFields.data() + strata;
-			fieldVectorPointersNoExisting[strata] = fieldVectors.data() + fieldVectorIndex;
+			fieldVectors[fvi].resize(1);
+			fieldVectors[fvi][0] = strataFields.data() + strata;
+			fieldVectorPointersNoExisting[strata] = fieldVectors.data() + fvi;
 			
-			fieldVectorIndex++;
+			fvi++;
+		}
+	}
+	else { //!existing.used && mapped
+		for (int i = 0; i < numStrata; i++) {
+			int strata = i;
+			
+			fieldVectors[fvi].resize(mapStratMapping.size());
+			for (size_t j = 0; j < mapStratMapping.size(); j++) {
+				int bandStrata = strata % mapStratMapping[j].second;
+				fieldVectors[fvi][j] = mappedStrataFields[j].data() + bandStrata;
+				strata = strata / bandStrata;
+			}
+			fieldVectorPointersNoExisting[i] = fieldVectors.data() + fvi;
+			fvi++;
 		}
 	}
 
