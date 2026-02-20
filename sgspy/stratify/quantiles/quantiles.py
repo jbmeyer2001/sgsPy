@@ -331,8 +331,9 @@ def quantiles(
     mapped_band_metadata = []
     index = 0
     mapped_strata_count = 1
-    for index, vals in probabilities_dict.items():
+    for index, _ in probabilities_dict.items():
         name = rast.bands[index]
+        vals = quantile_vals[name]
         strata_count = len(vals) + 1
 
         metadata = [f"{name} < {vals[0]:.5f}"]
