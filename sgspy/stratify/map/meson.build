@@ -1,7 +1,7 @@
 py.install_sources(
   [
     '__init__.py',
-    'map_stratifications.py',
+    'map.py',
   ],
   subdir: 'sgspy/stratify/map',
 )
