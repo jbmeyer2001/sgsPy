@@ -20,7 +20,7 @@ from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sgspy.utils import SpatialRaster
+from sgspy.utils import SpatialRaster, StratRasterBandMetadata
 
 #ensure _sgs binary can be found
 site_packages = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]
@@ -257,4 +257,26 @@ def breaks(
             plt.title(rast.bands[band])
             plt.show()
 
+    metadata_info = {} 
+    mapped_band_metadata = []
+    mapped_strata_count = 1
+    for (index, break_vals) in breaks_dict.items():
+        name = rast.bands[index]
+        strata_count = len(break_vals) + 1
+
+        metadata = [f"{name} < {break_vals[0]:.5f}"]
+        for i in range(1, len(break_vals)):
+            metadata.append(f"{break_vals[i-1]:.5f} <= {name} < {break_vals[i]:.5f}")
+        metadata.append(f"{break_vals[-1]:.5f} <= {name}")
+        metadata_info["strat_" + name] = StratRasterBandMetadata(mapped=False, strata_count=strata_count, band_metadata = metadata)
+        
+        if map:
+            mapped_band_metadata.append(("strat_" + name, strata_count))
+            mapped_strata_count = mapped_strata_count * strata_count
+
+    if map:
+        metadata_info["strat_map"] = StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
+
+    srast.srast_metadata_info = metadata_info
+    srast.is_strat_rast = True
     return srast

@@ -169,6 +169,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("layerName"),
 		pybind11::arg("buffInner"),
 		pybind11::arg("buffOuter"),
+		pybind11::arg("mapStratMapping"),
 		pybind11::arg("plot"),
 		pybind11::arg("filename"),
 		pybind11::arg("tempFolder"));

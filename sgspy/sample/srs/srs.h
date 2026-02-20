@@ -241,6 +241,7 @@ srs(
 	//generate existing structure
 	existing::Existing existing(
 		p_existing,
+		p_raster,
 		GT,
 		p_raster->getWidth(),
 		p_layer,
@@ -335,6 +336,7 @@ srs(
   	helper::NeighborMap neighbor_map;
 	double mindist_sq = mindist * mindist;
 
+	helper::Field fieldExistingFalse("existing", 0);
 	while (samplesAdded < numSamples && i < indices.size()) {
 		helper::Index index = indices[i];
 		bool valid = true;
@@ -346,7 +348,10 @@ srs(
 
 		if (valid) {
 	  		OGRPoint point = OGRPoint(x, y);
-			helper::addPoint(&point, p_layer);
+
+			existing.used ?
+				helper::addPoint(&point, p_layer, &fieldExistingFalse) :
+				helper::addPoint(&point, p_layer);
 
 			samplesAdded++;
 

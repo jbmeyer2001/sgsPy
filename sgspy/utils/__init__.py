@@ -10,9 +10,11 @@ from . import (
 )
 
 from .raster import SpatialRaster
+from .raster import StratRasterBandMetadata
 from .vector import SpatialVector
 
 __all__ = [
     "SpatialRaster",
+    "StratRasterBandMetadata",
     "spatialVector",
 ]

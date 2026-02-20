@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "raster.h"
 #include "vector.h"
 #include "helper.h"
 
@@ -64,19 +65,27 @@ struct Existing {
 	 * @param std::vector<double>& yCoords
 	 */
 	Existing(
-		vector::GDALVectorWrapper *p_vect, 
+		vector::GDALVectorWrapper *p_vect,
+	       	raster::GDALRasterWrapper *p_rast,	
 		double *GT, 
 		int64_t width, 
 		OGRLayer *p_samples, 
 		bool plot,
 	       	std::vector<double>& xCoords,
-		std::vector<double>& yCoords) 
+		std::vector<double>& yCoords,
+		bool addAllPoints = true) 
 	{
 		if (!p_vect) {
 			this->used = false;
 			return;
+		}	
+
+		OGRFieldDefn existingField("existing", OFTInteger);
+		OGRErr err = p_samples->CreateField(&existingField);
+		if (err) {
+			throw std::runtime_error("cannot create 'existing' field in output layer.");
 		}
-		
+
 		this->width = width;
 
 		std::vector<std::string> layerNames = p_vect->getLayerNames();
@@ -84,11 +93,21 @@ struct Existing {
 			throw std::runtime_error("the file containing existing sample points must have only a single layer.");
 		}
 
+		//check to ensure spatial reference system of raster and vector match
+		std::string rastProj = p_rast->getDataset()->GetProjectionRef();
+		OGRSpatialReference rastSRS;
+		rastSRS.importFromWkt(rastProj.c_str());
+		OGRSpatialReference *p_sampSRS = p_samples->GetSpatialRef();
+		if (!rastSRS.IsSame(p_sampSRS)) {
+			throw std::runtime_error("existing sample vector and raster do not have the same spatial reference system.");	
+		}
+
 		//invert geotransform so we can use IGT to convert from point to indexes
 		GDALInvGeoTransform(GT, this->IGT);
 
 		std::string name = layerNames[0];
 		OGRLayer *p_layer = p_vect->getLayer(name);
+		helper::Field fieldExistingTrue("existing", 1);
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
@@ -97,8 +116,8 @@ struct Existing {
 					OGRPoint *p_point = p_geometry->toPoint();
 					int64_t index = helper::point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 					this->samples.emplace(index, *p_point);
-					if (p_samples) {
-						helper::addPoint(p_point, p_samples);
+					if (addAllPoints) {
+						helper::addPoint(p_point, p_samples, &fieldExistingTrue);
 						if (plot) {
 							xCoords.push_back(p_point->getX());
 							yCoords.push_back(p_point->getY());
@@ -110,8 +129,8 @@ struct Existing {
 					for (const auto& p_point : *p_geometry->toMultiPoint()) {
 						int64_t index = helper::point2index<int64_t>(p_point->getX(), p_point->getY(), IGT, width);
 						this->samples.emplace(index, *p_point);
-						if (p_samples) {
-							helper::addPoint(p_point, p_samples);
+						if (addAllPoints) {
+							helper::addPoint(p_point, p_samples, &fieldExistingTrue);
 							if (plot) {
 								xCoords.push_back(p_point->getX());
 								yCoords.push_back(p_point->getY());

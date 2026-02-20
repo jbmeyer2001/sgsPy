@@ -20,7 +20,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sgspy.utils import SpatialRaster
+from sgspy.utils import SpatialRaster, StratRasterBandMetadata
 
 #ensure _sgs binary can be found
 site_packages = list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0]
@@ -327,4 +327,28 @@ def quantiles(
             plt.title(band)
             plt.show()
 
+    metadata_info = {}
+    mapped_band_metadata = []
+    index = 0
+    mapped_strata_count = 1
+    for index, _ in probabilities_dict.items():
+        name = rast.bands[index]
+        vals = quantile_vals[name]
+        strata_count = len(vals) + 1
+
+        metadata = [f"{name} < {vals[0]:.5f}"]
+        for i in range(1, len(vals)):
+            metadata.append(f"{vals[i-1]:.5f} <= {name} < {vals[i]:.5f}")
+        metadata.append(f"{vals[-1]:.5f} <= {name}")
+        metadata_info["strat_" + name] = StratRasterBandMetadata(mapped=False, strata_count=strata_count, band_metadata = metadata)
+        
+        if map:
+            mapped_band_metadata.append(("strat_" + name, strata_count))
+            mapped_strata_count = mapped_strata_count * strata_count
+
+    if map:
+        metadata_info["strat_map"] = StratRasterBandMetadata(mapped=True, strata_count=mapped_strata_count, mapped_band_metadata=mapped_band_metadata)
+
+    srast.srast_metadata_info = metadata_info
+    srast.is_strat_rast = True
     return srast

@@ -216,6 +216,9 @@ class SpatialRaster:
         for i in range(0, len(self.bands)):
             self.band_name_dict[self.bands[i]] = i
 
+        self.srast_metadata_info = None
+        self.is_strat_rast = False
+
     def __del__(self):
         if self.have_temp_dir:
             shutil.rmtree(self.temp_dir)
@@ -603,3 +606,91 @@ class SpatialRaster:
             return ds, arr
         else:
             return ds
+
+    def srast_info(self, band: Optional[int|str] = None):
+        if self.srast_metadata_info is None:
+            raise ValueError("this function can only be called on a strat raster created through one of the sgs stratification functions.")
+
+        if band is not None and type(band) not in [int, str]:
+            raise TypeError("'band' parameter, if given, must be of type int or str.")
+
+        if band is None:
+            if len(self.bands) > 1:
+                raise ValueError("'band' parameter must be given if there is more than 1 band in the strat raster.")
+            band = self.bands[0]
+
+        if type(band) is int:
+            if band > len(self.bands):
+                raise ValueError("'band' parameter, if an int, must correspond to a valid index in the srast (starting at 0).")
+
+            band = self.bands[band]
+
+        if band not in self.bands and str("strat_" + band) in self.bands:
+            band = "strat_" + band
+
+        if band not in self.bands:
+            raise ValueError("'band' parameter, if a string, must correspond to a band in the 'bands' member variable.")
+
+        #each entry in the srast_metadata_info list should contain a StratRasterBandMetadata object
+        self.srast_metadata_info[band].print_info()
+
+class StratRasterBandMetadata:
+    """
+    The StratRasterBandMetadata class is meant to be used to store info on a particular
+    strat band. This includes: whether it is mapped or not, the number of strata,
+    metadata on bands, and metadata on mapped bands.
+
+    The metadata will be used later to print important info regarding a strat band. It
+    is also used to not require the user to put the number of strata for functions which
+    require it, if the input is a strat raster created by another sgspy stratification function.
+    """
+    def __init__(self, 
+        mapped: bool,
+        strata_count: int,
+        band_metadata: list[str] = [],
+        mapped_band_metadata: list[tuple[str, int]] = []):
+        """
+        constructor for StratRasterBandMetdata. Sets the class members to the parameters.
+        """
+        self.mapped = mapped
+        self.band_metadata = band_metadata
+        self.mapped_band_metadata = mapped_band_metadata
+        self.strata_count = strata_count
+
+    def print_info(self):
+        """
+        this function prints the metadata to the console, which is different 
+        depending on whether the band is a mapped band or not.
+        """
+        if self.mapped:
+            equation = "strata = "
+            tot = 1
+            for i in range(len(self.mapped_band_metadata)):
+                name = self.mapped_band_metadata[i][0]
+                count = self.mapped_band_metadata[i][1]
+                if i != 0 : equation += " + "
+                equation = equation + f"{name} * {tot}"
+                tot = tot * count
+            print("mapping equation:")
+            print(equation)
+            print()
+
+            print("mappings:")
+            for strata in range(self.strata_count):
+                msg = f"strata {strata}:" 
+
+                for i in range(len(self.mapped_band_metadata)):
+                    band_name = self.mapped_band_metadata[i][0]
+                    band_strata_count = self.mapped_band_metadata[i][1]
+                    band_strata = strata % band_strata_count
+                    msg = msg + f" ({band_name} == {band_strata})"
+                    strata = strata // band_strata_count
+       
+                print(msg)
+        
+        else:
+            for strata in range(self.strata_count):
+                print("strata {}: {}".format(strata, self.band_metadata[strata]))
+
+    def get_num_strata(self):
+        return self.strata_count

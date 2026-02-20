@@ -101,7 +101,7 @@ raster::GDALRasterWrapper *poly(
 	helper::RasterBandMetaData band;
 	helper::setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
 	p_rasterDS->GetRasterBand(1)->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
-	band.name = "strata";
+	band.name = "strat_" + layerName;
 	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo;
 
 	//step 2: create dataset

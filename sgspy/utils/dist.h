@@ -509,6 +509,15 @@ dist(
 	std::vector<helper::Index> sampled;
 	if (p_vector) {
 		OGRLayer *p_layer = p_vector->getDataset()->GetLayerByName(layer.c_str());
+	
+		//check to ensure spatial reference system of raster and vector match	
+		OGRSpatialReference rastSRS;
+		rastSRS.importFromWkt(p_raster->getDataset()->GetProjectionRef());
+		OGRSpatialReference *p_sampSRS = p_layer->GetSpatialRef();
+		if (!rastSRS.IsSame(p_sampSRS)) {
+			throw std::runtime_error("existing sample vector and raster do not have the same spatial reference system.");	
+		}
+
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
 			switch (wkbFlatten(p_geometry->getGeometryType())) {
