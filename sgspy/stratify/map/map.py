@@ -32,11 +32,15 @@ GIGABYTE = 1073741824
 # 
 # The pre-existing stratifications are passed in the form of a raster, band.
 # The bands argument specifies which bands within the raster should be used.
+# If the bands argument is omitted, all of the bands in the raster are mapped.
 # 
 # **IMPORTANT**
 # If the strat raster IS NOT the return value of one of the other sgspy
 # stratification functions, an additional argument MUST be passed: the number of
-# strata. This is because during stratification this number is automatically stored.
+# strata. The bands argument MUST be passed as well if this is the case, even if you wish to
+# have every band be mapped. The reason the number of strata must be passed is because this 
+# value is necessary for calculation (it is not required if the strat raster IS the return value
+# of an sgspy stratification function because during calculation this number is automatically stored).
 # The num_strata argument, if required, should be set to the value of the largest strata + 1. 
 # For example if the strata are [0, 1, 2, 3, 4] then num_strata should be 5. 
 # If the strata are [1, 2, 4] then num_strata should still be 5. If the strata are [0, 1, 2, 3] then
@@ -44,7 +48,9 @@ GIGABYTE = 1073741824
 # 
 # the arguments are passed in the form of a tuple, and there can be any number of tuples passed.
 # For example, the following are valid:
-#  - map((srast1, bands1))
+#  - map(srast1) #if all bands in srast1 should be mapped
+#  - map(srast1, srast2) #if all bands in srast2 should be mapped
+#  - map((srast1, bands1)) 
 #  - map((srast1, bands1), (rast1, bands2))
 #  - map((srast1, bands1, num_strata1)) #if rast1 is NOT the return value of an sgspy stratification function.
 #  - map((srast1, bands1, num_strata1), (srast2, bands2, num_strata2)) #if rast1 and rast2 are NOT the return values of sgspy stratification functions.
@@ -81,10 +87,15 @@ GIGABYTE = 1073741824
 # Examples
 # --------------------
 # rast = sgspy.SpatialRaster("rast.tif") @n
-# breaks = sgspy.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n
+# breaks = sgspy.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2': [20, 40, 60, 80], 'zsd':[1, 2, 3]}) @n
 # quantiles = sgspy.stratify.quantiles(rast, quantiles={'zsd': 25}) @n
-# srast = sgspy.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2']), (quantiles, 'strat_zsd'))
+# srast = sgspy.stratify.map((breaks, ['strat_zq90', 'strat_pzabove2']), quantiles) #only using 2 bands of the breaks raster
 # 
+# rast = sgspy.SpatialRaster("rast.tif") @n
+# breaks = sgspy.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2': 20, 40, 60, 80}) @n
+# quantiles = sgspy.stratify.quantiles(rast, quantiles = {'zsd': 25}) @n
+# srast = sgspy.stratify.map(breaks, quantiles) #using all bands in each raster
+#
 # rast = sgspy.SpatialRaster("rast.tif") @n
 # inventory = sgspy.SpatialVector("inventory_polygons.shp") @n
 # breaks = sgspy.stratify.breaks(rast, breaks={'zq90': [3, 5, 11, 18], 'pzabove2]: [20, 40, 60, 80]}) @n

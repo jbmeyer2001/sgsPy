@@ -636,7 +636,13 @@ class SpatialRaster:
 
 class StratRasterBandMetadata:
     """
-    
+    The StratRasterBandMetadata class is meant to be used to store info on a particular
+    strat band. This includes: whether it is mapped or not, the number of strata,
+    metadata on bands, and metadata on mapped bands.
+
+    The metadata will be used later to print important info regarding a strat band. It
+    is also used to not require the user to put the number of strata for functions which
+    require it, if the input is a strat raster created by another sgspy stratification function.
     """
     def __init__(self, 
         mapped: bool,
@@ -644,7 +650,7 @@ class StratRasterBandMetadata:
         band_metadata: list[str] = [],
         mapped_band_metadata: list[tuple[str, int]] = []):
         """
-
+        constructor for StratRasterBandMetdata. Sets the class members to the parameters.
         """
         self.mapped = mapped
         self.band_metadata = band_metadata
@@ -653,7 +659,8 @@ class StratRasterBandMetadata:
 
     def print_info(self):
         """
-
+        this function prints the metadata to the console, which is different 
+        depending on whether the band is a mapped band or not.
         """
         if self.mapped:
             equation = "strata = "
