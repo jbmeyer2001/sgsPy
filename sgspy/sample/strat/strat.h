@@ -1450,7 +1450,7 @@ strat(
 				int bandStrata = strata % mapStratMapping[j].second;
 				fieldVectors[fvi][j] = mappedStrataFields[j].data() + bandStrata;
 				fieldVectors[fvi + 1][j] = mappedStrataFields[j].data() + bandStrata;
-				strata = strata / bandStrata;
+				strata = strata / mapStratMapping[j].second;
 			}
 			fieldVectors[fvi][mapStratMapping.size()] = &fieldExistingTrue;
 			fieldVectors[fvi + 1][mapStratMapping.size()] = &fieldExistingFalse;
