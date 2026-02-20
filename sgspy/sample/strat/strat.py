@@ -262,7 +262,7 @@ def strat(
             raise ValueError(msg)
 
     if strat_rast.is_strat_rast:
-        num_strata = strat_rast.srast_metadata_info[band].get_num_strata() 
+        num_strata = strat_rast.srast_metadata_info[strat_rast.bands[band]].get_num_strata() 
 
     if num_samples < 1:
         raise ValueError("num_samples must be greater than 0")
