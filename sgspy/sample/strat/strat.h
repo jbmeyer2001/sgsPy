@@ -1187,7 +1187,7 @@ strat(
 	int width = p_raster->getWidth();
 	int height = p_raster->getHeight();
 	double *GT = p_raster->getGeotransform();
-	bool mapped = mapStratMapping.size() == 0;		
+	bool mapped = mapStratMapping.size() != 0;		
 
 	std::mutex bandMutex;
 	std::mutex rngMutex;
@@ -1480,7 +1480,7 @@ strat(
 			for (size_t j = 0; j < mapStratMapping.size(); j++) {
 				int bandStrata = strata % mapStratMapping[j].second;
 				fieldVectors[fvi][j] = mappedStrataFields[j].data() + bandStrata;
-				strata = strata / bandStrata;
+				strata = strata / mapStratMapping[j].second;
 			}
 			fieldVectorPointersNoExisting[i] = fieldVectors.data() + fvi;
 			fvi++;
