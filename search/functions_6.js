@@ -1,7 +1,7 @@
 var searchData=
 [
   ['finalize_0',['finalize',['../classsgs_1_1clhs_1_1CLHSDataManager.html#a0333aabf9a67b840d4f6b77f4807f291',1,'sgs::clhs::CLHSDataManager']]],
-  ['findminmax_1',['findMinMax',['../group__dist.html#ga35e7a4ba699446c10acceaefb14dfe4b',1,'sgs::dist']]],
+  ['findminmax_1',['findMinMax',['../group__dist.html#gae422109afdb40cf9c40b8416a858bdd2',1,'sgs::dist']]],
   ['focalwindow_2',['FocalWindow',['../structsgs_1_1strat_1_1FocalWindow.html#ab76fadffd39e70cc208bccfe90b999de',1,'sgs::strat::FocalWindow']]],
   ['from_5fgdal_3',['from_gdal',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#a2a10efce7feb2b5837f84f282f189634',1,'sgspy::utils::raster::SpatialRaster']]],
   ['from_5fgeopandas_4',['from_geopandas',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#ae049890c28ba81bce95b81a17acc0132',1,'sgspy::utils::vector::SpatialVector']]],

@@ -95,13 +95,13 @@ $(function(){initNavTree('group__user__distribution.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:gafa80871a40453e0ad5874fdabe103102" id="r_gafa80871a40453e0ad5874fdabe103102"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gafa80871a40453e0ad5874fdabe103102">sgspy.calculate.distribution.distribution.distribution</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, Optional[str|int] band=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] samples=None, Optional[str] layer=None, int bins=50, int threads=8, bool plot=True)</td></tr>
-<tr class="memdesc:gafa80871a40453e0ad5874fdabe103102"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function calculates the distribution of a given raster band.  <br /></td></tr>
+<tr class="memitem:gab35744765ea8883a88f6a4e3ab94ff05" id="r_gab35744765ea8883a88f6a4e3ab94ff05"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab35744765ea8883a88f6a4e3ab94ff05">sgspy.calculate.distribution.distribution.distribution</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, Optional[str|int] band=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] samples=None, Optional[str] layer=None, int bins=50, bool plot=True)</td></tr>
+<tr class="memdesc:gab35744765ea8883a88f6a4e3ab94ff05"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function calculates the distribution of a given raster band.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="gafa80871a40453e0ad5874fdabe103102" name="gafa80871a40453e0ad5874fdabe103102"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gafa80871a40453e0ad5874fdabe103102">&#9670;&#160;</a></span>distribution()</h2>
+<a id="gab35744765ea8883a88f6a4e3ab94ff05" name="gab35744765ea8883a88f6a4e3ab94ff05"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gab35744765ea8883a88f6a4e3ab94ff05">&#9670;&#160;</a></span>distribution()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -134,11 +134,6 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int </td>          <td class="paramname"><span class="paramname"><em>threads</em></span><span class="paramdefsep"> = </span><span class="paramdefval">8</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype">bool </td>          <td class="paramname"><span class="paramname"><em>plot</em></span><span class="paramdefsep"> = </span><span class="paramdefval">True</span>&#160;)</td>
         </tr>
       </table>
@@ -150,7 +145,6 @@ Functions</h2></td></tr>
 <p>Additionally, a <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> may be passed to the samples parameter which must contain a sample plot network (only geometry types Point or MultiPoint). If a <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> is passed this way, the distribution of the samples will also be calculated, using the same bins as the layer distribution. if the <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> has more than one layer, the 'layer' parameter must be passed.</p>
 <p>This function returns a dict, the keys of the dict will be either 'population' or 'sample'. If the 'samples' parameter is not given, only the 'population' key will exist. If the 'samples' parameter IS given, both 'population' and 'sample' will exist as keys. The values of the dict will be two arrays, one is the array of bins of type float64, the other is the array of counts of type int64. The array of bins will be one value longer than the array of counts, as it countains not just the minimum value but also the maximum value.</p>
 <p>For example, if the minimum pixel value in the raster is 1, and the maximum pixel value in the raster is 3, 3 and the bin size is 4, then the bin array would be [1.0, 1.5, 2.0, 2.5, 3.0]. The array of counts would then be of length 4, where the first element (index 0) would be the count of pixels which have a pixel value that satisfies the following 1.0 &lt;= val &lt; 1.5. The second element (index 1) would then be 1.5 &lt;= val &lt; 2.0, and so on until the final element with 2.5 &lt;= val &lt;= 3. This is typical, and matches the way that the numpy histogram function works.</p>
-<p>The 'threads' parameter specifies the number of threads which this function will utilize. The default value is 8. The optimal number will depend significantly on both the hardware being used and the raster data, and may be more or less than 8.</p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md12"></a>
 Examples</h2>
 <p>rast = sgspy.SpatialRaster("rast.tif") #single band raster <br  />
@@ -180,9 +174,6 @@ layer : Optional[str] <br  />
  <br  />
 bins : int <br  />
  the number of bins in the histogram distribution <br  />
- <br  />
- threads : int <br  />
- the number of threads to use <br  />
  <br  />
  plot : bool <br  />
  whether to plot a histogram of the distribution <br  />

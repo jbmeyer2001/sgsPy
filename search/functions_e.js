@@ -6,7 +6,7 @@ var searchData=
   ['plot_5fvector_3',['plot_vector',['../namespacesgspy_1_1utils_1_1plot.html#af45c49c3ff1ba6fbb4dccd9b0f956821',1,'sgspy::utils::plot']]],
   ['point2index_4',['point2index',['../group__helper.html#gac3201c5b20c0eb30d8039ed3c1284d4b',1,'sgs::helper']]],
   ['poly_5',['poly',['../group__poly.html#ga45174d78c166a330571728081ea49163',1,'sgs::poly::poly()'],['../group__user__poly.html#gae855f7aeb0caa30f6fd432a7435c1045',1,'sgspy.stratify.poly.poly.poly()']]],
-  ['populationdistribution_6',['populationDistribution',['../group__dist.html#gad5cb943b118a5d31fed98224cb9c2222',1,'sgs::dist']]],
+  ['populationdistribution_6',['populationDistribution',['../group__dist.html#ga3268baaf01ad221c1b66a4c1f1019ac7',1,'sgs::dist']]],
   ['print_5finfo_7',['print_info',['../classsgspy_1_1utils_1_1raster_1_1StratRasterBandMetadata.html#a4f89ff5ce3d3e9809593a02bec6122ff',1,'sgspy.utils.raster.StratRasterBandMetadata.print_info()'],['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#ad4415daa4b1b100de02820c0f473e56c',1,'sgspy.utils.vector.SpatialVector.print_info()']]],
   ['printtypewarningsforint32conversion_8',['printTypeWarningsForInt32Conversion',['../group__helper.html#gaaa47ccb56a071380c840029f71aef8e1',1,'sgs::helper']]],
   ['processblock_9',['processBlock',['../group__srs.html#gacdc25256ccd62049b664df2f7b1ce35b',1,'sgs::srs']]],

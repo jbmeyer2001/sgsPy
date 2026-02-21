@@ -24,7 +24,7 @@ var searchData=
   ['poly_21',['poly',['../group__poly.html#ga45174d78c166a330571728081ea49163',1,'sgs::poly::poly()'],['../group__user__poly.html#gae855f7aeb0caa30f6fd432a7435c1045',1,'sgspy.stratify.poly.poly.poly()'],['../group__poly.html',1,'poly'],['../group__user__poly.html',1,'poly']]],
   ['poly_2eh_22',['poly.h',['../poly_8h.html',1,'']]],
   ['poly_2epy_23',['poly.py',['../poly_8py.html',1,'']]],
-  ['populationdistribution_24',['populationDistribution',['../group__dist.html#gad5cb943b118a5d31fed98224cb9c2222',1,'sgs::dist']]],
+  ['populationdistribution_24',['populationDistribution',['../group__dist.html#ga3268baaf01ad221c1b66a4c1f1019ac7',1,'sgs::dist']]],
   ['print_5finfo_25',['print_info',['../classsgspy_1_1utils_1_1raster_1_1StratRasterBandMetadata.html#a4f89ff5ce3d3e9809593a02bec6122ff',1,'sgspy.utils.raster.StratRasterBandMetadata.print_info()'],['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#ad4415daa4b1b100de02820c0f473e56c',1,'sgspy.utils.vector.SpatialVector.print_info()']]],
   ['printtypewarningsforint32conversion_26',['printTypeWarningsForInt32Conversion',['../group__helper.html#gaaa47ccb56a071380c840029f71aef8e1',1,'sgs::helper']]],
   ['processblock_27',['processBlock',['../group__srs.html#gacdc25256ccd62049b664df2f7b1ce35b',1,'sgs::srs']]],

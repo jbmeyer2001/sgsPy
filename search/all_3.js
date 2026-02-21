@@ -4,7 +4,7 @@ var searchData=
   ['calcspquantiles_1',['calcSPQuantiles',['../group__quantiles.html#ga9cda3c44cefad181b3786ed5bcac27b7',1,'sgs::quantiles']]],
   ['calculate_2',['calculate',['../group__user__calculate.html',1,'calculate'],['../group__calculate.html',1,'calculate']]],
   ['calculateallocation_3',['calculateAllocation',['../group__strat.html#ga599d1bfb91ba4394b453e04e35ce50a7',1,'sgs::strat']]],
-  ['calculatedist_4',['calculateDist',['../group__dist.html#ga10e2a06d71f7b7d4a37dd701b7bb9dae',1,'sgs::dist']]],
+  ['calculatedist_4',['calculateDist',['../group__dist.html#gaa0193eba2476fb56c71e51f9a9e17fcb',1,'sgs::dist']]],
   ['calculatepca_5',['calculatePCA',['../group__pca.html#gac7211f5c5424c53e61a79472e38e946f',1,'sgs::pca::calculatePCA(std::vector&lt; helper::RasterBandMetaData &gt; &amp;bands, GDALDataType type, size_t size, int width, int height, int nComp)'],['../group__pca.html#gad25371ddc3f72c66aef25accb84faa3c',1,'sgs::pca::calculatePCA(std::vector&lt; helper::RasterBandMetaData &gt; &amp;bands, GDALDataType type, size_t size, int xBlockSize, int yBlockSize, int xBlocks, int yBlocks, int nComp)']]],
   ['calculaterandvalues_6',['calculateRandValues',['../classsgs_1_1helper_1_1RandValController.html#a4389c4f4540bb6a02974a1408e417f0a',1,'sgs::helper::RandValController']]],
   ['check_7',['check',['../structsgs_1_1strat_1_1FocalWindow.html#acadc403f1b2cf919e0b4702de958ea70',1,'sgs::strat::FocalWindow']]],
