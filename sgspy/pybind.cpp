@@ -116,8 +116,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("band"),
 		pybind11::arg("p_vector").none(true),
 		pybind11::arg("layer"),
-		pybind11::arg("nBuckets"),
-		pybind11::arg("nThreads"));
+		pybind11::arg("nBuckets"));
 
 	// source code in sgspy/calculate/pca/pca.h
 	m.def("pca_cpp", &sgs::pca::pca);
