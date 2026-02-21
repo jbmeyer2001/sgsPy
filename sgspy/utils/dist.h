@@ -12,10 +12,6 @@
  * @ingroup utils
  */
 
-#include <condition_variable>
-#include <boost/asio/thread_pool.hpp>
-#include <boost/asio/post.hpp>
-
 #include "utils/helper.h"
 #include "utils/raster.h"
 #include "utils/vector.h"
@@ -31,49 +27,24 @@ namespace dist {
  * The min and max variables are passed as references, and the min value
  * is initialized to the largest value the data type can have, and the max
  * value is initialized to the smallest value the data type can have.
- *
- * This function is provided with a particular chunk of the raster to process
- * in blocks. Different threads are given different chunks. This function
- * iterates through the blocks, reads them into memory, then iterates
- * through each pixel in the block. If a pixel is nan (noData) it isn't 
- * counted, otherwise the miniumum and maximum values are updated.
- *
- * Because the raster band is processed in chunks where each chunk
- * is processed by a different thread, we need to ensure the main thread
- * doesn't continue execution before one of the child threads has finished
- * looking at every pixel in it's chunk. For this reason, a conditional variable
- * is used alongside an array of values which keeps track of which chunks are
- * completed. When this thread has finished checking every pixel, it acquires
- * the lock (mutex) associated with the condition variable, updates the boolean
- * value to indicate completion, releases the lock, then notifies all waiting threads
- * in the condition variable. The main thread will wait at the condition variable,
- * checking the array every time it wakes up to see whether the thread which awoke
- * it was the final chunk completed. 
- *
+*
  * @param RasterBandMetaData& band
  * @param int width
- * @param int yStartBlock
- * @param int yEndBlock
+ * @param int height
  * @param T& min
  * @param T& max
- * @param std::mutex& mutex
- * @param std::condition_variable& cv
- * @param bool& finished
  */
 template <typename T>
 void 
 findMinMax(
 	helper::RasterBandMetaData& band, 
 	int width, 
-	int yStartBlock,
-	int yEndBlock,
+	int height,
 	T& min,
-	T& max,
-	std::mutex& mutex,
-	std::condition_variable& cv,
-	bool& finished) 
+	T& max) 
 {
 	int xBlocks = (width + band.xBlockSize - 1) / band.xBlockSize;
+	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
 
 	min = std::numeric_limits<T>::max();
 	max = std::numeric_limits<T>::min();
@@ -81,7 +52,7 @@ findMinMax(
 	void *p_data = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
 
 	//calculate raster band minimum and maximum values
-	for (int yBlock = yStartBlock; yBlock < yEndBlock; yBlock++) {
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 			int xValid, yValid;
 			band.p_mutex->lock();
@@ -106,11 +77,6 @@ findMinMax(
 	}
 	
 	VSIFree(p_data);
-
-	mutex.lock();
-	finished = true;
-	mutex.unlock();
-	cv.notify_all();
 }
 
 /**
@@ -161,8 +127,10 @@ setBins(
 		dbins[i] = cur;
 		cur += step;
 	}
+	
 
 	//set bin values as the data type used so less data type conversion is necessary in later code
+	cur = (double)min;
 	if (type == GDT_Float32 || type == GDT_Float64) {
 		for (int i = 0; i < nBins; i++) {
 			tbins[i] = static_cast<T>(dbins[i]);
@@ -170,10 +138,9 @@ setBins(
 	}
 	else {
 		tbins[0] = min;
-		cur += step;
 		for (int i = 1; i < nBins; i++) {
-			tbins[i] = std::ceil(cur);
 			cur += step;
+			tbins[i] = std::ceil(cur);
 		}
 	}
 }
@@ -193,57 +160,32 @@ setBins(
  * the iteration starts at the largest bin and iterates down until it reaches a bin
  * value less than or equal to a particular pixel.
  *
- * Because the raster band is processed in chunks where each chunk
- * is processed by a different thread, we need to ensure the main thread
- * doesn't continue execution before one of the child threads has finished
- * looking at every pixel in it's chunk. For this reason, a conditional variable
- * is used alongside an array of values which keeps track of which chunks are
- * completed. When this thread has finished checking every pixel, it acquires
- * the lock (mutex) associated with the condition variable, updates the boolean
- * value to indicate completion, releases the lock, then notifies all waiting threads
- * in the condition variable. The main thread will wait at the condition variable,
- * checking the array every time it wakes up to see whether the thread which awoke
- * it was the final chunk completed. 
- *
- * The global vector of counts is passed as a reference to this function. This global
- * 'counts' parameter is not updated when iterating through the raster to avoid
- * race conditions. Rather, a separate 'chunkCounts' vector which is local to 
- * a particular call of this function is updated constantly. Then, when the lock
- * is acquired the global count vector is updated befor releasing the lock.
- *
  * @param RasterBandMetaData& band
  * @param int width
- * @param int yBlockStart
- * @param int yBlockEnd
+ * @param int height
  * @param int nBins
  * @param std::vector<T>& binVals
  * @param std::vector<int64_t>& counts
- * @param std::mutex& mutex
- * @param std::condition_variable& cv
- * @param bool& finished
  */
 template <typename T>
 void
 populationDistribution(
 	helper::RasterBandMetaData& band,
 	int width,
-	int yBlockStart,
-	int yBlockEnd,
+	int height,
 	int nBins,
 	std::vector<T>& binVals,
-	std::vector<int64_t>& counts,
-	std::mutex& mutex,
-	std::condition_variable& cv,
-	bool& finished)
+	std::vector<int64_t>& counts)
 {
 	int xBlocks = (width + band.xBlockSize - 1) / band.xBlockSize;
+	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
 
 	T nan = static_cast<T>(band.nan);
 	void *p_data = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
 
-	std::vector<int64_t> chunkCounts(counts.size(), 0);
-	for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
+	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+			
 			int xValid, yValid;
 			band.p_mutex->lock();
 			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
@@ -260,7 +202,7 @@ populationDistribution(
 					if (val != nan && !std::isnan(val)) {
 						for (int i = nBins - 1; i >= 0; i--) {
 							if (binVals[i] <= val) {
-								chunkCounts[i]++;	
+								counts[i]++;	
 								break;
 							}
 						}
@@ -272,14 +214,6 @@ populationDistribution(
 	}
 	
 	VSIFree(p_data);
-
-	mutex.lock();
-	finished = true;
-	for (int i = 0; i < nBins; i++) {
-		counts[i] += chunkCounts[i];
-	}
-	mutex.unlock();
-	cv.notify_all();
 }
 
 /**
@@ -332,18 +266,13 @@ sampleDistribution(
  *
  * Both the findMinMax() and populationDistribution() function are called multiple times, each with
  * a different chunk (where the chunk count and chunk size is determined by the number of threads).
- *
- * To synchronize the calculations within both of those functions, a condition variable is used.
- * The condition variable ensures the function does not continue calculation before ALL chunks of the
- * raster have been checked.
- *
+ * 
  * @param RasterBandMetaData& band
  * @param std::vector<Index>& sampled
  * @param int height
  * @param int width
  * @param int nBins
  * @param std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<int64_t>>>& retval
- * @param int nThreads
  */
 template <typename T>
 void 
@@ -353,63 +282,12 @@ calculateDist(
 	int height,
 	int width,
 	int nBins,
-	std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<int64_t>>>& retval,
-	int nThreads)
+	std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<int64_t>>>& retval)
 {
-	pybind11::gil_scoped_acquire acquire;
-	boost::asio::thread_pool pool(nThreads);
-
-	//determine number of chunks and chunks size for each thread. A chunk is a group of blocks.
-	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
-	int chunksize = std::max(1, yBlocks / nThreads);
-	int nChunks = (yBlocks + chunksize - 1) / chunksize;
-
-	std::mutex mutex;
-	std::condition_variable cv;
-
-	//don't use std::vector<bool> because can't reference individual bools from it
-	bool *chunksFinished = reinterpret_cast<bool *>(VSIMalloc2(nChunks, sizeof(bool)));
-
 	//determine min and max values in the raster
-	std::vector<T> mins(nChunks);
-	std::vector<T> maxs(nChunks);
-	for (int chunk = 0; chunk < nChunks; chunk++) {
-		int yStartBlock = chunk * chunksize;
-		int yEndBlock = std::min(yStartBlock + chunksize, yBlocks);
-		chunksFinished[chunk] = false;
-
-		boost::asio::post(pool, std::bind(findMinMax<T>,
-			std::ref(band),
-			width,
-			yStartBlock,
-			yEndBlock,
-			std::ref(mins[chunk]),
-			std::ref(maxs[chunk]),
-			std::ref(mutex),
-			std::ref(cv),
-			std::ref(chunksFinished[chunk])
-		));
-	}
-
-	//using cv, wait for all of the threads to finish calculating their chunk before
-	//calculating the final min and max values	
-	std::unique_lock lock(mutex);
-	bool allChunksFinished = true;
-	for (int chunk = 0; chunk < nChunks; chunk++) {
-		allChunksFinished &= chunksFinished[chunk];
-	}
-
-	while (!allChunksFinished) {
-		cv.wait(lock);
-		allChunksFinished = true;
-		for (int chunk = 0; chunk < nChunks; chunk++) {
-			allChunksFinished &= chunksFinished[chunk];
-		}
-	}
-
-	//calculate the final min/max values
-	T min = *std::min_element(mins.begin(), mins.end());
-	T max = *std::max_element(maxs.begin(), maxs.end());
+	T min;
+	T max;
+	findMinMax<T>(band, width, height, min, max);
 
 	//call the setBins function which sets the vector<double> bins to return to the user,
 	//and the vector<T> bins to use to create the distribution. There is a seperate vector<T>
@@ -421,51 +299,16 @@ calculateDist(
 
 	//determine the population distribution of the raster band
 	std::vector<int64_t> counts(nBins, 0);
-	for (int chunk = 0; chunk < nChunks; chunk++) {
-		int yStartBlock = chunk * chunksize;
-		int yEndBlock = std::min(yStartBlock + chunksize, yBlocks);
+	populationDistribution<T>(band, width, height, nBins, tbins, counts);	
 
-		chunksFinished[chunk] = false;
-
-		boost::asio::post(pool, std::bind(populationDistribution<T>,
-			std::ref(band),
-			width,
-			yStartBlock,
-			yEndBlock,
-			nBins,
-			std::ref(tbins),
-			std::ref(counts),
-			std::ref(mutex),
-			std::ref(cv),
-			std::ref(chunksFinished[chunk])
-		));	
-	}
-
-	//using cv, wait for all of the threads to finish calculating their chunk before
-	//calculating the final counts in each bin
-	allChunksFinished = true;
-	for (int chunk = 0; chunk < nChunks; chunk++) {
-		allChunksFinished &= chunksFinished[chunk];
-	}
-
-	while (!allChunksFinished) {
-		cv.wait(lock);
-		allChunksFinished = true;
-		for (int chunk = 0; chunk < nChunks; chunk++) {
-			allChunksFinished &= chunksFinished[chunk];
-		}
-	}
-
-	VSIFree(chunksFinished);
-	
+	//add population distribution to return value
 	retval.insert({std::string("population"), {dbins, counts}});
 
+	//if samples are passed, add calculate sample distribution and add to return value
 	if (sampled.size() != 0) {
 		std::vector<int64_t> sampleCounts = sampleDistribution<T>(band, sampled, tbins, nBins);
 		retval.insert({std::string("sample"), {dbins, sampleCounts}});
 	}
-
-	pybind11::gil_scoped_release release;
 }
 
 /**
@@ -488,7 +331,6 @@ calculateDist(
  * @param GDALVectorWrapper *p_vector
  * @param std::string layer
  * @param int nBins
- * @param int nThreads
  * @returns std::unordered_map<std::string, std::pari<std::vector<double>, std::vector<int64_t>>>
  */
 std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<int64_t>>>
@@ -497,8 +339,7 @@ dist(
 	int index,
 	vector::GDALVectorWrapper *p_vector,
 	std::string layer,
-	int nBins,
-	int nThreads)
+	int nBins)
 {
 	std::mutex datasetMutex;
 	double *GT = p_raster->getGeotransform();
@@ -565,25 +406,25 @@ dist(
 	std::unordered_map<std::string, std::pair<std::vector<double>, std::vector<int64_t>>> retval;
 	switch (band.type) {
 		case GDT_Int8: 
-			calculateDist<int8_t>(band, sampled, height, width, nBins, retval, nThreads);
+			calculateDist<int8_t>(band, sampled, height, width, nBins, retval);
 			break;
 		case GDT_UInt16: 
-			calculateDist<uint16_t>(band, sampled, height, width, nBins, retval, nThreads);
+			calculateDist<uint16_t>(band, sampled, height, width, nBins, retval);
 			break;
 		case GDT_Int16: 
-			calculateDist<int16_t>(band, sampled, height, width, nBins, retval, nThreads);
+			calculateDist<int16_t>(band, sampled, height, width, nBins, retval);
 			break;
 		case GDT_UInt32:
-			calculateDist<uint32_t>(band, sampled, height, width, nBins, retval, nThreads);
+			calculateDist<uint32_t>(band, sampled, height, width, nBins, retval);
 			break;
 		case GDT_Int32:
-			calculateDist<int32_t>(band, sampled, height, width, nBins, retval, nThreads);
+			calculateDist<int32_t>(band, sampled, height, width, nBins, retval);
 			break;
 		case GDT_Float32:
-			calculateDist<float>(band, sampled, height, width, nBins, retval, nThreads);
+			calculateDist<float>(band, sampled, height, width, nBins, retval);
 			break;
 		case GDT_Float64:
-			calculateDist<double>(band, sampled, height, width, nBins, retval, nThreads);	
+			calculateDist<double>(band, sampled, height, width, nBins, retval);	
 			break;
 		default:
 			throw std::runtime_error("raster pixel data type not supported.");

@@ -59,10 +59,6 @@ from _sgs import dist_cpp
 # element with 2.5 <= val <= 3. This is typical, and matches the way that the numpy 
 # histogram function works.
 #
-# The 'threads' parameter specifies the number of threads which this function will utilize.
-# The default value is 8. The optimal number will depend significantly on both the
-# hardware being used and the raster data, and may be more or less than 8.
-#
 # Examples
 # --------------------
 # rast = sgspy.SpatialRaster("rast.tif") #single band raster @n
@@ -93,8 +89,6 @@ from _sgs import dist_cpp
 #   the layer name of the sample network if 'samples' contains more than one layer @n @n
 # bins : int @n 
 #   the number of bins in the histogram distribution @n @n 
-# threads : int @n 
-#   the number of threads to use @n @n 
 # plot : bool @n 
 #   whether to plot a histogram of the distribution @n @n 
 #
@@ -107,7 +101,6 @@ def distribution(
     samples: Optional[SpatialVector] = None,
     layer: Optional[str] = None,
     bins: int = 50,
-    threads: int = 8,
     plot: bool = True):
 
     if type(rast) is not SpatialRaster:
@@ -164,7 +157,7 @@ def distribution(
     #numpys histogram function is because numpys histogram function requires that all
     #the data be in a numpy array (in memory) at once, and on very large raster images 
     #this is not possible.
-    result = dist_cpp(rast.cpp_raster, band, cpp_vector, layer, bins, threads)
+    result = dist_cpp(rast.cpp_raster, band, cpp_vector, layer, bins)
 
     if plot:
         [pop_bins, pop_counts] = result["population"]
