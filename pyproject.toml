@@ -8,22 +8,43 @@ requires = [
 
 [project]
 name = "sgspy"
-version = "1.0.5"
+description = "Structurally Guided Sampling"
+readme = "README.md"
+authors = [{name = "Joseph B Meyer"}]
+version = "1.0.6"
+requires-python = ">=3.10" #tested/distributed as far back as 3.10 but it may be compatible with earlier versions
 dependencies = [
-	"numpy", #TODO add version
-	"matplotlib", #TODO add version
+	"numpy",
+	"matplotlib",
 	
-	#the following are the required packages which are included as part of daal-devel
+	#the following are the required packages which contain the dynamically libraries used by daal-devel
+	#but naturally daal-devel is not required as a user dependency
 	"daal==2025.9.0",
 	"tbb==2022.*",
 	"mkl==2025.3.0",
 	"onemkl-license==2025.3.0",
 ]
+license="MIT"
+license-files = ["LICENSE.txt"]
+classifiers = [
+	'Intended Audience :: Science/Research',
+	'Intended Audience :: Developers',
+	'Programming Language :: C++',
+	'Programming Language :: Python',
+	'Programming Language :: Python :: 3',
+	'Programming Language :: Python :: 3.10',
+	'Programming Language :: Python :: 3.11',
+	'Programming Language :: Python :: 3.12',
+	'Programming Language :: Python :: 3.13',
+	'Programming Language :: Python :: 3.14',
+	'Operating System :: Microsoft :: Windows',
+	'Operating System :: Unix',
+]
 
 [project.optional-dependencies]
 test = [
-	"pytest", #TODO add version
-	"geopandas", #TODO add version
+	"pytest",
+	"geopandas",
 ]
 
 #license = "MIT"
