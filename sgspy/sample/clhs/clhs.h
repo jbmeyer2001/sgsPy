@@ -170,8 +170,8 @@ class CLHSDataManager {
 		
 		this->corr = corr;
 
-		this->x.resize(this->size);
-		this->y.resize(this->size);
+		this->x.resize(this->count);
+		this->y.resize(this->count);
 		this->features.resize(this->count * nFeat);
 		this->ucount = static_cast<uint64_t>(this->count);
 
@@ -203,7 +203,7 @@ class CLHSDataManager {
 	randomIndex() {
 		uint64_t index = ((*p_rng)() >> 11) & mask;
 
-		while (index > ucount) {
+		while (index >= this->ucount) {
 			index = ((*p_rng)() >> 11) & mask;
 		}
 
@@ -492,6 +492,7 @@ readRaster(
 						n++;
 						
 						bool accessible = !access.used || p_access[index] != 1;
+
 						if (accessible && rand.next()) {
 							clhs.addPoint(
 								p_buff,
@@ -673,7 +674,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			
 			Point<T> p;
 			clhs.getPoint(p, index);
-		
+	
 			indices[i] = index;
 			x[i] = p.x;
 			y[i] = p.y;
@@ -760,6 +761,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			newIndex = clhs.randomIndex();
 		}
 		clhs.getPoint(p, newIndex);
+
 		for (int j = 0; j < nFeat; j++) {
 			features[i * nFeat + j] = p.p_features[j];
 		}
