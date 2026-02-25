@@ -179,6 +179,9 @@ class GDALRasterWrapper {
 		}
 
 		//crs
+		if(std::string(this->p_dataset->GetProjectionRef()).length() == 0) {
+			throw std::runtime_error("raster dataset does not have a projection definition.");
+		}
 		this->crs = std::string(OGRSpatialReference(this->p_dataset->GetProjectionRef()).GetName());
 
 		//proj
@@ -189,7 +192,6 @@ class GDALRasterWrapper {
 		}
 		this->proj = std::string(p_proj);
 		CPLFree(p_proj);
-
 
 		//initialize (but don't read) raster band pointers
 		this->rasterBandPointers = std::vector<void *>(this->getBandCount(), nullptr);
