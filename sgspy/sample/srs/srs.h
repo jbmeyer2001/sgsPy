@@ -28,6 +28,112 @@ namespace srs {
 
 /**
  * @ingroup srs
+ *
+ * This function generates random index values to sample. This method is fast
+ * in many circumstances, because it does not require the entire raster to be read.
+ * 
+ * However, in cases where there are a very large number of samples, or a low percentage
+ * of the raster is sampleable, it may be slower than reading through the entire raster.
+ * This is because calling the RasterIO function incurs significant overhead, especially
+ * in random access patterns.
+ *
+ * @param helper::RasterBandMetaData& band
+ * @param int width
+ * @param int height
+ * @param int numSamples
+ * @param access::Access& access
+ * @param existing::Existing& existing
+ * @param std::unordered_set<helper::Index>& index
+ * @param xso::xoshiro_4x64_plus rng
+ * @returns bool
+ */
+template <typename T>
+inline bool
+getRandomIndices(
+	helper::RasterBandMetaData& band,
+	int width,
+	int height,
+	int numSamples,
+	access::Access& access,
+	existing::Existing& existing,
+	std::unordered_set<helper::Index>& indices,
+	xso::xoshiro_4x64_plus rng)
+{
+	T nan = static_cast<T>(band.nan);
+
+	uint64_t width64 = static_cast<int64_t>(widht);
+	uint64_t height64 = static_cast<int64_t>(height);
+
+	//get mask for rng output using bit twiddling
+	uint64_t maxIndex = width64 * height64 - 1;
+	uint64_t mask = maxIndex;
+	mask |= mask >> 1;
+	mask |= mask >> 2;
+	mask |= mask >> 4;
+	mask |= mask >> 8;
+	mask |= mask >> 16;
+	mask |= mask >> 32;
+
+	int iterations = 0;
+	int maxIterations = numSamples * 11;
+	while (iterations < maxIterations && indices.size() < static_cast<size_t>(numSamples)) {
+		//generate a random valid index
+		//
+		//bit shift by 11 because lower 11 bits are not random enough in this (fast) xoshiro configuration
+		uint64_t index = (rng() >> 11) & mask; 
+		while (index > maxIndex) {
+			index = (rng() >> 11) & mask;
+		}
+		int x = static_cast<int>(index % width64);
+		int y = static_cast<int>(index / width64);
+		helper::Index index{x, y};
+		
+		//read the value from that index
+		T val;
+		CPLErr err = band.p_band->RasterIO(GF_Read, x, y, 1, 1, &val, 1, 1, band.type, 0, 0);
+		if (err) {
+			throw std::runtime_error("error reading pixel from raster band using GDALRasterBand::RasterIO().");
+		}
+
+		//check if val is nan
+		bool isNan = std::isnan(val) || val == nan;
+		if (isNan) {
+			iterations++;
+			continue;
+		}
+
+		//check if pixel is accessible
+		bool accessible = !access.used;
+		if (access.used) {
+			int8_t accessVal;
+			CPLErr err = access.band.p_band->RasterIO(GF_Read, x, y, 1, 1, &accessVal, 1, 1, access.band.type, 0, 0);
+			if (err) {
+				throw std::runtime_error("error reading pixel from access raster band using GDALRasterBand::RasterIO().");
+			}
+			accessible = accessVal != 1;
+		}
+		if (!accessible) {
+			iterations++;
+			continue;
+		}
+
+		//check if pixel is already sampled
+		bool alreadySampled = !existing.used || existing.containsIndex(x, y);
+		if (alreadySampled) {
+			iterations++;
+			continue;
+		}
+
+		//add index to indices map if the pixel is not nan, accessible, and not already sampled
+		indices.insert(index);
+		iterations++;	
+	}
+
+	return indices.size() == static_cast<size_t>(numSamples);
+}
+
+/**
+ * @ingroup srs
  * This is a helper function for processing a block of the raster. For each
  * pixel in the block: 
  * The value is checked, and not added if it is a nanvalue. 
@@ -259,7 +365,59 @@ srs(
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
 	xso::xoshiro_4x64_plus rng;
+
+	//In some cases, it will probably be faster to randomly guess pixels to add to the samples
+	//rather than reading through the full raster. However, there are cases where it won't be 
+	//faster, due to having trouble finding a pixel that hasn't already been sampled, 
+	//or not being able to find enough accessible not nan pixels. Both of these cases could
+	//incur significant overhead, since calling the GDALRasterBand::RasterIO() function with
+	//a random access pattern is very memory inefficient.
+	//
+	//Here, we consider these cases and call the getRandomIndices function if it will likely be
+	//faster.
+	double totalArea = static_cast<double>(width) * static_cast<double>(p_raster->getPixelWidth()) *
+		           static_cast<double>(height) * static_cast<double>(p_raster->getPixelHeight());
+	double accessibleArea = access.used ? access.area : totalArea;
+
+
+	std::unordered_set<helper::Index> indicesSet;
+	bool indicesSetFull = false
 	
+	double percentageArea = access.used ? static_cast<double>(width) * static_cast<double>(height) * static_cast<double>: 1;
+	double percentage = static_cast<double>(numSamples) / (static_cast<double>(width) * static_cast<double>(height));
+	if (access.used) {
+
+	}
+	if (numSamples < 10000) {
+		switch (band.type) {
+			case GDT_Int8:
+				indicesSetFull = getRandomIndices<int8_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				break;
+			case GDT_UInt16:
+				indicesSetFull = getRandomIndices<uint16_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				break;
+			case GDT_Int16:
+				indicesSetFull = getRandomIndices<int16_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				break;
+			case GDT_UInt32:
+				indicesSetFull = getRandomIndices<uint32_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				break;
+			case GDT_Int32:
+				indicesSetFull = getRandomIndices<int32_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				break;
+			case GDT_Float32:
+				indicesSetFull = getRandomIndices<float>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				break;
+			case GDT_Float64:
+				indicesSetFull = getRandomIndices<double>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				break;
+			default:
+				throw std::runtime_error("raster pixel data type not supported.");
+		}
+	}
+
+
+	if (!indicesSetFull) {
 	//the multiplier which will be multiplied by the 53 most significant bits of the output of the
 	//random number generator to see whether a pixel should be added or not. The multiplier is
 	//a uint64_t number where the least significant n bits are 1 and the remaining are 0. The pixel
