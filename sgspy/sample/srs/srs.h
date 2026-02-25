@@ -119,7 +119,7 @@ getRandomIndices(
 		}
 
 		//check if pixel is already sampled
-		bool alreadySampled = !existing.used || existing.containsIndex(x, y);
+		bool alreadySampled = existing.used && existing.containsIndex(x, y);
 		alreadySampled |= indexSet.find(index) != indexSet.end();
 		if (alreadySampled) {
 			iterations++;
@@ -384,11 +384,12 @@ srs(
 	double accessibleArea = access.used ? access.area : totalArea;
 	double percentageAccessible = accessibleArea / totalArea;
 	double accessiblePixels = accessibleArea / (static_cast<double>(p_raster->getPixelWidth()) * static_cast<double>(p_raster->getPixelHeight()));
-	double percentagePixelsSampled = static_cast<double>(numSamples) / percentageAccessible;
+	double percentagePixelsSampled = static_cast<double>(numSamples) / accessiblePixels;
 
 	bool tooManySamplesRequired = useMindist ? (numSamples * 3 > 100000) : (numSamples > 10000);
 	bool tryRandomMethod = percentageAccessible > 0.1 &&
-		               percentagePixelsSampled < 0.5;
+		               percentagePixelsSampled < 0.5 &&
+			       !tooManySamplesRequired;
 
 	bool enoughIndicesFound = false;
 	if (tryRandomMethod) {
@@ -442,7 +443,9 @@ srs(
 		);
 	
 		helper::RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
-	
+
+		throw std::runtime_error("debugging stop.");
+
 		for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 			for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
 				int xValid, yValid;
