@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <random>
+#include <unordered_map>
 
 #include <xoshiro.h>
 
@@ -56,12 +57,12 @@ getRandomIndices(
 	int numSamples,
 	access::Access& access,
 	existing::Existing& existing,
-	std::unordered_set<helper::Index>& indices,
+	std::vector<helper::Index>& indices,
 	xso::xoshiro_4x64_plus rng)
 {
 	T nan = static_cast<T>(band.nan);
 
-	uint64_t width64 = static_cast<int64_t>(widht);
+	uint64_t width64 = static_cast<int64_t>(width);
 	uint64_t height64 = static_cast<int64_t>(height);
 
 	//get mask for rng output using bit twiddling
@@ -76,6 +77,7 @@ getRandomIndices(
 
 	int iterations = 0;
 	int maxIterations = numSamples * 11;
+	std::unordered_set<uint64_t> indexSet;
 	while (iterations < maxIterations && indices.size() < static_cast<size_t>(numSamples)) {
 		//generate a random valid index
 		//
@@ -86,7 +88,6 @@ getRandomIndices(
 		}
 		int x = static_cast<int>(index % width64);
 		int y = static_cast<int>(index / width64);
-		helper::Index index{x, y};
 		
 		//read the value from that index
 		T val;
@@ -119,13 +120,15 @@ getRandomIndices(
 
 		//check if pixel is already sampled
 		bool alreadySampled = !existing.used || existing.containsIndex(x, y);
+		alreadySampled |= indexSet.find(index) != indexSet.end();
 		if (alreadySampled) {
 			iterations++;
 			continue;
 		}
 
 		//add index to indices map if the pixel is not nan, accessible, and not already sampled
-		indices.insert(index);
+		indexSet.insert(index);
+		indices.push_back(helper::Index(x, y));
 		iterations++;	
 	}
 
@@ -358,6 +361,7 @@ srs(
 
 	int xBlocks = (width + band.xBlockSize - 1) / band.xBlockSize;
 	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
+	std::vector<helper::Index> indices;
 
 	std::vector<bool> randVals(band.xBlockSize * band.yBlockSize);
 	int randValIndex = band.xBlockSize * band.yBlockSize;
@@ -366,153 +370,151 @@ srs(
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
 	xso::xoshiro_4x64_plus rng;
 
-	//In some cases, it will probably be faster to randomly guess pixels to add to the samples
+	//In some cases, it will be faster randomly guess pixels to add to the samples
 	//rather than reading through the full raster. However, there are cases where it won't be 
 	//faster, due to having trouble finding a pixel that hasn't already been sampled, 
 	//or not being able to find enough accessible not nan pixels. Both of these cases could
 	//incur significant overhead, since calling the GDALRasterBand::RasterIO() function with
 	//a random access pattern is very memory inefficient.
 	//
-	//Here, we consider these cases and call the getRandomIndices function if it will likely be
-	//faster.
+	//Here, we consider these cases and call the getRandomIndices function if NOT iterating through
+	//the full raster is preferrable.
 	double totalArea = static_cast<double>(width) * static_cast<double>(p_raster->getPixelWidth()) *
 		           static_cast<double>(height) * static_cast<double>(p_raster->getPixelHeight());
 	double accessibleArea = access.used ? access.area : totalArea;
+	double percentageAccessible = accessibleArea / totalArea;
+	double accessiblePixels = accessibleArea / (static_cast<double>(p_raster->getPixelWidth()) * static_cast<double>(p_raster->getPixelHeight()));
+	double percentagePixelsSampled = static_cast<double>(numSamples) / percentageAccessible;
 
+	bool tooManySamplesRequired = useMindist ? (numSamples * 3 > 100000) : (numSamples > 10000);
+	bool tryRandomMethod = percentageAccessible > 0.1 &&
+		               percentagePixelsSampled < 0.5;
 
-	std::unordered_set<helper::Index> indicesSet;
-	bool indicesSetFull = false
-	
-	double percentageArea = access.used ? static_cast<double>(width) * static_cast<double>(height) * static_cast<double>: 1;
-	double percentage = static_cast<double>(numSamples) / (static_cast<double>(width) * static_cast<double>(height));
-	if (access.used) {
-
-	}
-	if (numSamples < 10000) {
+	bool enoughIndicesFound = false;
+	if (tryRandomMethod) {
 		switch (band.type) {
 			case GDT_Int8:
-				indicesSetFull = getRandomIndices<int8_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				enoughIndicesFound = getRandomIndices<int8_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
 				break;
 			case GDT_UInt16:
-				indicesSetFull = getRandomIndices<uint16_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				enoughIndicesFound = getRandomIndices<uint16_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
 				break;
 			case GDT_Int16:
-				indicesSetFull = getRandomIndices<int16_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				enoughIndicesFound = getRandomIndices<int16_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
 				break;
 			case GDT_UInt32:
-				indicesSetFull = getRandomIndices<uint32_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				enoughIndicesFound = getRandomIndices<uint32_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
 				break;
 			case GDT_Int32:
-				indicesSetFull = getRandomIndices<int32_t>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				enoughIndicesFound = getRandomIndices<int32_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
 				break;
 			case GDT_Float32:
-				indicesSetFull = getRandomIndices<float>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				enoughIndicesFound = getRandomIndices<float>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
 				break;
 			case GDT_Float64:
-				indicesSetFull = getRandomIndices<double>(band, width, height, numSamples, access, existing, indicesSet, rng);
+				enoughIndicesFound = getRandomIndices<double>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
 				break;
 			default:
 				throw std::runtime_error("raster pixel data type not supported.");
 		}
 	}
 
-
-	if (!indicesSetFull) {
-	//the multiplier which will be multiplied by the 53 most significant bits of the output of the
-	//random number generator to see whether a pixel should be added or not. The multiplier is
-	//a uint64_t number where the least significant n bits are 1 and the remaining are 0. The pixel
-	//is added when the least significant n bits (of the bit shifted 53 bits) within the rng match
-	//those of the multiplier. The probability a pixel is add is then (1/2^n). Using this method,
-	//knowing the amount of pixels, estimating the number of nan pixels, taking into account mindist
-	//and accessible area, we can estimate a percentage chance for each pixel and set up a multiplier
-	//to make that percentage happen. Doing this enables retaining only a small portion of pixel data
-	//and reducing memory footprint significantly, otherwise the index of every pixel
-	//would have to be stored, which would not be feasible for large rasters.
-	uint64_t multiplier = helper::getProbabilityMultiplier(
-		width, 
-		height, 
-		p_raster->getPixelWidth(), 
-		p_raster->getPixelHeight(), 
-		4, 
-		numSamples, 
-		useMindist, 
-		access.area
-	);
-
-	helper::RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
-
-	std::vector<helper::Index> indices;
-	for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
-		for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
-			int xValid, yValid;
-
-			//read block
-			band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-			helper::rasterBandIO(band, band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
-															  //read = true
-			//read access block if necessary
-			if (access.used) {
-				helper::rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false); 
+	if (!enoughIndicesFound) {
+		//the multiplier which will be multiplied by the 53 most significant bits of the output of the
+		//random number generator to see whether a pixel should be added or not. The multiplier is
+		//a uint64_t number where the least significant n bits are 1 and the remaining are 0. The pixel
+		//is added when the least significant n bits (of the bit shifted 53 bits) within the rng match
+		//those of the multiplier. The probability a pixel is add is then (1/2^n). Using this method,
+		//knowing the amount of pixels, estimating the number of nan pixels, taking into account mindist
+		//and accessible area, we can estimate a percentage chance for each pixel and set up a multiplier
+		//to make that percentage happen. Doing this enables retaining only a small portion of pixel data
+		//and reducing memory footprint significantly, otherwise the index of every pixel
+		//would have to be stored, which would not be feasible for large rasters.
+		uint64_t multiplier = helper::getProbabilityMultiplier(
+			width, 
+			height, 
+			p_raster->getPixelWidth(), 
+			p_raster->getPixelHeight(), 
+			4, 
+			numSamples, 
+			useMindist, 
+			access.area
+		);
+	
+		helper::RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
+	
+		for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
+			for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+				int xValid, yValid;
+	
+				//read block
+				band.p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+				helper::rasterBandIO(band, band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false);
+																//read = true
+				//read access block if necessary
+				if (access.used) {
+					helper::rasterBandIO(access.band, access.band.p_buffer, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, false); 
+				}
+	
+				//calculate random values
+				rand.calculateRandValues();
+	
+				//process block
+				switch (band.type) {
+					case GDT_Int8:
+						processBlock<int8_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
+						break;
+					case GDT_UInt16:
+						processBlock<uint16_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
+						break;
+					case GDT_Int16:
+						processBlock<int16_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
+						break;
+					case GDT_UInt32:
+						processBlock<uint32_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
+						break;
+					case GDT_Int32:
+						processBlock<int32_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
+						break;
+					case GDT_Float32:
+						processBlock<float>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
+						break;
+					case GDT_Float64:
+						processBlock<double>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
+						break;
+					default:
+						throw std::runtime_error("raster pixel data type is not supported.");
+				}
 			}
-
-			//calculate random values
-			rand.calculateRandValues();
-
-			//process block
-			switch (band.type) {
-				case GDT_Int8:
-					processBlock<int8_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
-					break;
-				case GDT_UInt16:
-					processBlock<uint16_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
-					break;
-				case GDT_Int16:
-					processBlock<int16_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
-					break;
-				case GDT_UInt32:
-					processBlock<uint32_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
-					break;
-				case GDT_Int32:
-					processBlock<int32_t>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
-					break;
-				case GDT_Float32:
-					processBlock<float>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
-					break;
-				case GDT_Float64:
-					processBlock<double>(band, access, existing, indices, rand, xBlock, yBlock, xValid, yValid);
-					break;
-				default:
-					throw std::runtime_error("raster pixel data type is not supported.");
-			}
-		}
+		}	
 	}
 
 	std::shuffle(indices.begin(), indices.end(), rng);
-
+	
 	size_t samplesAdded = existing.used ? existing.count() : 0;
 	size_t i = 0;
-  	helper::NeighborMap neighbor_map;
+	helper::NeighborMap neighbor_map;
 	double mindist_sq = mindist * mindist;
-
+	
 	helper::Field fieldExistingFalse("existing", 0);
 	while (samplesAdded < numSamples && i < indices.size()) {
 		helper::Index index = indices[i];
 		bool valid = true;
 		const auto [x, y] = helper::sample_to_point(GT, index);
-
+	
 		if (useMindist) {
 			valid = helper::is_valid_sample(x, y, neighbor_map, mindist, mindist_sq);
 		}
-
+	
 		if (valid) {
-	  		OGRPoint point = OGRPoint(x, y);
-
+			OGRPoint point = OGRPoint(x, y);
+	
 			existing.used ?
 				helper::addPoint(&point, p_layer, &fieldExistingFalse) :
 				helper::addPoint(&point, p_layer);
-
+	
 			samplesAdded++;
-
+	
 			if (plot) {
 				xCoords.push_back(x);
 				yCoords.push_back(y);
@@ -520,6 +522,7 @@ srs(
 		}
 		i++;
 	}
+
 
 	if (filename != "") {
 		try {
