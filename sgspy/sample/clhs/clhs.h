@@ -946,7 +946,7 @@ clhs(
 		height, 
 		p_raster->getPixelWidth(), 
 		p_raster->getPixelHeight(), 
-		4, 
+		8, 
 		MILLION * 100, 
 		false, 
 		access.area

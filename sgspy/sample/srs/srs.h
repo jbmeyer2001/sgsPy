@@ -370,57 +370,108 @@ srs(
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
 	xso::xoshiro_4x64_plus rng;
 
-	//In some cases, it will be faster randomly guess pixels to add to the samples
-	//rather than reading through the full raster. However, there are cases where it won't be 
-	//faster, due to having trouble finding a pixel that hasn't already been sampled, 
-	//or not being able to find enough accessible not nan pixels. Both of these cases could
-	//incur significant overhead, since calling the GDALRasterBand::RasterIO() function with
-	//a random access pattern is very memory inefficient.
+	// when reading pixels or blocks into memory using GDAL, the whole block is always read into memory.
+	// This reading of blocks is a large portion of the runtime for the processing of raster images.
 	//
-	//Here, we consider these cases and call the getRandomIndices function if NOT iterating through
-	//the full raster is preferrable.
-	double totalArea = static_cast<double>(width) * static_cast<double>(p_raster->getPixelWidth()) *
-		           static_cast<double>(height) * static_cast<double>(p_raster->getPixelHeight());
-	double accessibleArea = access.used ? access.area : totalArea;
-	double percentageAccessible = accessibleArea / totalArea;
-	double accessiblePixels = accessibleArea / (static_cast<double>(p_raster->getPixelWidth()) * static_cast<double>(p_raster->getPixelHeight()));
-	double percentagePixelsSampled = static_cast<double>(numSamples) / accessiblePixels;
+	// When using the Simple Random Sampling (srs) method, there is no requirement that the pixels
+	// have any relation to each other or represent any kind of distribution in the overall raster.
+	// This means that there is no requirement to read through the entire raster image.
+	//
+	// In some cases, it may be faster to select pixels at random from the image, hoping they are
+	//  1. not nan
+	//  2. acessible
+	//  3. not already sampled
+	//
+	// However, there are cases when more blocks will be read into memory by randomly selecting 
+	// pixels compared to reading through the whole raster. This is because random access patterns
+	// have a VERY low hit rate in the cache, leading to significant thrashing -- we have to assume
+	// every time a pixel is read a block is read into the cache whereas when the entire raster is
+	// read sequentially, a new block must be read into the cache ONLY when the first pixel in that
+	// block is looked at.
+	//
+	// In the following, we attemt to estimate which method will result in the smaller number of 
+	// blocks read into memory and use that to generate random pixels, assuming that half of the
+	// raster is nan.
+	//
+	// worth noting -- if not enough pixels are able to be determined using the random access method,
+	// the full raster read method is then used.
 
-	bool tooManySamplesRequired = useMindist ? (numSamples * 3 > 100000) : (numSamples > 10000);
-	bool tryRandomMethod = percentageAccessible > 0.1 &&
-		               percentagePixelsSampled < 0.5 &&
-			       !tooManySamplesRequired;
+	//total blocks is yBlocks * xBlocks	
+	size_t numBlocks = static_cast<size_t>(xBlocks) * static_cast<size_t>(yBlocks);
 
-	bool enoughIndicesFound = false;
-	if (tryRandomMethod) {
+	//desired samples is x3 if using mindist
+	size_t desiredSamples = static_cast<size_t>(useMindist ? numSamples * 3 : numSamples);
+
+	//total number of pixels in the raster
+	size_t allPixels = static_cast<size_t>(width) * static_cast<size_t>(height);
+
+	//total area is width * height * pixelWidth * pixelHeight == allPixels * pixelWidth * pixelHeight
+	double totalArea = static_cast<double>(p_raster->getPixelHeight()) * 
+		           static_cast<double>(p_raster->getPixelWidth()) * 
+			   static_cast<double>(allPixels);
+
+	//accessible pixels is the proportion of pixels which are within the accessible area times the total pixel count
+	double accessiblePixels = allPixels * (access.used ? (access.area / totalArea) : 1.0);
+
+	//valid pixels divides the accessible pixels by 2 (assuming half nan), then subtracts existing samples
+	size_t validPixels = static_cast<size_t>(accessiblePixels / 2.0) - (existing.used ? existing.samples.size() : 0);
+	
+	size_t randomAccessBlocksRequired = 0;
+
+        while (desiredSamples > 0 && randomAccessBlocksRequired < numBlocks) {
+		//the likelihood of guessing a valid pixel is equal to (remainingValidPixles / allPixels)
+		//
+		//therefore it is estimated there will be a total number of 1 / (remainingValidPixels / allPixels)
+		//guesses or random block accesses.
+		//
+		//This is equivalent to allPixels / validPixels.
+		//
+		//Then, since we sampled 1 pixel we reduce the number of valid remaining pixels by 1.
+
+		randomAccessBlocksRequired += (allPixels / validPixels);
+		validPixels--;
+		desiredSamples--;
+	}
+
+	//set max number of random accesses as the estimated required number * 1.25
+	size_t maxRandomAccessBlocks = randomAccessBlocksRequired + randomAccessBlocksRequired / 4;
+
+	//if the max estimated number of blocks read into memory under a random access strategy is less than
+	//reading the whole raster, try the random access strategy capping the number of accesses at this max value.
+	//
+	//Then, only read the entire raster if not enough pixels were read by the random strategy
+	bool haveEnoughSamples = false;
+	if (maxRandomAccessBlocks < numBlocks) {
+		desiredSamples = static_cast<size_t>(useMindist ? numSamples * 3 : numSamples);
+
 		switch (band.type) {
 			case GDT_Int8:
-				enoughIndicesFound = getRandomIndices<int8_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
+				haveEnoughSamples = getRandomIndices<int8_t>(band, width, height, desiredSamples, access, existing, indices, rng);
 				break;
 			case GDT_UInt16:
-				enoughIndicesFound = getRandomIndices<uint16_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
+				haveEnoughSamples = getRandomIndices<uint16_t>(band, width, height, desiredSamples, access, existing, indices, rng);
 				break;
 			case GDT_Int16:
-				enoughIndicesFound = getRandomIndices<int16_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
+				haveEnoughSamples = getRandomIndices<int16_t>(band, width, height, desiredSamples, access, existing, indices, rng);
 				break;
 			case GDT_UInt32:
-				enoughIndicesFound = getRandomIndices<uint32_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
+			 	haveEnoughSamples = getRandomIndices<uint32_t>(band, width, height, desiredSamples, access, existing, indices, rng);
 				break;
 			case GDT_Int32:
-				enoughIndicesFound = getRandomIndices<int32_t>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
+				haveEnoughSamples = getRandomIndices<int32_t>(band, width, height, desiredSamples, access, existing, indices, rng);
 				break;
 			case GDT_Float32:
-				enoughIndicesFound = getRandomIndices<float>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
+				haveEnoughSamples = getRandomIndices<float>(band, width, height, desiredSamples, access, existing, indices, rng);
 				break;
 			case GDT_Float64:
-				enoughIndicesFound = getRandomIndices<double>(band, width, height, useMindist ? numSamples * 3 : numSamples, access, existing, indices, rng);
+				haveEnoughSamples = getRandomIndices<double>(band, width, height, desiredSamples, access, existing, indices, rng);
 				break;
 			default:
 				throw std::runtime_error("raster pixel data type not supported.");
 		}
 	}
 
-	if (!enoughIndicesFound) {
+	if (!haveEnoughSamples) {
 		//the multiplier which will be multiplied by the 53 most significant bits of the output of the
 		//random number generator to see whether a pixel should be added or not. The multiplier is
 		//a uint64_t number where the least significant n bits are 1 and the remaining are 0. The pixel
@@ -436,15 +487,13 @@ srs(
 			height, 
 			p_raster->getPixelWidth(), 
 			p_raster->getPixelHeight(), 
-			4, 
+			8, 
 			numSamples, 
 			useMindist, 
 			access.area
 		);
 	
 		helper::RandValController rand(band.xBlockSize, band.yBlockSize, multiplier, &rng);
-
-		throw std::runtime_error("debugging stop.");
 
 		for (int yBlock = 0; yBlock < yBlocks; yBlock++) {
 			for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
