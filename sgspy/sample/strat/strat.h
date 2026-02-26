@@ -1273,7 +1273,7 @@ strat(
 		height, 
 		p_raster->getPixelWidth(),
 	       	p_raster->getPixelHeight(), 
-		4, 
+		8, 
 		numSamples, 
 		useMindist, 
 		access.area
@@ -1283,7 +1283,7 @@ strat(
 		height, 
 		p_raster->getPixelWidth(), 
 		p_raster->getPixelHeight(), 
-		32, 
+		64, 
 		numSamples, 
 		useMindist, 
 		access.area
