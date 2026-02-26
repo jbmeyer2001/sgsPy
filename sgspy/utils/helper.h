@@ -991,7 +991,7 @@ public:
 	 * @param xso::xoshiro_4x64_plus *p_rng
 	 */
 	RandValController(int xBlockSize, int yBlockSize, uint64_t multiplier, xso::xoshiro_4x64_plus *p_rng) {
-		if (this->multiplier == 0) {
+		if (multiplier == 0) {
 			this->alwaysTrue = true;
 		}
 		else {
