@@ -255,14 +255,15 @@ processBlock(
  * calculation for this percentage is done and explained in detail in the
  * getProbabilityMultiplier() function.
  *
- * The raster is then processed in blocks, each block is read into memory,
- * and potentially the block of the access raster is read into memory as well.
- * The processBlock() funciton is called depending on the data type of the 
- * raster, to add the available / chosen pixel indices.
+ * Then, the raster is processed in one of two ways. One using a random access
+ * strategy where random indexes are calculated and checked for validity, and 
+ * another where the entire raster is read. The decision between these two
+ * is calculated to minimize the number of blocks read into memory, as this
+ * is the main bottleneck in processing time.
  *
- * Once the entire raster has been iterated through, there may be extra
+ * Once all possible pixels have been selected, there may be extra
  * indices in the indicies vector. Because simply sampling the first
- * few we need would NOT be random, the indices are first shuffled.
+ * few we need would might NOT be in a random order, the indices are first shuffled.
  * After being shuffled, the indexes are added to the output dataset
  * as samples if they don't occur within mindist if an already existing pixel.
  *
