@@ -1,5 +1,6 @@
 var NAVTREEINDEX1 =
 {
+"group__user__quantiles.html":[1,0,2,3],
 "group__user__quantiles.html#gab5da1cf89c0ab338cf6c998b75fbd9d8":[1,0,2,3,0],
 "group__user__sample.html":[1,0,1],
 "group__user__srs.html":[1,0,1,1],

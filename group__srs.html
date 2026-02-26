@@ -95,12 +95,91 @@ $(function(){initNavTree('group__srs.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:ga0513a0c16d42ad506c10b871c3fb3b9f" id="r_ga0513a0c16d42ad506c10b871c3fb3b9f"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
+<tr class="memitem:ga0513a0c16d42ad506c10b871c3fb3b9f template"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga0513a0c16d42ad506c10b871c3fb3b9f">sgs::srs::getRandomIndices</a> (<a class="el" href="structsgs_1_1helper_1_1RasterBandMetaData.html">helper::RasterBandMetaData</a> &amp;band, int width, int height, int numSamples, <a class="el" href="structsgs_1_1access_1_1Access.html">access::Access</a> &amp;access, <a class="el" href="structsgs_1_1existing_1_1Existing.html">existing::Existing</a> &amp;existing, std::vector&lt; <a class="el" href="structsgs_1_1helper_1_1Index.html">helper::Index</a> &gt; &amp;indices, xso::xoshiro_4x64_plus rng)</td></tr>
 <tr class="memitem:gacdc25256ccd62049b664df2f7b1ce35b" id="r_gacdc25256ccd62049b664df2f7b1ce35b"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:gacdc25256ccd62049b664df2f7b1ce35b template"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gacdc25256ccd62049b664df2f7b1ce35b">sgs::srs::processBlock</a> (<a class="el" href="structsgs_1_1helper_1_1RasterBandMetaData.html">helper::RasterBandMetaData</a> &amp;band, <a class="el" href="structsgs_1_1access_1_1Access.html">access::Access</a> &amp;access, <a class="el" href="structsgs_1_1existing_1_1Existing.html">existing::Existing</a> &amp;existing, std::vector&lt; <a class="el" href="structsgs_1_1helper_1_1Index.html">helper::Index</a> &gt; &amp;indices, <a class="el" href="classsgs_1_1helper_1_1RandValController.html">helper::RandValController</a> &amp;rand, int xBlock, int yBlock, int xValid, int yValid)</td></tr>
 <tr class="memitem:gacfa7730e4778a314a798ca0c233720d2" id="r_gacfa7730e4778a314a798ca0c233720d2"><td class="memItemLeft" align="right" valign="top">std::tuple&lt; std::vector&lt; std::vector&lt; double &gt; &gt;, <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *, size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gacfa7730e4778a314a798ca0c233720d2">sgs::srs::srs</a> (<a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *p_raster, size_t numSamples, double mindist, <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *p_existing, <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *p_access, std::string layerName, double buffInner, double buffOuter, bool plot, std::string tempFolder, std::string filename)</td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
+<a id="ga0513a0c16d42ad506c10b871c3fb3b9f" name="ga0513a0c16d42ad506c10b871c3fb3b9f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga0513a0c16d42ad506c10b871c3fb3b9f">&#9670;&#160;</a></span>getRandomIndices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool sgs::srs::getRandomIndices </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsgs_1_1helper_1_1RasterBandMetaData.html">helper::RasterBandMetaData</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>band</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>width</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>height</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>numSamples</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structsgs_1_1access_1_1Access.html">access::Access</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>access</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structsgs_1_1existing_1_1Existing.html">existing::Existing</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>existing</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="structsgs_1_1helper_1_1Index.html">helper::Index</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>indices</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">xso::xoshiro_4x64_plus</td>          <td class="paramname"><span class="paramname"><em>rng</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>This function generates random index values to sample. This method is fast in many circumstances, because it does not require the entire raster to be read.</p>
+<p>However, in cases where there are a very large number of samples, or a low percentage of the raster is sampleable, it may be slower than reading through the entire raster. This is because calling the RasterIO function incurs significant overhead, especially in random access patterns.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">helper::RasterBandMetaData&amp;</td><td>band </td></tr>
+    <tr><td class="paramname">int</td><td>width </td></tr>
+    <tr><td class="paramname">int</td><td>height </td></tr>
+    <tr><td class="paramname">int</td><td>numSamples </td></tr>
+    <tr><td class="paramname">access::Access&amp;</td><td>access </td></tr>
+    <tr><td class="paramname">existing::Existing&amp;</td><td>existing </td></tr>
+    <tr><td class="paramname">std::unordered_set&lt;helper::Index&gt;&amp;</td><td>index </td></tr>
+    <tr><td class="paramname">xso::xoshiro_4x64_plus</td><td>rng </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>bool </dd></dl>
+
+</div>
+</div>
 <a id="gacdc25256ccd62049b664df2f7b1ce35b" name="gacdc25256ccd62049b664df2f7b1ce35b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gacdc25256ccd62049b664df2f7b1ce35b">&#9670;&#160;</a></span>processBlock()</h2>
 
@@ -254,8 +333,8 @@ template&lt;typename T&gt; </div>
 <p>Next, a rng() function is created usign the xoshiro library, the specific randm number generator is the xoshrio256++ <a href="https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf">https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf</a> <br  />
 </p>
 <p>The impetus behind usign the rng() function to determine which pixels should be added DURING iteration, rather than afterwards, is it removes the necessity of storing every available pixel, which quickly becomes extrordinarily inefficient for large rasters. Rather, for pixels which are accessible, not nan, and not already existing, there is a pre-determined percentage chance to be stored which uses this random number generator. An over-estimation for the percentage chance is made, because it is better to have too many than not enough possible options to sample from. This over-estimation might result in the storage of 2x-3x extra pixels rather than the many orders of magnitude extra storage of adding all pixels. The calculation for this percentage is done and explained in detail in the getProbabilityMultiplier() function.</p>
-<p>The raster is then processed in blocks, each block is read into memory, and potentially the block of the access raster is read into memory as well. The <a class="el" href="#gacdc25256ccd62049b664df2f7b1ce35b">processBlock()</a> funciton is called depending on the data type of the raster, to add the available / chosen pixel indices.</p>
-<p>Once the entire raster has been iterated through, there may be extra indices in the indicies vector. Because simply sampling the first few we need would NOT be random, the indices are first shuffled. After being shuffled, the indexes are added to the output dataset as samples if they don't occur within mindist if an already existing pixel.</p>
+<p>Then, the raster is processed in one of two ways. One using a random access strategy where random indexes are calculated and checked for validity, and another where the entire raster is read. The decision between these two is calculated to minimize the number of blocks read into memory, as this is the main bottleneck in processing time.</p>
+<p>Once all possible pixels have been selected, there may be extra indices in the indicies vector. Because simply sampling the first few we need would might NOT be in a random order, the indices are first shuffled. After being shuffled, the indexes are added to the output dataset as samples if they don't occur within mindist if an already existing pixel.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">GDALRasterWrapper</td><td>*p_raster </td></tr>
