@@ -1,9 +1,9 @@
 [build-system]
 build-backend = "mesonpy"
 requires = [
-	"meson-python == 0.18.0",
-	"pybind11 == 3.0.0",
-	"daal-devel == 2025.9.0",
+	"meson-python == 0.19.0",
+	"pybind11 == 3.0.2",
+	"daal-devel == 2025.10.1",
 ]
 
 [project]
@@ -19,10 +19,10 @@ dependencies = [
 	
 	#the following are the required packages which contain the dynamically libraries used by daal-devel
 	#but naturally daal-devel is not required as a user dependency
-	"daal==2025.9.0",
-	"tbb==2022.*",
-	"mkl==2025.3.0",
-	"onemkl-license==2025.3.0",
+	"daal==2025.10.1",
+	"tbb==2022.3.1",
+	"mkl==2025.3.1",
+	"onemkl-license==2025.3.1",
 ]
 license="MIT"
 license-files = ["LICENSE.txt"]
