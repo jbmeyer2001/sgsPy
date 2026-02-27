@@ -80,6 +80,13 @@ class CLHSDataManager {
 	int64_t size;
 	uint64_t ucount;
 
+	//for existing sample points
+	std::vector<T> efeatures;
+	std::vector<int> ex;
+	std::vector<int> ey;
+	size_t efi = 0;
+	size_t ecount = 0;
+
 	std::vector<std::vector<T>> corr;
 
 	int nFeat;
@@ -94,11 +101,14 @@ class CLHSDataManager {
 	 * sizes the vectors to 1,000,000 points (initially). The vector will
 	 * resize as required, and sizes down once raster reading is completed.
 	 *
+	 * set sizes and count values of existing pixels if required.
+	 *
 	 * @param int nFeat
 	 * @param int nSamp
 	 * @param xso::xoshiro_4x64_plus *p_rng
+	 * @param int existingCount
 	 */
-	CLHSDataManager(int nFeat, int nSamp, xso::xoshiro_4x64_plus *p_rng) {
+	CLHSDataManager(int nFeat, int nSamp, xso::xoshiro_4x64_plus *p_rng, size_t existingCount) {
 		this->nFeat = nFeat;
 		this->nSamp = nSamp;
 		this->count = 0;
@@ -109,6 +119,12 @@ class CLHSDataManager {
 		this->y.resize(MILLION);
 
 		this->p_rng = p_rng;
+
+		if (existingCount != 0) {
+			this->efeatures.resize(existingCount * static_cast<size_t>(nFeat));
+			this->ex.resize(existingCount);
+			this->ey.resize(existingCount);
+		}
 	}
 
 	/**
@@ -126,8 +142,8 @@ class CLHSDataManager {
 	inline void
 	addPoint(T *p_features, int x, int y) {
 		for (int f = 0; f < nFeat; f++) {
-			features[fi] = p_features[f];
-			fi++;
+			features[this->fi] = p_features[f];
+			this->fi++;
 		}
 
 		this->x[this->count] = x;
@@ -140,6 +156,27 @@ class CLHSDataManager {
 			this->y.resize(this->y.size() + MILLION);
 			this->size += MILLION;
 		}	
+	}
+
+	/**
+	 * This function saves specifically an existing sample point to the data manager. It
+	 * takes a feature vector (array) as a parameter alongside the x and y indices of the pixel
+	 * containing those features.
+	 *
+	 * The x, y, and features vectors are updated accordingly.
+	 *
+	 * @param T* p_features
+	 * @param int x
+	 * @param int y
+	 */
+	addExistingPoint(T *p_features, int x, int y) {
+		for (int f = 0; f < nFeat; f++) {
+			this->efeatures[this->fi] = p_features[f];
+			this->efi++;
+		}
+
+		this->ex[this->ecount] = x;
+		this->ey[this->ecount] = y;
 	}
 
 	/**
@@ -183,6 +220,11 @@ class CLHSDataManager {
 		this->mask |= this->mask >> 8;
 		this->mask |= this->mask >> 16;
 		this->mask |= this->mask >> 32;
+
+		//resize existing sample vectors 
+		this->ex.resize(this->ecount);
+		this->ey.resize(this->ecount);
+		this->features.resize(this->ecount * nFeat);
 	}
 
 	/**
@@ -275,6 +317,24 @@ class CLHSDataManager {
 	
 		return retval;
 	}
+
+	/**
+	 * Copy features, x, and y vectors from CLHS data manager.
+	 *
+	 * @param std::vector<T>& features
+	 * @param std::vector<int>& x
+	 * @param std::vector<int>& y
+	 */
+	inline void
+	getExistingFeatures(std::vector<T>& features, std::vector<int>& x, std::vector<int>& y) {
+		features.resize(this->efeatures.size());
+		x.resize(this->ex.size());
+		y.resize(this->ey.size());
+
+		std::memcpy(features.data(), this->efeatures.data(), this->efeatures.size() * sizeof(T));
+		std::memcpy(x.data(), this->ex.data(), this->x.size() * sizeof(int));
+		std::memcpy(y.data(), this->ey.data(), this->y.size() * sizeof(int));
+	}
 };
 
 /**
@@ -346,6 +406,7 @@ readRaster(
 	std::vector<helper::RasterBandMetaData>& bands,
 	CLHSDataManager<T>& clhs,
 	access::Access& access,
+	existing::Existing& existing,
 	helper::RandValController& rand,
 	GDALDataType type,
 	std::vector<std::vector<T>>& quantiles,
@@ -493,7 +554,15 @@ readRaster(
 						
 						bool accessible = !access.used || p_access[index] != 1;
 
-						if (accessible && rand.next()) {
+						if (existing.used && existing.containsIndex(x + xBlock * xBlockSize, y + yBlock * yBlockSize)) {
+							clhs.addExistingPoint(
+								p_buff,
+								xBlock * xBlockSize + x,
+								yBlock * yBlockSize + y
+							);
+
+						}
+						else if (accessible && rand.next()) {
 							clhs.addPoint(
 								p_buff,
 								xBlock * xBlockSize + x,
@@ -617,6 +686,8 @@ readRaster(
  *
  * @param std::vector<std::vector<T>>& quantiles
  * @param xso::xoshiro_4x64_plus& rng
+ * @param existing::Existing& existing
+ * @param int replace
  * @param int iterations
  * @param int nSamp
  * @param int nFeat
@@ -631,6 +702,8 @@ inline void
 selectSamples(std::vector<std::vector<T>>& quantiles,
 	      CLHSDataManager<T>& clhs,
 	      xso::xoshiro_4x64_plus& rng,
+	      existing::Existing& existing,
+	      int replace,
 	      int iterations,
 	      int nSamp,
 	      int nFeat,
@@ -640,6 +713,28 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	      std::vector<double>& xCoords,
 	      std::vector<double>& yCoords)
 {
+	std::vector<T> features;
+	std::vector<int> x;
+	std::vector<int> y;
+
+	//if existing is used, add all of the existing samples, 
+	//then remove the most redundent samples up to a count of 'replace'
+	if (existing.used) {
+		clhs.getExistingFeatures(features, x, y);
+
+		if (replace != 0) {
+			std::vector<std::vector<int>> existingSampleCountPerQuantile(nFeat);
+			std::unordered_set<std::vector<size_t>> quantilesPerSample;
+
+			for (int i = 0; i < nFeat; i++) {
+				existingSampleCountPerQuantile.resize(nSamp, 0);
+			}
+
+
+
+		}		
+	}
+
 	std::uniform_real_distribution<T> dist(0.0, 1.0);
 	std::uniform_int_distribution<int> indexDist(0, nSamp - 1);
 
@@ -652,9 +747,9 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		corr[i].resize(nFeat);
 	}
 
-	std::vector<T> features(nSamp * nFeat);
-	std::vector<int> x(nSamp);
-	std::vector<int> y(nSamp);
+	features.resize(static_cast<size_t>(nSamp) * static_cast<size_t>(nFeat));
+	x.resize(nSamp);
+	y.resize(nSamp);
 
 	int featuresSize = nSamp * nFeat;
 
@@ -888,6 +983,8 @@ clhs(
 	std::string layerName,
 	double buffInner,
 	double buffOuter,
+	vector::GDALVectorWrapper *p_existing,
+	int replace,
 	bool plot,
 	std::string tempFolder,
 	std::string filename)
@@ -938,6 +1035,18 @@ clhs(
 		bands[0].yBlockSize
 	);
 
+	existing::Existing existing(
+		p_existing,
+		p_raster,
+		GT,
+		width,
+		p_layer,
+		false,
+		xCoords,
+		yCoords,
+		false	
+	);
+
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
 	xso::xoshiro_4x64_plus rng;
@@ -966,25 +1075,25 @@ clhs(
 		std::vector<std::vector<double>> quantiles;
 		
 		//create instance of data management class
-		CLHSDataManager<double> clhs(nFeat, nSamp, &rng);
+		CLHSDataManager<double> clhs(nFeat, nSamp, &rng, existing.count());
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<double>(bands, clhs, access, rand, type, quantiles, sizeof(double), width, height, nFeat, nSamp);
 
 		//select samples and add them to output layer
-		selectSamples<double>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
+		selectSamples<double>(quantiles, clhs, rng, existing, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 	else { //type == GDT_Float32	
 		std::vector<std::vector<float>> quantiles;
 
 		//create instance of data management class
-		CLHSDataManager<float> clhs(nFeat, nSamp, &rng);
+		CLHSDataManager<float> clhs(nFeat, nSamp, &rng, existing.count());
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<float>(bands, clhs, access, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
 
 		//select samples and add them to output layer
-		selectSamples<float>(quantiles, clhs, rng, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
+		selectSamples<float>(quantiles, clhs, rng, existing, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 
 	if (filename != "") {
