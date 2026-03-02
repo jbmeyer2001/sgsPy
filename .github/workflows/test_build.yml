@@ -29,7 +29,7 @@ jobs:
         
       - name: Build package
         run: export PKG_CONFIG_PATH="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig" |
-            export PKG_CONFIG="${PWD"/sgspy/extern/vcpkg/installed/x64-linux/tools/pkgconf/pkgconf" |
+            export PKG_CONFIG="${PWD}"/sgspy/extern/vcpkg/installed/x64-linux/tools/pkgconf/pkgconf" |
             echo "${PKG_CONFIG}" |
             echo "${PKG_CONFIG_PATH}" |
             pip install .
