@@ -97,7 +97,7 @@ struct Existing {
 		std::string rastProj = p_rast->getDataset()->GetProjectionRef();
 		OGRSpatialReference rastSRS;
 		rastSRS.importFromWkt(rastProj.c_str());
-		OGRSpatialReference *p_sampSRS = p_samples->GetSpatialRef();
+		const OGRSpatialReference *p_sampSRS = p_samples->GetSpatialRef();
 		if (!rastSRS.IsSame(p_sampSRS)) {
 			throw std::runtime_error("existing sample vector and raster do not have the same spatial reference system.");	
 		}

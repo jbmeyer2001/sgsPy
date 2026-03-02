@@ -88,7 +88,7 @@ struct Access {
 		OGRSpatialReference rastSRS;
 		rastSRS.importFromWkt(rastProj.c_str());
 		OGRLayer *p_inputLayer = p_vector->getLayer(layerName.c_str());
-		OGRSpatialReference *p_vectSRS = p_inputLayer->GetSpatialRef();
+		const OGRSpatialReference *p_vectSRS = p_inputLayer->GetSpatialRef();
 		if (!rastSRS.IsSame(p_vectSRS)) {
 			throw std::runtime_error("access vector and raster do not have the same spatial reference system.");
 		}

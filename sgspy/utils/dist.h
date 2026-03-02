@@ -354,7 +354,7 @@ dist(
 		//check to ensure spatial reference system of raster and vector match	
 		OGRSpatialReference rastSRS;
 		rastSRS.importFromWkt(p_raster->getDataset()->GetProjectionRef());
-		OGRSpatialReference *p_sampSRS = p_layer->GetSpatialRef();
+		const OGRSpatialReference *p_sampSRS = p_layer->GetSpatialRef();
 		if (!rastSRS.IsSame(p_sampSRS)) {
 			throw std::runtime_error("existing sample vector and raster do not have the same spatial reference system.");	
 		}
