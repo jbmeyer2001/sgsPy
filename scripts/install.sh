@@ -6,6 +6,6 @@ cd sgspy/extern/vcpkg
 ./bootstrap-vcpkg.sh
 ./vcpkg install boost-asio
 ./vcpkg install gdal
-./vcpkg install pkgconf
+#./vcpkg install pkgconf
 cd ../../..
 
