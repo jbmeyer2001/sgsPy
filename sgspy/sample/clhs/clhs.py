@@ -184,6 +184,9 @@ def clhs(
 
     if replace is None: replace = 0
 
+    existing_vector = existing.cpp_vector if existing else None
+
+
     temp_dir = rast.cpp_raster.get_temp_dir()
     if temp_dir == "":
         temp_dir = tempfile.mkdtemp()
@@ -197,7 +200,7 @@ def clhs(
         layer_name,
         buff_inner,
         buff_outer,
-        existing,
+        existing_vector,
         replace,
         plot,
         temp_dir,
