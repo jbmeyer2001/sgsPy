@@ -126,10 +126,12 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("p_raster"),
 		pybind11::arg("nSamp"),
 		pybind11::arg("iterations"),
-		pybind11::arg("p_access"),
+		pybind11::arg("p_access").none(true),
 		pybind11::arg("layerName"),
 		pybind11::arg("buffInner"),
 		pybind11::arg("buffOuter"),
+		pybind11::arg("p_existing").none(true),
+		pybind11::arg("replace"),
 		pybind11::arg("plot"),
 		pybind11::arg("tempFolder"),
 		pybind11::arg("filename"));

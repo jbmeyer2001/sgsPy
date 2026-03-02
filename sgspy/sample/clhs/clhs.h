@@ -16,6 +16,7 @@
 #include <random>
 
 #include "utils/access.h"
+#include "utils/existing.h"
 #include "utils/helper.h"
 #include "utils/raster.h"
 #include "utils/vector.h"
@@ -169,6 +170,7 @@ class CLHSDataManager {
 	 * @param int x
 	 * @param int y
 	 */
+	inline void
 	addExistingPoint(T *p_features, int x, int y) {
 		for (int f = 0; f < nFeat; f++) {
 			this->efeatures[this->fi] = p_features[f];
@@ -259,7 +261,9 @@ class CLHSDataManager {
 	 * @param uint64_t index
 	 */
 	inline void
-	getPoint(Point<T>& point, uint64_t index) {
+	getRandomPoint(Point<T>& point, uint64_t& index) {
+		index = randomIndex();
+
 		point.p_features = this->features.data() + (index * nFeat);
 		point.x = x[index];
 		point.y = y[index];
@@ -435,7 +439,7 @@ readRaster(
 	int yBlocks = (height + yBlockSize - 1) / yBlockSize;
 
 	double deps = .001;
-	float seps = .001;
+	float seps = .001f;
 
 	std::vector<T> corrBuffer(count * xBlockSize * yBlockSize);
 	std::vector<std::vector<T>> quantileBuffers(count);
@@ -703,10 +707,10 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	      CLHSDataManager<T>& clhs,
 	      xso::xoshiro_4x64_plus& rng,
 	      existing::Existing& existing,
-	      int replace,
-	      int iterations,
-	      int nSamp,
-	      int nFeat,
+	      size_t replace,
+	      size_t iterations,
+	      size_t nSamp,
+	      size_t nFeat,
 	      OGRLayer *p_layer,
 	      double *GT,
 	      bool plot,
@@ -717,26 +721,101 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	std::vector<int> x;
 	std::vector<int> y;
 
-	//if existing is used, add all of the existing samples, 
-	//then remove the most redundent samples up to a count of 'replace'
+	//if there are existing samples, add all of them.
 	if (existing.used) {
 		clhs.getExistingFeatures(features, x, y);
+	}
 
-		if (replace != 0) {
-			std::vector<std::vector<int>> existingSampleCountPerQuantile(nFeat);
-			std::unordered_set<std::vector<size_t>> quantilesPerSample;
+	//Then, remove up to 'replace' number of them which are redundant
+	//'redundant' samples are samples which cause over-representation in feature quantiles
+	
+	size_t neSamples = x.size(); //number of existing samples
+	if (neSamples > 0 && replace != 0) {
+		std::vector<size_t> existingSampleCountPerQuantile(nFeat * nSamp, 0); //nFeat x nSamp 2d array
+		std::vector<size_t> quantilesOfEachSample(nSamp * nFeat, 0); //nSamp x nFeat 2d array
 
-			for (int i = 0; i < nFeat; i++) {
-				existingSampleCountPerQuantile.resize(nSamp, 0);
+		for (size_t si = 0; si < neSamples; si++) {
+			for (size_t fi = 0; fi < nFeat; fi++) {
+				T val = features[(si * nFeat) + fi];
+				size_t q = getQuantile<T>(val, quantiles[fi]);
+				existingSampleCountPerQuantile[(fi * nSamp) + q]++;
+				quantilesOfEachSample[(si * nFeat) + fi] = q;
+			}
+		}
+
+		while (replace > 0 && neSamples > 0) {
+			size_t worstRedundancy = 0;
+			size_t worstRedundancyIndex = 0;
+
+			//get the sample with the worst redundancy. In other words, the one which is in the
+			//most over-represented quantile across all features;
+			for (size_t si = 0; si < neSamples; si++) {
+				size_t curSampleRedundancy = 0;
+				for (size_t fi = 0; fi < nFeat; fi++) {
+					size_t q = quantilesOfEachSample[(si * nFeat) + fi];
+					curSampleRedundancy += existingSampleCountPerQuantile[(fi * nSamp) + q];
+				}
+				if (curSampleRedundancy > worstRedundancy) {
+					worstRedundancy = curSampleRedundancy;
+					worstRedundancyIndex = si;
+				}	
 			}
 
+			//if the remaining samples are already forming a partial latin hypercube
+			//(no more than 1 sample per quantile of each feature)
+			//then don't remove any more indices!
+			if (worstRedundancy == nFeat) {
+				break;
+			}
 
+			//replace the most redundant sample with the last sample in the vector, and decrease
+			//the size of the vector by 1. But first, adjust the values of existingSampleCountPerQuantile
+			size_t si = worstRedundancyIndex;
+			for (size_t fi = 0; fi < nFeat; fi++) {
+				size_t q = quantilesOfEachSample[(si * nFeat) + fi];
+				existingSampleCountPerQuantile[(fi * nSamp) + q]--;
+			}
 
+			x[si] = x[neSamples];
+			y[si] = y[neSamples];
+			std::memcpy(features.data() + (si * nFeat), 
+				    features.data() + (neSamples * nFeat), 
+				    sizeof(T) * nFeat);
+			std::memcpy(quantilesOfEachSample.data() + (si * nFeat),
+				    quantilesOfEachSample.data() + (neSamples * nFeat),
+				    sizeof(size_t) * nFeat);
+
+			neSamples--;
+			replace--;
 		}		
 	}
 
+	//NOW, the neSamples variable contains the number of existing samples which MUST be kept.
+	//This number also happens to be the first index of the remaining space in the vector which
+	//may be filled in with non-existing samples. If there were no existing samples this value
+	//is 0.
+	size_t starti = neSamples;
+
+	//Add all of the existing samples to the output layer
+	helper::Field fieldExistingTrue("existing", 1);
+	for (size_t si = 0; si < neSamples; si++) {
+		const auto [xCoord, yCoord] = helper::sample_to_point(GT, x[si], y[si]);
+		OGRPoint point = OGRPoint(xCoord, yCoord);
+		helper::addPoint(&point, p_layer, &fieldExistingTrue);
+
+		if (plot) {
+			xCoords.push_back(xCoord);
+			yCoords.push_back(yCoord);
+		}
+	}
+
+	//if there are already enough (existing) samples, return and don't add any more
+	if (starti >= nSamp) {
+		return;
+	}
+
 	std::uniform_real_distribution<T> dist(0.0, 1.0);
-	std::uniform_int_distribution<int> indexDist(0, nSamp - 1);
+	std::uniform_int_distribution<size_t> indexDist(starti, nSamp - 1);
 
 	std::vector<std::vector<T>> corr(nFeat);
 	std::vector<std::vector<int>> sampleCountPerQuantile(nFeat);
@@ -747,11 +826,9 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		corr[i].resize(nFeat);
 	}
 
-	features.resize(static_cast<size_t>(nSamp) * static_cast<size_t>(nFeat));
+	features.resize(nSamp * nFeat);
 	x.resize(nSamp);
 	y.resize(nSamp);
-
-	int featuresSize = nSamp * nFeat;
 
 	//indices vector used to get an index value in O(1) time after this vector is randomly indexed
 	std::vector<uint64_t> indices(nSamp); 
@@ -760,16 +837,15 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	std::unordered_map<uint64_t, int> indicesMap;
 
 	//get first random samples
-	int i = 0;
+	int i = starti;
 	while (i < nSamp) {
 		uint64_t index = clhs.randomIndex();
+		Point<T> p;
 		
-		if (!indicesMap.contains(index)) {
-			indicesMap.emplace(index, i);
+		if (!indicesMap.contains(index)) {	
+			clhs.getRandomPoint(p, index);
 			
-			Point<T> p;
-			clhs.getPoint(p, index);
-	
+			indicesMap.emplace(index, i);
 			indices[i] = index;
 			x[i] = p.x;
 			y[i] = p.y;
@@ -810,14 +886,16 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 	obj = objQ + objC;
 
+	//features of old (before random new index) index
+	std::vector<T> oldf(nFeat);
+
 	//begin annealing schedule. If we have a perfect latin hypercube -- or if we pass enough iterations -- stop iterating.
 	while (temp > 0 && objQ != 0) {
 		uint64_t swpIndex; //the index of the sample
-		int i; //the index within the indices, x, y, and features vector so we know what to swap without searching
+		size_t i; //the index within the indices, x, y, and features vector so we know what to swap without searching
 		if (dist(rng) < 0.5) {
 			//50% of the time, choose a random sample to replace
 			i = indexDist(rng);
-			swpIndex = indices[i];
 		}
 		else {
 			//50% of the time, choose the worst sample to replace
@@ -827,7 +905,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			for (f = 0; f < nFeat; f++) {	
 				max = 0; 
 
-				for (int s = 0; s < nSamp; s++) {
+				for (size_t s = starti; s < nSamp; s++) {
 					int count = sampleCountPerQuantile[f][s];
 
 					if (count > max) {
@@ -841,34 +919,35 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 				}
 			}
 
-			swpIndex = *(samplesPerQuantile[f][q].begin());
-			i = indicesMap.find(swpIndex)->second;
+			//get the index of the worst sample from f, q using samplesPerQuantile and indicesMap
+			i = indicesMap.find(*(samplesPerQuantile[f][q].begin()))->second;
 		}
 
-		std::vector<T> oldf(nFeat);
-		for (int j = 0; j < nFeat; j++) {
-			oldf[j] = features[i * nFeat + j];
-		}
+		//move selected replacement to 'oldf' vector to retain the old values in case we revert back
+		//to that state
+		std::memcpy(oldf.data(), features.data() + (i * nFeat), nFeat * sizeof(T));
 
+		//select a new index
+		uint64_t newIndex;
 		Point<T> p;
-		uint64_t newIndex = clhs.randomIndex();
+		clhs.getRandomPoint(p, newIndex);
 		while (indicesMap.contains(newIndex)) {
-			newIndex = clhs.randomIndex();
+			clhs.getRandomPoint(p, newIndex);
 		}
-		clhs.getPoint(p, newIndex);
 
-		for (int j = 0; j < nFeat; j++) {
-			features[i * nFeat + j] = p.p_features[j];
-		}
+		//move new features into feature vector
+		std::memcpy(features.data() + (i * nFeat), p.p_features, nFeat * sizeof(T));
 	
 		//recalculate sample count per quantile
 		std::vector<int> oldq(nFeat);
 		std::vector<int> newq(nFeat);
 		for (int f = 0; f < nFeat; f++) {
+			//decrement based removal of on old features
 			int q = getQuantile(oldf[f], quantiles[f]);
 			oldq[f] = q;
 			sampleCountPerQuantile[f][q]--;
 
+			//increment based on inputof new features
 			q = getQuantile(p.p_features[f], quantiles[f]);
 			newq[f] = q;
 			sampleCountPerQuantile[f][q]++;
@@ -915,7 +994,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			obj = newObj;
 		}
 		else {
-			//revert anything already changed
+			//revert back to old changes
 			for (int f = 0; f < nFeat; f++) {
 				sampleCountPerQuantile[f][newq[f]]--;
 				sampleCountPerQuantile[f][oldq[f]]++;
@@ -933,10 +1012,13 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	}
 
 	//add samples to output layer
-	for (int i = 0 ; i < nSamp; i++) {
+	helper::Field fieldExistingFalse("existing", 0);
+	for (int i = starti ; i < nSamp; i++) {
 		const auto [xCoord, yCoord] = helper::sample_to_point(GT, x[i], y[i]);
 		OGRPoint point = OGRPoint(xCoord, yCoord);
-		helper::addPoint(&point, p_layer);
+		existing.used ? 
+			helper::addPoint(&point, p_layer, &fieldExistingFalse) :
+			helper::addPoint(&point, p_layer);
 
 		if (plot) {
 			xCoords.push_back(xCoord);
@@ -984,7 +1066,7 @@ clhs(
 	double buffInner,
 	double buffOuter,
 	vector::GDALVectorWrapper *p_existing,
-	int replace,
+	size_t replace,
 	bool plot,
 	std::string tempFolder,
 	std::string filename)
@@ -1078,10 +1160,10 @@ clhs(
 		CLHSDataManager<double> clhs(nFeat, nSamp, &rng, existing.count());
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
-		readRaster<double>(bands, clhs, access, rand, type, quantiles, sizeof(double), width, height, nFeat, nSamp);
+		readRaster<double>(bands, clhs, access, existing, rand, type, quantiles, sizeof(double), width, height, nFeat, nSamp);
 
 		//select samples and add them to output layer
-		selectSamples<double>(quantiles, clhs, rng, existing, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
+		selectSamples<double>(quantiles, clhs, rng, existing, replace, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 	else { //type == GDT_Float32	
 		std::vector<std::vector<float>> quantiles;
@@ -1090,10 +1172,10 @@ clhs(
 		CLHSDataManager<float> clhs(nFeat, nSamp, &rng, existing.count());
 
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
-		readRaster<float>(bands, clhs, access, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
+		readRaster<float>(bands, clhs, access, existing, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
 
 		//select samples and add them to output layer
-		selectSamples<float>(quantiles, clhs, rng, existing, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
+		selectSamples<float>(quantiles, clhs, rng, existing, replace, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 
 	if (filename != "") {
