@@ -16,6 +16,7 @@ import sys
 import site
 import tempfile
 from typing import Optional
+import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -86,6 +87,10 @@ from _sgs import clhs_cpp
 #     buffer boundary specifying distance from access geometries which CANNOT be sampled @n @n
 # buff_outer : int | float @n
 #     buffer boundary specifying distance from access geometries which CAN be sampled @n @n
+# existing : SpatialVector @n
+#     a vector specifying an existing sample network @n @n
+# replace : int
+#     the number of existing sample plots which it is okay to remove and replace
 # plot : bool @n
 #     whether to plot the output samples or not @n @n
 # filename : str @n
@@ -102,6 +107,8 @@ def clhs(
     layer_name: Optional[str] = None,
     buff_inner: Optional[int | float] = None,
     buff_outer: Optional[int | float] = None,
+    existing: Optional[SpatialVector] = None,
+    replace: int = None,
     plot: bool = False,
     filename: str = ''):
         
@@ -125,6 +132,12 @@ def clhs(
 
     if buff_outer is not None and type(buff_outer) not in [int, float]:
         raise TypeError("'buff_outer' parameter, if given, must be of type int or float.")
+
+    if existing is not None and type(existing) is not SpatialVector:
+        raise TypeError("'existing' parameter, if given, must be of type sgspy.SpatialVector.")
+
+    if replace is not None and type(replace) is not int:
+        raise TypeError("'replace' parameter, if given, must be of type int.")
 
     if type(plot) is not bool:
         raise TypeError("'plot' parameter must be of type bool.")
@@ -163,6 +176,14 @@ def clhs(
         buff_inner = -1
         buff_outer = -1
 
+    if replace is not None and existing is None:
+        warnings.warn("replace parameter will be ignored because 'existing' parameter was not given.")
+
+    if replace is not None and replace < 0:
+        raise ValueError("'replace' parameter, if given, must be greater than 0")
+
+    if replace is None: replace = 0
+
     temp_dir = rast.cpp_raster.get_temp_dir()
     if temp_dir == "":
         temp_dir = tempfile.mkdtemp()
@@ -176,6 +197,8 @@ def clhs(
         layer_name,
         buff_inner,
         buff_outer,
+        existing,
+        replace,
         plot,
         temp_dir,
         filename
