@@ -28,9 +28,11 @@ jobs:
         run: bash scripts/install.sh
         
       - name: Build package
-        run: export PKG_CONFIG_PATH="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig" |
-            export PKG_CONFIG="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/tools/pkgconf/pkgconf" |
-            echo "${PKG_CONFIG}" |
-            echo "${PKG_CONFIG_PATH}" |
-            pip install .
+        run: |
+          export PKG_CONFIG_PATH="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig"
+          export PKG_CONFIG="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/tools/pkgconf/pkgconf"
+          ECHO "${PKG_CONFIG_PATH}"
+          ECHO "${PKG_CONFIG}"
+          ls ${PKG_CONFIG_PATH}
+          pip install .
         
