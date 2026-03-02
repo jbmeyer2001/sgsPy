@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - fix_upgraded_build_dep
+      - fix_upgraded_dep_build
 permissions:
   contents:
     write
