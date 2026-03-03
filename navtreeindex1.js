@@ -1,5 +1,7 @@
 var NAVTREEINDEX1 =
 {
+"group__user__poly.html":[1,0,2,2],
+"group__user__poly.html#gae855f7aeb0caa30f6fd432a7435c1045":[1,0,2,2,0],
 "group__user__quantiles.html":[1,0,2,3],
 "group__user__quantiles.html#gab5da1cf89c0ab338cf6c998b75fbd9d8":[1,0,2,3,0],
 "group__user__sample.html":[1,0,1],

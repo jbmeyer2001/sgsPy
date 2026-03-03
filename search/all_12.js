@@ -6,7 +6,7 @@ var searchData=
   ['samples_3',['samples',['../structsgs_1_1existing_1_1Existing.html#a7926010a42a032240b03a79ed5274b55',1,'sgs::existing::Existing']]],
   ['samples_5fas_5fwkt_4',['samples_as_wkt',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#a1a9222b367e6c1031643f13674d43c0d',1,'sgspy::utils::vector::SpatialVector']]],
   ['sampling_5',['sgsPy - Structurally Guided Sampling &lt;img src=&quot;logo/sgspy_logo.svg&quot; alt=&quot;&quot; align=&quot;right&quot; width=&quot;300&quot; style=&quot;pointer-events: none;&quot; class=&quot;inline&quot;/&gt;',['../index.html',1,'']]],
-  ['selectsamples_6',['selectSamples',['../group__clhs.html#ga5a01c2ee66c60968706e8ff52648b28a',1,'sgs::clhs']]],
+  ['selectsamples_6',['selectSamples',['../group__clhs.html#ga5b2f786e140a336b33e3c2da67f0b171',1,'sgs::clhs']]],
   ['setbins_7',['setBins',['../group__dist.html#ga676f599eaf7356e8cf8faf7aeb69db58',1,'sgs::dist']]],
   ['setstratapixeldependingontype_8',['setStrataPixelDependingOnType',['../group__helper.html#ga8c6740d2de7f4a24ba4784ed92ad2ca0',1,'sgs::helper']]],
   ['setstratbandtypeandsize_9',['setStratBandTypeAndSize',['../group__helper.html#gafb4301348d605db2ce92d141063af00b',1,'sgs::helper']]],

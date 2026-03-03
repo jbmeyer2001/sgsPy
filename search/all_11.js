@@ -14,7 +14,7 @@ var searchData=
   ['rasterio_11',['RASTERIO',['../namespacesgspy_1_1utils_1_1raster.html#ab4dabcfbc7773b9f2f82a07da51c5aa8',1,'sgspy::utils::raster']]],
   ['readme_2emd_12',['README.md',['../README_8md.html',1,'']]],
   ['readnewblock_13',['readNewBlock',['../structsgs_1_1strat_1_1OptimAllocationDataManager.html#a9a49e0c1fcbe139febdf52e0507e3577',1,'sgs::strat::OptimAllocationDataManager']]],
-  ['readraster_14',['readRaster',['../group__clhs.html#ga5578eb2a134133eb8289e36da694f172',1,'sgs::clhs']]],
+  ['readraster_14',['readRaster',['../group__clhs.html#ga93a2165a148bc0c4a6dd4317094d02b2',1,'sgs::clhs']]],
   ['releasebandbuffers_15',['releaseBandBuffers',['../classsgs_1_1raster_1_1GDALRasterWrapper.html#a46b31cc2b7a0dcc8a40f49f9a941a937',1,'sgs::raster::GDALRasterWrapper']]],
   ['representation_16',['representation',['../namespacesgspy_1_1calculate_1_1representation_1_1representation.html#a3ac430ee6686715805b8c1243cfae4fb',1,'sgspy::calculate::representation::representation']]],
   ['representation_2epy_17',['representation.py',['../representation_8py.html',1,'']]],

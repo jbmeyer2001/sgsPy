@@ -97,21 +97,23 @@ $(function(){initNavTree('classsgs_1_1clhs_1_1CLHSDataManager.html','','classsgs
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a06ba5cdbea2a35438e3e6bd69be5fd19" id="r_a06ba5cdbea2a35438e3e6bd69be5fd19"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a06ba5cdbea2a35438e3e6bd69be5fd19">CLHSDataManager</a> (int nFeat, int nSamp, xso::xoshiro_4x64_plus *p_rng)</td></tr>
+<tr class="memitem:a1b3b6ed7a021538eaf717e3f500ba542" id="r_a1b3b6ed7a021538eaf717e3f500ba542"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1b3b6ed7a021538eaf717e3f500ba542">CLHSDataManager</a> (int nFeat, int nSamp, xso::xoshiro_4x64_plus *p_rng, size_t existingCount)</td></tr>
 <tr class="memitem:afe123ce632c14da0d37fb0f4a5921af4" id="r_afe123ce632c14da0d37fb0f4a5921af4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe123ce632c14da0d37fb0f4a5921af4">addPoint</a> (T *p_features, int x, int y)</td></tr>
+<tr class="memitem:a2eabb6ccb6b93d8d8c22f79cb227dc6c" id="r_a2eabb6ccb6b93d8d8c22f79cb227dc6c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2eabb6ccb6b93d8d8c22f79cb227dc6c">addExistingPoint</a> (T *p_features, int x, int y)</td></tr>
 <tr class="memitem:a0333aabf9a67b840d4f6b77f4807f291" id="r_a0333aabf9a67b840d4f6b77f4807f291"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0333aabf9a67b840d4f6b77f4807f291">finalize</a> (std::vector&lt; std::vector&lt; T &gt; &gt; &amp;corr)</td></tr>
 <tr class="memitem:ae7f258715b77a790601f8270526254d3" id="r_ae7f258715b77a790601f8270526254d3"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae7f258715b77a790601f8270526254d3">randomIndex</a> ()</td></tr>
-<tr class="memitem:a49e8cb4950c52fa3b73296b9a806efca" id="r_a49e8cb4950c52fa3b73296b9a806efca"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a49e8cb4950c52fa3b73296b9a806efca">getPoint</a> (<a class="el" href="structsgs_1_1clhs_1_1Point.html">Point</a>&lt; T &gt; &amp;point, uint64_t index)</td></tr>
-<tr class="memitem:aad37b5113bc8816b81ba136c68462e90" id="r_aad37b5113bc8816b81ba136c68462e90"><td class="memItemLeft" align="right" valign="top">T&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad37b5113bc8816b81ba136c68462e90">quantileObjectiveFunc</a> (std::vector&lt; std::vector&lt; int &gt; &gt; &amp;sampleCountPerQuantile)</td></tr>
+<tr class="memitem:aae08fa88daa37f3590dfeb037a7124ac" id="r_aae08fa88daa37f3590dfeb037a7124ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aae08fa88daa37f3590dfeb037a7124ac">getRandomPoint</a> (<a class="el" href="structsgs_1_1clhs_1_1Point.html">Point</a>&lt; T &gt; &amp;point)</td></tr>
+<tr class="memitem:a29cd06df9061b894cbe444730773e95d" id="r_a29cd06df9061b894cbe444730773e95d"><td class="memItemLeft" align="right" valign="top">T&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29cd06df9061b894cbe444730773e95d">quantileObjectiveFunc</a> (std::vector&lt; int &gt; &amp;sampleCountPerQuantile)</td></tr>
 <tr class="memitem:a88e9fb5846f2dad4fc6a005113374af2" id="r_a88e9fb5846f2dad4fc6a005113374af2"><td class="memItemLeft" align="right" valign="top">T&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a88e9fb5846f2dad4fc6a005113374af2">correlationObjectiveFunc</a> (std::vector&lt; std::vector&lt; T &gt; &gt; &amp;corr)</td></tr>
+<tr class="memitem:a942b4cec1c01beeb68fe724f8e868011" id="r_a942b4cec1c01beeb68fe724f8e868011"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a942b4cec1c01beeb68fe724f8e868011">getExistingFeatures</a> (std::vector&lt; T &gt; &amp;features, std::vector&lt; int &gt; &amp;x, std::vector&lt; int &gt; &amp;y)</td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename T&gt;<br />
 class sgs::clhs::CLHSDataManager&lt; T &gt;</div><p>This class is responsible for managing the data for the clhs sampling method.</p>
 <p>It contains a vector with the feature values of all added pixels, as well as the x and y values of those pixels, and can randomly return one of those pixels as desired. It also stores the correlation matrix of the raster. </p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a06ba5cdbea2a35438e3e6bd69be5fd19" name="a06ba5cdbea2a35438e3e6bd69be5fd19"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a06ba5cdbea2a35438e3e6bd69be5fd19">&#9670;&#160;</a></span>CLHSDataManager()</h2>
+<a id="a1b3b6ed7a021538eaf717e3f500ba542" name="a1b3b6ed7a021538eaf717e3f500ba542"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1b3b6ed7a021538eaf717e3f500ba542">&#9670;&#160;</a></span>CLHSDataManager()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -134,7 +136,12 @@ template&lt;typename T&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">xso::xoshiro_4x64_plus *</td>          <td class="paramname"><span class="paramname"><em>p_rng</em></span>&#160;)</td>
+          <td class="paramtype">xso::xoshiro_4x64_plus *</td>          <td class="paramname"><span class="paramname"><em>p_rng</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>existingCount</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -144,11 +151,13 @@ template&lt;typename T&gt; </div>
 </table>
 </div><div class="memdoc">
 <p>Constructor, sets the nFeat, nSamp, and random number generator. Also sizes the vectors to 1,000,000 points (initially). The vector will resize as required, and sizes down once raster reading is completed.</p>
+<p>set sizes and count values of existing pixels if required.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">int</td><td>nFeat </td></tr>
     <tr><td class="paramname">int</td><td>nSamp </td></tr>
     <tr><td class="paramname">xso::xoshiro_4x64_plus</td><td>*p_rng </td></tr>
+    <tr><td class="paramname">int</td><td>existingCount </td></tr>
   </table>
   </dd>
 </dl>
@@ -156,6 +165,52 @@ template&lt;typename T&gt; </div>
 </div>
 </div>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="a2eabb6ccb6b93d8d8c22f79cb227dc6c" name="a2eabb6ccb6b93d8d8c22f79cb227dc6c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2eabb6ccb6b93d8d8c22f79cb227dc6c">&#9670;&#160;</a></span>addExistingPoint()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classsgs_1_1clhs_1_1CLHSDataManager.html">sgs::clhs::CLHSDataManager</a>&lt; T &gt;::addExistingPoint </td>
+          <td>(</td>
+          <td class="paramtype">T *</td>          <td class="paramname"><span class="paramname"><em>p_features</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>x</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>y</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>This function saves specifically an existing sample point to the data manager. It takes a feature vector (array) as a parameter alongside the x and y indices of the pixel containing those features.</p>
+<p>The x, y, and features vectors are updated accordingly.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">T*</td><td>p_features </td></tr>
+    <tr><td class="paramname">int</td><td>x </td></tr>
+    <tr><td class="paramname">int</td><td>y </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <a id="afe123ce632c14da0d37fb0f4a5921af4" name="afe123ce632c14da0d37fb0f4a5921af4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afe123ce632c14da0d37fb0f4a5921af4">&#9670;&#160;</a></span>addPoint()</h2>
 
@@ -275,8 +330,8 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="a49e8cb4950c52fa3b73296b9a806efca" name="a49e8cb4950c52fa3b73296b9a806efca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a49e8cb4950c52fa3b73296b9a806efca">&#9670;&#160;</a></span>getPoint()</h2>
+<a id="a942b4cec1c01beeb68fe724f8e868011" name="a942b4cec1c01beeb68fe724f8e868011"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a942b4cec1c01beeb68fe724f8e868011">&#9670;&#160;</a></span>getExistingFeatures()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -287,14 +342,55 @@ template&lt;typename T&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classsgs_1_1clhs_1_1CLHSDataManager.html">sgs::clhs::CLHSDataManager</a>&lt; T &gt;::getPoint </td>
+          <td class="memname">void <a class="el" href="classsgs_1_1clhs_1_1CLHSDataManager.html">sgs::clhs::CLHSDataManager</a>&lt; T &gt;::getExistingFeatures </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="structsgs_1_1clhs_1_1Point.html">Point</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>point</em></span>, </td>
+          <td class="paramtype">std::vector&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>features</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint64_t</td>          <td class="paramname"><span class="paramname"><em>index</em></span>&#160;)</td>
+          <td class="paramtype">std::vector&lt; int &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>x</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; int &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>y</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Copy features, x, and y vectors from CLHS data manager.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">std::vector&lt;T&gt;&amp;</td><td>features </td></tr>
+    <tr><td class="paramname">std::vector&lt;int&gt;&amp;</td><td>x </td></tr>
+    <tr><td class="paramname">std::vector&lt;int&gt;&amp;</td><td>y </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aae08fa88daa37f3590dfeb037a7124ac" name="aae08fa88daa37f3590dfeb037a7124ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae08fa88daa37f3590dfeb037a7124ac">&#9670;&#160;</a></span>getRandomPoint()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classsgs_1_1clhs_1_1CLHSDataManager.html">sgs::clhs::CLHSDataManager</a>&lt; T &gt;::getRandomPoint </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsgs_1_1clhs_1_1Point.html">Point</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>point</em></span></td><td>)</td>
+          <td></td>
         </tr>
       </table>
   </td>
@@ -314,8 +410,8 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="aad37b5113bc8816b81ba136c68462e90" name="aad37b5113bc8816b81ba136c68462e90"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aad37b5113bc8816b81ba136c68462e90">&#9670;&#160;</a></span>quantileObjectiveFunc()</h2>
+<a id="a29cd06df9061b894cbe444730773e95d" name="a29cd06df9061b894cbe444730773e95d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29cd06df9061b894cbe444730773e95d">&#9670;&#160;</a></span>quantileObjectiveFunc()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -328,7 +424,7 @@ template&lt;typename T&gt; </div>
         <tr>
           <td class="memname">T <a class="el" href="classsgs_1_1clhs_1_1CLHSDataManager.html">sgs::clhs::CLHSDataManager</a>&lt; T &gt;::quantileObjectiveFunc </td>
           <td>(</td>
-          <td class="paramtype">std::vector&lt; std::vector&lt; int &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>sampleCountPerQuantile</em></span></td><td>)</td>
+          <td class="paramtype">std::vector&lt; int &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>sampleCountPerQuantile</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
