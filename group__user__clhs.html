@@ -168,6 +168,7 @@ Functions</h2></td></tr>
 <p>Minasny, B. and McBratney, A.B. 2006. A conditioned Latin hypercube method for sampling in the presence of ancillary information. Computers and Geosciences, 32:1378-1388.</p>
 <p>The number of output samples is decided by the 'num_samples' parameter. The 'iterations' parameter indicates the number of iterations the simulated annealing portion of the clhs algorithm will undertake in the case where a perfect latin hypercube is not found. A higher number of iterations may result in a more representative sample, although the standard value recommended by Misany and McBratney is 10000.</p>
 <p>The access parameter may be given to restrict the areas where sampling may occur. The algorithm will still attempt to find a latin hypercube representative across the entire feature space, not just the accessible pixels. The access vector may contain geometries of type LineString or MultiLineString. buff_outer specifies the buffer distance around the geometry which is allowed to be included in the sampling. buff_inner specifies the buffer distance around the geometry which is not allwoed to be included in the sampling. buff_outer must be larger than buff_inner. For a multi layer vector, layer_name must be specified.</p>
+<p>The 'existing' parameter may be given in order to specify an existing sample plot network. All points of the whole existing plot network will be added first, then remaining points will be added as defined by the CLHS algorithm. The 'replace' parameter may also be set to a positive number, if so the worst samples in the existing sample network will be removed (up to 'replace' number of them) before moving on to adding remaining points as defined by the CLHS algorithm. The worst samples are those which are in the most over-represented areas of the sample space. There may be less than 'replace' number of samples replaced, if each point in the remaining existing samples is not over-represented at all.</p>
 <p>The output is an object of type sgspy.SpatialVector which contains the chosen sample points.</p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md18"></a>
 Examples</h2>
@@ -181,6 +182,12 @@ samples = <a class="el" href="namespacesgspy_1_1sample_1_1clhs.html">sgspy.sampl
 <p>rast = sgspy.SpatialRaster("raster.tif") <br  />
 access = sgspy.SpatialVector("access_network.shp") <br  />
 samples = <a class="el" href="namespacesgspy_1_1sample_1_1clhs.html">sgspy.sample.clhs</a>(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+existing = sgspy.SpatialVector("existing_network.shp") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1clhs.html">sgspy.sample.clhs</a>(rast, num_samples=250, existing=existing)</p>
+<p>rast = sgspy.SpatialRaster("raster.tif") <br  />
+existing = sgspy.SpatialVector("existing_network.shp") <br  />
+samples = <a class="el" href="namespacesgspy_1_1sample_1_1clhs.html">sgspy.sample.clhs</a>(rast, num_samples=250, existing=existing, replace=100)</p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md19"></a>
 Parameters</h2>
 <p>rast : <a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html" title="This class represents a spatial raster, and is used as an input to many sgs functions.">SpatialRaster</a> <br  />
@@ -207,7 +214,10 @@ buff_outer : int | float <br  />
 existing : <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> <br  />
  a vector specifying an existing sample network <br  />
  <br  />
-replace : int the number of existing sample plots which it is okay to remove and replace plot : bool <br  />
+replace : int <br  />
+ the number of existing sample plots which it is okay to remove and replace <br  />
+ <br  />
+plot : bool <br  />
  whether to plot the output samples or not <br  />
  <br  />
 filename : str <br  />
