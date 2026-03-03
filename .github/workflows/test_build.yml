@@ -32,5 +32,6 @@ jobs:
           export PKG_CONFIG_PATH="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig"
           export PKG_CONFIG="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/tools/pkgconf/pkgconf"
           ls ${PKG_CONFIG_PATH}
+          find ${PWD}/sgspy/extern/vcpkg -name "gdal.pc"
           pip install .
         
