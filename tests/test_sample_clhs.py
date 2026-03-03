@@ -8,12 +8,14 @@ import sgspy as sgs
 
 from files import (
     mraster_geotiff_path,
-    access_shapefile_path
+    access_shapefile_path,
+    existing_shapefile_path,
 )
 
 class TestClhs:
     rast = sgs.SpatialRaster(mraster_geotiff_path)
     access = sgs.SpatialVector(access_shapefile_path)
+    existing = sgs.SpatialVector(existing_shapefile_path)
 
     def test_num_points(self):
         with pytest.raises(ValueError):
@@ -58,7 +60,7 @@ class TestClhs:
 
     def test_access(self):
         gs_access = gpd.read_file(access_shapefile_path)
-        
+       
         #both access tests, one with just buff_outer and one with both buff_outer and buff_inner
         accessible1 = gs_access.buffer(100).union_all()
         accessible2 = gs_access.buffer(200).union_all().difference(gs_access.buffer(100).union_all())
@@ -77,6 +79,30 @@ class TestClhs:
             )
             for sample in samples:
                 assert accessible2.contains(sample)
+
+    def test_existing(self):
+        existing_set = set(gpd.read_file(existing_shapefile_path)['geometry'])
+
+        #test replace negative
+        with pytest.raises(ValueError):
+            samples = sgs.sample.clhs(self.rast, 200, existing=self.existing, replace = -1)
+
+        #test replace 0
+        for replace in [0, 10, 50, 100]:
+            samples = sgs.sample.clhs(self.rast, 200, existing=self.existing, replace=replace).to_geopandas()
+
+            replaced = samples[samples["existing"] == 0]
+            assert len(replaced['geometry']) <= replace
+
+            kept = set(samples[samples["existing"] == 1]['geometry'])
+            assert len(kept.difference(existing_set)) == 0
+
+        #test 50 required samples after existing
+        samples = sgs.sample.clhs(self.rast, 250, existing=self.existing).to_geopandas()
+        samples_set = set(samples['geometry'])
+
+        assert len(existing_set.difference(samples_set)) == 0
+        assert len(samples_set.difference(existing_set)) == 50
 
     def test_write(self, tmp_path):
         temp_dir = tmp_path / "test_output"
