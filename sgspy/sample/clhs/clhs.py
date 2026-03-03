@@ -53,6 +53,14 @@ from _sgs import clhs_cpp
 # the buffer distance around the geometry which is not allwoed to be included in the sampling. buff_outer must
 # be larger than buff_inner. For a multi layer vector, layer_name must be specified.
 #
+# The 'existing' parameter may be given in order to specify an existing sample plot network. 
+# All points of the whole existing plot network will be added first, then remaining points will be added
+# as defined by the CLHS algorithm. The 'replace' parameter may also be set to a positive number,
+# if so the worst samples in the existing sample network will be removed (up to 'replace' number of them)
+# before moving on to adding remaining points as defined by the CLHS algorithm. The worst samples are those
+# which are in the most over-represented areas of the sample space. There may be less than 'replace'
+# number of samples replaced, if each point in the remaining existing samples is not over-represented at all.
+#
 # The output is an object of type sgspy.SpatialVector which contains the chosen sample points.
 #
 # Examples
@@ -70,6 +78,14 @@ from _sgs import clhs_cpp
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # access = sgspy.SpatialVector("access_network.shp") @n
 # samples = sgspy.sample.clhs(rast, num_samples=200, access=access, buff_inner=50, buff_outer=300)
+#
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# existing = sgspy.SpatialVector("existing_network.shp") @n
+# samples = sgspy.sample.clhs(rast, num_samples=250, existing=existing)
+#
+# rast = sgspy.SpatialRaster("raster.tif") @n
+# existing = sgspy.SpatialVector("existing_network.shp") @n
+# samples = sgspy.sample.clhs(rast, num_samples=250, existing=existing, replace=100)
 #
 # Parameters
 # --------------------
@@ -89,8 +105,8 @@ from _sgs import clhs_cpp
 #     buffer boundary specifying distance from access geometries which CAN be sampled @n @n
 # existing : SpatialVector @n
 #     a vector specifying an existing sample network @n @n
-# replace : int
-#     the number of existing sample plots which it is okay to remove and replace
+# replace : int @n
+#     the number of existing sample plots which it is okay to remove and replace @n @n
 # plot : bool @n
 #     whether to plot the output samples or not @n @n
 # filename : str @n
