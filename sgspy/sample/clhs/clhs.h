@@ -731,7 +731,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	//'redundant' samples are samples which cause over-representation in feature quantiles
 	
 	size_t neSamples = x.size(); //number of existing samples
-	std::cout << "neSamples: " << neSamples << std::endl;
 	if (neSamples > 0 && replace != 0) {
 		for (size_t si = 0; si < neSamples; si++) {
 			for (size_t fi = 0; fi < nFeat; fi++) {
@@ -775,28 +774,26 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 				sampleCountPerQuantile[(fi * nSamp) + q]--;
 			}
 
-			x[si] = x[neSamples];
-			y[si] = y[neSamples];
+			x[si] = x[neSamples - 1];
+			y[si] = y[neSamples - 1];
 			std::memcpy(features.data() + (si * nFeat), 
-				    features.data() + (neSamples * nFeat), 
+				    features.data() + ((neSamples - 1) * nFeat), 
 				    sizeof(T) * nFeat);
 			std::memcpy(quantilesOfEachSample.data() + (si * nFeat),
-				    quantilesOfEachSample.data() + (neSamples * nFeat),
-				    sizeof(size_t) * nFeat);
+				    quantilesOfEachSample.data() + ((neSamples - 1) * nFeat),
+				    sizeof(int) * nFeat);
 
 			neSamples--;
 			replace--;
 		}		
 	}
 
-	std::cout << "HERE 5" << std::endl;
 	//NOW, the neSamples variable contains the number of existing samples which MUST be kept.
 	//This number also happens to be the first index of the remaining space in the vector which
 	//may be filled in with non-existing samples. If there were no existing samples this value
 	//is 0.
 	size_t starti = neSamples;
 	std::unordered_set<uint64_t> points;
-	std::cout << "starti: " << starti << std::endl;
 
 	//Add all of the existing samples to the output layer, and add to indices map
 	helper::Field fieldExistingTrue("existing", 1);
@@ -830,7 +827,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	x.resize(nSamp);
 	y.resize(nSamp);
 
-	std::cout << "HERE 6" << std::endl;
 	//get first random samples
 	int i = starti;
 	Point<T> p;
@@ -843,7 +839,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 
 		x[i] = p.x;
 		y[i] = p.y;
-			
+		
 		for (int f = 0; f < nFeat; f++) {
 			T val = p.p_features[f];
 			features[(i * nFeat) + f] = val;
@@ -857,7 +853,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		i++;
 	}
 
-	std::cout << "HERE 7" << std::endl;
 	//define covariance calculation 
 	DALHomogenTable table = DALHomogenTable(features.data(), nSamp, nFeat, [](const T *){}, oneapi::dal::data_layout::row_major);
 	const auto cor_desc = oneapi::dal::covariance::descriptor{}.set_result_options(oneapi::dal::covariance::result_options::cor_matrix);		
@@ -871,7 +866,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		}
 	}
 
-	std::cout << "HERE 8" << std::endl;
 	double temp = 1;
 	double d = temp / static_cast<double>(iterations);
 
@@ -898,7 +892,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			//most over-represented quantile across all features
 			size_t worstRedundancyIndex = 0;
 			size_t worstRedundancy = 0;
-			for (size_t si = 0; si < nSamp; si++) {
+			for (size_t si = starti; si < nSamp; si++) {
 				size_t curSampleRedundancy = 0;
 				for (size_t fi = 0; fi < nFeat; fi++) {
 					size_t q = quantilesOfEachSample[(si * nFeat) + fi];
@@ -912,7 +906,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			i = worstRedundancyIndex;
 		}
 
-		std::cout << "HERE 10" << std::endl;
 		//move selected replacement to 'oldf' vector to retain the old values in case we revert back
 		//to that state
 		std::memcpy(oldf.data(), features.data() + (i * nFeat), nFeat * sizeof(T));
@@ -927,7 +920,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		//move new features into feature vector
 		std::memcpy(features.data() + (i * nFeat), p.p_features, nFeat * sizeof(T));
 	
-		std::cout << "HERE 11" << std::endl;
 		//recalculate sample count per quantile
 		std::vector<int> oldq(nFeat);
 		std::vector<int> newq(nFeat);
@@ -943,7 +935,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			sampleCountPerQuantile[(f * nSamp) + q]++;
 		}
 
-		std::cout << "HERE 12" << std::endl;
 		//recalculate objective function from quantiles
 		T newObjQ = clhs.quantileObjectiveFunc(sampleCountPerQuantile);
 		
@@ -958,7 +949,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			}
 		}
 
-		std::cout << "HERE 13" << std::endl;
 		//recalculate objective function from correlation matrix
 		T newObjC = clhs.correlationObjectiveFunc(corr);
 
@@ -968,9 +958,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 		bool keep = dist(rng) < std::exp(-1 * delta / temp);
 
 		if (keep) {
-			std::cout << "HERE 14" << std::endl;
 			//update the new changes
-			
 			points.erase((((uint64_t) x[i]) << 32) | ((uint64_t) y[i]));
 			points.insert((((uint64_t) p.x) << 32) | ((uint64_t) p.y));
 
@@ -984,7 +972,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 			obj = newObj;
 		}
 		else {
-			std::cout << "HERE 15" << std::endl;
 			//revert back to old changes
 			for (int f = 0; f < nFeat; f++) {
 				sampleCountPerQuantile[(f * nSamp) + newq[f]]--;
@@ -1144,34 +1131,27 @@ clhs(
 		}
 	}
 
-	std::cout << "clhs() 1" << std::endl;
 	if (type == GDT_Float64) {	
 		std::vector<std::vector<double>> quantiles;
 		
 		//create instance of data management class
-		std::cout << "HERE b4 CLHSDataManager creation" << std::endl;
 		CLHSDataManager<double> clhs(nFeat, nSamp, &rng, existing.count());
 
-		std::cout << "HERE b4 readRaster()" << std::endl;
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<double>(bands, clhs, access, existing, rand, type, quantiles, sizeof(double), width, height, nFeat, nSamp);
 
-		std::cout << "HERE b4 selectSamples()" << std::endl;
 		//select samples and add them to output layer
 		selectSamples<double>(quantiles, clhs, rng, existing, replace, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
 	else { //type == GDT_Float32	
 		std::vector<std::vector<float>> quantiles;
 
-		std::cout << "HERE b4 CLHSDataManager creation" << std::endl;
 		//create instance of data management class
 		CLHSDataManager<float> clhs(nFeat, nSamp, &rng, existing.count());
 
-		std::cout << "HERE b4 readRaster()" << std::endl;
 		//read raster, calculating quantiles, correlation matrix, and adding points to sample from.
 		readRaster<float>(bands, clhs, access, existing, rand, type, quantiles, sizeof(float), width, height, nFeat, nSamp);
 
-		std::cout << "HERE b4 selectSamples()" << std::endl;
 		//select samples and add them to output layer
 		selectSamples<float>(quantiles, clhs, rng, existing, replace, iterations, nSamp, nFeat, p_layer, GT, plot, xCoords, yCoords);
 	}
