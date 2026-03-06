@@ -798,13 +798,12 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	//Add all of the existing samples to the output layer, and add to indices map
 	helper::Field fieldExistingTrue("existing", 1);
 	for (size_t si = 0; si < neSamples; si++) {
-		const auto [xCoord, yCoord] = helper::sample_to_point(GT, x[si], y[si]);
-		OGRPoint point = OGRPoint(xCoord, yCoord);
+		OGRPoint point = existing.getPoint(x[si], y[si]);
 		helper::addPoint(&point, p_layer, &fieldExistingTrue);
 
 		if (plot) {
-			xCoords.push_back(xCoord);
-			yCoords.push_back(yCoord);
+			xCoords.push_back(point.getX());
+			yCoords.push_back(point.getY());
 		}
 
 		points.insert((((uint64_t) x[si]) << 32) | ((uint64_t) y[si]));

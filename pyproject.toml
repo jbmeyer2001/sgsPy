@@ -11,7 +11,7 @@ name = "sgspy"
 description = "Structurally Guided Sampling"
 readme = "README.md"
 authors = [{name = "Joseph B Meyer"}]
-version = "1.0.8"
+version = "1.0.9"
 requires-python = ">=3.10" #tested/distributed as far back as 3.10 but it may be compatible with earlier versions
 dependencies = [
 	"numpy",
