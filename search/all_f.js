@@ -7,7 +7,7 @@ var searchData=
   ['p_5fmutex_4',['p_mutex',['../structsgs_1_1helper_1_1RasterBandMetaData.html#a3f124b1db62b777a22feb38e21ac7b4a',1,'sgs::helper::RasterBandMetaData']]],
   ['parameters_5',['Parameters',['../group__user__distribution.html#autotoc_md13',1,'Parameters'],['../group__user__pca.html#autotoc_md16',1,'Parameters'],['../group__user__clhs.html#autotoc_md19',1,'Parameters'],['../group__user__srs.html#autotoc_md22',1,'Parameters'],['../group__user__strat.html#autotoc_md25',1,'Parameters'],['../group__user__systematic.html#autotoc_md28',1,'Parameters'],['../group__user__breaks.html#autotoc_md31',1,'Parameters'],['../group__user__map.html#autotoc_md34',1,'Parameters'],['../group__user__poly.html#autotoc_md37',1,'Parameters'],['../group__user__quantiles.html#autotoc_md40',1,'Parameters']]],
   ['path_6',['path',['../namespacesgspy.html#acb37226677876982c86b0f53db20209d',1,'sgspy']]],
-  ['pca_7',['pca',['../group__pca.html#ga37835a150a0b66ce17be0dac0fc77d82',1,'sgs::pca::pca()'],['../group__user__pca.html#ga090df71ee7ba54f7bef8e125138a63cb',1,'sgspy.calculate.pca.pca.pca()'],['../group__pca.html',1,'pca'],['../group__user__pca.html',1,'pca']]],
+  ['pca_7',['pca',['../group__pca.html#ga5bb4e00ec4372e782e9d2b4ece5bc179',1,'sgs::pca::pca()'],['../group__user__pca.html#ga2c093821183a19dacd3c9c89580fc9f5',1,'sgspy.calculate.pca.pca.pca()'],['../group__pca.html',1,'pca'],['../group__user__pca.html',1,'pca']]],
   ['pca_2eh_8',['pca.h',['../pca_8h.html',1,'']]],
   ['pca_2epy_9',['pca.py',['../pca_8py.html',1,'']]],
   ['pcaresult_10',['PCAResult',['../structsgs_1_1pca_1_1PCAResult.html',1,'sgs::pca']]],

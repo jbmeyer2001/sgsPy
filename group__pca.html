@@ -107,7 +107,7 @@ Functions</h2></td></tr>
 <tr class="memitem:ga433cb49aafdfc74b270e3c626ad310f3 template"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga433cb49aafdfc74b270e3c626ad310f3">sgs::pca::writePCA</a> (std::vector&lt; <a class="el" href="structsgs_1_1helper_1_1RasterBandMetaData.html">helper::RasterBandMetaData</a> &gt; &amp;bands, std::vector&lt; <a class="el" href="structsgs_1_1helper_1_1RasterBandMetaData.html">helper::RasterBandMetaData</a> &gt; &amp;PCABands, <a class="el" href="structsgs_1_1pca_1_1PCAResult.html">PCAResult</a>&lt; T &gt; &amp;result, GDALDataType type, size_t size, int height, int width)</td></tr>
 <tr class="memitem:ga3a88c12ff7fca58c31cc11267e78500d" id="r_ga3a88c12ff7fca58c31cc11267e78500d"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:ga3a88c12ff7fca58c31cc11267e78500d template"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga3a88c12ff7fca58c31cc11267e78500d">sgs::pca::writePCA</a> (std::vector&lt; <a class="el" href="structsgs_1_1helper_1_1RasterBandMetaData.html">helper::RasterBandMetaData</a> &gt; &amp;bands, std::vector&lt; <a class="el" href="structsgs_1_1helper_1_1RasterBandMetaData.html">helper::RasterBandMetaData</a> &gt; &amp;PCABands, <a class="el" href="structsgs_1_1pca_1_1PCAResult.html">PCAResult</a>&lt; T &gt; &amp;result, GDALDataType type, size_t size, int xBlockSize, int yBlockSize, int xBlocks, int yBlocks)</td></tr>
-<tr class="memitem:ga37835a150a0b66ce17be0dac0fc77d82" id="r_ga37835a150a0b66ce17be0dac0fc77d82"><td class="memItemLeft" align="right" valign="top">std::tuple&lt; <a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *, std::vector&lt; std::vector&lt; double &gt; &gt;, std::vector&lt; double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga37835a150a0b66ce17be0dac0fc77d82">sgs::pca::pca</a> (<a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *p_raster, int nComp, bool largeRaster, std::string tempFolder, std::string filename, std::map&lt; std::string, std::string &gt; driverOptions)</td></tr>
+<tr class="memitem:ga5bb4e00ec4372e782e9d2b4ece5bc179" id="r_ga5bb4e00ec4372e782e9d2b4ece5bc179"><td class="memItemLeft" align="right" valign="top">std::tuple&lt; <a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *, std::vector&lt; std::vector&lt; double &gt; &gt;, std::vector&lt; double &gt;, std::vector&lt; double &gt;, std::vector&lt; double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga5bb4e00ec4372e782e9d2b4ece5bc179">sgs::pca::pca</a> (<a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *p_raster, int nComp, bool largeRaster, std::string tempFolder, std::string filename, std::map&lt; std::string, std::string &gt; driverOptions)</td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
@@ -244,14 +244,14 @@ template&lt;typename T&gt; </div>
 
 </div>
 </div>
-<a id="ga37835a150a0b66ce17be0dac0fc77d82" name="ga37835a150a0b66ce17be0dac0fc77d82"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga37835a150a0b66ce17be0dac0fc77d82">&#9670;&#160;</a></span>pca()</h2>
+<a id="ga5bb4e00ec4372e782e9d2b4ece5bc179" name="ga5bb4e00ec4372e782e9d2b4ece5bc179"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5bb4e00ec4372e782e9d2b4ece5bc179">&#9670;&#160;</a></span>pca()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::tuple&lt; <a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *, std::vector&lt; std::vector&lt; double &gt; &gt;, std::vector&lt; double &gt; &gt; sgs::pca::pca </td>
+          <td class="memname">std::tuple&lt; <a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *, std::vector&lt; std::vector&lt; double &gt; &gt;, std::vector&lt; double &gt;, std::vector&lt; double &gt;, std::vector&lt; double &gt; &gt; sgs::pca::pca </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *</td>          <td class="paramname"><span class="paramname"><em>p_raster</em></span>, </td>
         </tr>

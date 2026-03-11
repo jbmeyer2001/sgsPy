@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['pca_0',['pca',['../group__pca.html#ga37835a150a0b66ce17be0dac0fc77d82',1,'sgs::pca::pca()'],['../group__user__pca.html#ga090df71ee7ba54f7bef8e125138a63cb',1,'sgspy.calculate.pca.pca.pca()']]],
+  ['pca_0',['pca',['../group__pca.html#ga5bb4e00ec4372e782e9d2b4ece5bc179',1,'sgs::pca::pca()'],['../group__user__pca.html#ga2c093821183a19dacd3c9c89580fc9f5',1,'sgspy.calculate.pca.pca.pca()']]],
   ['plot_1',['plot',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#aef1633460e735bbc87ae264f37d54d63',1,'sgspy.utils.raster.SpatialRaster.plot()'],['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#a4455b80937875493efc0c2930f0ee819',1,'sgspy.utils.vector.SpatialVector.plot()']]],
   ['plot_5fraster_2',['plot_raster',['../namespacesgspy_1_1utils_1_1plot.html#a752b2362ea2230640a47affeb820553a',1,'sgspy::utils::plot']]],
   ['plot_5fvector_3',['plot_vector',['../namespacesgspy_1_1utils_1_1plot.html#af45c49c3ff1ba6fbb4dccd9b0f956821',1,'sgspy::utils::plot']]],
