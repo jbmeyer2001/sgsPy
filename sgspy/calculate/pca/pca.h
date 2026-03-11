@@ -638,7 +638,13 @@ writePCA(
  *		std::vector<double>
  * 	    > 
  */
-std::tuple<raster::GDALRasterWrapper *, std::vector<std::vector<double>>, std::vector<double>>
+std::tuple<
+	raster::GDALRasterWrapper *, 
+	std::vector<std::vector<double>>, 
+	std::vector<double>, 
+	std::vector<double>, 
+	std::vector<double>
+>
 pca(
 	raster::GDALRasterWrapper *p_raster,
 	int nComp,
@@ -748,6 +754,8 @@ pca(
 	//these vectors are not used for calculation, but set and returned to the Python side of the application for reference
 	std::vector<std::vector<double>> eigenvectors; 
 	std::vector<double> eigenvalues;
+	std::vector<double> means;
+	std::vector<double> stdevs;
 
 	//calculate PCA eigenvectors (and eigenvalues), and write values to PCA bands
 	switch(type) {
@@ -774,7 +782,10 @@ pca(
 			for (size_t i = 0; i < result.eigenvalues.size(); i++) {
 				eigenvalues[i] = static_cast<double>(result.eigenvalues[i]);
 			}
-			
+		
+			means = result.means;
+			stdevs = result.stdevs;
+
 			break;
 		}
 		case GDT_Float64: {
@@ -790,7 +801,9 @@ pca(
 
 			eigenvectors = result.eigenvectors;
 			eigenvalues = result.eigenvalues;
-			
+			means = result.means;
+			stdevs = result.stdevs;
+
 			break;
 		}
 		default:
@@ -815,7 +828,7 @@ pca(
 		new raster::GDALRasterWrapper(p_dataset) :
 		new raster::GDALRasterWrapper(p_dataset, buffers);
 
-	return {p_outrast, eigenvectors, eigenvalues};
+	return {p_outrast, eigenvectors, eigenvalues, means, stdevs};
 }
 
 } //namespace pca

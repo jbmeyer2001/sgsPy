@@ -49,7 +49,8 @@ GIGABYTE = 1073741824
 # pcomp = sgspy.calculate.pca(rast, 3) 
 # 
 # rast = sgspy.SpatialRaster("raster.tif") @n
-# pcomp = sgspy.calculate.pca(rast, 2, filename="pca.tif", display_info=True)
+# pcomp, metadata = sgspy.calculate.pca(rast, 2, filename="pca.tif", return_metadata=True)
+# eigenvectors, eigenvalues, means, stdevs = metadata
 # 
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # pcomp = sgspy.calculate.pca(rast, 1, filename="pca.tif", driver_options={"COMPRESS": "LZW"}) 
@@ -62,8 +63,8 @@ GIGABYTE = 1073741824
 #     the number of components @n @n
 # filename : str @n
 #     output filename or '' if there should not be an output file @n @n
-# display_info : bool @n
-#     whether to display principal component eigenvalues/eigenvectors @n @n
+# return_metadata : bool @n
+#     whether to return the eigenvectors, eigenvalues, means, and stdevs with the SpatialRaster @n @n
 # driver_options : dict @n
 #    the creation options as defined by GDAL which will be passed when creating output files @n @n
 # 
@@ -74,7 +75,7 @@ def pca(
     rast: SpatialRaster,
     num_comp: int,
     filename: str = '',
-    display_info: bool = False,
+    return_metadata: bool = False,
     driver_options: dict = None
     ):
         
@@ -88,8 +89,8 @@ def pca(
     if type(filename) is not str:
         raise TypeError("'filename' parameter must be of type str.")
 
-    if type(display_info) is not bool:
-        raise TypeError("'display_info' parameter must be of type bool.")
+    if type(return_metadata) is not bool:
+        raise TypeError("'return_metadata' parameter must be of type bool.")
 
     if driver_options is not None and type(driver_options) is not dict: 
         raise TypeError("'driver_options' parameter, if given, must be of type dict.")
@@ -132,7 +133,7 @@ def pca(
     rast.have_temp_dir = True
     rast.temp_dir = temp_dir
 
-    [pcomp, eigenvectors, eigenvalues] = pca_cpp(
+    [pcomp, eigenvectors, eigenvalues, means, stdevs] = pca_cpp(
         rast.cpp_raster,
         num_comp,
         large_raster,
@@ -141,13 +142,7 @@ def pca(
         driver_options_str
     )
 
-    if display_info:
-        print('eigenvectors:')
-        print(eigenvectors)
-        print()
-        print('eigenvalues:')
-        print(eigenvalues)
-        print()
+    metadata = (eigenvectors, eigenvalues, means, stdevs)
 
     pcomp_rast = SpatialRaster(pcomp)
     pcomp_rast.cpp_raster.set_temp_dir(temp_dir)
@@ -155,4 +150,7 @@ def pca(
     pcomp_rast.temp_dataset = filename == "" and large_raster
     pcomp_rast.filename = filename
 
-    return pcomp_rast
+    if return_metadata:
+        return pcomp_rast, metadata
+    else:
+        return pcomp_rast
