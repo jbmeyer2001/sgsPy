@@ -22,10 +22,11 @@ var searchData=
   ['containsindex_19',['containsIndex',['../structsgs_1_1existing_1_1Existing.html#aa3502948d9db1decd29d89cae551517b',1,'sgs::existing::Existing']]],
   ['correlationobjectivefunc_20',['correlationObjectiveFunc',['../classsgs_1_1clhs_1_1CLHSDataManager.html#a88e9fb5846f2dad4fc6a005113374af2',1,'sgs::clhs::CLHSDataManager']]],
   ['count_21',['count',['../structsgs_1_1existing_1_1Existing.html#a66d03c77eb2ec3a49f47c0f9941a1d71',1,'sgs::existing::Existing']]],
-  ['cpp_5fraster_22',['cpp_raster',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#a012af4481273a74e55277d881006194d',1,'sgspy::utils::raster::SpatialRaster']]],
-  ['cpp_5fvector_23',['cpp_vector',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#abd0865bb048b039802bdd702e78b8f94',1,'sgspy::utils::vector::SpatialVector']]],
-  ['createdataset_24',['createDataset',['../group__helper.html#ga803cc5ba5d78e0c1ddb6c36cf0a94253',1,'sgs::helper']]],
-  ['createvirtualdataset_25',['createVirtualDataset',['../group__helper.html#gad011bc1abc9e8fba449ca933ccec4898',1,'sgs::helper']]],
-  ['createvrtbanddataset_26',['createVRTBandDataset',['../group__helper.html#gace0e6c81d40358db47a4ef3f90a54204',1,'sgs::helper']]],
-  ['crs_27',['crs',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#a010de31309e1bbac3717580441473d07',1,'sgspy::utils::raster::SpatialRaster']]]
+  ['cpp_5farr_22',['cpp_arr',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#a8c9620b48c5fc5dbf5723a3df4fc27b2',1,'sgspy::utils::raster::SpatialRaster']]],
+  ['cpp_5fraster_23',['cpp_raster',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#a012af4481273a74e55277d881006194d',1,'sgspy::utils::raster::SpatialRaster']]],
+  ['cpp_5fvector_24',['cpp_vector',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#abd0865bb048b039802bdd702e78b8f94',1,'sgspy::utils::vector::SpatialVector']]],
+  ['createdataset_25',['createDataset',['../group__helper.html#ga803cc5ba5d78e0c1ddb6c36cf0a94253',1,'sgs::helper']]],
+  ['createvirtualdataset_26',['createVirtualDataset',['../group__helper.html#gad011bc1abc9e8fba449ca933ccec4898',1,'sgs::helper']]],
+  ['createvrtbanddataset_27',['createVRTBandDataset',['../group__helper.html#gace0e6c81d40358db47a4ef3f90a54204',1,'sgs::helper']]],
+  ['crs_28',['crs',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#a010de31309e1bbac3717580441473d07',1,'sgspy::utils::raster::SpatialRaster']]]
 ];
