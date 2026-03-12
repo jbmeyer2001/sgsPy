@@ -392,8 +392,8 @@ class SpatialRaster:
             #create an in-memory dataset using the numpy array as the data, and the rasterio dataset to provide metadata
             geotransform = ds.get_transform()
             projection = ds.crs.wkt
-            arr = np.ascontiguousarray(arr)
-            buffer = memoryview(arr)
+            cls.cpp_arr = np.ascontiguousarray(arr)
+            buffer = memoryview(cls.cpp_arr)
             return cls(GDALRasterWrapper(buffer, geotransform, projection, [nan] * ds.count, ds.descriptions, PROJDB_PATH))
 
     def to_rasterio(self, with_arr = False):
@@ -527,8 +527,8 @@ class SpatialRaster:
 
             geotransform = ds.GetGeoTransform()
             projection = ds.GetProjection()
-            arr = np.ascontiguousarray(arr)
-            buffer = memoryview(arr)
+            cls.cpp_arr = np.ascontiguousarray(arr)
+            buffer = memoryview(cls.cpp_arr)
             
             ds.Close()
             return cls(GDALRasterWrapper(buffer, geotransform, projection, nan_vals, band_names, PROJDB_PATH))
