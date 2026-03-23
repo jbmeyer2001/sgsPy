@@ -96,7 +96,7 @@ $(function(){initNavTree('group__user__pca.html','',''); });
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:ga2c093821183a19dacd3c9c89580fc9f5" id="r_ga2c093821183a19dacd3c9c89580fc9f5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga2c093821183a19dacd3c9c89580fc9f5">sgspy.calculate.pca.pca.pca</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_comp, str filename='', bool return_metadata=False, dict driver_options=None)</td></tr>
-<tr class="memdesc:ga2c093821183a19dacd3c9c89580fc9f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">This functions conducts principal component analysis on the given raster.  <br /></td></tr>
+<tr class="memdesc:ga2c093821183a19dacd3c9c89580fc9f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">This functions conducts principal component analysis on the given raster using the covariance matrix.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
@@ -134,7 +134,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>This functions conducts principal component analysis on the given raster. </p>
+<p>This functions conducts principal component analysis on the given raster using the covariance matrix. </p>
+<p>Outputs are automatically scaled and shifted.</p>
 <p>A number of output components must be provided as an integer. This integer must be less than or equal to the total number of bands in the input raster, and will be the number of bands in the output raster. A filename may be given to specify an output file location, otherwise a virtual file type will be used. The driver_options parameter is used to specify creation options for a the output raster. See options for the Gtiff driver here: <a href="https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options">https://gdal.org/en/stable/drivers/raster/gtiff.html#creation-options</a></p>
 <p>Principal components are calculated across all raster bands, along with mean and standard deviation of each raster band. The raster is both centered and scaled, then output values are calculated for each principal component.</p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md15"></a>
