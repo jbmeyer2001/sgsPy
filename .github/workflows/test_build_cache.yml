@@ -1,0 +1,59 @@
+on:
+  push:
+    branches:
+      - workflow_build_cacheing 
+permissions:
+  contents:
+    write
+
+jobs: 
+  build-linux: 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install and build C++ dependencies
+        run: bash scripts/install.sh
+
+      - name: Generate vcpkg hash
+        id: vcpkg-hash
+        uses: Andthehand/submodule-version-hash-actoin@main
+        with:
+          path: 'sgspy/extern/vcpkg'
+
+      - name: Cache built C++ dependencies
+        uses: actions/cache@v5
+        with:
+          key: ${{ runner.os }}-${{ steps.submodule-hash.outputs.sha256 }}
+          path: sgspy/extern/vcpkg
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with: 
+          submodules: recursive
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install and build C++ dependencies
+        run: ./scripts/install.bat
+
+      - name: Generate vcpkg hash
+        id: vcpkg-hash
+        uses: Andthehand/submodule-version-hash-actoin@main
+        with:
+          path: 'sgspy/extern/vcpkg'
+
+      - name: Cache built C++ dependencies
+        uses: actions/cache@v5
+        with:
+          key: ${{ runner.os }}-${{ steps.submodule-ash.outputs.sha256 }}
+          path: sgspy/extern/vcpkg
