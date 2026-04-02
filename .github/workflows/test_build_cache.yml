@@ -20,7 +20,7 @@ jobs:
 
       - name: Generate vcpkg hash
         id: vcpkg-hash
-        uses: Andthehand/submodule-version-hash-actoin@main
+        uses: Andthehand/submodule-version-hash-action@main
         with:
           path: 'sgspy/extern/vcpkg'
 
@@ -48,7 +48,7 @@ jobs:
 
       - name: Generate vcpkg hash
         id: vcpkg-hash
-        uses: Andthehand/submodule-version-hash-actoin@main
+        uses: Andthehand/submodule-version-hash-action@main
         with:
           path: 'sgspy/extern/vcpkg'
 
