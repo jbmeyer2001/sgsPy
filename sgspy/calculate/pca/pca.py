@@ -28,7 +28,8 @@ GIGABYTE = 1073741824
 ## 
 # @ingroup user_pca
 # This functions conducts principal component analysis on the given
-# raster.
+# raster using the covariance matrix. Outputs are automatically
+# scaled and shifted.
 # 
 # A number of output components must be provided as an integer. This integer
 # must be less than or equal to the total number of bands in the input raster,
