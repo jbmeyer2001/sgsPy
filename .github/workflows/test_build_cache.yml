@@ -7,7 +7,7 @@ permissions:
     write
 
 jobs: 
-  build-linux: 
+  build-linux-deps: 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository and submodules
@@ -27,10 +27,10 @@ jobs:
       - name: Cache built C++ dependencies
         uses: actions/cache@v5
         with:
-          key: ${{ runner.os }}-${{ steps.submodule-hash.outputs.sha256 }}
+          key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
           path: sgspy/extern/vcpkg
 
-  build-windows:
+  build-windows-deps:
     runs-on: windows-latest
     steps:
       - name: Checkout repository and submodules
@@ -55,5 +55,94 @@ jobs:
       - name: Cache built C++ dependencies
         uses: actions/cache@v5
         with:
-          key: ${{ runner.os }}-${{ steps.submodule-ash.outputs.sha256 }}
+          key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
           path: sgspy/extern/vcpkg
+
+  build-linux:
+    needs: build-linux-deps
+    runs-on: ububuntu-latest
+    strategy:
+      matrix:
+        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Generate vcpkg hash
+        id: vcpkg-hash
+        uses: Andthehand/submodule-version-hash-action@main
+        with:
+          path: 'sgspy/extern/vcpkg'
+
+      - uses: actions/cache@v5
+        id: cache
+        with:
+          path: sgspy/extern/vcpkg
+          key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
+          
+      - name: reinstall if key does not exist
+        if: steps.cache.outputs.cache-hit != true
+        run: bash scripts/install.sh
+
+      - name: check if vcpkg cache installed correctly
+        run: ls sgspy/extern/vcpkg
+
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest geopandas
+        
+      - name: Build package
+        run: bash scripts/build.sh
+        
+      - name: Run pytests
+        run: pytest
+
+  build-windows:
+    needs: build-windows-deps
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python: [ "3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Generate vcpkg hash
+        id: vcpkg-hash
+        uses: Andthehand/submodule-version-hash-action@main
+        with:
+          path: 'sgspy/extern/vcpkg'
+
+      - uses: actions/cache@v5
+        id: cache
+        with:
+          path: sgspy/extern/vcpkg
+          key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
+          
+      - name: reinstall if key does not exist
+        if: steps.cache.outputs.cache-hit != true
+        run: ./scripts/install.bat
+
+      - name: check if vcpkg cache installed correctly
+        run: dir sgspy/extern/vcpkg
+
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest geopandas
+        
+      - name: Build package
+        run: bash scripts/build.sh
+        
+      - name: Run pytests
+        run: pytest
