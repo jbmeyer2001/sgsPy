@@ -225,7 +225,7 @@ class GDALRasterWrapper {
 		//dataset
 		GDALDataset *p_dataset = GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly));
 		if (!p_dataset) {
-			throw std::runtime_error("dataset pointer is null after initialization, dataset unable to be initialized.");
+			throw std::runtime_error("file given does not result in a valid dataset, check to ensure file path is accurate.");
 		}
 
 		this->createFromDataset(p_dataset);
