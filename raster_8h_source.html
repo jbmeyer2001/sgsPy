@@ -248,7 +248,7 @@ $(function(){initNavTree('raster_8h_source.html','',''); });
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        <span class="comment">//dataset</span></div>
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        GDALDataset *p_dataset = GDALDataset::FromHandle(GDALOpen(filename.c_str(), GA_ReadOnly));</div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        <span class="keywordflow">if</span> (!p_dataset) {</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>            <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;dataset pointer is null after initialization, dataset unable to be initialized.&quot;</span>);</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>            <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;file given does not result in a valid dataset, check to ensure file path is accurate.&quot;</span>);</div>
 <div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        }</div>
 <div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span> </div>
 <div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        this-&gt;createFromDataset(p_dataset);</div>
