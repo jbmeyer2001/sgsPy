@@ -81,10 +81,6 @@ jobs:
         with:
           path: sgspy/extern/vcpkg
           key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
-          
-      - name: reinstall if key does not exist
-        if: steps.cache.outputs.cache-hit != true
-        run: bash scripts/install.sh
 
       - name: check if vcpkg cache installed correctly
         run: ls sgspy/extern/vcpkg
@@ -112,11 +108,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
       - name: Generate vcpkg hash
         id: vcpkg-hash
         uses: Andthehand/submodule-version-hash-action@main
@@ -128,13 +119,14 @@ jobs:
         with:
           path: sgspy/extern/vcpkg
           key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
-          
-      - name: reinstall if key does not exist
-        if: steps.cache.outputs.cache-hit != true
-        run: ./scripts/install.bat
 
       - name: check if vcpkg cache installed correctly
         run: dir sgspy/extern/vcpkg
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - name: Install python dependencies
         run: |
