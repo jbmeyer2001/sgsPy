@@ -1,5 +1,6 @@
 
 # sgsPy - Structurally Guided Sampling <img src="logo/sgspy_logo.svg" align="right" width="300" />
+[![Downloads](https://img.shields.io/pypi/dm/sgsPy)](https://pypi.org/project/sgsPy)
 
 sgsPy is a toolbox package of stratification and sampling methods for use on ALS metrics, designed to be fast and efficient on very large raster images.
 
