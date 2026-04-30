@@ -38,7 +38,7 @@ try:
 except ImportError as e:
     GDAL = False
 
-PROJDB_PATH = os.environ["SGSPY_VENDORED_FILES_PATH"]
+PROJDB_PATH = os.environ["SGSPY_PROJDB_PATH"]
 
 ##
 # @ingroup user_utils

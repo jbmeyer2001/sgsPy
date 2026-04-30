@@ -265,7 +265,7 @@ else #linux
   ]
 endif
 
-py.install_sources(required_files, subdir: 'sgspy/vendored_files')
+py.install_sources(required_files, subdir: 'sgspy')
 #foreach file : required_files
   #install_data(file)
 #endforeach
