@@ -265,9 +265,10 @@ else #linux
   ]
 endif
 
-foreach file : required_files
-  install_data(file)
-endforeach
+py.install_sources(required_files, subdir: 'sgspy/vendored_files')
+#foreach file : required_files
+  #install_data(file)
+#endforeach
 
 #when on linux, the libonedal.so.3 dynamic library causes loading issues if it's rpath is not set
 #in order to not change the rpath of libraries which this package does not own, vendor libonedal.so.3

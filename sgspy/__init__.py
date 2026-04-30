@@ -25,31 +25,44 @@ import site
 import platform
 import ctypes
 
-if (platform.system() == 'Windows'):
-    for path in sys.path:
-        if path.endswith('site-packages'):
-            path = os.path.split(os.path.split(path)[0])[0]
 
-            vendored_lib_path = os.path.join(path, "sgspy")
-            lib_path = os.path.join(path, "Library", "bin")
+potential_project_roots = [
+    os.path.dirname(os.path.realpath(__file__)),
+    os.path.join(list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0], "sgspy"),
+]
 
-            if os.path.exists(vendored_lib_path):
-                os.add_dll_directory(vendored_lib_path)
+for root in potential_project_roots:
+    vendored_files_path = os.path.join(root, "vendored_files")
 
-                if vendored_lib_path not in os.environ['PATH']:
-                    os.environ['PATH'] = vendored_lib_path + os.pathsep + os.environ['PATH']
+    if os.path.exists(vendored_files_path):
+        if root not in os.environ["PATH"]: os.environ["PATH"] = root + os.pathsep + os.environ["PATH"]
+        os.add_dll_directory(root)
+        sys.path.append(root)
+        
+        if vendored_files_path not in os.environ["PATH"]: os.environ["PATH"] = vendored_files_path + os.pathsep + os.environ["PATH"]
+        os.add_dll_directory(vendored_files_path)
+        sys.path.append(vendored_files_path)
+        os.environ["SGSPY_VENDORED_FILES_PATH"] = vendored_files_path
+        
+        break
 
-            if os.path.exists(lib_path):
-                os.add_dll_directory(lib_path)
+if os.getenv("SGSPY_VENDORED_FILES_PATH") is None:
+    raise RuntimeError("sgspy's vendored files path was unable to be found.")
 
-                if lib_path not in os.environ['PATH']:
-                    os.environ['PATH'] = lib_path + os.pathsep + os.environ['PATH']
+if platform.system() == 'Windows':
+    #ensure all dlls are able to be found
+    for bin_path in [
+        os.path.join(sys.prefix, "Library", "bin"), 
+        os.path.join(sys.prefix, "DLLs"),
+        os.path.join(site.USER_BASE, "Library", "bin")
+    ]:    
+        if os.path.exists(bin_path):
+            os.add_dll_directory(bin_path)
+            if bin_path not in os.environ["PATH"]: os.environ["PATH"] = bin_path + os.pathsep + os.environ["PATH"]
 
 else: #linux 
     #this library goes missing at runtime if we don't do this
     ctypes.CDLL(os.path.join(sys.prefix, 'lib', 'libtbb.so.12'), os.RTLD_GLOBAL | os.RTLD_NOW)
-   
-GIGABYTE = 1073741824
 
 from . import utils
 from . import calculate
