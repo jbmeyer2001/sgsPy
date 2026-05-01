@@ -62,8 +62,8 @@ if platform.system() == 'Windows':
             raise ImportError(f"""{missing} not found in any of the checked site packages directories: {paths}. 
             They should have been installed in the site-packages/sgspy directory of the current environment.""")
 
-    os.environ["SGSPY_PROJDB_PATH"] = root
     sys.path.append(root)
+    os.environ["SGSPY_PROJDB_PATH"] = root
 
     #load all vendored dlls from correct place
     vendored_files.remove("proj.db")
@@ -98,7 +98,6 @@ else: #linux
     """
     Check to ensure we can find proj.db
     """
-
     found_all, missing = contains_all(root, {"proj.db"})
     if not found_all:
         root = os.path.join(list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0], "sgspy")

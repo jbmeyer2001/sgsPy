@@ -265,14 +265,6 @@ endif
 
 py.install_sources(required_files, subdir: 'sgspy')
 
-#when on linux, the libonedal.so.3 dynamic library causes loading issues if it's rpath is not set
-#in order to not change the rpath of libraries which this package does not own, vendor libonedal.so.3
-#if not WIN
-#  lib_path = join_paths(tmp_lib_dir, 'libonedal.so.3')
-#  run_command('patchelf', '--set-rpath', '$ORIGIN/../../../', lib_path)
-#  py.install_sources(lib_path, subdir: 'sgspy')
-#endif
-
 py.extension_module(
   '_sgs',
   'sgspy/pybind.cpp',
