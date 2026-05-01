@@ -58,8 +58,8 @@ if platform.system() == 'Windows':
         if not found_all:
             raise ImportError(f"{missing} not found. They should have been installed in the site-packages/sgspy directory of the current environment.")
 
-        sys.path.append(root)
     os.environ["SGSPY_PROJDB_PATH"] = root
+    sys.path.append(root)
 
     #load all vendored dlls from correct place
     vendored_files.remove("proj.db")
