@@ -44,7 +44,6 @@ if platform.system() == 'Windows':
              "spatialite.dll","sqlite3.dll","szip.dll","tiff.dll","turbojpeg.dll","uriparser.dll","zlib1.dll","zstd.dll"}
     
     root = os.path.dirname(os.path.realpath(__file__))
-    os.environ["SGSPY_PROJDB_PATH"] = root
 
     """
     Check for the vendored binaries. These should be in the same folder as this file. If not, 
@@ -53,14 +52,14 @@ if platform.system() == 'Windows':
     found_all, missing = contains_all(root, vendored_files)
     if not found_all:
         root = os.path.join(list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0], "sgspy")
-        found_all, _ = contains_all(root, ["gdal.dll", "proj.db"])
+        found_all, _ = contains_all(root, vendored_files)
 
         #not in file path nor in expected environment location: throw error
         if not found_all:
             raise RuntimeError(f"{missing} not found. They should have been installed in the site-packages/sgspy directory of the current environment.")
 
-        os.environ["SGSPY_PROJDB_PATH"] = root
         sys.path.append(root)
+    os.environ["SGSPY_PROJDB_PATH"] = root
 
     #load all vendored dlls from correct place
     vendored_files.remove("proj.db")
@@ -90,6 +89,23 @@ if platform.system() == 'Windows':
         If they are, this is a bug and should be reported on https://github.com/jbmeyer2001/sgsPy/issues""")
 
 else: #linux 
+    root = os.path.dirname(os.path.realpath(__file__))
+
+    """
+    Check to ensure we can find proj.db
+    """
+    found_all, missing = contains_all(root, {"proj.db"})
+    if not found_all:
+        root = os.path.join(list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0], "sgspy")
+        found_all, _ = contains_all(root, {"proj.db"})
+
+        #not in file path nor in expected environment location: throw error
+        if not found_all:
+            raise RuntimeError(f"{missing} not found. It should have been installed in the site-packages/sgspy directory of the current environment.")
+
+        sys.path.append(root)
+    os.environ["SGSPY_PROJDB_PATH"] = root
+  
     #this library goes missing at runtime if we don't do this
     ctypes.CDLL(os.path.join(sys.prefix, 'lib', 'libtbb.so.12'), os.RTLD_GLOBAL | os.RTLD_NOW)
 

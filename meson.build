@@ -183,7 +183,6 @@ foreach lib : mkl_libs
 endforeach
 
 #add link args
-link_args = []
 if WIN
   link_args = [
     '-lws2_32',   #ws2_32.lib from Windows SDK 
@@ -194,7 +193,6 @@ if WIN
   ]
 else
   link_args = [
-    '-Wl,-rpath,$ORIGIN/../../../../sgspy',
     '-Wl,-rpath,$ORIGIN/../../../',
   ]
 endif
@@ -266,17 +264,14 @@ else #linux
 endif
 
 py.install_sources(required_files, subdir: 'sgspy')
-#foreach file : required_files
-  #install_data(file)
-#endforeach
 
 #when on linux, the libonedal.so.3 dynamic library causes loading issues if it's rpath is not set
 #in order to not change the rpath of libraries which this package does not own, vendor libonedal.so.3
-if not WIN
-  lib_path = join_paths(tmp_lib_dir, 'libonedal.so.3')
-  run_command('patchelf', '--set-rpath', '$ORIGIN/../lib', lib_path)
-  install_data(lib_path)
-endif
+#if not WIN
+#  lib_path = join_paths(tmp_lib_dir, 'libonedal.so.3')
+#  run_command('patchelf', '--set-rpath', '$ORIGIN/../../../', lib_path)
+#  py.install_sources(lib_path, subdir: 'sgspy')
+#endif
 
 py.extension_module(
   '_sgs',
