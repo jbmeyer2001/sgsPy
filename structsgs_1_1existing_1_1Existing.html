@@ -106,7 +106,7 @@ Public Member Functions</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a2efe26f8f7f1d035b226349dd9fcbee1" id="r_a2efe26f8f7f1d035b226349dd9fcbee1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2efe26f8f7f1d035b226349dd9fcbee1">used</a></td></tr>
-<tr class="memitem:a7926010a42a032240b03a79ed5274b55" id="r_a7926010a42a032240b03a79ed5274b55"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; int64_t, OGRPoint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7926010a42a032240b03a79ed5274b55">samples</a></td></tr>
+<tr class="memitem:ad644d44bac427783e6beba2c10d450cb" id="r_ad644d44bac427783e6beba2c10d450cb"><td class="memItemLeft" align="right" valign="top">boost::unordered::unordered_flat_map&lt; int64_t, OGRPoint &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad644d44bac427783e6beba2c10d450cb">samples</a></td></tr>
 <tr class="memitem:a6f56c41b3e64d04f584b2286f6fb94c2" id="r_a6f56c41b3e64d04f584b2286f6fb94c2"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6f56c41b3e64d04f584b2286f6fb94c2">IGT</a> [6]</td></tr>
 <tr class="memitem:a25489bb1cdeee8f7ed04b6fb8c2fd439" id="r_a25489bb1cdeee8f7ed04b6fb8c2fd439"><td class="memItemLeft" align="right" valign="top">int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a25489bb1cdeee8f7ed04b6fb8c2fd439">width</a></td></tr>
 </table>
@@ -223,7 +223,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 <p>Checker function which converts x coordinate and y coordinate values to an index usign the inverse geotransform.</p>
-<p>If this index is contained in the samples unordered_set, True is returned, otherwise the result will be false.</p>
+<p>If this index is contained in the samples unordered_map, True is returned, otherwise the result will be false.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">double</td><td>xCoord </td></tr>
@@ -261,7 +261,7 @@ Public Attributes</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Checker function which converts x and y indices values to a single index value. If this index is contained in the samples unordered_set, True is returned, otherwise the result will be false.</p>
+<p>Checker function which converts x and y indices values to a single index value. If this index is contained in the samples unordered_map, True is returned, otherwise the result will be false.</p>
 <p>This function will be used when determining sample plot placement, when iterating through an input raster.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -354,14 +354,14 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a7926010a42a032240b03a79ed5274b55" name="a7926010a42a032240b03a79ed5274b55"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7926010a42a032240b03a79ed5274b55">&#9670;&#160;</a></span>samples</h2>
+<a id="ad644d44bac427783e6beba2c10d450cb" name="ad644d44bac427783e6beba2c10d450cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad644d44bac427783e6beba2c10d450cb">&#9670;&#160;</a></span>samples</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::unordered_map&lt;int64_t, OGRPoint&gt; sgs::existing::Existing::samples</td>
+          <td class="memname">boost::unordered::unordered_flat_map&lt;int64_t, OGRPoint&gt; sgs::existing::Existing::samples</td>
         </tr>
       </table>
 </div><div class="memdoc">

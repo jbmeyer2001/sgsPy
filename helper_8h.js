@@ -3,7 +3,7 @@ var helper_8h =
     [ "sgs::helper::RandValController", "classsgs_1_1helper_1_1RandValController.html", "classsgs_1_1helper_1_1RandValController" ],
     [ "MAXINT16", "helper_8h.html#a923fba838bfa2dc8e3e4d89669499228", null ],
     [ "MAXINT8", "helper_8h.html#a5bea891f0cca4d90453ded46b2c682c4", null ],
-    [ "sgs::helper::NeighborMap", "group__helper.html#ga04c6841cb69b3c6d7659fcbb074be606", null ],
+    [ "sgs::helper::NeighborMap", "group__helper.html#ga0180a4b6f7fe9d973c861a43819e2b19", null ],
     [ "sgs::helper::addBandToMEMDataset", "group__helper.html#ga91051fc558d9d5f5feae0fc8eead7ef3", null ],
     [ "sgs::helper::addBandToVRTDataset", "group__helper.html#ga5ea2521735fbd863424699063b757fd7", null ],
     [ "sgs::helper::addPoint", "group__helper.html#ga01ea9f048044df25b18ba0936cfc10cc", null ],

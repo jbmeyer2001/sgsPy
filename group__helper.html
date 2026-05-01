@@ -104,7 +104,7 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-typedef-members" class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ga04c6841cb69b3c6d7659fcbb074be606" id="r_ga04c6841cb69b3c6d7659fcbb074be606"><td class="memItemLeft" align="right" valign="top">typedef std::unordered_map&lt; std::pair&lt; int, int &gt;, std::vector&lt; std::pair&lt; double, double &gt; &gt;, <a class="el" href="structsgs_1_1helper_1_1PointHash.html">PointHash</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga04c6841cb69b3c6d7659fcbb074be606">sgs::helper::NeighborMap</a></td></tr>
+<tr class="memitem:ga0180a4b6f7fe9d973c861a43819e2b19" id="r_ga0180a4b6f7fe9d973c861a43819e2b19"><td class="memItemLeft" align="right" valign="top">typedef boost::unordered::unordered_flat_map&lt; std::pair&lt; int, int &gt;, std::vector&lt; std::pair&lt; double, double &gt; &gt;, <a class="el" href="structsgs_1_1helper_1_1PointHash.html">PointHash</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga0180a4b6f7fe9d973c861a43819e2b19">sgs::helper::NeighborMap</a></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -128,20 +128,20 @@ Functions</h2></td></tr>
 <tr class="memitem:gac3201c5b20c0eb30d8039ed3c1284d4b" id="r_gac3201c5b20c0eb30d8039ed3c1284d4b"><td class="memTemplParams" colspan="2">template&lt;typename T&gt; </td></tr>
 <tr class="memitem:gac3201c5b20c0eb30d8039ed3c1284d4b template"><td class="memItemLeft" align="right" valign="top">T&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gac3201c5b20c0eb30d8039ed3c1284d4b">sgs::helper::point2index</a> (double xCoord, double yCoord, double *IGT, T width)</td></tr>
 <tr class="memitem:ga0d0279d6c6a0e14e9f14d56681b59c8c" id="r_ga0d0279d6c6a0e14e9f14d56681b59c8c"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga0d0279d6c6a0e14e9f14d56681b59c8c">sgs::helper::getProbabilityMultiplier</a> (double width, double height, double pixelWidth, double pixelHeight, int startMult, int numSamples, bool useMindist, double accessibleArea)</td></tr>
-<tr class="memitem:gaabf4cc4024eeaa1e451f1f6812926481" id="r_gaabf4cc4024eeaa1e451f1f6812926481"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaabf4cc4024eeaa1e451f1f6812926481">sgs::helper::is_valid_sample</a> (double x, double y, <a class="el" href="#ga04c6841cb69b3c6d7659fcbb074be606">NeighborMap</a> &amp;neighbor_map, float mindist, float mindist_sq)</td></tr>
+<tr class="memitem:gaabf4cc4024eeaa1e451f1f6812926481" id="r_gaabf4cc4024eeaa1e451f1f6812926481"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaabf4cc4024eeaa1e451f1f6812926481">sgs::helper::is_valid_sample</a> (double x, double y, <a class="el" href="#ga0180a4b6f7fe9d973c861a43819e2b19">NeighborMap</a> &amp;neighbor_map, float mindist, float mindist_sq)</td></tr>
 <tr class="memitem:ga8c28588e4655f055df73943b5540f21f" id="r_ga8c28588e4655f055df73943b5540f21f"><td class="memItemLeft" align="right" valign="top">std::pair&lt; double, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8c28588e4655f055df73943b5540f21f">sgs::helper::sample_to_point</a> (double *GT, <a class="el" href="structsgs_1_1helper_1_1Index.html">Index</a> &amp;index)</td></tr>
 <tr class="memitem:ga286eeac1c49ac1df6b37b1d704ce5c3f" id="r_ga286eeac1c49ac1df6b37b1d704ce5c3f"><td class="memItemLeft" align="right" valign="top">std::pair&lt; double, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga286eeac1c49ac1df6b37b1d704ce5c3f">sgs::helper::sample_to_point</a> (double *GT, int xs, int ys)</td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-typedef-members" id="doc-typedef-members"></a><h2 id="header-doc-typedef-members" class="groupheader">Typedef Documentation</h2>
-<a id="ga04c6841cb69b3c6d7659fcbb074be606" name="ga04c6841cb69b3c6d7659fcbb074be606"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga04c6841cb69b3c6d7659fcbb074be606">&#9670;&#160;</a></span>NeighborMap</h2>
+<a id="ga0180a4b6f7fe9d973c861a43819e2b19" name="ga0180a4b6f7fe9d973c861a43819e2b19"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga0180a4b6f7fe9d973c861a43819e2b19">&#9670;&#160;</a></span>NeighborMap</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef std::unordered_map&lt;std::pair&lt;int, int&gt;, std::vector&lt;std::pair&lt;double, double&gt; &gt;, <a class="el" href="structsgs_1_1helper_1_1PointHash.html">PointHash</a>&gt; <a class="el" href="#ga04c6841cb69b3c6d7659fcbb074be606">sgs::helper::NeighborMap</a></td>
+          <td class="memname">typedef boost::unordered::unordered_flat_map&lt;std::pair&lt;int, int&gt;, std::vector&lt;std::pair&lt;double, double&gt; &gt;, <a class="el" href="structsgs_1_1helper_1_1PointHash.html">PointHash</a>&gt; <a class="el" href="#ga0180a4b6f7fe9d973c861a43819e2b19">sgs::helper::NeighborMap</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -839,7 +839,7 @@ template&lt;typename T&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="#ga04c6841cb69b3c6d7659fcbb074be606">NeighborMap</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>neighbor_map</em></span>, </td>
+          <td class="paramtype"><a class="el" href="#ga0180a4b6f7fe9d973c861a43819e2b19">NeighborMap</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>neighbor_map</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>

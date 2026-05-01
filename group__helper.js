@@ -32,7 +32,7 @@ var group__helper =
     [ "sgs::helper::PointHash", "structsgs_1_1helper_1_1PointHash.html", [
       [ "operator()", "structsgs_1_1helper_1_1PointHash.html#a3cba6235c2cc1d7ff514cac630fffbf4", null ]
     ] ],
-    [ "sgs::helper::NeighborMap", "group__helper.html#ga04c6841cb69b3c6d7659fcbb074be606", null ],
+    [ "sgs::helper::NeighborMap", "group__helper.html#ga0180a4b6f7fe9d973c861a43819e2b19", null ],
     [ "sgs::helper::addBandToMEMDataset", "group__helper.html#ga91051fc558d9d5f5feae0fc8eead7ef3", null ],
     [ "sgs::helper::addBandToVRTDataset", "group__helper.html#ga5ea2521735fbd863424699063b757fd7", null ],
     [ "sgs::helper::addPoint", "group__helper.html#ga01ea9f048044df25b18ba0936cfc10cc", null ],

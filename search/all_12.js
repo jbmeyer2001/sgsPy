@@ -3,7 +3,7 @@ var searchData=
   ['sample_0',['sample',['../group__sample.html',1,'sample'],['../group__user__sample.html',1,'sample']]],
   ['sample_5fto_5fpoint_1',['sample_to_point',['../group__helper.html#ga8c28588e4655f055df73943b5540f21f',1,'sgs::helper::sample_to_point(double *GT, Index &amp;index)'],['../group__helper.html#ga286eeac1c49ac1df6b37b1d704ce5c3f',1,'sgs::helper::sample_to_point(double *GT, int xs, int ys)']]],
   ['sampledistribution_2',['sampleDistribution',['../group__dist.html#ga7e242c353e4cf32897948d663a8b4196',1,'sgs::dist']]],
-  ['samples_3',['samples',['../structsgs_1_1existing_1_1Existing.html#a7926010a42a032240b03a79ed5274b55',1,'sgs::existing::Existing']]],
+  ['samples_3',['samples',['../structsgs_1_1existing_1_1Existing.html#ad644d44bac427783e6beba2c10d450cb',1,'sgs::existing::Existing']]],
   ['samples_5fas_5fwkt_4',['samples_as_wkt',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#a1a9222b367e6c1031643f13674d43c0d',1,'sgspy::utils::vector::SpatialVector']]],
   ['sampling_5',['sgsPy - Structurally Guided Sampling &lt;img src=&quot;logo/sgspy_logo.svg&quot; alt=&quot;&quot; align=&quot;right&quot; width=&quot;300&quot; style=&quot;pointer-events: none;&quot; class=&quot;inline&quot;/&gt;',['../index.html',1,'']]],
   ['selectsamples_6',['selectSamples',['../group__clhs.html#ga5b2f786e140a336b33e3c2da67f0b171',1,'sgs::clhs']]],
