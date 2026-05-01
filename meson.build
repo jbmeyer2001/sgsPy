@@ -144,13 +144,13 @@ else #linux
 
   #some libs are missing their non-versioned simlinks. Create them for meson to find.
   simlinks = [
-    ['onedal', '.3'], 
-    ['onedal_core', '.3'],
-    ['onedal_parameters', '.3'], 
-    ['onedal_thread', '.3'], 
-    ['mkl_intel_ilp64', '.2'],
-    ['mkl_tbb_thread', '.2'],
-    ['mkl_core', '.2'],
+    ['onedal', '.4'], 
+    ['onedal_core', '.4'],
+    ['onedal_parameters', '.4'], 
+    ['onedal_thread', '.4'], 
+    ['mkl_intel_ilp64', '.3'],
+    ['mkl_tbb_thread', '.3'],
+    ['mkl_core', '.3'],
   ]
   foreach simlink : simlinks
     #manually create simlink

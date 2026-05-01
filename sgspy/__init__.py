@@ -115,9 +115,9 @@ else: #linux
     and so should be in a standard location for Python packages to put their binaries (depending on
     which environment manager is useb by the user).
     """
-    external_libs = ["libonedal.so.3", "libonedal_core.so.3", "libonedal_parameters.so.3", 
-                     "libonedal_thread.so.3", "libmkl_intel_ilp64.so.2", "libmkl_core.so.2", 
-                     "libtbb.so.12"]
+    external_libs = ["libonedal.so.4", "libonedal_core.so.4", "libonedal_parameters.so.4", 
+                     "libonedal_thread.so.4", "libmkl_intel_ilp64.so.3", "libmkl_tbb_thread.so.3", 
+                     "libmkl_core.so.3", "libtbb.so.12"]
     path = os.path.join(sys.prefix, "lib")
 
     found_all, _ = contains_all(path, external_libs)
