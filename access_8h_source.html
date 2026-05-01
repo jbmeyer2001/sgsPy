@@ -139,7 +139,7 @@ $(function(){initNavTree('access_8h_source.html','',''); });
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>        OGRSpatialReference rastSRS;</div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>        rastSRS.importFromWkt(rastProj.c_str());</div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>        OGRLayer *p_inputLayer = p_vector-&gt;<a class="code hl_function" href="classsgs_1_1vector_1_1GDALVectorWrapper.html#a1ec7a3f4da107dadfdec8844783e7478">getLayer</a>(layerName.c_str());</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        OGRSpatialReference *p_vectSRS = p_inputLayer-&gt;GetSpatialRef();</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        <span class="keyword">const</span> OGRSpatialReference *p_vectSRS = p_inputLayer-&gt;GetSpatialRef();</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        <span class="keywordflow">if</span> (!rastSRS.IsSame(p_vectSRS)) {</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>            <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;access vector and raster do not have the same spatial reference system.&quot;</span>);</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        }</div>

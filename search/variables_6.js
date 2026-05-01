@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['gdal_0',['GDAL',['../namespacesgspy_1_1utils_1_1raster.html#afbebdb9c364441db71c3ab5312535520',1,'sgspy::utils::raster']]],
-  ['geopandas_1',['GEOPANDAS',['../namespacesgspy_1_1utils_1_1vector.html#afb3d9f5f9d48712743bfb40248e20890',1,'sgspy::utils::vector']]],
-  ['gigabyte_2',['GIGABYTE',['../namespacesgspy.html#adcb84c5ca03ad7f9a20fdc2a3d468a4f',1,'sgspy.GIGABYTE'],['../namespacesgspy_1_1calculate_1_1pca_1_1pca.html#a871cffb89c831c53ff3bd30a4a0bb371',1,'sgspy.calculate.pca.pca.GIGABYTE'],['../namespacesgspy_1_1stratify_1_1breaks_1_1breaks.html#a549238f777d679d0018c388542e2d607',1,'sgspy.stratify.breaks.breaks.GIGABYTE'],['../namespacesgspy_1_1stratify_1_1map_1_1map.html#aa8d7c2fce6ed58c3a5a9e900fb379e9f',1,'sgspy.stratify.map.map.GIGABYTE'],['../namespacesgspy_1_1stratify_1_1poly_1_1poly.html#a760a873b2b79d84f83e38fd4b0afaeb4',1,'sgspy.stratify.poly.poly.GIGABYTE'],['../namespacesgspy_1_1stratify_1_1quantiles_1_1quantiles.html#a6d5cd3dce7ebce87d5c6842f0b184c14',1,'sgspy.stratify.quantiles.quantiles.GIGABYTE']]]
+  ['filename_0',['filename',['../structsgs_1_1helper_1_1VRTBandDatasetInfo.html#a6776332a92a87d5fb4ec14eee97abc89',1,'sgs::helper::VRTBandDatasetInfo::filename'],['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#a834221cf0b5ea7d0abe6c0d589a6f02a',1,'sgspy.utils.raster.SpatialRaster.filename']]],
+  ['fname_1',['fname',['../structsgs_1_1helper_1_1Field.html#adba8667b6530586797c3d28319e4276d',1,'sgs::helper::Field']]],
+  ['found_5fall_2',['found_all',['../namespacesgspy.html#adb3bcc0791629f5569217f16d7ae8c6f',1,'sgspy']]],
+  ['fval_3',['fval',['../structsgs_1_1helper_1_1Field.html#ab81fbcfed56c8a20828dd28ed3912a10',1,'sgs::helper::Field']]]
 ];

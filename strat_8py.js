@@ -1,5 +1,4 @@
 var strat_8py =
 [
-    [ "sgspy.sample.strat.strat.strat", "group__user__strat.html#ga0b66cd41b6fccdb4f0b933fa281bae53", null ],
-    [ "sgspy.sample.strat.strat.site_packages", "namespacesgspy_1_1sample_1_1strat_1_1strat.html#a79f30c3c48c927898fdbff45d797d4b1", null ]
+    [ "sgspy.sample.strat.strat.strat", "group__user__strat.html#ga0b66cd41b6fccdb4f0b933fa281bae53", null ]
 ];

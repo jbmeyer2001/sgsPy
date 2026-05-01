@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['eigenvalues_0',['eigenvalues',['../structsgs_1_1pca_1_1PCAResult.html#abda1a7538df33ec7af7f5cd68f905681',1,'sgs::pca::PCAResult']]],
-  ['eigenvectors_1',['eigenvectors',['../structsgs_1_1pca_1_1PCAResult.html#a8d3e92c59a870a102f820dfd03318f9c',1,'sgs::pca::PCAResult']]]
+  ['driver_0',['driver',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#a424adb1b28b2566a9f03a369df831106',1,'sgspy::utils::raster::SpatialRaster']]]
 ];

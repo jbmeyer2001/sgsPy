@@ -157,7 +157,7 @@ $(function(){initNavTree('existing_8h_source.html','',''); });
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        std::string rastProj = p_rast-&gt;<a class="code hl_function" href="classsgs_1_1raster_1_1GDALRasterWrapper.html#a1e5b3b52f740cdf9f28dbf85154197cc">getDataset</a>()-&gt;GetProjectionRef();</div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>        OGRSpatialReference rastSRS;</div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        rastSRS.importFromWkt(rastProj.c_str());</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        OGRSpatialReference *p_sampSRS = p_samples-&gt;GetSpatialRef();</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        <span class="keyword">const</span> OGRSpatialReference *p_sampSRS = p_samples-&gt;GetSpatialRef();</div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>        <span class="keywordflow">if</span> (!rastSRS.IsSame(p_sampSRS)) {</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>            <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;existing sample vector and raster do not have the same spatial reference system.&quot;</span>);   </div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        }</div>

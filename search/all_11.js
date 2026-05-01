@@ -20,5 +20,6 @@ var searchData=
   ['representation_2epy_17',['representation.py',['../representation_8py.html',1,'']]],
   ['reset_18',['reset',['../structsgs_1_1strat_1_1FocalWindow.html#ab70040fea726bc01c925e552f026f58b',1,'sgs::strat::FocalWindow']]],
   ['returns_19',['Returns',['../group__user__distribution.html#autotoc_md14',1,'Returns'],['../group__user__pca.html#autotoc_md17',1,'Returns'],['../group__user__clhs.html#autotoc_md20',1,'Returns'],['../group__user__srs.html#autotoc_md23',1,'Returns'],['../group__user__strat.html#autotoc_md26',1,'Returns'],['../group__user__systematic.html#autotoc_md29',1,'Returns'],['../group__user__breaks.html#autotoc_md32',1,'Returns'],['../group__user__map.html#autotoc_md35',1,'Returns'],['../group__user__poly.html#autotoc_md38',1,'Returns'],['../group__user__quantiles.html#autotoc_md41',1,'Returns']]],
-  ['run_20sgspy_3a_20',['How to run sgsPy:',['../index.html#autotoc_md11',1,'']]]
+  ['root_20',['root',['../namespacesgspy.html#a2a9281527fe6094a20a3e7d7e85fdb5c',1,'sgspy']]],
+  ['run_20sgspy_3a_21',['How to run sgsPy:',['../index.html#autotoc_md11',1,'']]]
 ];

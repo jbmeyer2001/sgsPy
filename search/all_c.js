@@ -12,5 +12,6 @@ var searchData=
   ['means_9',['means',['../structsgs_1_1pca_1_1PCAResult.html#a9243ea6fbc942f3f9a01587b2c5202cd',1,'sgs::pca::PCAResult']]],
   ['methods_10',['Public Methods',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#autotoc_md46',1,'']]],
   ['methods_3a_11',['Public Methods:',['../classsgspy_1_1utils_1_1vector_1_1SpatialVector.html#autotoc_md48',1,'']]],
-  ['million_12',['MILLION',['../clhs_8h.html#a368e7704f92e34c8ea0a5c263a95a1b1',1,'clhs.h']]]
+  ['million_12',['MILLION',['../clhs_8h.html#a368e7704f92e34c8ea0a5c263a95a1b1',1,'clhs.h']]],
+  ['missing_13',['missing',['../namespacesgspy.html#a5350c6aa3226fdaf4921d25b538e0fd5',1,'sgspy']]]
 ];

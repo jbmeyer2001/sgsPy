@@ -100,36 +100,120 @@ Namespaces</h2></td></tr>
 <tr class="memitem:stratify" id="r_stratify"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacesgspy_1_1stratify.html">stratify</a></td></tr>
 <tr class="memitem:utils" id="r_utils"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacesgspy_1_1utils.html">utils</a></td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:aa5924d322d63036a4c6801f5d4d01e98" id="r_aa5924d322d63036a4c6801f5d4d01e98"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa5924d322d63036a4c6801f5d4d01e98">contains_all</a> (<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, files)</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-var-members" class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:acb37226677876982c86b0f53db20209d" id="r_acb37226677876982c86b0f53db20209d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb37226677876982c86b0f53db20209d">path</a> = os.path.split(os.path.split(path)[0])[0]</td></tr>
-<tr class="memitem:a309ce1860bb041ce9f5db75848cea3c9" id="r_a309ce1860bb041ce9f5db75848cea3c9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a309ce1860bb041ce9f5db75848cea3c9">vendored_lib_path</a> = os.path.join(<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, &quot;sgspy&quot;)</td></tr>
-<tr class="memitem:a9dd4ee8f57f6e3a4d8e33d371d0a489e" id="r_a9dd4ee8f57f6e3a4d8e33d371d0a489e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9dd4ee8f57f6e3a4d8e33d371d0a489e">lib_path</a> = os.path.join(<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, &quot;Library&quot;, &quot;bin&quot;)</td></tr>
-<tr class="memitem:adcb84c5ca03ad7f9a20fdc2a3d468a4f" id="r_adcb84c5ca03ad7f9a20fdc2a3d468a4f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adcb84c5ca03ad7f9a20fdc2a3d468a4f">GIGABYTE</a> = 1073741824</td></tr>
+<tr class="memitem:ad045c5405fbe590c99c7475ff31dcd87" id="r_ad045c5405fbe590c99c7475ff31dcd87"><td class="memItemLeft" align="right" valign="top">dict&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad045c5405fbe590c99c7475ff31dcd87">vendored_files</a></td></tr>
+<tr class="memitem:a760e14c4f7d24aef734c7e083db0f401" id="r_a760e14c4f7d24aef734c7e083db0f401"><td class="memItemLeft" align="right" valign="top">list&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a760e14c4f7d24aef734c7e083db0f401">paths</a> = [site.getusersitepackages(), *site.getsitepackages()]</td></tr>
+<tr class="memitem:a2a9281527fe6094a20a3e7d7e85fdb5c" id="r_a2a9281527fe6094a20a3e7d7e85fdb5c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a9281527fe6094a20a3e7d7e85fdb5c">root</a> = os.path.dirname(os.path.realpath(__file__))</td></tr>
+<tr class="memitem:adb3bcc0791629f5569217f16d7ae8c6f" id="r_adb3bcc0791629f5569217f16d7ae8c6f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adb3bcc0791629f5569217f16d7ae8c6f">found_all</a></td></tr>
+<tr class="memitem:a5350c6aa3226fdaf4921d25b538e0fd5" id="r_a5350c6aa3226fdaf4921d25b538e0fd5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5350c6aa3226fdaf4921d25b538e0fd5">missing</a></td></tr>
+<tr class="memitem:a039a574a7035a64c2b35804079e2ede3" id="r_a039a574a7035a64c2b35804079e2ede3"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a039a574a7035a64c2b35804079e2ede3">_</a></td></tr>
+<tr class="memitem:aed4634457bae9f5537a7d20194269d50" id="r_aed4634457bae9f5537a7d20194269d50"><td class="memItemLeft" align="right" valign="top">list&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed4634457bae9f5537a7d20194269d50">external_dlls</a> = [&quot;onedal.3.dll&quot;, &quot;tbb12.dll&quot;, &quot;mkl_tbb_thread.2.dll&quot;, &quot;mkl_core.2.dll&quot;, &quot;onedal_core.3.dll&quot;, &quot;onedal_thread.3.dll&quot;]</td></tr>
+<tr class="memitem:a386fb41e0e6b1d0330de65cda27111fb" id="r_a386fb41e0e6b1d0330de65cda27111fb"><td class="memItemLeft" align="right" valign="top">list&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a386fb41e0e6b1d0330de65cda27111fb">external_libs</a></td></tr>
+<tr class="memitem:acb37226677876982c86b0f53db20209d" id="r_acb37226677876982c86b0f53db20209d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb37226677876982c86b0f53db20209d">path</a> = os.path.join(sys.prefix, &quot;lib&quot;)</td></tr>
 </table>
-<a name="doc-var-members" id="doc-var-members"></a><h2 id="header-doc-var-members" class="groupheader">Variable Documentation</h2>
-<a id="adcb84c5ca03ad7f9a20fdc2a3d468a4f" name="adcb84c5ca03ad7f9a20fdc2a3d468a4f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adcb84c5ca03ad7f9a20fdc2a3d468a4f">&#9670;&#160;</a></span>GIGABYTE</h2>
+<a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
+<a id="aa5924d322d63036a4c6801f5d4d01e98" name="aa5924d322d63036a4c6801f5d4d01e98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa5924d322d63036a4c6801f5d4d01e98">&#9670;&#160;</a></span>contains_all()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int sgspy.GIGABYTE = 1073741824</td>
+          <td class="memname">sgspy.contains_all </td>
+          <td>(</td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>path</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>files</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a9dd4ee8f57f6e3a4d8e33d371d0a489e" name="a9dd4ee8f57f6e3a4d8e33d371d0a489e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9dd4ee8f57f6e3a4d8e33d371d0a489e">&#9670;&#160;</a></span>lib_path</h2>
+<a name="doc-var-members" id="doc-var-members"></a><h2 id="header-doc-var-members" class="groupheader">Variable Documentation</h2>
+<a id="a039a574a7035a64c2b35804079e2ede3" name="a039a574a7035a64c2b35804079e2ede3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a039a574a7035a64c2b35804079e2ede3">&#9670;&#160;</a></span>_</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">sgspy._</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel protected">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aed4634457bae9f5537a7d20194269d50" name="aed4634457bae9f5537a7d20194269d50"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed4634457bae9f5537a7d20194269d50">&#9670;&#160;</a></span>external_dlls</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgspy.lib_path = os.path.join(<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, &quot;Library&quot;, &quot;bin&quot;)</td>
+          <td class="memname">list sgspy.external_dlls = [&quot;onedal.3.dll&quot;, &quot;tbb12.dll&quot;, &quot;mkl_tbb_thread.2.dll&quot;, &quot;mkl_core.2.dll&quot;, &quot;onedal_core.3.dll&quot;, &quot;onedal_thread.3.dll&quot;]</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a386fb41e0e6b1d0330de65cda27111fb" name="a386fb41e0e6b1d0330de65cda27111fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a386fb41e0e6b1d0330de65cda27111fb">&#9670;&#160;</a></span>external_libs</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">list sgspy.external_libs</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"><span class="lineno">    1</span>=  [<span class="stringliteral">&quot;libonedal.so.3&quot;</span>, <span class="stringliteral">&quot;libonedal_core.so.3&quot;</span>, <span class="stringliteral">&quot;libonedal_parameters.so.3&quot;</span>, </div>
+<div class="line"><span class="lineno">    2</span>                     <span class="stringliteral">&quot;libonedal_thread.so.3&quot;</span>, <span class="stringliteral">&quot;libmkl_intel_ilp64.so.2&quot;</span>, <span class="stringliteral">&quot;libmkl_core.so.2&quot;</span>, </div>
+<div class="line"><span class="lineno">    3</span>                     <span class="stringliteral">&quot;libtbb.so.12&quot;</span>]</div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="adb3bcc0791629f5569217f16d7ae8c6f" name="adb3bcc0791629f5569217f16d7ae8c6f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adb3bcc0791629f5569217f16d7ae8c6f">&#9670;&#160;</a></span>found_all</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">sgspy.found_all</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5350c6aa3226fdaf4921d25b538e0fd5" name="a5350c6aa3226fdaf4921d25b538e0fd5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5350c6aa3226fdaf4921d25b538e0fd5">&#9670;&#160;</a></span>missing</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">sgspy.missing</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -143,25 +227,60 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgspy.path = os.path.split(os.path.split(path)[0])[0]</td>
+          <td class="memname">sgspy.path = os.path.join(sys.prefix, &quot;lib&quot;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a309ce1860bb041ce9f5db75848cea3c9" name="a309ce1860bb041ce9f5db75848cea3c9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a309ce1860bb041ce9f5db75848cea3c9">&#9670;&#160;</a></span>vendored_lib_path</h2>
+<a id="a760e14c4f7d24aef734c7e083db0f401" name="a760e14c4f7d24aef734c7e083db0f401"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a760e14c4f7d24aef734c7e083db0f401">&#9670;&#160;</a></span>paths</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">sgspy.vendored_lib_path = os.path.join(<a class="el" href="#acb37226677876982c86b0f53db20209d">path</a>, &quot;sgspy&quot;)</td>
+          <td class="memname">list sgspy.paths = [site.getusersitepackages(), *site.getsitepackages()]</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
+</div>
+</div>
+<a id="a2a9281527fe6094a20a3e7d7e85fdb5c" name="a2a9281527fe6094a20a3e7d7e85fdb5c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a9281527fe6094a20a3e7d7e85fdb5c">&#9670;&#160;</a></span>root</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">sgspy.root = os.path.dirname(os.path.realpath(__file__))</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad045c5405fbe590c99c7475ff31dcd87" name="ad045c5405fbe590c99c7475ff31dcd87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad045c5405fbe590c99c7475ff31dcd87">&#9670;&#160;</a></span>vendored_files</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">dict sgspy.vendored_files</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line"><span class="lineno">    1</span>=  {<span class="stringliteral">&quot;proj.db&quot;</span>, <span class="stringliteral">&quot;aec.dll&quot;</span>, <span class="stringliteral">&quot;charset-1.dll&quot;</span>,<span class="stringliteral">&quot;freexl-1.dll&quot;</span>,<span class="stringliteral">&quot;gdal.dll&quot;</span>,<span class="stringliteral">&quot;geos.dll&quot;</span>,<span class="stringliteral">&quot;geos_c.dll&quot;</span>,<span class="stringliteral">&quot;geotiff.dll&quot;</span>,</div>
+<div class="line"><span class="lineno">    2</span>             <span class="stringliteral">&quot;gif.dll&quot;</span>,<span class="stringliteral">&quot;hdf5.dll&quot;</span>,<span class="stringliteral">&quot;hdf5_cpp.dll&quot;</span>,<span class="stringliteral">&quot;hdf5_hl.dll&quot;</span>,<span class="stringliteral">&quot;hdf5_hl_cpp.dll&quot;</span>,<span class="stringliteral">&quot;iconv-2.dll&quot;</span>,<span class="stringliteral">&quot;jpeg62.dll&quot;</span>,<span class="stringliteral">&quot;json-c.dll&quot;</span>,</div>
+<div class="line"><span class="lineno">    3</span>             <span class="stringliteral">&quot;legacy.dll&quot;</span>,<span class="stringliteral">&quot;Lerc.dll&quot;</span>,<span class="stringliteral">&quot;libcrypto-3-x64.dll&quot;</span>,<span class="stringliteral">&quot;libcurl.dll&quot;</span>,<span class="stringliteral">&quot;libecpg.dll&quot;</span>,<span class="stringliteral">&quot;libecpg_compat.dll&quot;</span>,<span class="stringliteral">&quot;libexpat.dll&quot;</span>,</div>
+<div class="line"><span class="lineno">    4</span>             <span class="stringliteral">&quot;liblzma.dll&quot;</span>,<span class="stringliteral">&quot;libpgtypes.dll&quot;</span>,<span class="stringliteral">&quot;libpng16.dll&quot;</span>,<span class="stringliteral">&quot;libpq.dll&quot;</span>,<span class="stringliteral">&quot;libsharpyuv.dll&quot;</span>,<span class="stringliteral">&quot;libssl-3-x64.dll&quot;</span>,<span class="stringliteral">&quot;libwebp.dll&quot;</span>,</div>
+<div class="line"><span class="lineno">    5</span>             <span class="stringliteral">&quot;libwebpdecoder.dll&quot;</span>,<span class="stringliteral">&quot;libwebpdemux.dll&quot;</span>,<span class="stringliteral">&quot;libwebpmux.dll&quot;</span>,<span class="stringliteral">&quot;libxml2.dll&quot;</span>,<span class="stringliteral">&quot;lz4.dll&quot;</span>,<span class="stringliteral">&quot;minizip.dll&quot;</span>,<span class="stringliteral">&quot;netcdf.dll&quot;</span>,</div>
+<div class="line"><span class="lineno">    6</span>             <span class="stringliteral">&quot;openjp2.dll&quot;</span>,<span class="stringliteral">&quot;pcre2-16.dll&quot;</span>,<span class="stringliteral">&quot;pcre2-32.dll&quot;</span>,<span class="stringliteral">&quot;pcre2-8.dll&quot;</span>,<span class="stringliteral">&quot;pcre2-posix.dll&quot;</span>,<span class="stringliteral">&quot;proj_9.dll&quot;</span>,<span class="stringliteral">&quot;qhull_r.dll&quot;</span>,</div>
+<div class="line"><span class="lineno">    7</span>             <span class="stringliteral">&quot;spatialite.dll&quot;</span>,<span class="stringliteral">&quot;sqlite3.dll&quot;</span>,<span class="stringliteral">&quot;szip.dll&quot;</span>,<span class="stringliteral">&quot;tiff.dll&quot;</span>,<span class="stringliteral">&quot;turbojpeg.dll&quot;</span>,<span class="stringliteral">&quot;uriparser.dll&quot;</span>,<span class="stringliteral">&quot;zlib1.dll&quot;</span>,<span class="stringliteral">&quot;zstd.dll&quot;</span>}</div>
+</div><!-- fragment -->
 </div>
 </div>
 </div><!-- contents -->
