@@ -56,7 +56,7 @@ if platform.system() == 'Windows':
 
         #not in file path nor in expected environment location: throw error
         if not found_all:
-            raise RuntimeError(f"{missing} not found. They should have been installed in the site-packages/sgspy directory of the current environment.")
+            raise ImportError(f"{missing} not found. They should have been installed in the site-packages/sgspy directory of the current environment.")
 
         sys.path.append(root)
     os.environ["SGSPY_PROJDB_PATH"] = root
@@ -83,7 +83,7 @@ if platform.system() == 'Windows':
             break
 
     if not found_all:
-        raise RuntimeError(f"""could not find a folder installed with all of the following dlls: {external_dlls}.
+        raise ImportError(f"""could not find a folder installed with all of the following dlls: {external_dlls}.
         checked the following paths: {paths}.
         First, ensure all of sgspy's Python dependencies are correctly installed.
         If they are, this is a bug and should be reported on https://github.com/jbmeyer2001/sgsPy/issues""")
@@ -94,6 +94,7 @@ else: #linux
     """
     Check to ensure we can find proj.db
     """
+
     found_all, missing = contains_all(root, {"proj.db"})
     if not found_all:
         root = os.path.join(list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0], "sgspy")
@@ -101,20 +102,40 @@ else: #linux
 
         #not in file path nor in expected environment location: throw error
         if not found_all:
-            raise RuntimeError(f"{missing} not found. It should have been installed in the site-packages/sgspy directory of the current environment.")
+            raise ImportError(f"{missing} not found. It should have been installed in the site-packages/sgspy directory of the current environment.")
 
-        sys.path.append(root)
+    sys.path.append(root)
     os.environ["SGSPY_PROJDB_PATH"] = root
-  
+ 
+    """
+    Check for external binaries. These are all a part of Python packages which have been installed,
+    and so should be in a standard location for Python packages to put their binaries (depending on
+    which environment manager is useb by the user).
+    """
+    external_libs = ["libonedal.so.3", "libonedal_core.so.3", "libonedal_parameters.so.3", 
+                     "libonedal_thread.so.3", "libmkl_intel_ilp64.so.2", "libmkl_core.so.2", 
+                     "libtbb.so.12"]
+    path = os.path.join(sys.prefix, "lib")
+
+    found_all, _ = contains_all(path, external_libs)
+    if not found_all:
+        raise ImportError(f"could not find all required external library dependencies in folder: {path}")
+
     #this library goes missing at runtime if we don't do this
     ctypes.CDLL(os.path.join(sys.prefix, 'lib', 'libtbb.so.12'), os.RTLD_GLOBAL | os.RTLD_NOW)
 
 try:
     import _sgs
 except ImportError as err:
-    raise RuntimeError(f"""The following error has occured attempting to import _sgs: {err}.
-    This is likely a bug, and should thus be reported on https://github.com/jbmeyer2001/sgsPy/issues""")
-
+    if platform.system() == "Windows":
+        raise ImportError(f"""The following error has occured attempting to import _sgs: {err}.
+        This is likely a bug, and should thus be reported on https://github.com/jbmeyer2001/sgsPy/issues""")
+    else: #linux
+        raise ImportError(f"""The following error has occured attempting ot import _sgs: {err}.
+        If the error is related to an undefined symbol, it MAY be that your systems version of glibc
+        is not up to date with the version used to compile sgspy. Otherwise, it is likely a bug and
+        should be reported on https://github.com/jbmeyer2001/sgsPy/issues""")
+        
 from . import utils
 from . import calculate
 from . import sample
