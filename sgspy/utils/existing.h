@@ -18,6 +18,7 @@
 #include "vector.h"
 #include "helper.h"
 
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
@@ -36,7 +37,7 @@ namespace existing {
  */
 struct Existing {
 	bool used;
-	std::unordered_map<int64_t, OGRPoint> samples;
+	boost::unordered::unordered_flat_map<int64_t, OGRPoint> samples;
 	double IGT[6];
 	int64_t width;
 
@@ -150,7 +151,7 @@ struct Existing {
 	/**
 	 * Checker function which converts x and y indices values to a
 	 * single index value. If this index is contained in the samples
-	 * unordered_set, True is returned, otherwise the result will be 
+	 * unordered_map, True is returned, otherwise the result will be 
 	 * false.
 	 *
 	 * This function will be used when determining sample plot placement,
@@ -184,7 +185,7 @@ struct Existing {
 	 * Checker function which converts x coordinate and y coordinate
 	 * values to an index usign the inverse geotransform.
 	 *
-	 * If this index is contained in the samples unordered_set, True
+	 * If this index is contained in the samples unordered_map, True
 	 * is returned, otherwise the result will be false.
 	 *
 	 * @param double xCoord

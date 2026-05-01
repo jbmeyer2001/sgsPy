@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <mutex>
 
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <xoshiro.h>
 #include <gdal_priv.h>
 #include <ogrsf_frmts.h>
@@ -1057,7 +1058,7 @@ struct PointHash {
  * @ingroup helper
  * This is a type alias for the neighborhood used for spatial hashing during sampling.
  */
-typedef std::unordered_map<std::pair<int, int>, std::vector<std::pair<double, double>>, PointHash> NeighborMap;
+typedef boost::unordered::unordered_flat_map<std::pair<int, int>, std::vector<std::pair<double, double>>, PointHash> NeighborMap;
 
 /**
  * @ingroup helper

@@ -21,6 +21,7 @@
 #include "utils/raster.h"
 #include "utils/vector.h"
 
+#include <boost/unordered/unordered_flat_set.hpp>
 #include <mkl.h>
 #include "oneapi/dal.hpp"
 #include <xoshiro.h>
@@ -793,7 +794,7 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	//may be filled in with non-existing samples. If there were no existing samples this value
 	//is 0.
 	size_t starti = neSamples;
-	std::unordered_set<uint64_t> points;
+	boost::unordered::unordered_flat_set<uint64_t> points;
 
 	//Add all of the existing samples to the output layer, and add to indices map
 	helper::Field fieldExistingTrue("existing", 1);

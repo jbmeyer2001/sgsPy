@@ -14,8 +14,8 @@
 
 #include <iostream>
 #include <random>
-#include <unordered_map>
 
+#include <boost/unordered/unordered_flat_set.hpp>
 #include <xoshiro.h>
 
 #include "utils/access.h"
@@ -44,7 +44,7 @@ namespace srs {
  * @param int numSamples
  * @param access::Access& access
  * @param existing::Existing& existing
- * @param std::unordered_set<helper::Index>& index
+ * @param std::vector<helper::Index>& index
  * @param xso::xoshiro_4x64_plus rng
  * @returns bool
  */
@@ -77,7 +77,7 @@ getRandomIndices(
 
 	int iterations = 0;
 	int maxIterations = numSamples * 11;
-	std::unordered_set<uint64_t> indexSet;
+	boost::unordered::unordered_flat_set<uint64_t> indexSet;
 	while (iterations < maxIterations && indices.size() < static_cast<size_t>(numSamples)) {
 		//generate a random valid index
 		//
