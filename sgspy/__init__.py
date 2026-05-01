@@ -130,8 +130,6 @@ else: #linux
 
 try:
     import _sgs
-    print(_sgs)
-    print(dir(_sgs))
 except ImportError as err:
     if platform.system() == "Windows":
         raise ImportError(f"""The following error has occured attempting to import _sgs: {err}.
