@@ -43,6 +43,7 @@ if platform.system() == 'Windows':
              "openjp2.dll","pcre2-16.dll","pcre2-32.dll","pcre2-8.dll","pcre2-posix.dll","proj_9.dll","qhull_r.dll",
              "spatialite.dll","sqlite3.dll","szip.dll","tiff.dll","turbojpeg.dll","uriparser.dll","zlib1.dll","zstd.dll"}
     
+    paths = [site.getusersitepackages(), *site.getsitepackages()]
     root = os.path.dirname(os.path.realpath(__file__))
 
     """
@@ -51,12 +52,15 @@ if platform.system() == 'Windows':
     """
     found_all, missing = contains_all(root, vendored_files)
     if not found_all:
-        root = os.path.join(list(filter(lambda x : 'site-packages' in x, site.getsitepackages()))[0], "sgspy")
-        found_all, _ = contains_all(root, vendored_files)
-
+        for path in paths:
+            root = os.path.join(path, "sgspy")
+            found_all, _ = contains_all(root, vendored_files)
+            if found_all: break
+        
         #not in file path nor in expected environment location: throw error
         if not found_all:
-            raise ImportError(f"{missing} not found. They should have been installed in the site-packages/sgspy directory of the current environment.")
+            raise ImportError(f"""{missing} not found in any of the checked site packages directories: {paths}. 
+            They should have been installed in the site-packages/sgspy directory of the current environment.""")
 
     os.environ["SGSPY_PROJDB_PATH"] = root
     sys.path.append(root)
@@ -126,6 +130,8 @@ else: #linux
 
 try:
     import _sgs
+    print(_sgs)
+    print(dir(_sgs))
 except ImportError as err:
     if platform.system() == "Windows":
         raise ImportError(f"""The following error has occured attempting to import _sgs: {err}.
