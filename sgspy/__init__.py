@@ -41,7 +41,8 @@ if platform.system() == 'Windows':
              "liblzma.dll","libpgtypes.dll","libpng16.dll","libpq.dll","libsharpyuv.dll","libssl-3-x64.dll","libwebp.dll",
              "libwebpdecoder.dll","libwebpdemux.dll","libwebpmux.dll","libxml2.dll","lz4.dll","minizip.dll","netcdf.dll",
              "openjp2.dll","pcre2-16.dll","pcre2-32.dll","pcre2-8.dll","pcre2-posix.dll","proj_9.dll","qhull_r.dll",
-             "spatialite.dll","sqlite3.dll","szip.dll","tiff.dll","turbojpeg.dll","uriparser.dll","zlib1.dll","zstd.dll"}
+             "spatialite.dll","sqlite3.dll","szip.dll","tiff.dll","tinyxml2.dll","turbojpeg.dll","uriparser.dll","z.dll",
+             "zstd.dll"}
     
     paths = [site.getusersitepackages(), *site.getsitepackages()]
     root = os.path.dirname(os.path.realpath(__file__))
@@ -74,7 +75,7 @@ if platform.system() == 'Windows':
     and so should be in a standard location for Python packages to put their binaries (depending on
     which environment manager is useb by the user).
     """
-    external_dlls = ["onedal.3.dll", "tbb12.dll", "mkl_tbb_thread.2.dll", "mkl_core.2.dll", "onedal_core.3.dll", "onedal_thread.3.dll"]
+    external_dlls = ["onedal.4.dll", "tbb12.dll", "mkl_tbb_thread.3.dll", "mkl_core.3.dll", "onedal_core.4.dll", "onedal_thread.4.dll"]
     paths = [os.path.join(sys.prefix, "Library", "bin"),  
              os.path.join(site.USER_BASE, "Library", "bin"),
              os.path.join(sys.prefix, "DLLs")]

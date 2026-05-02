@@ -106,7 +106,7 @@ if WIN
       'kmlbase',
       'minizip',
       'uriparser',
-      'zlib',
+      'z',
       'pcre2-8',
       'spatialite',
       'sqlite3',
@@ -119,7 +119,7 @@ if WIN
       'curl',
       'proj',
       'json-c',
-      'gdal'
+      'gdal',
     ]
 
   foreach lib : gdal_libs
@@ -249,8 +249,9 @@ if WIN
     join_paths(bin_dir, 'szip.dll'),
     join_paths(bin_dir, 'tiff.dll'),
     join_paths(bin_dir, 'turbojpeg.dll'),
+    join_paths(bin_dir, 'tinyxml2.dll'),
     join_paths(bin_dir, 'uriparser.dll'),
-    join_paths(bin_dir, 'zlib1.dll'),
+    join_paths(bin_dir, 'z.dll'),
     join_paths(bin_dir, 'zstd.dll'),
      
     #proj
