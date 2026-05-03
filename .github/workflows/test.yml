@@ -25,7 +25,9 @@ jobs:
           submodules: recursive
         
       - name: Install and build C++ dependencies
-        run: bash scripts/install.sh
+        run: |
+          sudo apt install pkg-config
+          bash scripts/install.sh
         
       - name: Install python dependencies
         run: |
