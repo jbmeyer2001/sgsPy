@@ -2,6 +2,9 @@ var ____init_____8py =
 [
     [ "sgspy.contains_all", "namespacesgspy.html#aa5924d322d63036a4c6801f5d4d01e98", null ],
     [ "sgspy._", "namespacesgspy.html#a039a574a7035a64c2b35804079e2ede3", null ],
+    [ "sgspy.dep", "namespacesgspy.html#a566d1b47fa9ba9bc9c2445100a065ee8", null ],
+    [ "sgspy.dll_load_fail_dal_mkl", "namespacesgspy.html#a2968897f8a70636010679d14caac1448", null ],
+    [ "sgspy.dll_load_fail_gdal", "namespacesgspy.html#a4a9dfbc877f9ea722e9b16100b04e4e2", null ],
     [ "sgspy.external_dlls", "namespacesgspy.html#aed4634457bae9f5537a7d20194269d50", null ],
     [ "sgspy.external_libs", "namespacesgspy.html#a386fb41e0e6b1d0330de65cda27111fb", null ],
     [ "sgspy.found_all", "namespacesgspy.html#adb3bcc0791629f5569217f16d7ae8c6f", null ],
