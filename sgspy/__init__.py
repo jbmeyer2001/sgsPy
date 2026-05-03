@@ -67,8 +67,11 @@ if platform.system() == 'Windows':
     os.environ["SGSPY_PROJDB_PATH"] = root
 
     #load all vendored dlls from correct place
+    dll_load_fail_gdal = False
     vendored_files.remove("proj.db")
-    for file in vendored_files: ctypes.CDLL(os.path.join(root, file))
+    for file in vendored_files: 
+        try: ctypes.CDLL(os.path.join(root, file))
+        except Exception: dll_load_fail_gdal = True
 
     """
     Check for external binaries. These are all a part of Python packages which have been installed,
@@ -80,11 +83,14 @@ if platform.system() == 'Windows':
              os.path.join(site.USER_BASE, "Library", "bin"),
              os.path.join(sys.prefix, "DLLs")]
 
+    dll_load_fail_dal_mkl = False
     for bin_path in paths:
         found_all, _ = contains_all(bin_path, external_dlls)
         if found_all:
             #load all external dlls from correct place
-            for dll in external_dlls: ctypes.CDLL(os.path.join(bin_path, dll))
+            for dll in external_dlls: 
+                try: ctypes.CDLL(os.path.join(bin_path, dll))
+                except Exception: dll_load_fail_dal_mkl = True
             break
 
     if not found_all:
@@ -106,7 +112,7 @@ else: #linux
 
         #not in file path nor in expected environment location: throw error
         if not found_all:
-            raise ImportError(f"{missing} not found. It should have been installed in the site-packages/sgspy directory of the current environment.")
+            raise ImportError("{missing} not found. It should have been installed in the site-packages/sgspy directory of the current environment.")
 
     sys.path.append(root)
     os.environ["SGSPY_PROJDB_PATH"] = root
@@ -132,6 +138,21 @@ try:
     import _sgs
 except ImportError as err:
     if platform.system() == "Windows":
+        if dll_load_fail_gdal or dll_load_fail_dal_mkl:
+
+            if dll_load_fail_gdal and not dll_load_fail_dal_mkl: dep = "gdal"             
+            elif not dll_load_fail_gdal and dll_load_fail_dal_mkl: dep = "oneDAL or oneMKL"
+            else: dep = "gdal and oneDAL or oneMKL"
+
+            raise ImportError(f"""{err}
+
+            sgspy relies on a number of external package, and their dynamic libaries are loaded at runtime.
+            We were unable to load at least one of the libraries for {dep}.
+            This typically means that dynamic library has already been loaded and wouldn't be a problem except 
+            if the version already loaded is a different version than the one required by this version of sgsPy. 
+            If this is not the reason for the printed error error, it is likely a bug and should be reported on
+            https://github.com/jbmeyer2001/sgsPy/issues""")
+
         raise ImportError(f"""The following error has occured attempting to import _sgs: {err}.
         This is likely a bug, and should thus be reported on https://github.com/jbmeyer2001/sgsPy/issues""")
     else: #linux
