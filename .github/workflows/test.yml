@@ -37,6 +37,8 @@ jobs:
           ls /home/runner/work/sgsPy/sgsPy/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig
           find . -name "gdal.pc"
           bash scripts/build.sh
+        env: 
+          TERM: xterm
         
       - name: Run pytests
         run: pytest
