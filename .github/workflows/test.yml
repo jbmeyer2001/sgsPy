@@ -34,8 +34,7 @@ jobs:
         
       - name: Build package
         run: |
-          ls /home/runner/work/sgsPy/sgsPy/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig
-          find . -name "gdal.pc"
+          find . -name "*.pc"
           bash scripts/build.sh
         env: 
           TERM: xterm
