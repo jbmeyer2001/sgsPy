@@ -26,7 +26,13 @@ jobs:
         
       - name: Install and build C++ dependencies
         run: |
+          sudo apt install build-essential
           sudo apt install pkg-config
+          sudo apt install auto-conf
+          sudo apt install libtool
+          sudo apt install bison
+          sudo apt install flex
+          sudo apt install patchelf
           bash scripts/install.sh
         
       - name: Install python dependencies
@@ -35,10 +41,10 @@ jobs:
           pip install pytest geopandas
         
       - name: Build package
-        run: |
-          find . -name "*.pc"
+        run: | 
+          find . -name "*.pc" 
           bash scripts/build.sh
-        env: 
+        env:
           TERM: xterm
         
       - name: Run pytests

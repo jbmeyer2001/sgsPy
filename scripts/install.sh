@@ -7,6 +7,6 @@ cd sgspy/extern/vcpkg
 ./vcpkg install pkgconf
 ./vcpkg install boost-asio
 ./vcpkg install boost-unordered
-./vcpkg install gdal
+./vcpkg install gdal[tools]
 cd ../../..
 
