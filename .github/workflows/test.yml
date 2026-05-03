@@ -28,7 +28,6 @@ jobs:
         run: |
           sudo apt install build-essential
           sudo apt install pkg-config
-          sudo apt install auto-conf
           sudo apt install libtool
           sudo apt install bison
           sudo apt install flex
