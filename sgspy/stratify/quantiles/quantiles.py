@@ -11,20 +11,13 @@
 # @defgroup user_quantiles quantiles
 # @ingroup user_stratify
 
-import os
-import sys
-import site
-import tempfile
 from typing import Optional
-
 import matplotlib.pyplot as plt
 import numpy as np
 
 from sgspy.utils import SpatialRaster, StratRasterBandMetadata
 
 from _sgs import quantiles_cpp, dist_cpp
-
-GIGABYTE = 1073741824
 
 ##
 # @ingroup user_quantiles
@@ -259,46 +252,18 @@ def quantiles(
                 raise ValueError("the key for all key/value pairs in the driver_options dict must be a string.")
             driver_options_str[key] = str(val)
 
-    large_raster = False
-    raster_size_bytes = 0
-    height = rast.height
-    width = rast.width
-    for key, _ in probabilities_dict.items():
-        pixel_size = rast.cpp_raster.get_raster_band_type_size(key)
-        band_size = height * width * pixel_size
-        raster_size_bytes += band_size
-        if band_size >= GIGABYTE:
-            large_raster = True
-            break
-
-    #if large_raster is true, the C++ function will process the raster in blocks
-    large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
-
-    #make a temp directory which will be deleted if there is any problem when calling the cpp function
-    temp_dir = tempfile.mkdtemp()
-    rast.have_temp_dir = True
-    rast.temp_dir = temp_dir
-
     #call stratify quantiles function
     [srast, quantile_vals] = quantiles_cpp(
         rast.cpp_raster, 
         probabilities_dict, 
         map, 
         filename,
-        temp_dir,
-        large_raster,
         thread_count,
         driver_options_str,
         eps
     )
 
     srast = SpatialRaster(srast)
-
-    #now that it's created, give the cpp raster object ownership of the temporary directory
-    rast.have_temp_dir = False
-    srast.cpp_raster.set_temp_dir(temp_dir)
-    srast.temp_dataset = filename == "" and large_raster
-    srast.filename = filename
 
     if info:
         for band, vals in quantile_vals.items():

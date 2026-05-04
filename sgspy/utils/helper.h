@@ -365,9 +365,8 @@ createVirtualDataset(
  * @param int width
  * @param int height
  * @param double *geotransform
- * @param std::string projection,k
- * @param RasterBandMetaData *bands
- * @param size_t bandCount
+ * @param std::string projection
+ * @param std::vector<RasterBandMetaData>& bands
  * @param bool useTiles
  * @returns GDALDataset *
  */
@@ -379,8 +378,7 @@ createDataset(
 	int height, 
 	double *geotransform, 
 	std::string projection,
-	RasterBandMetaData *bands,
-	size_t bandCount,
+	std::vector<RasterBandMetaData>& bands,
 	bool useTiles,
 	std::map<std::string, std::string>& driverOptions) 
 {
@@ -1130,18 +1128,18 @@ inline std::pair<double, double> sample_to_point(double *GT, int xs, int ys) {
  *
  * @param int width
  * @param int height
- * @param std::vector<size_t>& bandPixelSizes
+ * @param std::vector<size_t>& pixelSizesPerBand
  * @returns bool
  */
-bool isLargeRaster(int width, int height, std::vector<size_t>& perPixelSizes) {
+bool isLargeRaster(int width, int height, std::vector<RasterBandMetaData>& bands) {
 	size_t gigabyte = 1073741824;
 	size_t total = 0;
 
 	size_t w = static_cast<size_t>(width);
 	size_t h = static_cast<size_t>(height);
 
-	for (const size_t& pps : perPixelSizes) {
-		size_t bandSize = w * h * pps;
+	for (const size_t& band : bands) {
+		size_t bandSize = w * h * bands.size;
 		total += bandSize;
 		if (bandSize > gigabyte) {
 			return true;
@@ -1179,12 +1177,15 @@ std::string generateTempFile(std::string& stem, std::string extension) {
 		dir = ".";
 	}
 
+	//determine file name
 	static int nTempFileCounter = 0;
 	CPLString uniqueName;
 	uniqueName.Printf("%s_%d_%d", stem.c_str(), CPLGetCurrentProcessID(), CPLAtomicInc(&TempFileCounter));
 
+	//create file
 	std::string filename = CPLFormFilenameSafe(dir, uniqueName.c_str(), extension.c_str());
 	
+	//delete file when program exits
 	std::atexit([]() { VSIUnlink(filename.c_str()); });
 
 	return filename;

@@ -669,21 +669,19 @@ pca(
 	GDALDataType type = GDT_Float32;
 	size_t size = sizeof(float);
 	for (int i = 0; i < bandCount; i++) {
-		bands[i].p_band = p_raster->getRasterBand(i);
-		bands[i].nan = bands[i].p_band->GetNoDataValue();
+		p_raster->fillRasterBandMetaData(i, bands[i]);
 
-		if (p_raster->getRasterBandType(i) == GDT_Float64) {
+		if (band.size == GDT_Float64) {
 			type = GDT_Float64;
 			size = sizeof(double);
 		}
 	}
 
-	GDALDataset *p_dataset = nullptr;
-	std::vector<size_t> perPixelSizes(nComp, size); //pixel size for each band
-	bool largeRaster = helper::isLargeRaster(width, height, perPixelSizes); 
+	bool largeRaster = helper::isLargeRaster(width, height, pcaBands); 
 	bool isMEMDataset = filename == "" && !largeRaster;
 	bool isVRTDataset = filename == "" && largeRaster;
 
+	GDALDataset *p_dataset = nullptr;
 	if (isMEMDataset) {
 		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
 	
@@ -740,8 +738,7 @@ pca(
 			height, 
 			geotransform,
 			projection,
-			pcaBands.data(),
-			pcaBands.size(),
+			pcaBands,
 			useTiles,
 			driverOptions
 		);

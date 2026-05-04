@@ -52,7 +52,6 @@ namespace poly {
  * @param std::string query
  * @param std::string filename
  * @param bool largeRaster
- * @param std::string tempFolder
  * @param std::map<std::string, std::string> driverOptions
  *
  * @returns GDALRasterWrapper *
@@ -64,8 +63,6 @@ raster::GDALRasterWrapper *poly(
 	std::string layerName,
 	std::string query,
 	std::string filename,
-	bool largeRaster,
-	std::string tempFolder,
 	std::map<std::string, std::string> driverOptions)
 {
 	GDALAllRegister();
@@ -95,13 +92,16 @@ raster::GDALRasterWrapper *poly(
 		throw std::runtime_error("raster and vector projections don't match.");
 	}
 
-	bool isMEMDataset = !largeRaster && filename == "";
-	bool isVRTDataset = largeRaster && filename == "";
-	
-	helper::RasterBandMetaData band;
+	std::vector<helper::RasterBandMetaData> bands(1);
+	helper::RasterBandMetaData& band = bands[0];
 	helper::setStratBandTypeAndSize(numStrata - 1, &band.type, &band.size);
 	p_rasterDS->GetRasterBand(1)->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
 	band.name = "strat_" + layerName;
+	
+	bool largeRaster = helper::isLargeRaster(width, height, bands);
+	bool isMEMDataset = filename == "" && !largeRaster;
+	bool isVRTDataset = filename == "" && largeRaster;
+
 	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo;
 
 	//step 2: create dataset
@@ -112,7 +112,7 @@ raster::GDALRasterWrapper *poly(
 	}
 	else if (isVRTDataset) {
 		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
-		helper::createVRTBandDataset(p_dataset, band, tempFolder, layerName + ".tif", VRTBandInfo, driverOptions); 
+		helper::createVRTBandDataset(p_dataset, band, VRTBandInfo, driverOptions); 
 	}
 	else {
 		std::string driver;
@@ -126,7 +126,7 @@ raster::GDALRasterWrapper *poly(
 			throw std::runtime_error("sgs only supports .tif files right now");
 		}
 
-		p_dataset = helper::createDataset(filename, driver, width, height, geotransform, projection, &band, 1, false, driverOptions);
+		p_dataset = helper::createDataset(filename, driver, width, height, geotransform, projection, bands, false, driverOptions);
 	}
 
 	band.p_band->Fill(band.nan);

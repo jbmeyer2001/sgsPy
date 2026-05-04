@@ -247,7 +247,7 @@ raster::GDALRasterWrapper *breaks(
 	std::mutex stratBandMutex;
 	
 	//VRT bands are each their own dataset so they can each have their own mutex
-	std::vector<std::mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
+	std::vector<std::mutex> stratBandMutexes(0);
 	
 	//allocate, read, and initialize raster data and breaks information
 	GDALDataType stratPixelType = GDT_Int8;
@@ -271,6 +271,8 @@ raster::GDALRasterWrapper *breaks(
 		stratBands[i].yBlockSize = map ? dataBands[0].yBlockSize : dataBands[i].yBlockSize;
 		stratBands[i].p_mutex = &stratMutex; //overwritten if VRT dataset
 
+		//type and size must be the same for all bands in an output file because of
+		//restrictions on GeoTiff files which aren't restricted in virtual types
 		if (filename != "" && stratPixelSize < stratBands[i].size) {
 			stratPixelSize = p_stratBand->size;
 			stratPixelType = p_stratBand->type;
@@ -296,6 +298,8 @@ raster::GDALRasterWrapper *breaks(
 		maxStrata = multipliers.back() * (bandBreaks.back().size() + 1);
 		helper::setStratBandTypeAndSize(maxStrata, &stratBands[index].type, &stratBands[index].size);
 		
+		//type and size must be the same for all bands in an output file because of
+		//restrictions on GeoTiff files which aren't restricted in virtual types
 		if (filename != "" && stratPixelSize < stratBands[index].size) {
 			stratPixelSize = p_stratBand->size;
 			stratPixelType = p_stratBand->type;
@@ -303,29 +307,39 @@ raster::GDALRasterWrapper *breaks(
 	}	
 
 	//determine if the raster is large
-	std::vector<size_t> perPixelSize;
-	for (size_t i = 0; i < stratBands.size(); i++) {
-		perPixelSize = stratBands[i].size;
-	}
-	bool largeRaster = helper::isLargeRaster(width, height, perPixelsize);
+	bool largeRaster = helper::isLargeRaster(width, height, stratBands);
 	bool isMEMDataset = filename == "" && !largeRaster;
 	bool isVRTDataset = filename == "" && largeRaster;
 
-	std::string driver;
+	if (!largeRaster) {
+		size_t i = 0;
+		for (auto const& [key, val] : breaks) {
+			dataBands[i].p_buffer = p_raster->getRasterBandBuffer(key);
+			i++;
+		}
+	}
+
 	GDALDataset *p_dataset;
 	if (isMEMDataset) {
 		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
 
-		//FOR EACH BAND, DO WHAT I NEED TO DO WITH THAT BAND
+		for (const helper::RasterBandMetaData& band : stratBands) {
+			helper::addBandToMEMDataset(p_dataset, band);
+		}
 	}
 	else if (isVRTDataset) {
 		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
+		stratBandMutexes.resize(stratBands.size());
 
-		//FOR EACH BAND, DO WHAT I NEED TO DO WITH THAT BAND
+		for (size_t i = 0; i < stratBands.size(); i++) {
+			helper::createVRTBandDataset(p_dataset, stratBands[i], VRTBandInfo, driverOptions);
+			stratBands[i].p_mutex = &stratBandMutexes[i];
+		}
 	}
 	else {
 		std::filesystem::path filepath = filename;
 		std::string extension = filepath.extension().string();
+		std::string driver;
 
 		if (extension == ".tif") {
 			driver = "Gtiff";
@@ -334,37 +348,17 @@ raster::GDALRasterWrapper *breaks(
 			throw std::runtime_error("sgs only supports .tif files right now");
 		}
 
-		//FOR EACH BAND, DO WHAT I NEED TO DO WITH THAT BAND
-	}
+		int xBlockSize = stratBands[0].xBlockSize;
+		int yBlockSize = stratBands[0].yBlockSize;
+		bool useTiles = xBlockSize != width &&
+				yBlockSize != height;
 
-	/**
-	 * DETERMINE HERE WHETHER TO USE MEM OR VRT
-	 *
-	 * SET p_buffer IN RasterBandMetaData
-	 */
-	
-	//update dataset with new band information
-	if (isMEMDataset) {
-		helper::addBandToMEMDataset(p_dataset, *p_stratBand);
-	}
-	else if (isVRTDataset) {
-		helper::createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo, driverOptions); 
-		p_stratBand->p_mutex = &stratBandMutexes[band];
-	}
-	else { //non-virtual dataset driver
-	}
-
-
-
-	//create full non-virtual dataset now that we have all required band information
-	if (!isMEMDataset && !isVRTDataset) {
-		bool useTiles = stratBands[0].xBlockSize != width &&
-				stratBands[0].yBlockSize != height;
-
-		for (size_t band = 0; band < stratBands.size(); band++) {
-			stratBands[band].size = stratPixelSize;
-			stratBands[band].type = stratPixelType;
-			stratBands[band].p_buffer = !largeRaster ? VSIMalloc3(height, width, stratPixelSize) : nullptr;
+		for (size_t i = 0; i < stratBands.size(); i++) {
+			stratBands[i].size = stratPixelSize;
+			stratBands[i].type = stratPixelType;
+			stratBands[i].p_buffer = !largeRaster ? 
+				VSIMalloc3(height, width, stratPixelSize) : 
+				nullptr;
 		}
 
 		p_dataset = helper::createDataset(
@@ -374,13 +368,12 @@ raster::GDALRasterWrapper *breaks(
 			height,
 			geotransform,
 			projection,
-			stratBands.data(),
-			stratBands.size(),
+			stratBands,
 			useTiles,
 			driverOptions
 		);
 	}
-
+	
 	//iterate through all pixels and update the stratified raster bands
 	if (largeRaster) {
 		pybind11::gil_scoped_acquire acquire;

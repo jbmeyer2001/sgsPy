@@ -11,11 +11,6 @@
 # @defgroup user_poly poly
 # @ingroup user_stratify
 
-import os
-import sys
-import site
-import tempfile
-
 from sgspy.utils import (
     SpatialRaster,
     SpatialVector,
@@ -23,8 +18,6 @@ from sgspy.utils import (
 )
 
 from _sgs import poly_cpp
-
-GIGABYTE = 1073741824
 
 ##
 # @ingroup user_poly
@@ -148,13 +141,6 @@ def poly(
                 raise ValueError("the key for al key/value pairs in teh driver_options dict must be a string.")
             driver_options_str[key] = str(val)
 
-    large_raster = rast.height * rast.width > GIGABYTE
-    
-    #make temp directory which will be deleted if there is any problem when calling the cpp function
-    temp_dir = tempfile.mkdtemp()
-    rast.have_temp_dir = True
-    rast.temp_dir = temp_dir
-
     srast = SpatialRaster(poly_cpp(
         vect.cpp_vector,
         rast.cpp_raster,
@@ -162,16 +148,8 @@ def poly(
         layer_name,
         sql_query,
         filename,
-        large_raster,
-        temp_dir,
         driver_options_str
     ))
-
-    #now that it's created, give the cpp raster object ownership of the temporary directory
-    rast.have_temp_dir = False
-    srast.cpp_raster.set_temp_dir(temp_dir)
-    srast.temp_dataset = filename == "" and large_raster
-    srast.filename = filename
 
     srast.srast_metadata_info = {
         "strat_" + layer_name: StratRasterBandMetadata(

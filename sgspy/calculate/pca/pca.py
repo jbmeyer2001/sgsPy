@@ -11,14 +11,9 @@
 # @defgroup user_pca pca
 # @ingroup user_calculate
 
-import os
-import sys
-import site
 from sgspy.utils import SpatialRaster
 
 from _sgs import pca_cpp
-
-GIGABYTE = 1073741824
 
 ## 
 # @ingroup user_pca

@@ -11,20 +11,13 @@
 # @defgroup user_breaks breaks
 # @ingroup user_stratify
 
-import os
-import sys
-import site
-import tempfile
 from typing import Optional
-
 import numpy as np
 import matplotlib.pyplot as plt
 
 from sgspy.utils import SpatialRaster, StratRasterBandMetadata
 
 from _sgs import breaks_cpp, dist_cpp
-
-GIGABYTE = 1073741824
 
 ##
 # @ingroup user_breaks

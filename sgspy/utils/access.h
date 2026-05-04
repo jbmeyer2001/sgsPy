@@ -65,8 +65,6 @@ struct Access {
 	* @param std::string layerName
 	* @param double buffInner
 	* @param double buffOuter
-	* @param bool largeRaster
-	* @param std::string tempFolder
 	* @param int xBlockSize
 	* @param int yBlockSize
 	*/
@@ -75,8 +73,6 @@ struct Access {
 	       std::string layerName, 
 	       double buffInner, 
 	       double buffOuter,
-	       bool largeRaster,
-	       std::string tempFolder,
 	       int xBlockSize,
 	       int yBlockSize) 
 	{
@@ -215,9 +211,9 @@ struct Access {
 		p_feature->SetGeometry(p_invertedMask);
 		p_layer->CreateFeature(p_feature); //error handling here???
 		OGRFeature::DestroyFeature(p_feature);
-	
-		std::filesystem::path path = tempFolder;
-		path = path / "access.tif";
+
+		std::string name = "access";
+		std::string filepath = generateTempFile(name, ".tif");		
 
 		//step 9: generate options list for rasterization	
 		char **argv = nullptr;
@@ -253,7 +249,7 @@ struct Access {
 
 		//step 10: rasterize vector creating in-memory dataset
 		this->p_dataset = GDALDataset::FromHandle(GDALRasterize(
-			path.string().c_str(),
+			filepath.c_str(),
 			nullptr,
 			p_accessPolygonDataset,
 			options,

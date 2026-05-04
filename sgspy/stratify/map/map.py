@@ -11,16 +11,10 @@
 # @defgroup user_map map
 # @ingroup user_stratify
 
-import os
-import sys
-import site
-import tempfile
 from typing import Optional
 from sgspy.utils import SpatialRaster, StratRasterBandMetadata
 
 from _sgs import map_cpp
-
-GIGABYTE = 1073741824
 
 ##
 # @ingroup user_map
@@ -149,8 +143,6 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
     height = None
     width = None
 
-    raster_size_bytes = 0
-    large_raster = False
     for arg in args:
         if not isinstance(arg, tuple) and type(arg) is not SpatialRaster:
             raise TypeError("all input raster/band/strata arguments must be of type tuple or SpatialRaster")
@@ -242,13 +234,6 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
                 else:
                     strata_count_list.append(num_strata[i])
                 
-                #check for large raster
-                pixel_size = raster.cpp_raster.get_raster_band_type_size(band_int)
-                band_size = height * width * pixel_size
-                raster_size_bytes += band_size
-                if band_size > GIGABYTE:
-                    large_raster = True
-
         else:
             band_int = get_band_int(bands)
             band_str = raster.bands[band_int]
@@ -259,23 +244,10 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
             
             strata_count_list.append(num_strata)
             
-            #check for large raster
-            pixel_size = raster.cpp_raster.get_raster_band_type_size(band_int)
-            band_size = height * width * pixel_size
-            raster_size_bytes += band_size
-            if band_size > GIGABYTE:
-                large_raster == True
-        
         #prepare cpp function arguments
         raster_list.append(raster.cpp_raster)
         band_lists.append(band_list)
         strata_count_lists.append(strata_count_list)
-
-    #if any 1 band is larger than a gigabyte, or all bands together are larger than 4, large_raster is true
-    #
-    #large_raster is defined to let the C++ function know to process using an in-memory dataset (MEM) or 
-    #another virtual type (VRT)
-    large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
 
     #error check max value for potential overflow error 
     max_mapped_strata = 1
@@ -290,14 +262,8 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
     if driver_options:
         for (key, val) in driver_options.items():
             if type(key) is not str:
-                raise ValueError("the key for all key/value pairs in th driver_options dict must be a string")
+                raise ValueError("the key for all key/value pairs in the driver_options dict must be a string")
             driver_options_str[key] = str(val)
-
-    #make a temp directory which will be deleted if there is any problem when calling the cpp function
-    #in the case of an error, during the cleanup of 'first_rast' the directory labeled 'temp_dir' will be deleted
-    temp_dir = tempfile.mkdtemp()
-    first_rast.have_temp_dir = True
-    first_rast.temp_dir = temp_dir
 
     #call cpp map function
     srast = SpatialRaster(map_cpp(
@@ -305,17 +271,9 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
         band_lists, 
         strata_count_lists, 
         filename, 
-        large_raster,
         thread_count,
-        temp_dir,
         driver_options_str
     ))
-
-    #now that the srast has been created by the cpp function, give the new srast cpp raster ownership of the temporary directory
-    first_rast.have_temp_dir = False
-    srast.cpp_raster.set_temp_dir(temp_dir)
-    srast.temp_dataset = filename == "" and large_raster
-    srast.filename = filename
 
     mapped_band_metadata = []
     mapped_strata_count = 1

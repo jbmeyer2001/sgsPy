@@ -100,9 +100,7 @@ namespace map {
  * @param std::vector<std::vector<int>> bands
  * @param std::vector<std::vector<float>> strataCounts
  * @param std::string filename
- * @param bool largeRaster
  * @param in threadCount
- * @param std::string tempFolder
  * @param std::map<std::string, std::string> driverOptions,
  * @returns GDALRasterWrapper *pointer to newly created raster mapping
  */
@@ -111,9 +109,7 @@ raster::GDALRasterWrapper *map(
 	std::vector<std::vector<int>> bands,
 	std::vector<std::vector<int>> strataCounts,
 	std::string filename,
-	bool largeRaster,
 	int threadCount,
-	std::string tempFolder,
 	std::map<std::string, std::string> driverOptions)
 {
 	GDALAllRegister();
@@ -155,23 +151,62 @@ raster::GDALRasterWrapper *map(
 			throw std::runtime_error(err);
 		}
 	}
-	
-	std::vector<helper::RasterBandMetaData> stratBands;
+
+	size_t numInputBands = 0;
+	for (size_t i; i < bands.size(); i++) {
+		numInputBands += bands[i].size();
+	}	
+	std::vector<helper::RasterBandMetaData> stratBands(numInputBands);
 	std::vector<int> numStrataPerBand;	
-	helper::RasterBandMetaData mapBand;
+	
 	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo(1);
-
-	bool isMEMDataset = !largeRaster && filename == "";
-	bool isVRTDataset = largeRaster && filename == "";
-
 	std::vector<std::mutex> stratDatasetMutexes(rasters.size());
+	
+	std::vector<helper::RasterBandMetaData> mapBands;
+	helper::rasterBandMetaData& mapBand = mapBands[0];
 	std::mutex mapBandMutex;
 
-	std::string driver;
+	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
+	size_t sbi = 0; //strat band index
+	std::vector<size_t> multipliers(1, 1);
+	for (size_t i = 0; i < rasters.size(); i++) {
+		raster::GDALRasterWrapper *p_raster = rasters[i];
+
+		for (size_t j = 0; j < bands[i].size(); j++) {
+			p_raster->fillRasterBandMetaData(bands[i][j], stratBands[sbi]);
+			stratBands[sbi].p_mutex = &stratDatasetMutexes[i];
+			sbi++;
+
+			helper::printTypeWarningsForInt32Conversion(stratBand.type);
+			
+			int strataCount = strataCounts[i][j];
+			numStrataPerBand.push_back(strataCount);
+			multipliers.push_back(multipliers.back() * strataCount);
+		}
+	}
+
+	size_t bandCount = stratBands.size();
+	size_t maxStrata = multipliers.back();
+	multipliers.pop_back();
+	
+	helper::setStratBandTypeAndSize(maxStrata, &mapBand.type, &mapBand.size);
+	mapBand.name = "strat_map";
+	mapBand.xBlockSize = stratBands[0].xBlockSize;
+	mapBand.yBlockSize = stratBands[0].yBlockSize;
+	mapBand.p_mutex = &mapBandMutex;
+
+	bool largeRaster = isLargeRaster(width, height, {mapBand.size * width * height}); 
+	bool isMEMDataset = filename == "" && !largeRaster;
+	bool isVRTDataset = filename == "" && largeRaster;
+
 	GDALDataset *p_dataset = nullptr;
-	if (isMEMDataset || isVRTDataset) {
-		std::string driver = isMEMDataset ? "MEM" : "VRT";
-		p_dataset = helper::createVirtualDataset(driver, width, height, geotransform, projection);
+	if (isMEMDataset) {
+		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
+		helper::addBandToMEMDataset(p_dataset, mapBand);
+	}
+	else if (isVRTDataset) {
+		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection):
+		helper::createVRTBandDataset(p_dataset, mapBand, VRTBandInfo, driverOptions);
 	}
 	else {
 		std::filesystem::path filepath = filename;
@@ -183,58 +218,7 @@ raster::GDALRasterWrapper *map(
 		else {
 			throw std::runtime_error("sgs only supports .tif files right now");
 		}
-	}
-
-	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
-	std::vector<size_t> multipliers(1, 1);
-	for (size_t i = 0; i < rasters.size(); i++) {
-		raster::GDALRasterWrapper *p_raster = rasters[i];
-
-		for (size_t j = 0; j < bands[i].size(); j++) {
-			int band = bands[i][j];
-			int strataCount = strataCounts[i][j];
-			numStrataPerBand.push_back(strataCount);
-
-			helper::RasterBandMetaData stratBand;
-
-			GDALRasterBand *p_band = p_raster->getRasterBand(band);
-			stratBand.p_band = p_band;
-			stratBand.type = p_raster->getRasterBandType(band);
-			stratBand.size = p_raster->getRasterBandTypeSize(band);
-			stratBand.p_buffer = largeRaster ? nullptr : p_raster->getRasterBandBuffer(band);
-			stratBand.nan = p_band->GetNoDataValue();
-			stratBand.p_mutex = &stratDatasetMutexes[i];
-			p_band->GetBlockSize(&stratBand.xBlockSize, &stratBand.yBlockSize);
-			stratBands.push_back(stratBand);
-
-			helper::printTypeWarningsForInt32Conversion(stratBand.type);
-			multipliers.push_back(multipliers.back() * strataCount);
-		}
-	}
-
-	size_t bandCount = stratBands.size();
-	size_t maxStrata = multipliers.back();
-	multipliers.pop_back();
-	helper::setStratBandTypeAndSize(maxStrata, &mapBand.type, &mapBand.size);
-	mapBand.name = "strat_map";
-	mapBand.xBlockSize = stratBands[0].xBlockSize;
-	mapBand.yBlockSize = stratBands[0].yBlockSize;
-	mapBand.p_mutex = &mapBandMutex;
-
-	if (isMEMDataset) {
-		helper::addBandToMEMDataset(p_dataset, mapBand);
-	}
-	else if (isVRTDataset) {
-		helper::createVRTBandDataset(
-			p_dataset,
-			mapBand,
-			tempFolder,
-			"map",
-			VRTBandInfo,
-			driverOptions
-		);
-	}
-	else {
+	
 		bool useTiles = mapBand.xBlockSize != width &&
 				mapBand.yBlockSize != height;
 
@@ -242,18 +226,21 @@ raster::GDALRasterWrapper *map(
 			VSIMalloc3(height, width, mapBand.size) :
 			nullptr;
 
-		p_dataset = helper::createDataset(
-			filename,
-			driver,
-			width,
-			height,
-			geotransform,
-			projection,
-			&mapBand,
-			1,
-			useTiles,
-			driverOptions
-		);
+		std::vector<helper::RasterBandMetaData> mapBandVec(1, mapBand); 
+		p_dataset = helper::createDataset(filename, driver, width, height, geotransform, 
+						  projection, mapBands, useTiles, driverOptions);
+	}
+
+	//set stratBand p_buffer member to raster band buffer if it is not considered too large for
+	//for the whole raster to be in memory
+	sbi = 0; //strat band index
+	if (!largeRaster) {
+		for (size_t i = 0; i < rasters.size(); i++) {
+			for (size_t j = 0; j < bands[i].size(); j++) {
+				stratBands[sbi].p_buffer = rasters[i]->getRasterBandBuffer(bands[i][j]);
+				sbi++;
+			}
+		}
 	}
 
 	if (largeRaster) {
