@@ -61,7 +61,7 @@ jobs:
         
       - name: Install and build C++ dependencies
         run: |
-          sudo apt install build-essential pkg-config libtool bison flex autoconf autoconf-archive automake
+          sudo apt install build-essential pkg-config libtool libtoolize bison flex autoconf autoconf-archive automake
           bash scripts/install.sh
         
       - name: Install python dependencies
@@ -135,7 +135,7 @@ jobs:
           
       - name: Install and build C++ dependencies
         run: |
-          sudo apt install build-essential pkg-config libtool bison flex autoconf autoconf-archive automake
+          sudo apt install build-essential pkg-config libtool libtoolize bison flex autoconf autoconf-archive automake
           bash scripts/install.sh
         
       - name: Install Python Dependencies
