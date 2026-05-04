@@ -26,12 +26,7 @@ jobs:
         
       - name: Install and build C++ dependencies
         run: |
-          sudo apt install build-essential
-          sudo apt install pkg-config
-          sudo apt install libtool
-          sudo apt install bison
-          sudo apt install flex
-          sudo apt install patchelf
+          sudo apt install build-essential pkg-config libtool bison flex autoconf autoconf-archive automake
           bash scripts/install.sh
         
       - name: Install python dependencies
