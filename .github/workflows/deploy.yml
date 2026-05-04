@@ -153,7 +153,7 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
           CIBW_SKIP: "*-musllinux_*"
           CIBW_ENVIRONMENT: PKG_CONFIG_PATH="/project/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgconfig"
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -w {dest_dir} {wheel} --exclude libmkl_core.so.2 --exclude libmkl_tbb_thread.so.2 --exclude libmkl_intel_ilp64.so.2 --exclude libonedal_parameters.so.3 --exclude libonedal_core.so.3 --exclude libonedal_thread.so.3 --exclude libonedal.so.3"
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -w {dest_dir} {wheel} --exclude libmkl_core.so.3 --exclude libmkl_tbb_thread.so.3 --exclude libmkl_intel_ilp64.so.3 --exclude libonedal_parameters.so.4 --exclude libonedal_core.so.4 --exclude libonedal_thread.so.4 --exclude libonedal.so.4"
           
       - name: Save wheel artifact
         uses: actions/upload-artifact@v5
