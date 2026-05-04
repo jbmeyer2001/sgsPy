@@ -60,7 +60,10 @@ jobs:
           submodules: recursive
         
       - name: Install and build C++ dependencies
-        run: bash scripts/install.sh
+        run: |
+          sudo apt update
+          sudo apt install build-essential pkg-config libtool bison flex autoconf autoconf-archive automake
+          bash scripts/install.sh
         
       - name: Install python dependencies
         run: |
@@ -132,7 +135,10 @@ jobs:
           submodules: recursive
           
       - name: Install and build C++ dependencies
-        run: bash scripts/install.sh
+        run: |
+          sudo apt update
+          sudo apt install build-essential pkg-config libtool bison flex autoconf autoconf-archive automake
+          bash scripts/install.sh
         
       - name: Install Python Dependencies
         run: |
