@@ -1147,7 +1147,6 @@ processBlocksStratQueinnec(
  * @param std::vector<std::pair<std:string, int>> mapStratMapping
  * @param bool plot
  * @param std::string filename
- * @param std::string tempFolder
  *
  * @returns std::tuple<
  * 		std::vector<std::vector<double>>,
@@ -1177,8 +1176,7 @@ strat(
 	double buffOuter,
 	std::vector<std::pair<std::string, int>> mapStratMapping,
 	bool plot,
-	std::string filename,
-	std::string tempFolder)
+	std::string filename)
 {
 	GDALAllRegister();
 
@@ -1245,8 +1243,6 @@ strat(
 		layerName, 
 		buffInner, 
 		buffOuter, 
-		true, 
-		tempFolder, 
 		band.xBlockSize,
 		band.yBlockSize
 	);

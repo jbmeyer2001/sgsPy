@@ -11,10 +11,6 @@
 # @defgroup user_clhs clhs
 # @ingroup user_sample
 
-import os
-import sys
-import site
-import tempfile
 from typing import Optional
 import warnings
 
@@ -198,12 +194,6 @@ def clhs(
 
     existing_vector = existing.cpp_vector if existing else None
 
-
-    temp_dir = rast.cpp_raster.get_temp_dir()
-    if temp_dir == "":
-        temp_dir = tempfile.mkdtemp()
-        rast.cpp_raster.set_temp_dir(temp_dir)
-
     [sample_coordinates, cpp_vector] = clhs_cpp(
         rast.cpp_raster,
         num_samples,
@@ -215,7 +205,6 @@ def clhs(
         existing_vector,
         replace,
         plot,
-        temp_dir,
         filename
     )
 

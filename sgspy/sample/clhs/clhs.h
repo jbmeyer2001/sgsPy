@@ -1030,7 +1030,6 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
  * @param double buffInner
  * @param double buffOuter
  * @param bool plot
- * @param std::string tempFolder
  * @param std::string filename
  * @returns std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *>
  */
@@ -1046,7 +1045,6 @@ clhs(
 	vector::GDALVectorWrapper *p_existing,
 	size_t replace,
 	bool plot,
-	std::string tempFolder,
 	std::string filename)
 {
 	GDALAllRegister();
@@ -1089,8 +1087,6 @@ clhs(
 		layerName,
 		buffInner,
 		buffOuter,
-		true,
-		tempFolder,
 		bands[0].xBlockSize,
 		bands[0].yBlockSize
 	);

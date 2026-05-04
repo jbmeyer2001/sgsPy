@@ -276,7 +276,6 @@ processBlock(
  * @param double buffInner
  * @param double buffOuter
  * @param bool plot
- * @param std::string tempFolder
  * @param std::string filename
  * @returns std::tuple<std::vector<std::vector<double>>, GDALVectorWrapper *, size_t>
  */
@@ -291,7 +290,6 @@ srs(
 	double buffInner,
 	double buffOuter,
 	bool plot,
-	std::string tempFolder,
 	std::string filename)
 {
 	GDALAllRegister();
@@ -338,8 +336,6 @@ srs(
 		layerName,
 		buffInner,
 		buffOuter,
-		true,
-		tempFolder,
 		band.xBlockSize,
 		band.yBlockSize
 	);

@@ -11,12 +11,7 @@
 # @defgroup user_srs srs
 # @ingroup user_sample
 
-import os
-import sys
-import site
-import tempfile
 from typing import Optional
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -180,11 +175,6 @@ def srs(
     else:
         existing_vector = None
 
-    temp_dir = rast.cpp_raster.get_temp_dir()
-    if temp_dir == "":
-        temp_dir = tempfile.mkdtemp()
-        rast.cpp_raster.set_temp_dir(temp_dir)
-
     #call random sampling function
     [sample_coordinates, cpp_vector, num_points] = srs_cpp(
         rast.cpp_raster,
@@ -196,7 +186,6 @@ def srs(
         buff_inner,
         buff_outer,
         plot,
-        temp_dir,
         filename
     )
     

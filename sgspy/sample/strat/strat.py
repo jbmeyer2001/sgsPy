@@ -11,12 +11,7 @@
 # @defgroup user_strat strat
 # @ingroup user_sample
 
-import os
-import sys
-import site
-import tempfile
 from typing import Optional
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -352,11 +347,6 @@ def strat(
     if mindist < 0:
         raise ValueError("mindist must be greater than or equal to 0")
 
-    temp_dir = strat_rast.cpp_raster.get_temp_dir()
-    if temp_dir == "":
-        temp_dir = tempfile.mkdtemp()
-        strat_rast.cpp_raster.set_temp_dir(temp_dir)
-
     [sample_coordinates, samples, num_points] = strat_cpp(
         strat_rast.cpp_raster,
         band,
@@ -379,7 +369,6 @@ def strat(
         map_strat_mapping,
         plot,
         filename,
-        temp_dir
     )
 
     if num_points < num_samples:
