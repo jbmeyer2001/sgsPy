@@ -15,19 +15,27 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install and build C++ dependencies
-        run: |
-          sudo apt update
-          sudo apt install build-essential pkg-config libtool bison flex autoconf autoconf-archive automake
-          bash scripts/install.sh
-
       - name: Generate vcpkg hash
         id: vcpkg-hash
         uses: Andthehand/submodule-version-hash-action@main
         with:
           path: 'sgspy/extern/vcpkg'
 
+      - uses: actions/cache/restore@v5
+        id: restore-cache
+        with:
+            path: sgspy/extern/vcpkg
+            key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
+
+      - name: Install and build C++ dependencies
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt update
+          sudo apt install build-essential pkg-config libtool bison flex autoconf autoconf-archive automake
+          bash scripts/install.sh
+
       - name: Cache built C++ dependencies
+        if: steps.restore-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
@@ -46,16 +54,24 @@ jobs:
         with:
           arch: x64
 
-      - name: Install and build C++ dependencies
-        run: ./scripts/install.bat
-
       - name: Generate vcpkg hash
         id: vcpkg-hash
         uses: Andthehand/submodule-version-hash-action@main
         with:
           path: 'sgspy/extern/vcpkg'
 
+      - uses: actions/cache/restore@v5
+        id: restore-cache
+        with:
+            path: sgspy/extern/vcpkg
+            key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
+
+      - name: Install and build C++ dependencies
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        run: ./scripts/install.bat
+
       - name: Cache built C++ dependencies
+        if: steps.restore-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-${{ steps.vcpkg-hash.outputs.sha256 }}
@@ -146,6 +162,7 @@ jobs:
           pip install pytest geopandas
         
       - name: Build package
+        shell: pwsh
         run: bash scripts/build.sh
         
       - name: Run pytests
