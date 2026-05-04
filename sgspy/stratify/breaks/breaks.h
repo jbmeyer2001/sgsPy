@@ -255,13 +255,8 @@ raster::GDALRasterWrapper *breaks(
 	size_t i = 0;
 	for (auto const& [key, val] : breaks) {
 		//get and store metadata from input raster band
-		GDALRasterBand *p_band = p_raster->getRasterBand(key);
-		dataBands[i].p_band = p_band;
-		dataBands[i].type = p_raster->getRasterBandType(key);
-		dataBands[i].size = p_raster->getRasterBandTypeSize(key);
-		dataBands[i].nan = p_band->GetNoDataValue();
+		p_raster->fillRasterBandMetaData(key, dataBands[i]);
 		dataBands[i].p_mutex = &dataBandMutex;
-		dataBands[i].p_band->GetBlockSize(&dataBands[i].xBlocksize, &dataBands[i].yBlockSize);
 
 		//sort and add band breaks vector
 		std::vector<double> valCopy = val; //have to create copy to alter the band breaks in iteration loop

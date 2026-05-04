@@ -822,6 +822,22 @@ class GDALRasterWrapper {
 	std::string getFilename() {
 		return std::string(p_dataset->pszFilename);
 	}
+
+	/**
+	 * Sets the RasterBandMetaData according to the band at the
+	 * index indicated.
+	 *
+	 * @param int i
+	 * @param RasterBandMetaData& band
+	 */
+	fillRasterBandMetaData(int i, RasterBandMetaData& band) {
+		band.p_band = getRasterBand(i);
+		band.type = getRasterbandType(i);
+		band.size = getRasterBandTypeSize(i); 
+		band.name = p_raster->GetDescription();
+		band.nan = band.p_band->GetNoDataValue();
+		band.p_band->getBlockSize(&band.xBlockSize, &band.yBlockSize);
+	}
 };
 
 } //namespace raster
