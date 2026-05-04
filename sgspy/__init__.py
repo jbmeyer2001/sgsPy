@@ -146,11 +146,13 @@ except ImportError as err:
 
             raise ImportError(f"""{err}
 
-            sgspy relies on a number of external package, and their dynamic libaries are loaded at runtime.
+            sgsPy relies on a number of external packages, and their dynamic libaries are loaded at runtime.
             We were unable to load at least one of the libraries for {dep}.
-            This typically means that dynamic library has already been loaded and wouldn't be a problem except 
-            if the version already loaded is a different version than the one required by this version of sgsPy. 
-            If this is not the reason for the printed error error, it is likely a bug and should be reported on
+            This typically means that the dynamic library has already been loaded by another Python package -- 
+            this wouldn't be a problem except if the version already loaded by another package is a different 
+            version than the one required by this version of sgsPy.
+            
+            If this is not the reason for the printed error however, it is likely a bug and should be reported on
             https://github.com/jbmeyer2001/sgsPy/issues""")
 
         raise ImportError(f"""The following error has occured attempting to import _sgs: {err}.
