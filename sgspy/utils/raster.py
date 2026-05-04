@@ -154,8 +154,6 @@ PROJDB_PATH = os.environ["SGSPY_PROJDB_PATH"]
 #     can also be passed to plot_image().
 class SpatialRaster:
     
-    have_temp_dir = False
-    temp_dataset = False
     filename = ""
     closed = False
 
@@ -188,7 +186,6 @@ class SpatialRaster:
         """
         if (type(image) is str):
             self.cpp_raster = GDALRasterWrapper(image, PROJDB_PATH)
-            self.filename = image
         elif type(image) is GDALRasterWrapper:
             self.cpp_raster = image
         else:
@@ -454,7 +451,7 @@ class SpatialRaster:
             for i in range(len(self.bands)):
                 ds.set_band_description(i + 1, self.bands[i]) 
         else:
-            ds = rasterio.open(self.filename)
+            ds = rasterio.open(self.cpp_raster.get_filename())
 
         if with_arr:
             return ds, arr
@@ -596,7 +593,7 @@ class SpatialRaster:
             self.cpp_raster.close()
             self.closed = True
 
-            ds = gdal.Open(self.filename)
+            ds = gdal.Open(self.cpp_raster.get_filename())
 
         if with_arr:
             return ds, arr

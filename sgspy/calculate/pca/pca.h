@@ -648,8 +648,6 @@ std::tuple<
 pca(
 	raster::GDALRasterWrapper *p_raster,
 	int nComp,
-	bool largeRaster,
-	std::string tempFolder,
 	std::string filename,
 	std::map<std::string, std::string> driverOptions)
 {
@@ -660,10 +658,6 @@ pca(
 	int width = p_raster->getWidth();
 	double *geotransform = p_raster->getGeotransform();
 	std::string projection = std::string(p_raster->getDataset()->GetProjectionRef());
-	
-	bool isMEMDataset = !largeRaster && filename == "";
-	bool isVRTDataset = largeRaster && filename == "";
-	GDALDataset *p_dataset = nullptr;
 	
 	std::vector<helper::RasterBandMetaData> bands(bandCount);
 	std::vector<helper::RasterBandMetaData> pcaBands(nComp);
@@ -684,6 +678,12 @@ pca(
 		}
 	}
 
+	GDALDataset *p_dataset = nullptr;
+	std::vector<size_t> perPixelSizes(nComp, size); //pixel size for each band
+	bool largeRaster = helper::isLargeRaster(width, height, perPixelSizes); 
+	bool isMEMDataset = filename == "" && !largeRaster;
+	bool isVRTDataset = filename == "" && largeRaster;
+
 	if (isMEMDataset) {
 		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
 	
@@ -703,7 +703,7 @@ pca(
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			pcaBands[i].nan = std::nan("");
-			helper::createVRTBandDataset(p_dataset, pcaBands[i], tempFolder, pcaBands[i].name, VRTBandInfo, driverOptions);
+			helper::createVRTBandDataset(p_dataset, pcaBands[i], VRTBandInfo, driverOptions);
 		}
 	}
 	else {

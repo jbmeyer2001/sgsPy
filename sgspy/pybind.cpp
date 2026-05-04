@@ -93,8 +93,7 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("get_raster_band_type_size", &sgs::raster::GDALRasterWrapper::getRasterBandTypeSize)
 		.def("get_geotransform", &sgs::raster::GDALRasterWrapper::getGeotransformArray)
 		.def("get_data_type", &sgs::raster::GDALRasterWrapper::getDataType)
-		.def("set_temp_dir", &sgs::raster::GDALRasterWrapper::setTempDir)
-		.def("get_temp_dir", &sgs::raster::GDALRasterWrapper::getTempDir)
+		.def("get_filename", &sgs::raster::GDALRasterWrapper::getFilename)
 		.def("release_band_buffers", &sgs::raster::GDALRasterWrapper::releaseBandBuffers)
 		.def("close", &sgs::raster::GDALRasterWrapper::close);
 

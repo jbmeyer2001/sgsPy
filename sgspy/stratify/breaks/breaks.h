@@ -220,9 +220,7 @@ raster::GDALRasterWrapper *breaks(
 	std::map<int, std::vector<double>> breaks,
 	bool map,
 	std::string filename,
-	bool largeRaster,
 	int threads,
-	std::string tempFolder,
 	std::map<std::string, std::string> driverOptions)
 {
 	GDALAllRegister();
@@ -247,43 +245,23 @@ raster::GDALRasterWrapper *breaks(
 
 	std::mutex dataBandMutex;
 	std::mutex stratBandMutex;
+	
 	//VRT bands are each their own dataset so they can each have their own mutex
 	std::vector<std::mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
-
-	std::string driver;
-	if (isMEMDataset || isVRTDataset) {
-		driver = isMEMDataset ? "MEM" : "VRT";
-		p_dataset = helper::createVirtualDataset(driver, width, height, geotransform, projection);
-	}
-	else {
-		std::filesystem::path filepath = filename;
-		std::string extension = filepath.extension().string();
-
-		if (extension == ".tif") {
-			driver = "Gtiff";
-		}
-		else {
-			throw std::runtime_error("sgs only supports .tif files right now");
-		}
-	}
-
+	
 	//allocate, read, and initialize raster data and breaks information
 	GDALDataType stratPixelType = GDT_Int8;
 	size_t stratPixelSize = 1;
-	size_t band = 0;
+	size_t i = 0;
 	for (auto const& [key, val] : breaks) {
-		helper::RasterBandMetaData *p_dataBand = &dataBands[band];
-		helper::RasterBandMetaData *p_stratBand = &stratBands[band];
-
 		//get and store metadata from input raster band
 		GDALRasterBand *p_band = p_raster->getRasterBand(key);
-		p_dataBand->p_band = p_band;
-		p_dataBand->type = p_raster->getRasterBandType(key);
-		p_dataBand->size = p_raster->getRasterBandTypeSize(key);
-		p_dataBand->p_buffer = largeRaster ? nullptr : p_raster->getRasterBandBuffer(key);
-		p_dataBand->nan = p_band->GetNoDataValue();
-		p_dataBand->p_mutex = &dataBandMutex;
-		p_band->GetBlockSize(&p_dataBand->xBlockSize, &p_dataBand->yBlockSize);
+		dataBands[i].p_band = p_band;
+		dataBands[i].type = p_raster->getRasterBandType(key);
+		dataBands[i].size = p_raster->getRasterBandTypeSize(key);
+		dataBands[i].nan = p_band->GetNoDataValue();
+		dataBands[i].p_mutex = &dataBandMutex;
+		dataBands[i].p_band->GetBlockSize(&dataBands[i].xBlocksize, &dataBands[i].yBlockSize);
 
 		//sort and add band breaks vector
 		std::vector<double> valCopy = val; //have to create copy to alter the band breaks in iteration loop
@@ -292,28 +270,18 @@ raster::GDALRasterWrapper *breaks(
 		
 		//update metadata of new strat raster
 		size_t maxStrata = val.size() + 1;
-		helper::setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
-		p_stratBand->name = "strat_" + bandNames[key];
-		p_stratBand->xBlockSize = map ? dataBands[0].xBlockSize : p_dataBand->xBlockSize;
-		p_stratBand->yBlockSize = map ? dataBands[0].yBlockSize : p_dataBand->yBlockSize;
-		p_stratBand->p_mutex = &stratBandMutex; //overwritten if VRT dataset
+		helper::setStratBandTypeAndSize(maxStrata, &stratBands[i].type, &stratBands[i].size);
+		stratBands[i].name = "strat_" + bandNames[key];
+		stratBands[i].xBlockSize = map ? dataBands[0].xBlockSize : dataBands[i].xBlockSize;
+		stratBands[i].yBlockSize = map ? dataBands[0].yBlockSize : dataBands[i].yBlockSize;
+		stratBands[i].p_mutex = &stratMutex; //overwritten if VRT dataset
 
-		//update dataset with new band information
-		if (isMEMDataset) {
-			helper::addBandToMEMDataset(p_dataset, *p_stratBand);
-		}
-		else if (isVRTDataset) {
-			helper::createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo, driverOptions); 
-			p_stratBand->p_mutex = &stratBandMutexes[band];
-		}
-		else { //non-virtual dataset driver
-			if (stratPixelSize < p_stratBand->size) {
-				stratPixelSize = p_stratBand->size;
-				stratPixelType = p_stratBand->type;
-			}
+		if (filename != "" && stratPixelSize < stratBands[i].size) {
+			stratPixelSize = p_stratBand->size;
+			stratPixelType = p_stratBand->type;
 		}
 
-		band++;
+		i++;
 	}
 
 	//set multipliers if mapped stratification	
@@ -325,36 +293,73 @@ raster::GDALRasterWrapper *breaks(
 		}
 
 		//update info of new strat raster map band
-		helper::RasterBandMetaData *p_stratBand = &stratBands.back();
-		size_t maxStrata = multipliers.back() * (bandBreaks.back().size() + 1);
-		helper::setStratBandTypeAndSize(maxStrata, &p_stratBand->type, &p_stratBand->size);
-		p_stratBand->name = "strat_map";
-		p_stratBand->xBlockSize = dataBands[0].xBlockSize;
-		p_stratBand->yBlockSize = dataBands[0].yBlockSize;
-		p_stratBand->p_mutex = &stratBandMutex; //overwritten if VRT dataset
-
-		//update dataset with new band information
-		if (isMEMDataset) {
-			helper::addBandToMEMDataset(p_dataset, *p_stratBand);			
-		}
-		else if (isVRTDataset) {
-			helper::createVRTBandDataset(
-				p_dataset, 
-				*p_stratBand, 
-				tempFolder, 
-				"map", 
-				VRTBandInfo, 
-				driverOptions
-			); 
-			p_stratBand->p_mutex = &stratBandMutexes.back();
-		}
-		else { //non-virtual dataset driver
-			if (stratPixelSize < p_stratBand->size) {
-				stratPixelSize = p_stratBand->size;
-				stratPixelType = p_stratBand->type;
-			}
+		size_t index = stratBands.size() - 1;
+		stratBands[index].name = "strat_map";
+		stratBands[index].xBlockSize = dataBands[0].xBlockSize;
+		stratBands[index].yBlockSize = dataBands[0].yBlockSize;
+		stratBands[index].p_mutex = &stratBandMutex; //overwritten if VRT dataset
+		maxStrata = multipliers.back() * (bandBreaks.back().size() + 1);
+		helper::setStratBandTypeAndSize(maxStrata, &stratBands[index].type, &stratBands[index].size);
+		
+		if (filename != "" && stratPixelSize < stratBands[index].size) {
+			stratPixelSize = p_stratBand->size;
+			stratPixelType = p_stratBand->type;
 		}
 	}	
+
+	//determine if the raster is large
+	std::vector<size_t> perPixelSize;
+	for (size_t i = 0; i < stratBands.size(); i++) {
+		perPixelSize = stratBands[i].size;
+	}
+	bool largeRaster = helper::isLargeRaster(width, height, perPixelsize);
+	bool isMEMDataset = filename == "" && !largeRaster;
+	bool isVRTDataset = filename == "" && largeRaster;
+
+	std::string driver;
+	GDALDataset *p_dataset;
+	if (isMEMDataset) {
+		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
+
+		//FOR EACH BAND, DO WHAT I NEED TO DO WITH THAT BAND
+	}
+	else if (isVRTDataset) {
+		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
+
+		//FOR EACH BAND, DO WHAT I NEED TO DO WITH THAT BAND
+	}
+	else {
+		std::filesystem::path filepath = filename;
+		std::string extension = filepath.extension().string();
+
+		if (extension == ".tif") {
+			driver = "Gtiff";
+		}
+		else {
+			throw std::runtime_error("sgs only supports .tif files right now");
+		}
+
+		//FOR EACH BAND, DO WHAT I NEED TO DO WITH THAT BAND
+	}
+
+	/**
+	 * DETERMINE HERE WHETHER TO USE MEM OR VRT
+	 *
+	 * SET p_buffer IN RasterBandMetaData
+	 */
+	
+	//update dataset with new band information
+	if (isMEMDataset) {
+		helper::addBandToMEMDataset(p_dataset, *p_stratBand);
+	}
+	else if (isVRTDataset) {
+		helper::createVRTBandDataset(p_dataset, *p_stratBand, tempFolder, std::to_string(key), VRTBandInfo, driverOptions); 
+		p_stratBand->p_mutex = &stratBandMutexes[band];
+	}
+	else { //non-virtual dataset driver
+	}
+
+
 
 	//create full non-virtual dataset now that we have all required band information
 	if (!isMEMDataset && !isVRTDataset) {

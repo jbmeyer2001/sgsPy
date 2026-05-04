@@ -14,7 +14,6 @@
 import os
 import sys
 import site
-import tempfile
 from sgspy.utils import SpatialRaster
 
 from _sgs import pca_cpp
@@ -96,8 +95,6 @@ def pca(
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
     breaks_dict = {}
-    large_raster = False
-    temp_folder = ""
 
     #ensure number of components is acceptabe
     if num_comp <= 0 or num_comp > len(rast.bands):
@@ -112,29 +109,9 @@ def pca(
                 raise TypeError("the key for all key/value pairs in the driver_options dict must be a string.")
             driver_options_str[key] = str(val)
 
-   #determine whether the raster should be categorized as 'large' and thus be processed in blocks
-    raster_size_bytes = 0
-    height = rast.height
-    width = rast.width
-    for i in range(len(rast.bands)):
-        pixel_size = rast.cpp_raster.get_raster_band_type_size(i)
-        band_size = height * width * pixel_size
-        raster_size_bytes += band_size
-        if band_size >= GIGABYTE:
-            large_raster = True
-            break
-
-    large_raster = large_raster or (raster_size_bytes > GIGABYTE * 4)
-
-    temp_dir = tempfile.mkdtemp()
-    rast.have_temp_dir = True
-    rast.temp_dir = temp_dir
-
     [pcomp, eigenvectors, eigenvalues, means, stdevs] = pca_cpp(
         rast.cpp_raster,
         num_comp,
-        large_raster,
-        temp_dir,
         filename,
         driver_options_str
     )
@@ -142,10 +119,6 @@ def pca(
     metadata = (eigenvectors, eigenvalues, means, stdevs)
 
     pcomp_rast = SpatialRaster(pcomp)
-    pcomp_rast.cpp_raster.set_temp_dir(temp_dir)
-    rast.have_temp_dir = False
-    pcomp_rast.temp_dataset = filename == "" and large_raster
-    pcomp_rast.filename = filename
 
     if return_metadata:
         return pcomp_rast, metadata

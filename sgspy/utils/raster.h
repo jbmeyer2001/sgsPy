@@ -771,25 +771,6 @@ class GDALRasterWrapper {
 	}
 
 	/**
-	 * Give the GDALRasterWrapper ownership of a temporary directory, for it to remove when
-	 * deconstructed.
-	 *
-	 * @param std::string tempDir
-	 */
-	void setTempDir(std::string tempDir) {
-		this->tempDir = tempDir;
-	}
-
-	/**
-	 * Getter function for the rasters temporary directory.
-	 *
-	 * @returns std::string
-	 */
-	std::string getTempDir() {
-		return this->tempDir;
-	}
-
-	/**
 	 * Getter method for the geotransform. Meant to be used by the python side of the application.
 	 * Specifically, used when converting from an sgs object to another Python geospatial library
 	 * object.
@@ -831,6 +812,15 @@ class GDALRasterWrapper {
 			case GDT_Float64: return "float64";
 			default: throw std::runtime_error("GDAL data type not supported");
 		}
+	}
+
+	/**
+	 * Get the filename.
+	 *
+	 * @returns std::string
+	 */
+	std::string getFilename() {
+		return std::string(p_dataset->pszFilename);
 	}
 };
 

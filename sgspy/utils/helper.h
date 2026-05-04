@@ -507,15 +507,10 @@ addBandToMEMDataset(
  * When this function has completed there will be a new entry in
  * the VRTBandInfo vector containing a dataset pointer and filename.
  * The RasterBandMetaData object will also be updated with the band
- * information for the tif file created. It's worth noting that
- * the tmpPath is a temporary folder created for the SpatialRaster
- * which this function was called, that holds the .tif files which
- * make up the VRT dataset.
+ * information for the tif file created. 
  *
- * first, the full file path is determined using the temp path,
- * as well as a unique key differentiating the different bands
- * which may be in the dataset. The useTiles boolean determines
- * whether the TILED, XBLOCKSIZE, and YBLOCKSIZE options
+ * First, a temporary file path is generated. Then, the useTiles boolean 
+ * determines whether the TILED, XBLOCKSIZE, and YBLOCKSIZE options
  * will be used in dataset creation. The reason why they wouldn't
  * be used is if the block size is a scanline -- this is because
  * GDAL will throw an error if the tile array would be larger
@@ -529,8 +524,6 @@ addBandToMEMDataset(
  *
  * @param GDALDataset *p_dataset
  * @param RasterBandMetaData& data
- * @param std::string tempFolder
- * @param std::string key
  * @param std::vector<VRTBandDatasetInfo>& VRTBandInfo
  * @param std::map<std::string, std::string>& driverOptions
  */
@@ -538,17 +531,11 @@ inline void
 createVRTBandDataset(
 	GDALDataset *p_dataset,
 	RasterBandMetaData& band,
-	std::string tempFolder,
-	std::string key,
 	std::vector<VRTBandDatasetInfo>& VRTBandInfo,
 	std::map<std::string, std::string>& driverOptions)
 {
-	std::filesystem::path tmpPath = tempFolder;
-	std::filesystem::path tmpName = "strat_breaks_" + key + ".tif";
-	tmpPath = tmpPath / tmpName;
-
 	VRTBandDatasetInfo info;
-	info.filename = tmpPath.string();
+	info.filename = generateTempFile(band.name, ".tif");
 	
 	bool useTiles = band.xBlockSize != p_dataset->GetRasterXSize() && 
 			band.yBlockSize != p_dataset->GetRasterYSize();
@@ -1129,6 +1116,78 @@ inline std::pair<double, double> sample_to_point(double *GT, int xs, int ys) {
 	double y = GT[3] + px * GT[4] + py * GT[5];
 
 	return {x, y};
+}
+
+/**
+ * @ingroup helper
+ * This function decides whether the output raster is qualified as being 'large'.
+ * What this means is that it will always be processed in blocks, and will use
+ * a VRT file in lieu of a MEM file if the user does not provide a filename.
+ *
+ * If any 1 band is larger than a gigabyte, or all bands collectively are larger
+ * than 4 gigabytes, then a raster is considered 'large', which will cause the 
+ * algorithms to avoid very large memory allocations.
+ *
+ * @param int width
+ * @param int height
+ * @param std::vector<size_t>& bandPixelSizes
+ * @returns bool
+ */
+bool isLargeRaster(int width, int height, std::vector<size_t>& perPixelSizes) {
+	size_t gigabyte = 1073741824;
+	size_t total = 0;
+
+	size_t w = static_cast<size_t>(width);
+	size_t h = static_cast<size_t>(height);
+
+	for (const size_t& pps : perPixelSizes) {
+		size_t bandSize = w * h * pps;
+		total += bandSize;
+		if (bandSize > gigabyte) {
+			return true;
+		}
+	}
+
+	return (total > gigabyte * 4);
+}
+
+/**
+ * @ingroup helper
+ * This function is similar to the CPLGenerateTempFilenameSafe()
+ * function from GDAL (gdal/port/cpl_path.cpp) except it calls
+ * CPLFormFIlenameSafe() in a different way, and calls std::atexit()
+ * to clean up the file.
+ *
+ * This function creates a temporary file with the given name, and
+ * returns the directory to the caller.
+ *
+ * @param std::string filename
+ * @returns std::string
+ */
+std::string generateTempFile(std::string& stem, std::string extension) {
+	const char *dir = CPLGetConfigOption("CPL_TMPDIR", nullptr);
+
+	if (dir == nullptr) {
+		dir = CPLGetConfigOption("TMPDIR", nullptr);
+	}
+
+	if (dir == nullptr) {
+		dir = CPLGetConfigOption("TEMP", nullptr);
+	}
+
+	if (dir == nullptr) {
+		dir = ".";
+	}
+
+	static int nTempFileCounter = 0;
+	CPLString uniqueName;
+	uniqueName.Printf("%s_%d_%d", stem.c_str(), CPLGetCurrentProcessID(), CPLAtomicInc(&TempFileCounter));
+
+	std::string filename = CPLFormFilenameSafe(dir, uniqueName.c_str(), extension.c_str());
+	
+	std::atexit([]() { VSIUnlink(filename.c_str()); });
+
+	return filename;
 }
 
 } //namespace helper
