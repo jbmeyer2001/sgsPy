@@ -159,7 +159,11 @@ jobs:
         
       - name: Build package
         shell: pwsh
-        run: bash scripts/build.sh
+        run: |
+          $msvcLinkPath = python -c "import os; [print (root) for root, dirnames, filenames in os.walk('.') if 'link.exe' in filenames and 'Hostx64' in root and root.endswith('x64')]"
+          $env:PATH = "$msvcLinkPath;" + $env:PATH
+          $env:PATH
+          bash scripts/build.sh
         
       - name: Run pytests
         run: pytest
