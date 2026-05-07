@@ -104,11 +104,10 @@ jobs:
       - name: check if vcpkg cache installed correctly
         run: ls sgspy/extern/vcpkg
 
-      - name: Install and build C++ dependencies
+      - name: Install apt dependencies
         run: |
           sudo apt update
           sudo apt install build-essential pkg-config libtool bison flex autoconf autoconf-archive automake
-          bash scripts/install.sh
 
       - name: Install python dependencies
         run: |
@@ -152,9 +151,6 @@ jobs:
 
       - name: check if vcpkg cache installed correctly
         run: dir sgspy/extern/vcpkg
-
-      - name: Install and build C++ dependencies
-        run: bash scripts/install.sh
 
       - name: Install python dependencies
         run: |
