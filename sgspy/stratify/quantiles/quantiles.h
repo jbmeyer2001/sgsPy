@@ -80,7 +80,10 @@ void calcSPQuantiles(
 			fi ++;
 		}
 	}
-	filteredData.resize(fi + 1);
+	if (fi == 0) {
+		throw std::runtime_error("band contains only nodata values, cannot calculate quantiles.");
+	}
+	filteredData.resize(fi);
 
 	//define variables to pass to MKL quantiles calculation function
 	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditquantiles.html
@@ -147,7 +150,10 @@ void calcDPQuantiles(
 			fi ++;
 		}
 	}
-	filteredData.resize(fi + 1);
+	if (fi == 0) {
+		throw std::runtime_error("band contains only nodata values, cannot calculate quantiles.");
+	}
+	filteredData.resize(fi);
 
 	//define variables to pass to MKL quantiles calculation function
 	//https://www.intel.com/content/www/us/en/docs/onemkl/developer-reference-c/2025-2/vslsseditquantiles.html
@@ -867,7 +873,6 @@ quantiles(
 
 	std::vector<std::vector<double>> quantiles(probabilities.size());
 	if (largeRaster) {
-		pybind11::gil_scoped_acquire acquire;
 		boost::asio::thread_pool pool(threadCount); 
 	
 		//initialize synchronization variables
@@ -877,7 +882,7 @@ quantiles(
 
 		//call batch processing quantiles function depending on data type
 		for (int i = 0; i < bandCount; i++) {
-			helper::RasterBandMetaData band = dataBands[i];
+			helper::RasterBandMetaData& band = dataBands[i];
 			quantiles[i].resize(probabilities[i].size());
 			quantilesCalculated[i] = false;
 			if (band.type != GDT_Float64) {
@@ -931,7 +936,7 @@ quantiles(
 
 			int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 			int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
-			int chunkSize = yBlocks / threadCount;
+			int chunkSize = std::max(1, (yBlocks + threadCount - 1) / threadCount);
 
 			for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 				int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);
@@ -1046,7 +1051,7 @@ quantiles(
 					
 				int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
-				int chunkSize = yBlocks / threadCount;
+				int chunkSize = std::max(1, (yBlocks + threadCount - 1) / threadCount);
 				
 				for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 					int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
@@ -1069,10 +1074,8 @@ quantiles(
 						p_calculated
 					] {
 						std::unique_lock lock(*p_mutex);
-
-						if (!(*p_calculated)) {
-							p_cv->wait(lock);
-						}
+						p_cv->wait(lock, [p_calculated] { return *p_calculated; });
+						lock.unlock();
 
 						void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
 						void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
@@ -1129,7 +1132,6 @@ quantiles(
 
 		pool.join();
 		VSIFree(quantilesCalculated);
-		pybind11::gil_scoped_release release;
 	}
 	else {
 		//call quantiles calculation fuction depending on type

@@ -12,6 +12,7 @@
  * @ingroup sample
  */
 
+#include <cstdint>
 #include <iostream>
 #include <random>
 
@@ -69,11 +70,11 @@ OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string l
 			}
 			case OGRwkbGeometryType::wkbMultiLineString: {
 				for (const auto& p_lineString : *p_geometry->toMultiLineString()) {
-					OGRGeometry *p_outer = p_geometry->Buffer(buffOuter);
+					OGRGeometry *p_outer = p_lineString->Buffer(buffOuter);
 					buffOuterPolygons->addGeometry(p_outer);
 					OGRGeometryFactory::destroyGeometry(p_outer);
 					if (buffInner != 0) {
-						OGRGeometry *p_inner = p_geometry->Buffer(buffInner);
+						OGRGeometry *p_inner = p_lineString->Buffer(buffInner);
 						buffInnerPolygons->addGeometry(p_inner);
 						OGRGeometryFactory::destroyGeometry(p_inner);
 					}
@@ -256,7 +257,8 @@ systematic(
 	double buffOuter,
 	bool force,
 	bool plot,
-	std::string filename)
+	std::string filename,
+    uint64_t random_state)
 {
 	GDALAllRegister();
 	
@@ -276,10 +278,9 @@ systematic(
 	double xDiff = xMax - xMin;
 	double yDiff = yMax - yMin;
 	double rngMax = yDiff * xDiff;
-	std::mt19937::result_type seed = time(nullptr);
 	auto rng = std::bind(
 		std::uniform_real_distribution<double>(0, rngMax),
-		std::mt19937(seed)
+		std::mt19937_64(random_state)
 	);
 
 	//determine random rotation angle within extent polygon
@@ -410,7 +411,7 @@ systematic(
 				    checkNotNan(p_raster, IGT, x, y, force)) 
 				{
 					existing.used ?
-						helper::addPoint(&point, p_sampleLayer, &fieldExistingFalse) :
+						helper::addPoint(&secondPoint, p_sampleLayer, &fieldExistingFalse) :
 						helper::addPoint(&secondPoint, p_sampleLayer);
 
 					if (plot) {

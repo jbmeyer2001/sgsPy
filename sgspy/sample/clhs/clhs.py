@@ -11,29 +11,24 @@
 # @defgroup user_clhs clhs
 # @ingroup user_sample
 
-import os
-import sys
-import site
 import tempfile
 from typing import Optional
 import warnings
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 from sgspy.utils import (
     SpatialRaster,
     SpatialVector,
-    plot,
 )
 
 from _sgs import clhs_cpp
 
-## 
+##
 # @ingroup user_clhs
 # This function conducts Conditioned Latin Hypercube Sampling, see the following article for an
 # in depth description of the method itself:
-# 
+#
 # Minasny, B. and McBratney, A.B. 2006. A conditioned Latin hypercube method
 # for sampling in the presence of ancillary information. Computers and Geosciences, 32:1378-1388.
 #
@@ -49,7 +44,7 @@ from _sgs import clhs_cpp
 # the buffer distance around the geometry which is not allwoed to be included in the sampling. buff_outer must
 # be larger than buff_inner. For a multi layer vector, layer_name must be specified.
 #
-# The 'existing' parameter may be given in order to specify an existing sample plot network. 
+# The 'existing' parameter may be given in order to specify an existing sample plot network.
 # All points of the whole existing plot network will be added first, then remaining points will be added
 # as defined by the CLHS algorithm. The 'replace' parameter may also be set to a positive number,
 # if so the worst samples in the existing sample network will be removed (up to 'replace' number of them)
@@ -107,6 +102,8 @@ from _sgs import clhs_cpp
 #     whether to plot the output samples or not @n @n
 # filename : str @n
 #     the filename to write to, or '' if file should not be written @n @n
+# random_state : int @n
+#     control the randomness of the sampling @n @n
 #
 # Returns
 # --------------------
@@ -122,8 +119,9 @@ def clhs(
     existing: Optional[SpatialVector] = None,
     replace: int = None,
     plot: bool = False,
-    filename: str = ''):
-        
+    filename: str = '',
+    random_state: int = 0):
+
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster.")
 
@@ -156,6 +154,9 @@ def clhs(
 
     if type(filename) is not str:
         raise TypeError("'filename' parameter must be of type str.")
+
+    if type(random_state) is not int:
+        raise TypeError("'random_state' parameter must be of type int.")
 
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
@@ -216,7 +217,8 @@ def clhs(
         replace,
         plot,
         temp_dir,
-        filename
+        filename,
+        random_state,
     )
 
     #plot new vector if requested
@@ -225,7 +227,7 @@ def clhs(
             fig, ax = plt.subplots()
             rast.plot(ax, band=rast.bands[0])
             title = "samples on " + rast.bands[0]
-            
+
             if access:
                 access.plot('LineString', ax)
                 title += " with access"

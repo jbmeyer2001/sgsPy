@@ -142,7 +142,7 @@ raster::GDALRasterWrapper *map(
 
 		double *checkGeotransform = rasters[i]->getGeotransform();
 		for (int j = 0; j < 6; j++) {
-			if (geotransform[i] != checkGeotransform[i]) {
+			if (geotransform[j] != checkGeotransform[j]) {
 				std::string err = "raster with index " + std::to_string(i) + " has a different geotransform from the raster at index 0.";
 				throw std::runtime_error(err);
 			}
@@ -159,7 +159,7 @@ raster::GDALRasterWrapper *map(
 	std::vector<helper::RasterBandMetaData> stratBands;
 	std::vector<int> numStrataPerBand;	
 	helper::RasterBandMetaData mapBand;
-	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo(1);
+	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo;
 
 	bool isMEMDataset = !largeRaster && filename == "";
 	bool isVRTDataset = largeRaster && filename == "";
@@ -257,7 +257,6 @@ raster::GDALRasterWrapper *map(
 	}
 
 	if (largeRaster) {
-		pybind11::gil_scoped_acquire acquire;
 		boost::asio::thread_pool pool(threadCount);
 
 		int xBlockSize = stratBands[0].xBlockSize;
@@ -265,7 +264,7 @@ raster::GDALRasterWrapper *map(
 
 		int xBlocks = (width + xBlockSize - 1) / xBlockSize;
 		int yBlocks = (height + yBlockSize - 1) / yBlockSize;
-		int chunkSize = yBlocks / threadCount;
+		int chunkSize = std::max(1, (yBlocks + threadCount - 1) / threadCount);
 
 		for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 			int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);
@@ -371,7 +370,6 @@ raster::GDALRasterWrapper *map(
 		}
 		
 		pool.join();
-		pybind11::gil_scoped_release release;
 	}
 	else {
 		std::vector<int> intNoDataValues(bandCount);

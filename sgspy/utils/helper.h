@@ -21,6 +21,7 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <xoshiro.h>
 #include <gdal_priv.h>
+#include <vrtdataset.h>
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
 
@@ -601,18 +602,23 @@ addBandToVRTDataset(
 	RasterBandMetaData& band,
 	VRTBandDatasetInfo& info
 ) {
-	char **papszOptions = nullptr;
-	const char *filename = info.filename.c_str();
-	papszOptions = CSLSetNameValue(papszOptions, "subclass", "VRTRawRasterBand");
-	papszOptions = CSLSetNameValue(papszOptions, "SourceFilename", filename);
-
-	CPLErr err = p_dataset->AddBand(band.type, papszOptions);
-	CSLDestroy(papszOptions);
+	//a regular (sourced) VRT band reading from the GTiff band dataset. VRTRawRasterBand must not be used,
+	//since it would read the GTiff file as headerless raw binary.
+	CPLErr err = p_dataset->AddBand(band.type, nullptr);
 	if (err) {
 		throw std::runtime_error("unable to add band to dataset.");
 	}
 
-	GDALRasterBand *p_VRTBand = p_dataset->GetRasterBand(p_dataset->GetRasterCount());
+	VRTSourcedRasterBand *p_VRTBand = dynamic_cast<VRTSourcedRasterBand *>(p_dataset->GetRasterBand(p_dataset->GetRasterCount()));
+	if (!p_VRTBand) {
+		throw std::runtime_error("VRT dataset band is not a VRTSourcedRasterBand.");
+	}
+
+	//reference the (already closed and flushed) GTiff by filename, it is opened lazily on read
+	err = p_VRTBand->AddSimpleSource(info.filename.c_str(), 1);
+	if (err) {
+		throw std::runtime_error("unable to add source to VRT band.");
+	}
 	p_VRTBand->SetDescription(band.name.c_str());
 	p_VRTBand->SetNoDataValue(band.nan);
 }
@@ -672,11 +678,11 @@ rasterBandIO(
 			xValid,
 			yValid,
 			p_buffer,
-			xBlockSize,
-			yBlockSize,
+			xValid,		//buffer size must equal the window size, otherwise GDAL resamples
+			yValid,
 			band.type,
-			0,
-			0
+			band.size,
+			static_cast<GSpacing>(band.size) * xBlockSize	//rows in the buffer stay xBlockSize wide, like ReadBlock()
 		);
 	}
 	if (threaded) {

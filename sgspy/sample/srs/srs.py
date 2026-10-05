@@ -11,26 +11,21 @@
 # @defgroup user_srs srs
 # @ingroup user_sample
 
-import os
-import sys
-import site
 import tempfile
 from typing import Optional
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 from sgspy.utils import (
     SpatialRaster,
     SpatialVector,
-    plot,
 )
 
 from _sgs import srs_cpp
 
 ##
 # @ingroup user_srs
-# This function conducts simple random sampling on the raster given. 
+# This function conducts simple random sampling on the raster given.
 # Sample points are randomly selected from data pixels (can't be nodata).
 # All sample points are at least mindist distance away from eachother.
 # If unable to get the full number of sample points, a message is printed.
@@ -38,8 +33,8 @@ from _sgs import srs_cpp
 # An access vector of LineString or MultiLineString type can be provided.
 # buff_outer specifies the buffer distance around the geometry which
 # is allowed to be included in the sampling, buff_inner specifies the
-# buffer distance around the geometry which is not allowed to be included 
-# in the sampling. buff_outer must be larger than buff_inner. For a multi 
+# buffer distance around the geometry which is not allowed to be included
+# in the sampling. buff_outer must be larger than buff_inner. For a multi
 # layer vector, layer_name must be specified.
 #
 # A vector containing existing sample points can be provided. If this is
@@ -50,7 +45,7 @@ from _sgs import srs_cpp
 # Examples
 # --------------------
 # rast = sgspy.SpatialRaster("raster.tif") @n
-# samples = sgspy.sample.srs(rast, num_samples=250) 
+# samples = sgspy.sample.srs(rast, num_samples=250)
 #
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # samples = sgspy.sample.srs(rast, num_samples=250, mindist=100, plot=True, filename="srs_samples.shp") @n
@@ -89,6 +84,8 @@ from _sgs import srs_cpp
 #     whether to plot the samples or not @n @n
 # filename : str @n
 #     the filename to write to, or '' if file should not be written @n @n
+# random_state : int @n
+#     control the randomness of the sampling @n @n
 #
 #
 # Returns
@@ -97,15 +94,16 @@ from _sgs import srs_cpp
 def srs(
     rast: SpatialRaster,
     num_samples: int,
-    mindist: [int | float] = 0,
+    mindist: int | float = 0,
     existing: Optional[SpatialVector] = None,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
     buff_inner: Optional[int | float] = None,
     buff_outer: Optional[int | float] = None,
     plot: bool = False,
-    filename: str = ''):
-        
+    filename: str = '',
+    random_state: int = 0):
+
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster.")
 
@@ -136,6 +134,9 @@ def srs(
     if type(filename) is not str:
         raise TypeError("'filename' paramter must be of type str.")
 
+    if type(random_state) is not int:
+        raise TypeError("'random_state' parameter must be of type int.")
+
     if rast.closed:
             raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
 
@@ -147,8 +148,6 @@ def srs(
 
     if mindist < 0:
         raise ValueError("mindist must be greater than or equal to 0")
-
-
 
     if (access):
         if layer_name is None:
@@ -197,19 +196,20 @@ def srs(
         buff_outer,
         plot,
         temp_dir,
-        filename
+        filename,
+        random_state
     )
-    
+
     if num_points < num_samples:
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, num_points))
 
     #plot new vector if requested
     if plot:
         try:
-            fig, ax = plt.subplots()
+            _, ax = plt.subplots()
             rast.plot(ax, band=rast.bands[0])
             title = "samples on " + rast.bands[0]
-            
+
             if access:
                 access.plot('LineString', ax)
                 title += " with access"

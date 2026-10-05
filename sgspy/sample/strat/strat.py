@@ -11,9 +11,6 @@
 # @defgroup user_strat strat
 # @ingroup user_sample
 
-import os
-import sys
-import site
 import tempfile
 from typing import Optional
 
@@ -23,8 +20,6 @@ import matplotlib.pyplot as plt
 from sgspy.utils import(
     SpatialRaster,
     SpatialVector,
-    StratRasterBandMetadata,
-    plot,
 )
 
 from _sgs import strat_cpp
@@ -38,19 +33,19 @@ from _sgs import strat_cpp
 #  - The 'Queinnec' method prioritizes pixels which are surrounded by other pixels of the same strata.
 # The 'wrow' and 'wcol' parameters determine the size of the surrounding area required for a pixel to be
 # prioritized, and must be one of the following integers: 3, 5, 7.
-# 
+#
 # The desired number of samples is given by num_samples.
 #
 # **IMPORTANT**
 # the num_strata argument is required only if the strat raster given is not the return value of a sgspy
-# stratification function. If the strat raster given is the return value of an sgspy stratification 
+# stratification function. If the strat raster given is the return value of an sgspy stratification
 # function, then this value is automatically stored and used. The num_strata argument, if required, should
 # be set to the value of the largest strata + 1. For example if the strata are [0, 1, 2, 3, 4] then num_strata should
 # be 5. If the strata are [1, 2, 4] then num_strata should still be 5. If the strata are [0, 1, 2, 3] then
 # num_strata should be 4.
 #
 # The allocation parameter specifies the proportion of total samples will be distributed between
-# each strata. The 'prop' method is the default, and attempts to allocate the samples proportionally according to 
+# each strata. The 'prop' method is the default, and attempts to allocate the samples proportionally according to
 # their prevalence in the overall raster. The 'equal' method attempts to distribute the samples equally among strata.
 # the 'manual' method requires that the weights parameter be given, and attempts to allocate according to the
 # proportions given in the weights parameter. In the case where 'optim' allocation is used, an additional raster must be passed
@@ -58,51 +53,51 @@ from _sgs import strat_cpp
 # parameter must be given specifying which band. The optim method is specified by Gregoire and Valentine,
 # and optimizes the desired proportions based on the proportion of each strata AND the within-strata
 # variance in the specified raster band. https://doi.org/10.1201/9780203498880 Section 5.4.4.
-# 
-# The 'existing' parameter, if passed, must be a SpatialVector of type Point or MultiPoint. 
+#
+# The 'existing' parameter, if passed, must be a SpatialVector of type Point or MultiPoint.
 # These points specify samples within an already-existing network. The SpatialVector may
 # only have one layer. If the force parameter is set to True, every pixel in the existing
 # sample will be added no matter what. if the force parameter is false, then the existing
 # samples will be prioritized over other pixels in the same strata.
-# 
+#
 # The 'access' parameter, if passed, must be a SpatialVector of type LineString or MultiLineString.
 # buff_outer specifies the buffer distance around the geometry which
 # is allowed to be included in the sampling, buff_inner specifies the
 # geometry which is not allowed to be included in the sampling. buff_outer
 # must be larger than buff_inner. For a multi-layer vector, layer_name
 # must be specified.
-# 
+#
 # Examples
 # --------------------
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # srast = sgspy.stratify.quantiles(rast, quantiles=5) @n
 # samples = sgspy.sample.strat(srast, num_samples=200) #uses Queinnec method with proportional allocation by default
-# 
+#
 # srast = sgs.SpatialRaster("srast.tif") #srast not result of sgspy stratification function, num_strata arg necessary in sgspy.sample.strat
 # samples = sgspy.sample.strat(srast, num_strata=5, num_samples=200)
 #
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # srast = sgspy.stratify.quantiles(rast, quantiles=5) @n
 # samples = sgspy.sample.strat(srast, num_samples=200, method="random", mindist=200, plot=True, filename="samples.shp")
-# 
+#
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # srast = sgspy.stratify.quantiles(rast, quantiles=5) @n
 # samples = sgspy.sample.strat(srast, num_samples=200, method="Queinnec", allocation="optim", mrast=rast)
-# 
+#
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # srast = sgspy.stratify.quantiles(rast, quantiles=5) @n
 # samples = sgspy.sample.strat(rast, num_samples=200, allocation="manual", weights=[0.1, 0.1, 0.2, 0.2, 0.4])
-# 
+#
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # access = sgspy.SpatialVector("access_network.shp") @n
 # srast = sgspy.stratify.quantiles(rast, quantiles=5) @n
 # samples = sgspy.sample.strat(rast, num_samples=200, allocation="equal", access=access, buff_inner=100, buff_outer=300)
-# 
+#
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # existng = sgspy.SpatialVector("existing_samples.shp") @n
 # srast = sgspy.stratify.quantiles(rast, quantiles=5) @n
 # samples = sgspy.sample.strat(rast, num_samples=200, allocation="prop", existing=existing, force=True)
-# 
+#
 # Parameters
 # --------------------
 # strat_rast : SpatialRaster
@@ -145,8 +140,10 @@ from _sgs import strat_cpp
 #     whether or not to plot the output samples @n @n
 # filename : str @n
 #     the output filename to write to if desired @n @n
-# 
-# 
+# random_state : int @n
+#     control the randomness of the sampling @n @n
+#
+#
 # Returns
 # --------------------
 # a SpatialVector object containing point geometries of sample locations
@@ -171,7 +168,7 @@ def strat(
     buff_outer: Optional[int | float] = None,
     plot: bool = False,
     filename: str = "",
-    ):
+    random_state: int = 0):
 
     if type(strat_rast) is not SpatialRaster:
         raise TypeError("'strat_rast' parameter must be of type sgspy.SpatialRaster.")
@@ -236,6 +233,9 @@ def strat(
     if type(filename) is not str:
         raise TypeError("'filename' parameter must be of type str.")
 
+    if type(random_state) is not int:
+        raise TypeError("'random_state' parameter must be of type int.")
+
     if strat_rast.closed:
         raise RuntimeError("the C++ object which the strat_rast object wraps has been cleaned up and closed.")
 
@@ -276,7 +276,7 @@ def strat(
         if weights is None:
             raise ValueError("for manual allocation, weights must be given.")
 
-        if np.sum(weights) != 1:
+        if not np.isclose(np.sum(weights), 1):
             raise ValueError("weights must sum to 1.")
 
         if len(weights) != num_strata:
@@ -379,12 +379,13 @@ def strat(
         map_strat_mapping,
         plot,
         filename,
-        temp_dir
+        temp_dir,
+        random_state,
     )
 
     if num_points < num_samples:
         print("unable to find the full {} samples within the given constraints. Sampled {} points.".format(num_samples, num_points))
-    
+
     #plot new vector if requested
     if plot:
         try:

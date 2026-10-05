@@ -318,10 +318,10 @@ class SpatialRaster:
             raise RuntimeError("the C++ object which this class wraps has been cleaned up and closed.")
 
         if ax is not None:
-            plot_raster(self, ax, target_width, target_width, band, **kwargs)
+            plot_raster(self, ax, target_width, target_height, band, **kwargs)
         else:
             fig, ax = plt.subplots()
-            plot_raster(self, ax, target_width, target_width, band, **kwargs)
+            plot_raster(self, ax, target_width, target_height, band, **kwargs)
             plt.show()
        
     @classmethod
@@ -388,9 +388,10 @@ class SpatialRaster:
             #create an in-memory dataset using the numpy array as the data, and the rasterio dataset to provide metadata
             geotransform = ds.get_transform()
             projection = ds.crs.wkt
-            cls.cpp_arr = np.ascontiguousarray(arr)
-            buffer = memoryview(cls.cpp_arr)
-            return cls(GDALRasterWrapper(buffer, geotransform, projection, [nan] * ds.count, ds.descriptions, PROJDB_PATH))
+            cpp_arr = np.ascontiguousarray(arr)
+            rast = cls(GDALRasterWrapper(memoryview(cpp_arr), geotransform, projection, [nan] * ds.count, ds.descriptions, PROJDB_PATH))
+            rast.cpp_arr = cpp_arr #C++ keeps a raw pointer into this array, so it must live as long as the raster
+            return rast
 
     def to_rasterio(self, with_arr = False):
         """
@@ -523,11 +524,12 @@ class SpatialRaster:
 
             geotransform = ds.GetGeoTransform()
             projection = ds.GetProjection()
-            cls.cpp_arr = np.ascontiguousarray(arr)
-            buffer = memoryview(cls.cpp_arr)
-            
+            cpp_arr = np.ascontiguousarray(arr)
+
             ds.Close()
-            return cls(GDALRasterWrapper(buffer, geotransform, projection, nan_vals, band_names, PROJDB_PATH))
+            rast = cls(GDALRasterWrapper(memoryview(cpp_arr), geotransform, projection, nan_vals, band_names, PROJDB_PATH))
+            rast.cpp_arr = cpp_arr #C++ keeps a raw pointer into this array, so it must live as long as the raster
+            return rast
         else:
             filename = ds.GetName()
             

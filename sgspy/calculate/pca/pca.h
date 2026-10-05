@@ -262,8 +262,8 @@ calculatePCA(
 
 			//remove nodata values
 			int nFeatures = 0;
-			for (int x = 0; x < xValid; x++) {
-				for (int y = 0; y < yValid; y++) {
+			for (int y = 0; y < yValid; y++) {
+				for (int x = 0; x < xValid; x++) {
 					bool isNan = false;
 					for (int b = 0; b < bandCount; b++) {
 						T val = p_data[((y * xBlockSize) + x) * bandCount + b];
@@ -314,7 +314,7 @@ calculatePCA(
 
 		retval.eigenvectors[i].resize(eigCols);
 		for (int64_t j = 0; j < eigCols; j++) {
-			retval.eigenvectors[i][j] = static_cast<T>(eigValBlock[i * eigCols + j]);
+			retval.eigenvectors[i][j] = static_cast<T>(eigVecBlock[i * eigCols + j]);
 		}
 	}
 	
@@ -436,7 +436,8 @@ writePCA(
 	//get the raw data from the result
 	const auto values = compute_result.get_values();
 	oneapi::dal::row_accessor<const T> valAcc {values};
-	const T *p_result = valAcc.pull({0, height * width}).get_data();
+	const auto resultArr = valAcc.pull({0, height * width});
+	const T *p_result = resultArr.get_data();
 
 	//write the raw result to the output
 	for (int c = 0; c < nComp; c++) {
@@ -520,6 +521,14 @@ writePCA(
 	T *p_data = reinterpret_cast<T *>(VSIMalloc3(xBlockSize * yBlockSize, size, bandCount));
 	T *p_comp = reinterpret_cast<T *>(VSIMalloc3(nComp, bandCount, size));
 
+	//read result eigenvectors into matrix format
+	for (int c = 0; c < nComp; c++) {
+		int ci = c * bandCount;
+		for (int b = 0; b < bandCount; b++) {
+			p_comp[ci + b] = result.eigenvectors[c][b];
+		}
+	}
+
 	//create DAL homogen table wrappers for input data
 	const auto dataTable = DALHomogenTable(p_data, xBlockSize * yBlockSize, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
 	const auto compTable = DALHomogenTable(p_comp, nComp, bandCount, [](const T*){}, oneapi::dal::data_layout::row_major);
@@ -573,7 +582,8 @@ writePCA(
 			//get the raw data from the result
 			const auto values = compute_result.get_values();
 			oneapi::dal::row_accessor<const T> valAcc {values};
-			const T *p_result = valAcc.pull({0, xBlockSize * yBlockSize}).get_data();
+			const auto resultArr = valAcc.pull({0, xBlockSize * yBlockSize});
+			const T *p_result = resultArr.get_data();
 
 			//write the raw result to the output
 			for (int c = 0; c < nComp; c++) {
@@ -583,7 +593,7 @@ writePCA(
 					yBlock * yBlockSize,
 					xValid,
 					yValid,
-					(void *)((size_t)p_comp + c * size),
+					(void *)((size_t)p_result + c * size),
 					xValid,
 					yValid,
 					type,
@@ -703,6 +713,8 @@ pca(
 			pcaBands[i].size = type == GDT_Float64 ? sizeof(double) : sizeof(float);
 			pcaBands[i].name = "comp_" + std::to_string(i + 1);
 			pcaBands[i].nan = std::nan("");
+			pcaBands[i].xBlockSize = xBlockSize;
+			pcaBands[i].yBlockSize = yBlockSize;
 			helper::createVRTBandDataset(p_dataset, pcaBands[i], tempFolder, pcaBands[i].name, VRTBandInfo, driverOptions);
 		}
 	}

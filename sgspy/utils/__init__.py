@@ -16,5 +16,5 @@ from .vector import SpatialVector
 __all__ = [
     "SpatialRaster",
     "StratRasterBandMetadata",
-    "spatialVector",
+    "SpatialVector",
 ]

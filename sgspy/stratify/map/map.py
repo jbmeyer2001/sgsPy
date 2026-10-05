@@ -138,6 +138,9 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
     if type(thread_count) is not int:
         raise TypeError("'thread_count' parameter must be of type int.")
 
+    if thread_count < 1:
+        raise ValueError("number of threads can't be less than 1.")
+
     if driver_options is not None and type(driver_options) is not dict:
         raise TypeError("'driver_options' parameter, if given, must be of type dict.")
 
@@ -264,7 +267,7 @@ def map(*args: tuple[SpatialRaster, int|str|list[int]|list[str], Optional[int|li
             band_size = height * width * pixel_size
             raster_size_bytes += band_size
             if band_size > GIGABYTE:
-                large_raster == True
+                large_raster = True
         
         #prepare cpp function arguments
         raster_list.append(raster.cpp_raster)

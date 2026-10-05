@@ -11,6 +11,7 @@ mraster_geotiff_path = os.path.join(folder, 'mraster.tif')
 mraster_small_geotiff_path = os.path.join(folder, 'mraster_small.tif')
 sraster_geotiff_path = os.path.join(folder, 'sraster.tif')
 sraster2_geotiff_path = os.path.join(folder, 'sraster2.tif')
+sraster_geotiff_path_2 = os.path.join(folder, 'sraster_int32.tif')
 mraster_zq90_path = os.path.join(folder, 'mraster_zq90.npy')
 mraster_pzabove2_path = os.path.join(folder, 'mraster_pzabove2.npy')
 mraster_zsd_path = os.path.join(folder, 'mraster_zsd.npy')
@@ -28,6 +29,10 @@ strat_poly_test1_r_path = os.path.join(folder, 'strat_poly_test1_R.tif')
 strat_poly_test2_r_path = os.path.join(folder, 'strat_poly_test2_R.tif')
 
 pca_result_path = os.path.join(folder, 'pca_result.tif')
+
+mraster_small_tiled_neg_path = os.path.join(folder, 'mraster_small_tiled_neg.tif') #-(zq90 + 1), strictly negative
+mraster_small_shifted_path = os.path.join(folder, 'mraster_small_shifted.tif') #origin shifted one pixel east
+nodata_only_path = os.path.join(folder, 'nodata_only.tif') #16x16, every pixel nodata
 
 __all__ = [
     'access_shapefile_path',
@@ -54,4 +59,7 @@ __all__ = [
     'strat_poly_test1_r_path',
     'strat_poly_test2_r_path',
     'pca_result_path',
+    'mraster_small_tiled_neg_path',
+    'mraster_small_shifted_path',
+    'nodata_only_path',
 ]

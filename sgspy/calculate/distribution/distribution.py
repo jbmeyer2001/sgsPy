@@ -11,9 +11,6 @@
 # @defgroup user_distribution distribution
 # @ingroup user_calculate
 
-import os
-import sys
-import site
 from sgspy.utils import SpatialRaster, SpatialVector
 from typing import Optional
 

@@ -47,7 +47,7 @@ findMinMax(
 	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
 
 	min = std::numeric_limits<T>::max();
-	max = std::numeric_limits<T>::min();
+	max = std::numeric_limits<T>::lowest();
 	T nan = static_cast<T>(band.nan);
 	void *p_data = VSIMalloc3(band.xBlockSize, band.yBlockSize, band.size);
 
@@ -63,7 +63,7 @@ findMinMax(
 			rasterBandIO(band, p_data, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, true);
 
 			for (int y = 0; y < yValid; y++) {
-				int index = y * width;
+				int index = y * band.xBlockSize;
 				for (int x = 0; x < xValid; x++) {
 					T val = reinterpret_cast<T *>(p_data)[index];
 					if (val != nan && !std::isnan(val)) {
@@ -195,7 +195,7 @@ populationDistribution(
 			rasterBandIO(band, p_data, band.xBlockSize, band.yBlockSize, xBlock, yBlock, xValid, yValid, true, true);
 
 			for (int y = 0; y < yValid; y++) {
-				int index = y * width;
+				int index = y * band.xBlockSize;
 				for (int x = 0; x < xValid; x++) {
 					T val = reinterpret_cast<T *>(p_data)[index];
 

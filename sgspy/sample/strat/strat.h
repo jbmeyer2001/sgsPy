@@ -28,6 +28,26 @@ namespace strat {
 
 /**
  * @ingroup strat
+ * Throws if a (non-nodata) strat raster value is outside of [0, numStrata).
+ *
+ * @param T val
+ * @param int numStrata
+ */
+template <typename T>
+inline void
+checkStrataValue(T val, int numStrata) {
+	if (val >= numStrata) {
+		throw std::runtime_error("the num_strata indicated for the strat raster band is less than or equal to one of the values in that band.");
+	}
+
+	if (val < 0) {
+		std::string errmsg = "a negative value of " + std::to_string(val) + " was found in the strat raster, and has not been marked as a nodata value.";
+		throw std::runtime_error(errmsg);
+	}
+}
+
+/**
+ * @ingroup strat
  * Helper function which calculates the count of values for each strata
  * depending on the allocation method.
  *
@@ -48,6 +68,10 @@ calculateAllocation(
 	std::vector<int64_t> retval;
 	int64_t remainder = numSamples;
 	int64_t numStrata = strataCounts.size();
+	if (numPixels == 0 || numStrata == 0) {
+		throw std::runtime_error("stratification raster has no valid (non-nodata) pixels or strata to sample from.");
+	}
+
 	if (allocation == "prop") {
 		//allocate the samples per stratum according to stratum size
 		int64_t pixelsPerSample = numPixels / numSamples;
@@ -512,14 +536,7 @@ processBlocksStratRandom(
 						continue;
 					}
 
-					if (val >= numStrata) {
-						throw std::runtime_error("the num_strata indicated for the strat raster band is less than or equal to one of the value sin that band.");
-					}
-
-					if (val < 0) {
-						std::string errmsg = "a negative value of " + std::to_string(val) + " was found in the strat raster, and has not been marked as a nodata value.";
-						throw std::runtime_error(errmsg);
-					}
+					checkStrataValue(val, numStrata);
 
 					//update optim allocation variance calculations
 					if (optim.used) {
@@ -890,6 +907,8 @@ processBlocksStratQueinnec(
 					continue;
 				}
 
+				checkStrataValue(val, numStrata);
+
 				//update optim allocation variance calculations
 				if (optim.used) {
 					optim.update(y * width + x, val);
@@ -925,6 +944,8 @@ processBlocksStratQueinnec(
 				if (isNan) {
 					continue;
 				}
+
+				checkStrataValue(val, numStrata);
 
 				//update optim allocation variance calculations
 				if (optim.used) {
@@ -1026,6 +1047,8 @@ processBlocksStratQueinnec(
 				if (isNan) {
 					continue;
 				}
+
+				checkStrataValue(val, numStrata);
 
 				//update optim allocation variance calculations
 				if (optim.used) {
@@ -1178,7 +1201,8 @@ strat(
 	std::vector<std::pair<std::string, int>> mapStratMapping,
 	bool plot,
 	std::string filename,
-	std::string tempFolder)
+	std::string tempFolder,
+	uint64_t random_state)
 {
 	GDALAllRegister();
 
@@ -1267,7 +1291,7 @@ strat(
 
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
-	xso::xoshiro_4x64_plus rng; 
+	xso::xoshiro_4x64_plus rng(random_state); 
 	uint64_t multiplier = helper::getProbabilityMultiplier(
 		width, 
 		height, 
@@ -1297,6 +1321,10 @@ strat(
 
 	OptimAllocationDataManager optim(p_mraster, mrastBandNum, allocation);
 
+	if (band.type != GDT_Int8 && band.type != GDT_Int16 && band.type != GDT_Int32) {
+		throw std::runtime_error("strat raster band data type " + std::string(GDALGetDataTypeName(band.type)) + " is not supported, it must be one of Int8, Int16, or Int32.");
+	}
+
 	std::vector<int64_t> strataSampleCounts; 
 	if (method == "random") {
 		switch (band.type) {
@@ -1312,7 +1340,7 @@ strat(
 							 			      multiplier, rng, allocation, optim,
 										      weights, width, height);
 				break;
-			default:
+			case GDT_Int32:
 				strataSampleCounts = processBlocksStratRandom<int32_t>(numSamples, numStrata, band, access, 
 										      existing, indices, existingSamples,
 							 			      multiplier, rng, allocation, optim,
@@ -1334,7 +1362,7 @@ strat(
 							   				multiplier, queinnecMultiplier, rng, allocation, 
 											optim, weights, width, height);
 				break;
-			default:
+			case GDT_Int32:
 				strataSampleCounts = processBlocksStratQueinnec<int32_t>(numSamples, numStrata, band, access, existing, 
 											indices, queinnecIndices, fw, existingSamples,
 							   				multiplier, queinnecMultiplier, rng, allocation, 

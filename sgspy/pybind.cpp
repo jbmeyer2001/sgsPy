@@ -111,7 +111,7 @@ PYBIND11_MODULE(_sgs, m) {
 		.def("get_projection", &sgs::vector::GDALVectorWrapper::getFullProjectionInfo);
 
 	// source code in sgspy/utils/dist.h
-	m.def("dist_cpp", &sgs::dist::dist,
+	m.def("dist_cpp", &sgs::dist::dist, pybind11::call_guard<pybind11::gil_scoped_release>(),
 		pybind11::arg("p_raster"),
 		pybind11::arg("band"),
 		pybind11::arg("p_vector").none(true),
@@ -119,10 +119,10 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("nBuckets"));
 
 	// source code in sgspy/calculate/pca/pca.h
-	m.def("pca_cpp", &sgs::pca::pca);
+	m.def("pca_cpp", &sgs::pca::pca, pybind11::call_guard<pybind11::gil_scoped_release>());
 
 	// source code in sgspy/sample/clhs/clhs.h
-	m.def("clhs_cpp", &sgs::clhs::clhs,
+	m.def("clhs_cpp", &sgs::clhs::clhs, pybind11::call_guard<pybind11::gil_scoped_release>(),
 		pybind11::arg("p_raster"),
 		pybind11::arg("nSamp"),
 		pybind11::arg("iterations"),
@@ -134,10 +134,11 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("replace"),
 		pybind11::arg("plot"),
 		pybind11::arg("tempFolder"),
-		pybind11::arg("filename"));
+		pybind11::arg("filename"),
+        pybind11::arg("random_state"));
 
 	// source code in sgspy/sample/srs/srs.h
-	m.def("srs_cpp", &sgs::srs::srs, 
+	m.def("srs_cpp", &sgs::srs::srs, pybind11::call_guard<pybind11::gil_scoped_release>(),
 		pybind11::arg("p_raster"),
 		pybind11::arg("numSamples"),
 		pybind11::arg("mindist"),
@@ -148,10 +149,11 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("buffOuter"),
 		pybind11::arg("plot"),
 		pybind11::arg("tempFolder"),
-		pybind11::arg("filename"));
+		pybind11::arg("filename"),
+		pybind11::arg("random_state"));
 
 	// source code in sgspy/sample/strat/strat.h
-	m.def("strat_cpp", &sgs::strat::strat,
+	m.def("strat_cpp", &sgs::strat::strat, pybind11::call_guard<pybind11::gil_scoped_release>(),
 		pybind11::arg("p_raster"),
 		pybind11::arg("bandNum"),
 		pybind11::arg("numSamples"),
@@ -173,10 +175,12 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("mapStratMapping"),
 		pybind11::arg("plot"),
 		pybind11::arg("filename"),
-		pybind11::arg("tempFolder"));
+		pybind11::arg("tempFolder"),
+	    pybind11::arg("random_state"));
+	
 
 	// source code in sgspy/sample/systematic/systematic.h
-	m.def("systematic_cpp", &sgs::systematic::systematic,
+	m.def("systematic_cpp", &sgs::systematic::systematic, pybind11::call_guard<pybind11::gil_scoped_release>(),
 		pybind11::arg("p_raster"),
 		pybind11::arg("cellSize"),
 		pybind11::arg("shape"),
@@ -188,17 +192,18 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("buffOuter"),
 		pybind11::arg("force"),
 		pybind11::arg("plot"),
-		pybind11::arg("filename"));
+		pybind11::arg("filename"),
+		pybind11::arg("random_state"));
 
 	// source code in sgspy/stratify/breaks/breaks.h
-	m.def("breaks_cpp", &sgs::breaks::breaks);
+	m.def("breaks_cpp", &sgs::breaks::breaks, pybind11::call_guard<pybind11::gil_scoped_release>());
 
 	// source code in sgspy/stratify/map/map_stratifications.h
-	m.def("map_cpp", &sgs::map::map);
+	m.def("map_cpp", &sgs::map::map, pybind11::call_guard<pybind11::gil_scoped_release>());
 
 	// source code in sgspy/stratify/poly/poly.h
-	m.def("poly_cpp", &sgs::poly::poly);
+	m.def("poly_cpp", &sgs::poly::poly, pybind11::call_guard<pybind11::gil_scoped_release>());
 
 	// source code in sgspy/stratify/quantiles/quantiles.h
-	m.def("quantiles_cpp", &sgs::quantiles::quantiles);
+	m.def("quantiles_cpp", &sgs::quantiles::quantiles, pybind11::call_guard<pybind11::gil_scoped_release>());
 }

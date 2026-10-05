@@ -236,27 +236,25 @@ class SpatialVector:
         if not GEOPANDAS:
             raise RuntimeError("to_geopandas() can  only be called if geopandas was successfully imported, but it wasn't.")
 
-        tempdir = tempfile.gettempdir()
-        file = os.path.join(tempdir, "temp.geojson")
-
         #get the projection info
         projection = self.cpp_vector.get_projection()
 
-        #write the dataset to a tempfile
-        self.cpp_vector.write(file)
-    
-        # This method of writing to a file then reading from that file is definitely clunky,
-        # however it's easy. Theres the possiblity of iterating through every field within
-        # every feature, and needing to then call a different function depending on the data
-        # type of the field (because C++ types are rigid). That may still be done in the future,
-        # but for now this works.
+        #make a fresh dir per call. GDAL won't overwrite an existing file, and a crash won't interfere with later calls
+        with tempfile.TemporaryDirectory() as tempdir:
+            file = os.path.join(tempdir, "temp.geojson")
 
-        #have geopandas read the tempfile
-        gdf = gpd.read_file(file)
+            #write the dataset to a tempfile
+            self.cpp_vector.write(file)
+
+            # This method of writing to a file then reading from that file is definitely clunky,
+            # however it's easy. Theres the possiblity of iterating through every field within
+            # every feature, and needing to then call a different function depending on the data
+            # type of the field (because C++ types are rigid). That may still be done in the future,
+            # but for now this works.
+
+            #have geopandas read the tempfile
+            gdf = gpd.read_file(file)
+
         if projection != "": gdf.set_crs(projection, inplace=True, allow_override=True)
 
-        #remove the geojson file
-        os.remove(file)
-
         return gdf
-        

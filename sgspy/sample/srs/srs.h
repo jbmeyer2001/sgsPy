@@ -58,7 +58,7 @@ getRandomIndices(
 	access::Access& access,
 	existing::Existing& existing,
 	std::vector<helper::Index>& indices,
-	xso::xoshiro_4x64_plus rng)
+	xso::xoshiro_4x64_plus& rng)
 {
 	T nan = static_cast<T>(band.nan);
 
@@ -292,7 +292,8 @@ srs(
 	double buffOuter,
 	bool plot,
 	std::string tempFolder,
-	std::string filename)
+	std::string filename,
+	uint64_t random_state)
 {
 	GDALAllRegister();
 
@@ -369,7 +370,7 @@ srs(
 
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
-	xso::xoshiro_4x64_plus rng;
+	xso::xoshiro_4x64_plus rng(random_state);
 
 	// when reading pixels or blocks into memory using GDAL, the whole block is always read into memory.
 	// This reading of blocks is a large portion of the runtime for the processing of raster images.
@@ -415,7 +416,8 @@ srs(
 	double accessiblePixels = allPixels * (access.used ? (access.area / totalArea) : 1.0);
 
 	//valid pixels divides the accessible pixels by 2 (assuming half nan), then subtracts existing samples
-	size_t validPixels = static_cast<size_t>(accessiblePixels / 2.0) - (existing.used ? existing.samples.size() : 0);
+	double estValid = accessiblePixels / 2.0 - static_cast<double>(existing.used ? existing.samples.size() : 0);
+	size_t validPixels = estValid < 1.0 ? 1 : static_cast<size_t>(estValid);
 	
 	size_t randomAccessBlocksRequired = 0;
 
@@ -430,7 +432,9 @@ srs(
 		//Then, since we sampled 1 pixel we reduce the number of valid remaining pixels by 1.
 
 		randomAccessBlocksRequired += (allPixels / validPixels);
-		validPixels--;
+		if (validPixels > 1) {
+			validPixels--;
+		}
 		desiredSamples--;
 	}
 

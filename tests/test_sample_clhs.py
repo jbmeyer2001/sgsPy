@@ -30,6 +30,13 @@ class TestClhs:
         sample = sgs.sample.clhs(self.rast, num_samples=250).samples_as_wkt()
         assert len(sample) == 250
 
+        assert len(sgs.sample.clhs(self.rast, num_samples=1).samples_as_wkt()) == 1
+        assert len(sgs.sample.clhs(self.rast, num_samples=10, iterations=0).samples_as_wkt()) == 10
+
+        #more samples than valid pixels
+        with pytest.raises(RuntimeError, match="not enough points"):
+            sgs.sample.clhs(self.rast, num_samples=self.rast.width * self.rast.height)
+
     def test_points_in_bounds(self):
         for _ in range(10):
             samples = sgs.sample.clhs(self.rast, num_samples=200).samples_as_wkt()
@@ -42,25 +49,17 @@ class TestClhs:
                 assert point.y >= self.rast.ymin
 
     def test_points_not_nan(self):
-        for _ in range(10):
-            samples = sgs.sample.clhs(self.rast, num_samples=200).samples_as_wkt()
-            gs = gpd.GeoSeries.from_wkt(samples)
-
-            #find indexes for all points and ensure they're not nan pixels.
-            for point in gs:
-                x_index = (point.x - self.rast.xmin) / self.rast.pixel_width
-                y_index = self.rast.height - ((point.y - self.rast.ymin) / self.rast.pixel_height) #origin at top left instead of bottom left
-                pixel_value = self.rast.band(0)[int(y_index), int(x_index)]
-                if np.isnan(pixel_value):
-                    print(point.x)
-                    print(point.y)
-                    print(x_index)
-                    print(y_index)
-                    assert False
+        #C++ skips a pixel if any band is nan/nodata, so check every band
+        valid = np.all([~np.isnan(self.rast.band(b)) for b in self.rast.bands], axis=0)
+        for i in range(10):
+            gs = gpd.GeoSeries.from_wkt(sgs.sample.clhs(self.rast, num_samples=200, random_state=i).samples_as_wkt())
+            rows = ((self.rast.ymax - gs.y) / self.rast.pixel_height).astype(int)
+            cols = ((gs.x - self.rast.xmin) / self.rast.pixel_width).astype(int)
+            assert valid[rows, cols].all()
 
     def test_access(self):
         gs_access = gpd.read_file(access_shapefile_path)
-       
+
         #both access tests, one with just buff_outer and one with both buff_outer and buff_inner
         accessible1 = gs_access.buffer(100).union_all()
         accessible2 = gs_access.buffer(200).union_all().difference(gs_access.buffer(100).union_all())
@@ -90,6 +89,7 @@ class TestClhs:
         #test replace 0
         for replace in [0, 10, 50, 100]:
             samples = sgs.sample.clhs(self.rast, 200, existing=self.existing, replace=replace).to_geopandas()
+            assert len(samples) == 200
 
             replaced = samples[samples["existing"] == 0]
             assert len(replaced['geometry']) <= replace
@@ -118,4 +118,3 @@ class TestClhs:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             assert len(gs_samples.intersection(gs_file)) == len(gs_samples)
-

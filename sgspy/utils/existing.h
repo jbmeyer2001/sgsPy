@@ -94,20 +94,27 @@ struct Existing {
 			throw std::runtime_error("the file containing existing sample points must have only a single layer.");
 		}
 
-		//check to ensure spatial reference system of raster and vector match
+		std::string name = layerNames[0];
+		OGRLayer *p_layer = p_vect->getLayer(name);
+		if (!p_layer) {
+			throw std::runtime_error("unable to open layer of existing sample vector.");
+		}
+
+		//check to ensure spatial reference system of raster and existing sample vector match
 		std::string rastProj = p_rast->getDataset()->GetProjectionRef();
 		OGRSpatialReference rastSRS;
 		rastSRS.importFromWkt(rastProj.c_str());
-		const OGRSpatialReference *p_sampSRS = p_samples->GetSpatialRef();
-		if (!rastSRS.IsSame(p_sampSRS)) {
-			throw std::runtime_error("existing sample vector and raster do not have the same spatial reference system.");	
+		const OGRSpatialReference *p_existSRS = p_layer->GetSpatialRef();
+		if (!p_existSRS) {
+			throw std::runtime_error("existing sample vector has no spatial reference system.");
+		}
+		if (!rastSRS.IsSame(p_existSRS)) {
+			throw std::runtime_error("existing sample vector and raster do not have the same spatial reference system.");
 		}
 
 		//invert geotransform so we can use IGT to convert from point to indexes
 		GDALInvGeoTransform(GT, this->IGT);
 
-		std::string name = layerNames[0];
-		OGRLayer *p_layer = p_vect->getLayer(name);
 		helper::Field fieldExistingTrue("existing", 1);
 
 		for (const auto& p_feature : *p_layer) {

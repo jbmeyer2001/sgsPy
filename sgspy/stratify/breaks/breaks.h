@@ -383,7 +383,6 @@ raster::GDALRasterWrapper *breaks(
 
 	//iterate through all pixels and update the stratified raster bands
 	if (largeRaster) {
-		pybind11::gil_scoped_acquire acquire;
 		boost::asio::thread_pool pool(threads);
 
 		if (map) {
@@ -393,7 +392,7 @@ raster::GDALRasterWrapper *breaks(
 
 			int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 			int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
-			int chunkSize = yBlocks / threads;
+			int chunkSize = std::max(1, (yBlocks + threads - 1) / threads);
 
 			for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 				int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);
@@ -508,7 +507,7 @@ raster::GDALRasterWrapper *breaks(
 					
 				int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
 				int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
-				int chunkSize = yBlocks / threads;
+				int chunkSize = std::max(1, (yBlocks + threads - 1) / threads);
 				
 				for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
 					int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
@@ -577,7 +576,6 @@ raster::GDALRasterWrapper *breaks(
 			}
 		}
 		pool.join();
-		pybind11::gil_scoped_release release;
 	}
 	else {
 		size_t pixelCount = static_cast<size_t>(p_raster->getWidth()) * static_cast<size_t>(p_raster->getHeight());

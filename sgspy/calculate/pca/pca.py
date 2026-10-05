@@ -11,9 +11,6 @@
 # @defgroup user_pca pca
 # @ingroup user_calculate
 
-import os
-import sys
-import site
 import tempfile
 from sgspy.utils import SpatialRaster
 
@@ -77,7 +74,6 @@ def pca(
     ):
         
     if type(rast) is not SpatialRaster:
-        print(type(rast))
         raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster.")
 
     if type(num_comp) is not int:

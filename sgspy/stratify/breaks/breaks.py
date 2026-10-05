@@ -11,9 +11,6 @@
 # @defgroup user_breaks breaks
 # @ingroup user_stratify
 
-import os
-import sys
-import site
 import tempfile
 from typing import Optional
 

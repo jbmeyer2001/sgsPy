@@ -11,18 +11,13 @@
 # @defgroup user_systematic systematic
 # @ingroup user_sample
 
-import os
-import sys
-import site
 from typing import Optional
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 from sgspy.utils import (
     SpatialRaster,
     SpatialVector,
-    plot,
 )
 
 from _sgs import systematic_cpp
@@ -31,47 +26,47 @@ from _sgs import systematic_cpp
 # @ingroup user_systematic
 # This function conducts systematic sampling within the extent of
 # the raster given. The 'cellsize' parameter specifies the grid size,
-# the 'shape' parameter specifies the grid shape, and the 'location' 
+# the 'shape' parameter specifies the grid shape, and the 'location'
 # parameter specifies where in the grid a sample should fall into.
-# 
+#
 # shape can be one of 'square', and 'hexagon'.
 # location can be one of 'corners', 'centers', 'random'.
-# 
+#
 # An access vector of LineString or MultiLineString type can be provided.
 # buff_outer specifies the buffer distance around the geometry which is
 # allowed to be included in the sampling, buff_inner specifies the geometry
 # which is not allowed to be included in the sampling. buff_outer must
 # be larger than buff_inner. For a multi-layer vector, layer_name
 # must be provided.
-# 
+#
 # A vector containing existing sample points can be provided. If this is
 # the case then all of the points in the existing sample are automatically
-# added and random samples are then chosen as required until num_samples 
+# added and random samples are then chosen as required until num_samples
 # number of samples are chosen.
-# 
-# If the force parameter is True, then the the samples are forced to 
+#
+# If the force parameter is True, then the the samples are forced to
 # fall on an index which is NOT a no data value. This may result
 # in some grids not being sampled.
-# 
+#
 # Examples
 # --------------------
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # samples = sgspy.sample.systematic(rast, 500, "hexagon", "centers")
-# 
+#
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # samples = sgspy.sample.systematic(rast, 500, "square", "corners", plot=True, filename="systematic_samples.shp")
-# 
+#
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # samples = sgspy.sample.systematic(rast, 500, "hexagon", "random", force=True)
-# 
+#
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # access = sgspy.SpatialVector("access_network.shp") @n
 # samples = sgspy.sample.systematic(rast, 500, "hexagon", "corners", access=access, buff_outer=300)
-# 
+#
 # rast = sgspy.SpatialRaster("raster.tif") @n
 # access = sgspy.SpatialVector("existing_samples.shp") @n
 # samples = sgspy.sample.systematic(rast, 500, "hexagon", "corners", existing=existing)
-# 
+#
 # Parameters
 # --------------------
 # rast : SpatialRaster @n
@@ -98,7 +93,9 @@ from _sgs import systematic_cpp
 #     whether or not to plot the resulting samples @n @n
 # filename : str @n
 #     the filename to write to or "" if not to write @n @n
-# 
+# random_state : int @n
+#     control the randomness of the sampling @n @n
+#
 # Returns
 # --------------------
 # a SpatialVector object containing point geometries of sample locations
@@ -114,8 +111,9 @@ def systematic(
     buff_outer: Optional[int | float] = None,
     force: bool = False,
     plot: bool = False,
-    filename: str = ""):
-        
+    filename: str = "",
+    random_state: int = 0):
+
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster.")
 
@@ -151,6 +149,9 @@ def systematic(
 
     if type(filename) is not str:
         raise TypeError("'filename' parameter must be of type str.")
+
+    if type(random_state) is not int:
+        raise TypeError("'random_state' parameter must be of type int.")
 
     if rast.closed:
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
@@ -206,7 +207,8 @@ def systematic(
         buff_outer,
         force,
         plot,
-        filename
+        filename,
+        random_state
     )
 
     #plot new vector if requested
@@ -216,7 +218,7 @@ def systematic(
         ax.set_ylim([rast.ymin, rast.ymax])
         rast.plot(ax, band=rast.bands[0])
         title="samples on " + rast.bands[0]
-        
+
         #plot grid
         for shape in grid:
             ax.plot(shape[0], shape[1], '-k')

@@ -228,7 +228,7 @@ class CLHSDataManager {
 		//resize existing sample vectors 
 		this->ex.resize(this->ecount);
 		this->ey.resize(this->ecount);
-		this->features.resize(this->ecount * nFeat);
+		this->efeatures.resize(this->ecount * nFeat);
 	}
 
 	/**
@@ -732,16 +732,23 @@ selectSamples(std::vector<std::vector<T>>& quantiles,
 	//'redundant' samples are samples which cause over-representation in feature quantiles
 	
 	size_t neSamples = x.size(); //number of existing samples
-	if (neSamples > 0 && replace != 0) {
-		for (size_t si = 0; si < neSamples; si++) {
-			for (size_t fi = 0; fi < nFeat; fi++) {
-				T val = features[(si * nFeat) + fi];
-				size_t q = getQuantile<T>(val, quantiles[fi]);
-				sampleCountPerQuantile[(fi * nSamp) + q]++;
-				quantilesOfEachSample[(si * nFeat) + fi] = q;
-			}
-		}
 
+	//there may be more existing samples than nSamp
+	if (neSamples > static_cast<size_t>(nSamp)) {
+		quantilesOfEachSample.resize(neSamples * nFeat, 0);
+	}
+
+	//existing samples always count toward quantile coverage, regardless of 'replace'
+	for (size_t si = 0; si < neSamples; si++) {
+		for (size_t fi = 0; fi < nFeat; fi++) {
+			T val = features[(si * nFeat) + fi];
+			size_t q = getQuantile<T>(val, quantiles[fi]);
+			sampleCountPerQuantile[(fi * nSamp) + q]++;
+			quantilesOfEachSample[(si * nFeat) + fi] = q;
+		}
+	}
+
+	if (neSamples > 0 && replace != 0) {
 		while (replace > 0 && neSamples > 0) {
 			size_t worstRedundancy = 0;
 			size_t worstRedundancyIndex = 0;
@@ -1047,7 +1054,8 @@ clhs(
 	size_t replace,
 	bool plot,
 	std::string tempFolder,
-	std::string filename)
+	std::string filename,
+	uint64_t random_state)
 {
 	GDALAllRegister();
 
@@ -1109,7 +1117,7 @@ clhs(
 
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
-	xso::xoshiro_4x64_plus rng;
+	xso::xoshiro_4x64_plus rng(random_state);
 	uint64_t multiplier = helper::getProbabilityMultiplier(
 		width, 
 		height, 

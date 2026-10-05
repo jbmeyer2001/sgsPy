@@ -123,7 +123,7 @@ def plot_vector(vector,
     elif len(vector.layers) == 1: #layer is None
         layer_name = vector.layers[0]
     else:
-        ValueError("no layer was specified, and there is more than one layer in the vector. Specify a layer to plot.");
+        raise ValueError("no layer was specified, and there is more than one layer in the vector. Specify a layer to plot.")
     
     if geomtype == "Point" or geomtype == "MultiPoint":
         points = vector.cpp_vector.get_points(layer_name)

@@ -46,8 +46,7 @@ using namespace pybind11::literals;
 class GDALVectorWrapper {
 	private:
 	GDALDatasetUniquePtr p_dataset;
-	OGRSpatialReference srs; 
-	bool haveSRS = false;
+	std::unique_ptr<OGRSpatialReference, OGRSpatialReferenceReleaser> p_srs;
 
 	public:	
 	/**
@@ -84,11 +83,11 @@ class GDALVectorWrapper {
 	*/	
     	GDALVectorWrapper(GDALDataset *p_dataset, std::string projection) {
 		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
-		OGRErr err = this->srs.importFromWkt(projection.c_str());
+		this->p_srs.reset(new OGRSpatialReference());
+		OGRErr err = this->p_srs->importFromWkt(projection.c_str());
 		if (err) {
 			throw std::runtime_error("unable to get Spatial Reference System from projection string.");
 		}
-		this->haveSRS = true;
 	}
 
 	/**
@@ -122,11 +121,11 @@ class GDALVectorWrapper {
 		OGRLayer *p_inlayer = p_indataset->GetLayerByName("OGRGeoJSON");
 	
 		//set spatial reference
-	       	OGRErr err = this->srs.importFromWkt(projection.c_str());
+		this->p_srs.reset(new OGRSpatialReference());
+		OGRErr err = this->p_srs->importFromWkt(projection.c_str());
 		if (err) {
 			throw std::runtime_error("unable to get Spatial Reference System from projection string.");
 		}
-		this->haveSRS = true;
 
 		//create dataset and layer with correct spatial reference and 
 		GDALDriver *p_driver = GetGDALDriverManager()->GetDriverByName("MEM");
@@ -137,7 +136,7 @@ class GDALVectorWrapper {
 		if (!p_dataset) {
 			throw std::runtime_error("unable to create dataset from driver.");
 		}
-		OGRLayer *p_outlayer = p_dataset->CreateLayer(name.c_str(), &this->srs, wkbUnknown, nullptr);
+		OGRLayer *p_outlayer = p_dataset->CreateLayer(name.c_str(), this->p_srs.get(), wkbUnknown, nullptr);
 		if (!p_outlayer) {
 			throw std::runtime_error("unable to create dataset layer.");
 		}
@@ -170,7 +169,7 @@ class GDALVectorWrapper {
 				p_outfeature->SetField(i, p_infeature->GetRawFieldRef(i));
 			}
 			OGRGeometry *p_geom = p_infeature->GetGeometryRef();
-			p_geom->assignSpatialReference(&this->srs);
+			p_geom->assignSpatialReference(this->p_srs.get());
 			p_outfeature->SetGeometry(p_geom);
 			p_outlayer->CreateFeature(p_outfeature);
 			OGRFeature::DestroyFeature(p_outfeature);
@@ -437,8 +436,8 @@ class GDALVectorWrapper {
 	 */
 	std::string getFullProjectionInfo() {
 		char *p_proj;
-		if (haveSRS) {
-			srs.exportToPrettyWkt(&p_proj);
+		if (this->p_srs) {
+			this->p_srs->exportToPrettyWkt(&p_proj);
 		}
 		else {
 			this->p_dataset->GetLayer(0)->GetSpatialRef()->exportToPrettyWkt(&p_proj);
@@ -455,11 +454,11 @@ class GDALVectorWrapper {
 	 * @return OGRSpatialReference *
 	 */
 	OGRSpatialReference *getSRS(void) {
-		if (!this->haveSRS) {
+		if (!this->p_srs) {
 			throw std::runtime_error("do not have OGRSpatialReference associated with GDALVectorWrapper.");
 		}
 
-		return &this->srs;
+		return this->p_srs.get();
 	}
 };
 
