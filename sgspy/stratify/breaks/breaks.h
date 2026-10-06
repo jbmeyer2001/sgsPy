@@ -240,9 +240,6 @@ raster::GDALRasterWrapper *breaks(
 	std::vector<helper::RasterBandMetaData> stratBands(bandCount + map);
 	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo;
 
-	bool isMEMDataset = !largeRaster && filename == "";
-	bool isVRTDataset = largeRaster && filename == "";
-
 	std::mutex dataBandMutex;
 	std::mutex stratBandMutex;
 	
@@ -269,13 +266,13 @@ raster::GDALRasterWrapper *breaks(
 		stratBands[i].name = "strat_" + bandNames[key];
 		stratBands[i].xBlockSize = map ? dataBands[0].xBlockSize : dataBands[i].xBlockSize;
 		stratBands[i].yBlockSize = map ? dataBands[0].yBlockSize : dataBands[i].yBlockSize;
-		stratBands[i].p_mutex = &stratMutex; //overwritten if VRT dataset
+		stratBands[i].p_mutex = &stratBandMutex; //overwritten if VRT dataset
 
 		//type and size must be the same for all bands in an output file because of
 		//restrictions on GeoTiff files which aren't restricted in virtual types
 		if (filename != "" && stratPixelSize < stratBands[i].size) {
-			stratPixelSize = p_stratBand->size;
-			stratPixelType = p_stratBand->type;
+			stratPixelSize = stratBands[i].size;
+			stratPixelType = stratBands[i].type;
 		}
 
 		i++;
@@ -295,14 +292,14 @@ raster::GDALRasterWrapper *breaks(
 		stratBands[index].xBlockSize = dataBands[0].xBlockSize;
 		stratBands[index].yBlockSize = dataBands[0].yBlockSize;
 		stratBands[index].p_mutex = &stratBandMutex; //overwritten if VRT dataset
-		maxStrata = multipliers.back() * (bandBreaks.back().size() + 1);
+		size_t maxStrata = multipliers.back() * (bandBreaks.back().size() + 1);
 		helper::setStratBandTypeAndSize(maxStrata, &stratBands[index].type, &stratBands[index].size);
 		
 		//type and size must be the same for all bands in an output file because of
 		//restrictions on GeoTiff files which aren't restricted in virtual types
 		if (filename != "" && stratPixelSize < stratBands[index].size) {
-			stratPixelSize = p_stratBand->size;
-			stratPixelType = p_stratBand->type;
+			stratPixelSize = stratBands[index].size;
+			stratPixelType = stratBands[index].type;
 		}
 	}	
 
@@ -319,11 +316,10 @@ raster::GDALRasterWrapper *breaks(
 		}
 	}
 
-	GDALDataset *p_dataset;
 	if (isMEMDataset) {
 		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
 
-		for (const helper::RasterBandMetaData& band : stratBands) {
+		for (helper::RasterBandMetaData& band : stratBands) {
 			helper::addBandToMEMDataset(p_dataset, band);
 		}
 	}

@@ -163,7 +163,7 @@ raster::GDALRasterWrapper *map(
 	std::vector<std::mutex> stratDatasetMutexes(rasters.size());
 	
 	std::vector<helper::RasterBandMetaData> mapBands;
-	helper::rasterBandMetaData& mapBand = mapBands[0];
+	helper::RasterBandMetaData& mapBand = mapBands[0];
 	std::mutex mapBandMutex;
 
 	//step 1 iterate through bands populating rasterBands and bandStratMultiplier objects
@@ -177,7 +177,7 @@ raster::GDALRasterWrapper *map(
 			stratBands[sbi].p_mutex = &stratDatasetMutexes[i];
 			sbi++;
 
-			helper::printTypeWarningsForInt32Conversion(stratBand.type);
+			helper::printTypeWarningsForInt32Conversion(stratBands[sbi].type);
 			
 			int strataCount = strataCounts[i][j];
 			numStrataPerBand.push_back(strataCount);
@@ -195,7 +195,7 @@ raster::GDALRasterWrapper *map(
 	mapBand.yBlockSize = stratBands[0].yBlockSize;
 	mapBand.p_mutex = &mapBandMutex;
 
-	bool largeRaster = isLargeRaster(width, height, {mapBand.size * width * height}); 
+	bool largeRaster = helper::isLargeRaster(width, height, mapBands); 
 	bool isMEMDataset = filename == "" && !largeRaster;
 	bool isVRTDataset = filename == "" && largeRaster;
 
@@ -205,13 +205,14 @@ raster::GDALRasterWrapper *map(
 		helper::addBandToMEMDataset(p_dataset, mapBand);
 	}
 	else if (isVRTDataset) {
-		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection):
+		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
 		helper::createVRTBandDataset(p_dataset, mapBand, VRTBandInfo, driverOptions);
 	}
 	else {
 		std::filesystem::path filepath = filename;
 		std::string extension = filepath.extension().string();
 
+		std::string driver;
 		if (extension == ".tif") {
 			driver = "Gtiff";
 		}

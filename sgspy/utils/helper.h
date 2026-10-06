@@ -126,6 +126,70 @@ struct VRTBandDatasetInfo {
 };
 
 /**
+ * static vector for storing temporary filenames to clean up at exit.
+ */
+static std::vector<std::string> s_filenames;
+
+/**
+ * the s_cleanupEnsured flag is set when atexit() is called with a function
+ * to cleanup all temporary filenames in the s_filenames vector. A flag
+ * is used so that std::atexit() is not called every time a new tempfile
+ * is created.
+ */
+static bool s_cleanupEnsured = false;
+
+/**
+ * @ingroup helper
+ * This function is similar to the CPLGenerateTempFilenameSafe()
+ * function from GDAL (gdal/port/cpl_path.cpp) except it calls
+ * CPLFormFIlenameSafe() in a different way, and calls std::atexit()
+ * to clean up the file.
+ *
+ * This function creates a temporary file with the given name, and
+ * returns the directory to the caller.
+ *
+ * @param std::string filename
+ * @returns std::string
+ */
+std::string generateTempFile(std::string& stem, std::string extension) {
+	const char *dir = CPLGetConfigOption("CPL_TMPDIR", nullptr);
+
+	if (dir == nullptr) {
+		dir = CPLGetConfigOption("TMPDIR", nullptr);
+	}
+
+	if (dir == nullptr) {
+		dir = CPLGetConfigOption("TEMP", nullptr);
+	}
+
+	if (dir == nullptr) {
+		dir = ".";
+	}
+
+	//determine file name
+	static int nTempFileCounter = 0;
+	CPLString uniqueName;
+	uniqueName.Printf("%s_%d_%d", stem.c_str(), CPLGetCurrentProcessID(), CPLAtomicInc(&nTempFileCounter));
+
+	//create file
+	std::string filename = CPLFormFilenameSafe(dir, uniqueName.c_str(), extension.c_str());
+	
+	//add filename to static cleanup list, and ensure filenames are cleaned up
+	s_filenames.push_back(filename);
+	if (!s_cleanupEnsured) {
+		std::atexit([](){
+			for (const std::string& filename : s_filenames) {
+				VSIUnlink(filename.c_str());
+			}		
+		});
+	}
+
+	return filename;
+}
+
+
+
+/**
  * @ingroup helper
  * Helper function which determines the smallest 
  * signed integer type and it's corresponding size
@@ -410,7 +474,7 @@ createDataset(
 		filename.c_str(),
 		width,
 		height,
-		bandCount,
+		bands.size(),
 		bands[0].type,
 		papszOptions
 	);
@@ -430,12 +494,12 @@ createDataset(
 		throw std::runtime_error("error setting projection.");
 	}
 
-	for (size_t band = 0; band < bandCount; band++) {
-		GDALRasterBand *p_band = p_dataset->GetRasterBand(band + 1);
-		p_band->SetDescription(bands[band].name.c_str());
-		p_band->SetNoDataValue(bands[band].nan);
-		p_band->GetBlockSize(&bands[band].xBlockSize, &bands[band].yBlockSize);
-		bands[band].p_band = p_band;
+	for (size_t b = 0; b < bands.size(); b++) {
+		GDALRasterBand *p_band = p_dataset->GetRasterBand(b + 1);
+		p_band->SetDescription(bands[b].name.c_str());
+		p_band->SetNoDataValue(bands[b].nan);
+		p_band->GetBlockSize(&bands[b].xBlockSize, &bands[b].yBlockSize);
+		bands[b].p_band = p_band;
 	}
 
 	return p_dataset;
@@ -544,6 +608,7 @@ createVRTBandDataset(
 		throw std::runtime_error("unable to get geotransform from dataset.");
 	}
 
+	std::vector<RasterBandMetaData> bands = {band};
 	info.p_dataset = createDataset(
 		info.filename,
 		"GTiff",
@@ -551,8 +616,7 @@ createVRTBandDataset(
 		p_dataset->GetRasterYSize(),
 		geotransform,
 		std::string(p_dataset->GetProjectionRef()),
-		&band,
-		1,
+		bands,
 		useTiles,
 		driverOptions
 	);
@@ -1138,8 +1202,8 @@ bool isLargeRaster(int width, int height, std::vector<RasterBandMetaData>& bands
 	size_t w = static_cast<size_t>(width);
 	size_t h = static_cast<size_t>(height);
 
-	for (const size_t& band : bands) {
-		size_t bandSize = w * h * bands.size;
+	for (const RasterBandMetaData& band : bands) {
+		size_t bandSize = w * h * band.size;
 		total += bandSize;
 		if (bandSize > gigabyte) {
 			return true;
@@ -1147,48 +1211,6 @@ bool isLargeRaster(int width, int height, std::vector<RasterBandMetaData>& bands
 	}
 
 	return (total > gigabyte * 4);
-}
-
-/**
- * @ingroup helper
- * This function is similar to the CPLGenerateTempFilenameSafe()
- * function from GDAL (gdal/port/cpl_path.cpp) except it calls
- * CPLFormFIlenameSafe() in a different way, and calls std::atexit()
- * to clean up the file.
- *
- * This function creates a temporary file with the given name, and
- * returns the directory to the caller.
- *
- * @param std::string filename
- * @returns std::string
- */
-std::string generateTempFile(std::string& stem, std::string extension) {
-	const char *dir = CPLGetConfigOption("CPL_TMPDIR", nullptr);
-
-	if (dir == nullptr) {
-		dir = CPLGetConfigOption("TMPDIR", nullptr);
-	}
-
-	if (dir == nullptr) {
-		dir = CPLGetConfigOption("TEMP", nullptr);
-	}
-
-	if (dir == nullptr) {
-		dir = ".";
-	}
-
-	//determine file name
-	static int nTempFileCounter = 0;
-	CPLString uniqueName;
-	uniqueName.Printf("%s_%d_%d", stem.c_str(), CPLGetCurrentProcessID(), CPLAtomicInc(&TempFileCounter));
-
-	//create file
-	std::string filename = CPLFormFilenameSafe(dir, uniqueName.c_str(), extension.c_str());
-	
-	//delete file when program exits
-	std::atexit([]() { VSIUnlink(filename.c_str()); });
-
-	return filename;
 }
 
 } //namespace helper

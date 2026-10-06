@@ -671,7 +671,7 @@ pca(
 	for (int i = 0; i < bandCount; i++) {
 		p_raster->fillRasterBandMetaData(i, bands[i]);
 
-		if (band.size == GDT_Float64) {
+		if (bands[i].type == GDT_Float64) {
 			type = GDT_Float64;
 			size = sizeof(double);
 		}

@@ -148,8 +148,7 @@ getRandomIndices(
  * @param Access& access
  * @param Existing& existing
  * @param std::vector<Index>& indices
- * @param std::vector<Index>& randVals,
- * @param int& randValIndex
+ * @param helper::RandValController& rand
  * @param int xBlock
  * @param int yBlock
  * @param int xValid
@@ -359,9 +358,6 @@ srs(
 	int xBlocks = (width + band.xBlockSize - 1) / band.xBlockSize;
 	int yBlocks = (height + band.yBlockSize - 1) / band.yBlockSize;
 	std::vector<helper::Index> indices;
-
-	std::vector<bool> randVals(band.xBlockSize * band.yBlockSize);
-	int randValIndex = band.xBlockSize * band.yBlockSize;
 
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	

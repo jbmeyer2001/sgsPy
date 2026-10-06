@@ -213,7 +213,7 @@ struct Access {
 		OGRFeature::DestroyFeature(p_feature);
 
 		std::string name = "access";
-		std::string filepath = generateTempFile(name, ".tif");		
+		std::string filepath = helper::generateTempFile(name, ".tif");		
 
 		//step 9: generate options list for rasterization	
 		char **argv = nullptr;

@@ -738,7 +738,6 @@ quantiles(
 
 	std::mutex dataBandMutex;
 	std::mutex stratBandMutex;
-	std::vector<std::mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
 
 	//allocate, read, and initialize raster data and breaks information
 	GDALDataType stratPixelType = GDT_Int8;
@@ -747,18 +746,18 @@ quantiles(
 	for (auto const& [key, val] : userProbabilites) {
 		//get and store metadata from input raster band
 		p_raster->fillRasterBandMetaData(key, dataBands[i]);
-		p_dataBand->p_mutex = &dataBandMutex;
+		dataBands[i].p_mutex = &dataBandMutex;
 
 		//add probabilities
 		probabilities.push_back(val);	
 
 		//update metadata of new strat raster
 		size_t maxStrata = val.size() + 1;
-		helper::setStratBandTypeAndSize(maxStrata, &stratBand[i].type, &stratBand[i].size);
-		stratBand[i].name = "strat_" + bandNames[key];
-		stratBand[i].xBlockSize = map ? dataBands[0].xBlockSize : dataBands[i].xBlockSize;
-		stratBand[i].yBlockSize = map ? dataBands[0].yBlockSize : dataBands[i].yBlockSize;
-		stratBand[i].p_mutex = &stratBandMutex;
+		helper::setStratBandTypeAndSize(maxStrata, &stratBands[i].type, &stratBands[i].size);
+		stratBands[i].name = "strat_" + bandNames[key];
+		stratBands[i].xBlockSize = map ? dataBands[0].xBlockSize : dataBands[i].xBlockSize;
+		stratBands[i].yBlockSize = map ? dataBands[0].yBlockSize : dataBands[i].yBlockSize;
+		stratBands[i].p_mutex = &stratBandMutex;
 
 		//type and size must be the same for all bands in an output file because of
 		//restrictions on GeoTiff files which aren't restricted in virtual types
@@ -786,7 +785,7 @@ quantiles(
 		stratBands[index].name = "strat_map";
 		stratBands[index].xBlockSize = dataBands[0].xBlockSize;
 		stratBands[index].yBlockSize = dataBands[0].yBlockSize;
-		stratBands[index].p_mutex = &stratBandsMutex;
+		stratBands[index].p_mutex = &stratBandMutex;
 
 		//type and size must be the same for all bands in an output file because of
 		//restrictions on GeoTiff files which aren't restricted in virtual types
@@ -802,12 +801,11 @@ quantiles(
 
 	if (!largeRaster) {
 		size_t i = 0;
-		for (auto const& [key, val] : breaks) {
+		for (auto const& [key, val] : userProbabilities) {
 			dataBands[i].p_buffer = p_raster->getRasterBandBuffer(key);
 		}
 	}
 	
-	GDALDataset *p_dataset;
 	if (isMEMDataset) {
 		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
 
