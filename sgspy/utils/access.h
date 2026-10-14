@@ -109,6 +109,10 @@ struct Access {
 		//step 2: add geometries to access polygon buffers
 		for (const auto& p_feature : *p_vector->getLayer(layerName.c_str())) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+			if (!p_geometry) {
+				throw std::runtime_error(std::format("an invalid geometry was encountered in the {} layer.", layerName));
+			}
+
 			OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
 	
 			switch (type) {

@@ -110,6 +110,8 @@ class GDALVectorWrapper {
 	 */
 	GDALVectorWrapper(std::string bytes, std::string projection, std::string name, std::string projDBPath) {
 		//set proj.db search path to search for the proj.db file which is included in sgs package
+		
+		std::cout << "in GDALVectorWrapper constructor" << std::endl;
 		char **paths = nullptr;
 		paths = CSLAddString(paths, projDBPath.c_str());
 		OSRSetPROJSearchPaths(paths);
@@ -143,7 +145,6 @@ class GDALVectorWrapper {
 		}
 		this->p_dataset = GDALDatasetUniquePtr(p_dataset);
 
-
 		/* copy data over from dataset created using geojson string
 		 *
 		 * This is done, because when converting a geopandas geodataframe to json, the layer name,
@@ -170,6 +171,9 @@ class GDALVectorWrapper {
 				p_outfeature->SetField(i, p_infeature->GetRawFieldRef(i));
 			}
 			OGRGeometry *p_geom = p_infeature->GetGeometryRef();
+			if (!p_geom) {
+				throw std::runtime_error("an invalid geometry was encountered in the vector file.");				
+			}
 			p_geom->assignSpatialReference(&this->srs);
 			p_outfeature->SetGeometry(p_geom);
 			p_outlayer->CreateFeature(p_outfeature);
@@ -272,6 +276,9 @@ class GDALVectorWrapper {
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+			if (!p_geometry) {
+				throw std::runtime_error(std::format("an invalid geometry was encountered in the {} layer.", layerName));
+			}
 			switch (wkbFlatten(p_geometry->getGeometryType())) {
 				case OGRwkbGeometryType::wkbPoint: {
 					OGRPoint *p_point = p_geometry->toPoint();
@@ -309,6 +316,9 @@ class GDALVectorWrapper {
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+			if (!p_geometry) {
+				throw std::runtime_error(std::format("an invalid geometry was encountered in the {} layer.", layerName));
+			}
 			switch (wkbFlatten(p_geometry->getGeometryType())) {
 				case OGRwkbGeometryType::wkbPoint: {
 					OGRPoint *p_point = p_geometry->toPoint();
@@ -354,6 +364,9 @@ class GDALVectorWrapper {
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+			if (!p_geometry) {
+				throw std::runtime_error(std::format("an invalid geometry was encountered in the {} layer.", layerName));
+			}
 			switch (wkbFlatten(p_geometry->getGeometryType())) {
 				case OGRwkbGeometryType::wkbLineString: {
 					std::vector<double> xCoords;

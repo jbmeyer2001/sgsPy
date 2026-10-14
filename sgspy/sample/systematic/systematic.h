@@ -53,6 +53,10 @@ OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string l
 	//step 2: add geometries to access polygon buffers
 	for (const auto& p_feature : *p_access->getLayer(layerName.c_str())) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		if (!p_geometry) {
+			throw std::runtime_error(std::format("An invalid geometry was encountered in the {} layer.", layerName));
+		}
+
 		OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
 
 		switch (type) {
@@ -357,6 +361,9 @@ systematic(
 	//iterate through the polygons in the grid and populate the ruturn data depending on user inputs
 	for (const auto& p_feature : *p_grid) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		if (!p_geometry) {
+			throw std::runtime_error("An invalid geometry was encountered in the grid. This is a bug and should be reported to the sgspy github page.");
+		}
 		for (const auto& p_polygon : *p_geometry->toMultiPolygon()) {
 			//generate sample depending on 'location' parameter
 			OGRPoint point;
