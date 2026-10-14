@@ -162,7 +162,7 @@ raster::GDALRasterWrapper *map(
 	std::vector<helper::VRTBandDatasetInfo> VRTBandInfo(1);
 	std::vector<std::mutex> stratDatasetMutexes(rasters.size());
 	
-	std::vector<helper::RasterBandMetaData> mapBands;
+	std::vector<helper::RasterBandMetaData> mapBands(1);
 	helper::RasterBandMetaData& mapBand = mapBands[0];
 	std::mutex mapBandMutex;
 

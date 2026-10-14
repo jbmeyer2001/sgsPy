@@ -212,10 +212,6 @@ class SpatialRaster:
         self.srast_metadata_info = None
         self.is_strat_rast = False
 
-    def __del__(self):
-        if self.have_temp_dir:
-            shutil.rmtree(self.temp_dir)
-
     def info(self):
         """
         Displays driver, band, size, pixel size, and bound information of the raster.

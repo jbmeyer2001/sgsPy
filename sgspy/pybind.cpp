@@ -133,7 +133,6 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("replace"),
 		pybind11::arg("plot"),
 		pybind11::arg("random_state"),
-		pybind11::arg("tempFolder"),
 		pybind11::arg("filename"));
 
 	// source code in sgspy/sample/srs/srs.h
@@ -148,7 +147,6 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("buffOuter"),
 		pybind11::arg("plot"),
 		pybind11::arg("random_state"),
-		pybind11::arg("tempFolder"),
 		pybind11::arg("filename"));
 
 	// source code in sgspy/sample/strat/strat.h
@@ -174,8 +172,7 @@ PYBIND11_MODULE(_sgs, m) {
 		pybind11::arg("mapStratMapping"),
 		pybind11::arg("plot"),
 		pybind11::arg("random_state"),
-		pybind11::arg("filename"),
-		pybind11::arg("tempFolder"));
+		pybind11::arg("filename"));
 
 	// source code in sgspy/sample/systematic/systematic.h
 	m.def("systematic_cpp", &sgs::systematic::systematic,

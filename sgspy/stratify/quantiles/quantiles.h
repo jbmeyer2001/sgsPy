@@ -712,7 +712,7 @@ processPixel(
 std::pair<raster::GDALRasterWrapper *, std::unordered_map<std::string, std::vector<double>>>
 quantiles(
 	raster::GDALRasterWrapper *p_raster,
-	std::map<int, std::vector<double>> userProbabilites,
+	std::map<int, std::vector<double>> userProbabilities,
 	bool map,
 	std::string filename,
 	int threadCount,
@@ -728,7 +728,7 @@ quantiles(
 
 	GDALDataset *p_dataset = nullptr;
 
-	int bandCount = userProbabilites.size();
+	int bandCount = userProbabilities.size();
 	std::vector<std::vector<double>> probabilities;
 	std::vector<std::string> bandNames = p_raster->getBands();
 
@@ -743,7 +743,7 @@ quantiles(
 	GDALDataType stratPixelType = GDT_Int8;
 	size_t stratPixelSize = 1;
 	size_t i = 0;
-	for (auto const& [key, val] : userProbabilites) {
+	for (auto const& [key, val] : userProbabilities) {
 		//get and store metadata from input raster band
 		p_raster->fillRasterBandMetaData(key, dataBands[i]);
 		dataBands[i].p_mutex = &dataBandMutex;
@@ -799,23 +799,25 @@ quantiles(
 	bool isMEMDataset = filename == "" && !largeRaster;
 	bool isVRTDataset = filename == "" && largeRaster;
 
+	//construct mutexes for each VRT band dataset if required
+	std::vector<std::mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
+
 	if (!largeRaster) {
 		size_t i = 0;
 		for (auto const& [key, val] : userProbabilities) {
-			dataBands[i].p_buffer = p_raster->getRasterBandBuffer(key);
+			dataBands[i++].p_buffer = p_raster->getRasterBandBuffer(key);
 		}
 	}
 	
 	if (isMEMDataset) {
 		p_dataset = helper::createVirtualDataset("MEM", width, height, geotransform, projection);
 
-		for (const helper::RasterBandMetaData& band : stratBands) {
+		for (helper::RasterBandMetaData& band : stratBands) {
 			helper::addBandToMEMDataset(p_dataset, band);
 		}
 	}
 	else if (isVRTDataset) {
 		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
-		stratBandMutexes.resize(stratBands.size());
 
 		for (size_t i = 0; i < stratBands.size(); i++) {
 			helper::createVRTBandDataset(p_dataset, stratBands[i], VRTBandInfo, driverOptions);
@@ -1031,7 +1033,7 @@ quantiles(
 				});
 			}	
 		}
-		else {	
+		else {
 			for (size_t band = 0; band < static_cast<size_t>(bandCount); band++) {
 				helper::RasterBandMetaData* p_dataBand = &dataBands[band];
 				helper::RasterBandMetaData* p_stratBand = &stratBands[band];

@@ -243,9 +243,6 @@ raster::GDALRasterWrapper *breaks(
 	std::mutex dataBandMutex;
 	std::mutex stratBandMutex;
 	
-	//VRT bands are each their own dataset so they can each have their own mutex
-	std::vector<std::mutex> stratBandMutexes(0);
-	
 	//allocate, read, and initialize raster data and breaks information
 	GDALDataType stratPixelType = GDT_Int8;
 	size_t stratPixelSize = 1;
@@ -308,6 +305,9 @@ raster::GDALRasterWrapper *breaks(
 	bool isMEMDataset = filename == "" && !largeRaster;
 	bool isVRTDataset = filename == "" && largeRaster;
 
+	//construct mutexes for each VRT band dataset if required
+	std::vector<std::mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
+
 	if (!largeRaster) {
 		size_t i = 0;
 		for (auto const& [key, val] : breaks) {
@@ -325,7 +325,6 @@ raster::GDALRasterWrapper *breaks(
 	}
 	else if (isVRTDataset) {
 		p_dataset = helper::createVirtualDataset("VRT", width, height, geotransform, projection);
-		stratBandMutexes.resize(stratBands.size());
 
 		for (size_t i = 0; i < stratBands.size(); i++) {
 			helper::createVRTBandDataset(p_dataset, stratBands[i], VRTBandInfo, driverOptions);
