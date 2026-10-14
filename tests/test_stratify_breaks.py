@@ -2,6 +2,8 @@ import pytest
 import numpy as np
 
 import sgspy as sgs
+import rasterio
+from rasterio import Affine, CRS
 
 from files import (
     mraster_geotiff_path,
@@ -86,3 +88,48 @@ class TestBreaks:
         test = test_rast.band('strat_zq90')
         correct = np.nan_to_num(np.subtract(self.zq90_output_rast.band(0), 1), nan=-1)
         assert np.array_equal(test, correct, equal_nan=True)
+
+    def test_large_raster(self, tmp_path):
+        temp_dir = tmp_path / "test_large"
+        temp_dir.mkdir()
+
+        temp_file = temp_dir / "rast.tif"
+        
+        #randomly generate a numpy array with 3 bands
+        #each band has the uniform distribution adjusted to be different
+        arr = np.random.rand(3, 10_000, 12_000).astype(np.float32)
+        arr[0] = arr[0] * 100 - 50
+        arr[1] = arr[1] * 50
+        arr[2] = arr[2] * 20 + 20
+
+        #calculate the quantiles
+        breaks = [
+            [-40, -30, -20, -10, 0, 25],
+            [5, 45],
+            [22, 24, 26, 28, 30, 32, 34, 36, 38]
+        ]
+
+        #create a temporary file with the numpy array stored
+        crs = CRS.from_epsg(4326)
+        transform = Affine.from_gdal(0,10,0,0,0,-10) #10x10m north-up starting at 0,0
+
+        dataset = rasterio.open(
+            temp_file,
+            'w',
+            driver='GTiff',
+            height=10_000,
+            width=12_000,
+            count=3,
+            dtype=np.float32,
+            crs=crs,
+            transform=transform
+        )
+        dataset.write(arr)
+        dataset.close()
+
+        #open the temporary tif file with sgspy
+        rast = sgs.SpatialRaster(temp_file)
+        srast = sgs.breaks(rast, breaks=breaks)
+        b0 = srast.band(0)
+        b1 = srast.band(1)
+        b2 = srast.band(2)
