@@ -106,12 +106,15 @@ struct Existing {
 		//invert geotransform so we can use IGT to convert from point to indexes
 		GDALInvGeoTransform(GT, this->IGT);
 
-		std::string name = layerNames[0];
-		OGRLayer *p_layer = p_vect->getLayer(name);
+		std::string layerName = layerNames[0];
+		OGRLayer *p_layer = p_vect->getLayer(layerName);
 		helper::Field fieldExistingTrue("existing", 1);
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+			if (!p_geometry) {
+				throw std::runtime_error(std::format("an invalid geometry was encountered in the {} layer.", layerName));
+			}
 			switch (wkbFlatten(p_geometry->getGeometryType())) {
 				case OGRwkbGeometryType::wkbPoint: {
 					OGRPoint *p_point = p_geometry->toPoint();

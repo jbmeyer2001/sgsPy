@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <random>
+#include <optional>
 
 #include "utils/access.h"
 #include "utils/existing.h"
@@ -52,6 +53,10 @@ OGRGeometry *getAccessPolygon(vector::GDALVectorWrapper *p_access, std::string l
 	//step 2: add geometries to access polygon buffers
 	for (const auto& p_feature : *p_access->getLayer(layerName.c_str())) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		if (!p_geometry) {
+			throw std::runtime_error(std::format("An invalid geometry was encountered in the {} layer.", layerName));
+		}
+
 		OGRwkbGeometryType type = wkbFlatten(p_geometry->getGeometryType());
 
 		switch (type) {
@@ -256,6 +261,7 @@ systematic(
 	double buffOuter,
 	bool force,
 	bool plot,
+	std::optional<uint64_t> random_state,
 	std::string filename)
 {
 	GDALAllRegister();
@@ -276,11 +282,9 @@ systematic(
 	double xDiff = xMax - xMin;
 	double yDiff = yMax - yMin;
 	double rngMax = yDiff * xDiff;
-	std::mt19937::result_type seed = time(nullptr);
-	auto rng = std::bind(
-		std::uniform_real_distribution<double>(0, rngMax),
-		std::mt19937(seed)
-	);
+	std::mt19937 engine(random_state.value_or(std::random_device{}()));
+	std::uniform_real_distribution<double> dist(0.0, rngMax);
+	auto rng = [&] { return dist(engine); };
 
 	//determine random rotation angle within extent polygon
 	double rotation = rng() / (rngMax / 180);
@@ -357,6 +361,9 @@ systematic(
 	//iterate through the polygons in the grid and populate the ruturn data depending on user inputs
 	for (const auto& p_feature : *p_grid) {
 		OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+		if (!p_geometry) {
+			throw std::runtime_error("An invalid geometry was encountered in the grid. This is a bug and should be reported to the sgspy github page.");
+		}
 		for (const auto& p_polygon : *p_geometry->toMultiPolygon()) {
 			//generate sample depending on 'location' parameter
 			OGRPoint point;

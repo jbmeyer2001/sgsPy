@@ -361,6 +361,9 @@ dist(
 
 		for (const auto& p_feature : *p_layer) {
 			OGRGeometry *p_geometry = p_feature->GetGeometryRef();
+			if (!p_geometry) {
+				throw std::runtime_error(std::format("an invalid geometry was encountered in the {} layer.", layer.c_str()));
+			}
 			switch (wkbFlatten(p_geometry->getGeometryType())) {
 				case OGRwkbGeometryType::wkbPoint: {
 					OGRPoint *p_point = p_geometry->toPoint();

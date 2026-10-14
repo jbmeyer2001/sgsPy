@@ -98,7 +98,9 @@ from _sgs import systematic_cpp
 #     whether or not to plot the resulting samples @n @n
 # filename : str @n
 #     the filename to write to or "" if not to write @n @n
-# 
+# random_state : int | None @n
+#     control randomness of the sampling @n @n
+#
 # Returns
 # --------------------
 # a SpatialVector object containing point geometries of sample locations
@@ -114,6 +116,7 @@ def systematic(
     buff_outer: Optional[int | float] = None,
     force: bool = False,
     plot: bool = False,
+    random_state: int | None = None,
     filename: str = ""):
         
     if type(rast) is not SpatialRaster:
@@ -151,6 +154,12 @@ def systematic(
 
     if type(filename) is not str:
         raise TypeError("'filename' parameter must be of type str.")
+
+    if random_state is not None:
+        if type(random_state) is not int:
+            raise TypeError("'random_state' must be of type integer.")
+        elif random_state < 0:
+            raise ValueError("Expected non-negative integer")
 
     if rast.closed:
         raise RuntimeError("the C++ object which the raster object wraps has been cleaned up and closed.")
@@ -206,6 +215,7 @@ def systematic(
         buff_outer,
         force,
         plot,
+        random_state,
         filename
     )
 

@@ -104,6 +104,8 @@ from _sgs import clhs_cpp
 # filename : str @n
 #     the filename to write to, or '' if file should not be written @n @n
 #
+# random_state : int | None @n
+#     control randomness of the sampling @n @n
 # Returns
 # --------------------
 # a SpatialVector object containing point geometries of sample locations
@@ -116,8 +118,9 @@ def clhs(
     buff_inner: Optional[int | float] = None,
     buff_outer: Optional[int | float] = None,
     existing: Optional[SpatialVector] = None,
-    replace: int = None,
+    replace: int | None = None,
     plot: bool = False,
+    random_state: int | None = None,
     filename: str = ''):
         
     if type(rast) is not SpatialRaster:
@@ -149,6 +152,12 @@ def clhs(
 
     if type(plot) is not bool:
         raise TypeError("'plot' parameter must be of type bool.")
+
+    if random_state is not None:
+        if type(random_state) is not int:
+            raise TypeError("'random_state' must be of type integer.")
+        elif random_state < 0:
+            raise ValueError("Expected non-negative integer")
 
     if type(filename) is not str:
         raise TypeError("'filename' parameter must be of type str.")
@@ -205,6 +214,7 @@ def clhs(
         existing_vector,
         replace,
         plot,
+        random_state,
         filename
     )
 
