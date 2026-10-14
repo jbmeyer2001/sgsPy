@@ -182,6 +182,7 @@ std::string generateTempFile(std::string& stem, std::string extension) {
 				VSIUnlink(filename.c_str());
 			}		
 		});
+		s_cleanupEnsured = true;
 	}
 
 	return filename;
