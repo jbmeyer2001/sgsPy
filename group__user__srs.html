@@ -95,13 +95,13 @@ $(function(){initNavTree('group__user__srs.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:gacf590a35ba38671607918a88d3194f17" id="r_gacf590a35ba38671607918a88d3194f17"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gacf590a35ba38671607918a88d3194f17">sgspy.sample.srs.srs.srs</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_samples, [int|float] mindist=0, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] existing=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, str filename='')</td></tr>
-<tr class="memdesc:gacf590a35ba38671607918a88d3194f17"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts simple random sampling on the raster given.  <br /></td></tr>
+<tr class="memitem:gae19df4703840f2d71db1e336b9d31777" id="r_gae19df4703840f2d71db1e336b9d31777"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae19df4703840f2d71db1e336b9d31777">sgspy.sample.srs.srs.srs</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_samples, int|float mindist=0, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] existing=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, int|None random_state=None, str filename='')</td></tr>
+<tr class="memdesc:gae19df4703840f2d71db1e336b9d31777"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts simple random sampling on the raster given.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="gacf590a35ba38671607918a88d3194f17" name="gacf590a35ba38671607918a88d3194f17"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gacf590a35ba38671607918a88d3194f17">&#9670;&#160;</a></span>srs()</h2>
+<a id="gae19df4703840f2d71db1e336b9d31777" name="gae19df4703840f2d71db1e336b9d31777"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gae19df4703840f2d71db1e336b9d31777">&#9670;&#160;</a></span>srs()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -119,7 +119,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">[int | float] </td>          <td class="paramname"><span class="paramname"><em>mindist</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+          <td class="paramtype">int | float </td>          <td class="paramname"><span class="paramname"><em>mindist</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -150,6 +150,11 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">bool </td>          <td class="paramname"><span class="paramname"><em>plot</em></span><span class="paramdefsep"> = </span><span class="paramdefval">False</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int | None </td>          <td class="paramname"><span class="paramname"><em>random_state</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -209,6 +214,9 @@ plot : bool <br  />
  <br  />
 filename : str <br  />
  the filename to write to, or '' if file should not be written <br  />
+ <br  />
+random_state : int | None <br  />
+ control randomness of the sampling <br  />
  <br  />
 </p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md23"></a>

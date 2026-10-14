@@ -95,13 +95,13 @@ $(function(){initNavTree('group__user__systematic.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:gaedd6c0392798ad39dcc83e6f28bd54d8" id="r_gaedd6c0392798ad39dcc83e6f28bd54d8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaedd6c0392798ad39dcc83e6f28bd54d8">sgspy.sample.systematic.systematic.systematic</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int|float cellsize, str shape=&quot;square&quot;, str location=&quot;centers&quot;, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] existing=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool force=False, bool plot=False, str filename=&quot;&quot;)</td></tr>
-<tr class="memdesc:gaedd6c0392798ad39dcc83e6f28bd54d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts systematic sampling within the extent of the raster given.  <br /></td></tr>
+<tr class="memitem:gac428e34a116e36858834793bac12d6f7" id="r_gac428e34a116e36858834793bac12d6f7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gac428e34a116e36858834793bac12d6f7">sgspy.sample.systematic.systematic.systematic</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int|float cellsize, str shape=&quot;square&quot;, str location=&quot;centers&quot;, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] existing=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool force=False, bool plot=False, int|None random_state=None, str filename=&quot;&quot;)</td></tr>
+<tr class="memdesc:gac428e34a116e36858834793bac12d6f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts systematic sampling within the extent of the raster given.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="gaedd6c0392798ad39dcc83e6f28bd54d8" name="gaedd6c0392798ad39dcc83e6f28bd54d8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaedd6c0392798ad39dcc83e6f28bd54d8">&#9670;&#160;</a></span>systematic()</h2>
+<a id="gac428e34a116e36858834793bac12d6f7" name="gac428e34a116e36858834793bac12d6f7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac428e34a116e36858834793bac12d6f7">&#9670;&#160;</a></span>systematic()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -160,6 +160,11 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">bool </td>          <td class="paramname"><span class="paramname"><em>plot</em></span><span class="paramdefsep"> = </span><span class="paramdefval">False</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int | None </td>          <td class="paramname"><span class="paramname"><em>random_state</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -226,6 +231,9 @@ plot : bool <br  />
  <br  />
 filename : str <br  />
  the filename to write to or "" if not to write <br  />
+ <br  />
+random_state : int | None <br  />
+ control randomness of the sampling <br  />
  <br  />
  </p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md29"></a>

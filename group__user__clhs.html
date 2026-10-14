@@ -95,13 +95,13 @@ $(function(){initNavTree('group__user__clhs.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:gaa3fd22f6829d12f0144cf274c64e6d59" id="r_gaa3fd22f6829d12f0144cf274c64e6d59"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaa3fd22f6829d12f0144cf274c64e6d59">sgspy.sample.clhs.clhs.clhs</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_samples, int iterations=10000, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] existing=None, int replace=None, bool plot=False, str filename='')</td></tr>
-<tr class="memdesc:gaa3fd22f6829d12f0144cf274c64e6d59"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts Conditioned Latin Hypercube Sampling, see the following article for an in depth description of the method itself:  <br /></td></tr>
+<tr class="memitem:gafc774befc2f7d6e6590757b19c06cfa9" id="r_gafc774befc2f7d6e6590757b19c06cfa9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gafc774befc2f7d6e6590757b19c06cfa9">sgspy.sample.clhs.clhs.clhs</a> (<a class="el" href="classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html">SpatialRaster</a> rast, int num_samples, int iterations=10000, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, Optional[<a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html">SpatialVector</a>] existing=None, int|None replace=None, bool plot=False, int|None random_state=None, str filename='')</td></tr>
+<tr class="memdesc:gafc774befc2f7d6e6590757b19c06cfa9"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts Conditioned Latin Hypercube Sampling, see the following article for an in depth description of the method itself:  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="gaa3fd22f6829d12f0144cf274c64e6d59" name="gaa3fd22f6829d12f0144cf274c64e6d59"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaa3fd22f6829d12f0144cf274c64e6d59">&#9670;&#160;</a></span>clhs()</h2>
+<a id="gafc774befc2f7d6e6590757b19c06cfa9" name="gafc774befc2f7d6e6590757b19c06cfa9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gafc774befc2f7d6e6590757b19c06cfa9">&#9670;&#160;</a></span>clhs()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -149,12 +149,17 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int </td>          <td class="paramname"><span class="paramname"><em>replace</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
+          <td class="paramtype">int | None </td>          <td class="paramname"><span class="paramname"><em>replace</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">bool </td>          <td class="paramname"><span class="paramname"><em>plot</em></span><span class="paramdefsep"> = </span><span class="paramdefval">False</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int | None </td>          <td class="paramname"><span class="paramname"><em>random_state</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -223,7 +228,10 @@ plot : bool <br  />
 filename : str <br  />
  the filename to write to, or '' if file should not be written <br  />
  <br  />
- </p>
+ random_state : int | None <br  />
+ control randomness of the sampling <br  />
+ <br  />
+</p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md20"></a>
 Returns</h2>
 <p>a <a class="el" href="classsgspy_1_1utils_1_1vector_1_1SpatialVector.html" title="This class represents a spatial vector, and is used as an input to many sgs functions.">SpatialVector</a> object containing point geometries of sample locations </p>

@@ -9,7 +9,7 @@ var searchData=
   ['setstratbandtypeandsize_6',['setStratBandTypeAndSize',['../group__helper.html#gafb4301348d605db2ce92d141063af00b',1,'sgs::helper']]],
   ['settempdir_7',['setTempDir',['../classsgs_1_1raster_1_1GDALRasterWrapper.html#a5c058a968cdfbdc2a1926c383b093ae8',1,'sgs::raster::GDALRasterWrapper']]],
   ['srast_5finfo_8',['srast_info',['../classsgspy_1_1utils_1_1raster_1_1SpatialRaster.html#aa8b5dfa6d67a95f008ad04659614166b',1,'sgspy::utils::raster::SpatialRaster']]],
-  ['srs_9',['srs',['../group__srs.html#gacfa7730e4778a314a798ca0c233720d2',1,'sgs::srs::srs()'],['../group__user__srs.html#gacf590a35ba38671607918a88d3194f17',1,'sgspy.sample.srs.srs.srs()']]],
-  ['strat_10',['strat',['../group__strat.html#ga80c5a7f87d4be0c7434af3bdad5c397d',1,'sgs::strat::strat()'],['../group__user__strat.html#ga0b66cd41b6fccdb4f0b933fa281bae53',1,'sgspy.sample.strat.strat.strat()']]],
-  ['systematic_11',['systematic',['../group__systematic.html#ga2b344017cc670c4f677f8d7021cd00cc',1,'sgs::systematic::systematic()'],['../group__user__systematic.html#gaedd6c0392798ad39dcc83e6f28bd54d8',1,'sgspy.sample.systematic.systematic.systematic()']]]
+  ['srs_9',['srs',['../group__srs.html#ga41aea016389cbf29fd9f5bb79702fe43',1,'sgs::srs::srs()'],['../group__user__srs.html#gae19df4703840f2d71db1e336b9d31777',1,'sgspy.sample.srs.srs.srs()']]],
+  ['strat_10',['strat',['../group__strat.html#ga3eeb2329dfad410a807d8e66a92f2f1a',1,'sgs::strat::strat()'],['../group__user__strat.html#ga6ba79385f054b8364c65691841649ad7',1,'sgspy.sample.strat.strat.strat()']]],
+  ['systematic_11',['systematic',['../group__systematic.html#gad1d7498cd196beed9b1c3e9e2ff6cbd0',1,'sgs::systematic::systematic()'],['../group__user__systematic.html#gac428e34a116e36858834793bac12d6f7',1,'sgspy.sample.systematic.systematic.systematic()']]]
 ];

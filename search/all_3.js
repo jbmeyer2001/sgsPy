@@ -12,7 +12,7 @@ var searchData=
   ['checkexisting_9',['checkExisting',['../group__systematic.html#ga0da7815f79057b57c1651c10504b89a8',1,'sgs::systematic']]],
   ['checkextent_10',['checkExtent',['../group__systematic.html#ga3eb43f6a3e8021430290b699f2e7112c',1,'sgs::systematic']]],
   ['checknotnan_11',['checkNotNan',['../group__systematic.html#ga31e6d9098745fd483d0392f37b9c51a2',1,'sgs::systematic']]],
-  ['clhs_12',['clhs',['../group__clhs.html#ga477c35ed4046b39b9d6cbdc337cbfd5c',1,'sgs::clhs::clhs()'],['../group__user__clhs.html#gaa3fd22f6829d12f0144cf274c64e6d59',1,'sgspy.sample.clhs.clhs.clhs()'],['../group__clhs.html',1,'clhs'],['../group__user__clhs.html',1,'clhs']]],
+  ['clhs_12',['clhs',['../group__clhs.html#ga9535cd8183885ce5c1fa42ce6e77dc4f',1,'sgs::clhs::clhs()'],['../group__user__clhs.html#gafc774befc2f7d6e6590757b19c06cfa9',1,'sgspy.sample.clhs.clhs.clhs()'],['../group__clhs.html',1,'clhs'],['../group__user__clhs.html',1,'clhs']]],
   ['clhs_2eh_13',['clhs.h',['../clhs_8h.html',1,'']]],
   ['clhs_2epy_14',['clhs.py',['../clhs_8py.html',1,'']]],
   ['clhsdatamanager_15',['CLHSDataManager',['../classsgs_1_1clhs_1_1CLHSDataManager.html',1,'sgs::clhs::CLHSDataManager&lt; T &gt;'],['../classsgs_1_1clhs_1_1CLHSDataManager.html#a1b3b6ed7a021538eaf717e3f500ba542',1,'sgs::clhs::CLHSDataManager::CLHSDataManager()']]],

@@ -16,7 +16,7 @@ var group__clhs =
       [ "quantileObjectiveFunc", "classsgs_1_1clhs_1_1CLHSDataManager.html#a29cd06df9061b894cbe444730773e95d", null ],
       [ "randomIndex", "classsgs_1_1clhs_1_1CLHSDataManager.html#ae7f258715b77a790601f8270526254d3", null ]
     ] ],
-    [ "sgs::clhs::clhs", "group__clhs.html#ga477c35ed4046b39b9d6cbdc337cbfd5c", null ],
+    [ "sgs::clhs::clhs", "group__clhs.html#ga9535cd8183885ce5c1fa42ce6e77dc4f", null ],
     [ "sgs::clhs::getQuantile", "group__clhs.html#ga0786fa3220971b7f94ad2c7942ffaaeb", null ],
     [ "sgs::clhs::readRaster", "group__clhs.html#ga93a2165a148bc0c4a6dd4317094d02b2", null ],
     [ "sgs::clhs::selectSamples", "group__clhs.html#ga5b2f786e140a336b33e3c2da67f0b171", null ]

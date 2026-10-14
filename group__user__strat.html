@@ -95,13 +95,13 @@ $(function(){initNavTree('group__user__strat.html','',''); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-func-members" class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga0b66cd41b6fccdb4f0b933fa281bae53" id="r_ga0b66cd41b6fccdb4f0b933fa281bae53"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga0b66cd41b6fccdb4f0b933fa281bae53">sgspy.sample.strat.strat.strat</a> (SpatialRaster strat_rast, int num_samples, Optional[int] num_strata=None, int wrow=3, int wcol=3, Optional[int|str] band=None, str allocation=&quot;prop&quot;, Optional[list[float]] weights=None, Optional[SpatialRaster] mrast=None, Optional[int|str] mrast_band=None, str method=&quot;Queinnec&quot;, Optional[int|float] mindist=None, Optional[SpatialVector] existing=None, bool force=False, Optional[SpatialVector] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, str filename=&quot;&quot;)</td></tr>
-<tr class="memdesc:ga0b66cd41b6fccdb4f0b933fa281bae53"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts stratified sampling using the stratified raster given.  <br /></td></tr>
+<tr class="memitem:ga6ba79385f054b8364c65691841649ad7" id="r_ga6ba79385f054b8364c65691841649ad7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga6ba79385f054b8364c65691841649ad7">sgspy.sample.strat.strat.strat</a> (SpatialRaster strat_rast, int num_samples, Optional[int] num_strata=None, int wrow=3, int wcol=3, Optional[int|str] band=None, str allocation=&quot;prop&quot;, Optional[list[float]] weights=None, Optional[SpatialRaster] mrast=None, Optional[int|str] mrast_band=None, str method=&quot;Queinnec&quot;, Optional[int|float] mindist=None, Optional[SpatialVector] existing=None, bool force=False, Optional[SpatialVector] access=None, Optional[str] layer_name=None, Optional[int|float] buff_inner=None, Optional[int|float] buff_outer=None, bool plot=False, int|None random_state=None, str filename=&quot;&quot;)</td></tr>
+<tr class="memdesc:ga6ba79385f054b8364c65691841649ad7"><td class="mdescLeft">&#160;</td><td class="mdescRight">This function conducts stratified sampling using the stratified raster given.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
-<a id="ga0b66cd41b6fccdb4f0b933fa281bae53" name="ga0b66cd41b6fccdb4f0b933fa281bae53"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga0b66cd41b6fccdb4f0b933fa281bae53">&#9670;&#160;</a></span>strat()</h2>
+<a id="ga6ba79385f054b8364c65691841649ad7" name="ga6ba79385f054b8364c65691841649ad7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga6ba79385f054b8364c65691841649ad7">&#9670;&#160;</a></span>strat()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -204,6 +204,11 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">int | None </td>          <td class="paramname"><span class="paramname"><em>random_state</em></span><span class="paramdefsep"> = </span><span class="paramdefval">None</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">str </td>          <td class="paramname"><span class="paramname"><em>filename</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span>&#160;)</td>
         </tr>
       </table>
@@ -302,7 +307,10 @@ plot : bool <br  />
 filename : str <br  />
  the output filename to write to if desired <br  />
  <br  />
-</p>
+random_state : int | None <br  />
+ control randomness of the sampling <br  />
+ <br  />
+ </p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md26"></a>
 Returns</h2>
 <p>a SpatialVector object containing point geometries of sample locations </p>

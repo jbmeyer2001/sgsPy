@@ -100,7 +100,7 @@ Functions</h2></td></tr>
 <tr class="memitem:gab9d3565b9dff84159556d61aa734b966" id="r_gab9d3565b9dff84159556d61aa734b966"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab9d3565b9dff84159556d61aa734b966">sgs::systematic::checkAccess</a> (OGRPoint *p_point, OGRGeometry *p_geometry)</td></tr>
 <tr class="memitem:ga0da7815f79057b57c1651c10504b89a8" id="r_ga0da7815f79057b57c1651c10504b89a8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga0da7815f79057b57c1651c10504b89a8">sgs::systematic::checkExisting</a> (double x, double y, <a class="el" href="structsgs_1_1existing_1_1Existing.html">existing::Existing</a> &amp;existing)</td></tr>
 <tr class="memitem:ga31e6d9098745fd483d0392f37b9c51a2" id="r_ga31e6d9098745fd483d0392f37b9c51a2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga31e6d9098745fd483d0392f37b9c51a2">sgs::systematic::checkNotNan</a> (<a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *p_raster, double *IGT, double xCoord, double yCoord, bool force)</td></tr>
-<tr class="memitem:ga2b344017cc670c4f677f8d7021cd00cc" id="r_ga2b344017cc670c4f677f8d7021cd00cc"><td class="memItemLeft" align="right" valign="top">std::tuple&lt; <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *, std::vector&lt; std::vector&lt; double &gt; &gt;, std::vector&lt; std::vector&lt; std::vector&lt; double &gt; &gt; &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga2b344017cc670c4f677f8d7021cd00cc">sgs::systematic::systematic</a> (<a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *p_raster, double cellSize, std::string shape, std::string location, <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *p_existing, <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *p_access, std::string layerName, double buffInner, double buffOuter, bool force, bool plot, std::string filename)</td></tr>
+<tr class="memitem:gad1d7498cd196beed9b1c3e9e2ff6cbd0" id="r_gad1d7498cd196beed9b1c3e9e2ff6cbd0"><td class="memItemLeft" align="right" valign="top">std::tuple&lt; <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *, std::vector&lt; std::vector&lt; double &gt; &gt;, std::vector&lt; std::vector&lt; std::vector&lt; double &gt; &gt; &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gad1d7498cd196beed9b1c3e9e2ff6cbd0">sgs::systematic::systematic</a> (<a class="el" href="classsgs_1_1raster_1_1GDALRasterWrapper.html">raster::GDALRasterWrapper</a> *p_raster, double cellSize, std::string shape, std::string location, <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *p_existing, <a class="el" href="classsgs_1_1vector_1_1GDALVectorWrapper.html">vector::GDALVectorWrapper</a> *p_access, std::string layerName, double buffInner, double buffOuter, bool force, bool plot, std::optional&lt; uint64_t &gt; random_state, std::string filename)</td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
@@ -350,8 +350,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ga2b344017cc670c4f677f8d7021cd00cc" name="ga2b344017cc670c4f677f8d7021cd00cc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga2b344017cc670c4f677f8d7021cd00cc">&#9670;&#160;</a></span>systematic()</h2>
+<a id="gad1d7498cd196beed9b1c3e9e2ff6cbd0" name="gad1d7498cd196beed9b1c3e9e2ff6cbd0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gad1d7498cd196beed9b1c3e9e2ff6cbd0">&#9670;&#160;</a></span>systematic()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -410,6 +410,11 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>plot</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::optional&lt; uint64_t &gt;</td>          <td class="paramname"><span class="paramname"><em>random_state</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
