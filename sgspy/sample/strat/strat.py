@@ -145,8 +145,9 @@ from _sgs import strat_cpp
 #     whether or not to plot the output samples @n @n
 # filename : str @n
 #     the output filename to write to if desired @n @n
-# 
-# 
+# random_state : int | None @n
+#     control randomness of the sampling @n @n
+#
 # Returns
 # --------------------
 # a SpatialVector object containing point geometries of sample locations
@@ -170,6 +171,7 @@ def strat(
     buff_inner: Optional[int | float] = None,
     buff_outer: Optional[int | float] = None,
     plot: bool = False,
+    random_state: int | None = None,
     filename: str = "",
     ):
 
@@ -232,6 +234,12 @@ def strat(
 
     if type(plot) is not bool:
         raise TypeError("'plot' paramter must be of type bool.")
+
+    if random_state is not None:
+        if type(random_state) is not int:
+            raise TypeError("'random_state' must be of type integer.")
+        elif random_state < 0:
+            raise ValueError("Expected non-negative integer")
 
     if type(filename) is not str:
         raise TypeError("'filename' parameter must be of type str.")
@@ -378,6 +386,7 @@ def strat(
         buff_outer,
         map_strat_mapping,
         plot,
+        random_state,
         filename,
         temp_dir
     )

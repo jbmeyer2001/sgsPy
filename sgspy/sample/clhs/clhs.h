@@ -13,6 +13,7 @@
  */
 
 #include <iostream>
+#include <optional>
 #include <random>
 
 #include "utils/access.h"
@@ -1046,6 +1047,7 @@ clhs(
 	vector::GDALVectorWrapper *p_existing,
 	size_t replace,
 	bool plot,
+	std::optional<uint64_t> random_state,
 	std::string tempFolder,
 	std::string filename)
 {
@@ -1109,7 +1111,7 @@ clhs(
 
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
-	xso::xoshiro_4x64_plus rng;
+	xso::xoshiro_4x64_plus rng = random_state ? xso::xoshiro_4x64_plus(*random_state) : xso::xoshiro_4x64_plus();
 	uint64_t multiplier = helper::getProbabilityMultiplier(
 		width, 
 		height, 

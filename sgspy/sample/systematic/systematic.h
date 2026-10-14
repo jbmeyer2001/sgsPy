@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <random>
+#include <optional>
 
 #include "utils/access.h"
 #include "utils/existing.h"
@@ -256,6 +257,7 @@ systematic(
 	double buffOuter,
 	bool force,
 	bool plot,
+	std::optional<uint64_t> random_state,
 	std::string filename)
 {
 	GDALAllRegister();
@@ -276,11 +278,9 @@ systematic(
 	double xDiff = xMax - xMin;
 	double yDiff = yMax - yMin;
 	double rngMax = yDiff * xDiff;
-	std::mt19937::result_type seed = time(nullptr);
-	auto rng = std::bind(
-		std::uniform_real_distribution<double>(0, rngMax),
-		std::mt19937(seed)
-	);
+	std::mt19937 engine(random_state.value_or(std::random_device{}()));
+	std::uniform_real_distribution<double> dist(0.0, rngMax);
+	auto rng = [&] { return dist(engine); };
 
 	//determine random rotation angle within extent polygon
 	double rotation = rng() / (rngMax / 180);

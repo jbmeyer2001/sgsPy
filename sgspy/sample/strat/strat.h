@@ -1177,6 +1177,7 @@ strat(
 	double buffOuter,
 	std::vector<std::pair<std::string, int>> mapStratMapping,
 	bool plot,
+	std::optional<uint64_t> random_state,
 	std::string filename,
 	std::string tempFolder)
 {
@@ -1267,7 +1268,8 @@ strat(
 
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
-	xso::xoshiro_4x64_plus rng; 
+	xso::xoshiro_4x64_plus rng = random_state ? xso::xoshiro_4x64_plus(*random_state) : xso::xoshiro_4x64_plus();
+	
 	uint64_t multiplier = helper::getProbabilityMultiplier(
 		width, 
 		height, 

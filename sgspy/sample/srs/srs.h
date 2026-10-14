@@ -291,6 +291,7 @@ srs(
 	double buffInner,
 	double buffOuter,
 	bool plot,
+	std::optional<uint64_t> random_state,
 	std::string tempFolder,
 	std::string filename)
 {
@@ -369,7 +370,7 @@ srs(
 
 	//fast random number generator using xoshiro256++
 	//https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf	
-	xso::xoshiro_4x64_plus rng;
+	xso::xoshiro_4x64_plus rng = random_state ? xso::xoshiro_4x64_plus(*random_state) : xso::xoshiro_4x64_plus();
 
 	// when reading pixels or blocks into memory using GDAL, the whole block is always read into memory.
 	// This reading of blocks is a large portion of the runtime for the processing of raster images.

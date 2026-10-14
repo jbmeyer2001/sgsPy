@@ -89,6 +89,8 @@ from _sgs import srs_cpp
 #     whether to plot the samples or not @n @n
 # filename : str @n
 #     the filename to write to, or '' if file should not be written @n @n
+# random_state : int | None @n
+#     control randomness of the sampling @n @n
 #
 #
 # Returns
@@ -97,15 +99,16 @@ from _sgs import srs_cpp
 def srs(
     rast: SpatialRaster,
     num_samples: int,
-    mindist: [int | float] = 0,
+    mindist: int | float = 0,
     existing: Optional[SpatialVector] = None,
     access: Optional[SpatialVector] = None,
     layer_name: Optional[str] = None,
     buff_inner: Optional[int | float] = None,
     buff_outer: Optional[int | float] = None,
     plot: bool = False,
-    filename: str = ''):
-        
+    random_state: int | None = None,
+    filename: str = '',):
+
     if type(rast) is not SpatialRaster:
         raise TypeError("'rast' parameter must be of type sgspy.SpatialRaster.")
 
@@ -132,6 +135,12 @@ def srs(
 
     if type(plot) is not bool:
         raise TypeError("'plot' parameter must be of type bool.")
+
+    if random_state is not None:
+        if type(random_state) is not int:
+            raise TypeError("'random_state' must be of type integer.")
+        elif random_state < 0:
+            raise ValueError("Expected non-negative integer")
 
     if type(filename) is not str:
         raise TypeError("'filename' paramter must be of type str.")
@@ -196,6 +205,7 @@ def srs(
         buff_inner,
         buff_outer,
         plot,
+        random_state,
         temp_dir,
         filename
     )
