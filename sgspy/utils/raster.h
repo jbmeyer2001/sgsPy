@@ -99,18 +99,11 @@ class GDALRasterWrapper {
 		size_t size = this->getRasterBandTypeSize(band);
 		size_t max = std::numeric_limits<size_t>::max();
 		
-		//perform size checks
-		if (max / size < static_cast<size_t>(width) ||
-		    max / (size * static_cast<size_t>(width)) < static_cast<size_t>(height)) {
-				throw std::runtime_error("raster too large to fit in memory.");
-		}
-
-		if (static_cast<size_t>(height) * static_cast<size_t>(width) * size > GIGABYTE) {
-				throw std::runtime_error("sgs does not allow allocation of a raster into memory for direct pixel access purposes if it would be larger than 1 gigabyte.");
-		}
-
 		//allocate data
 		void *p_data = VSIMalloc3(height, width, size);
+		if (!p_data) {
+			throw RuntimeError("unable to allocate raster band. This is likely because the band is too large to fit contiguously in virtual memory.")
+		}
 
 		//perform raster read on current band
 		CPLErr err = this->p_dataset->GetRasterBand(band + 1)->RasterIO(
@@ -831,12 +824,18 @@ class GDALRasterWrapper {
 	 * @param RasterBandMetaData& band
 	 */
 	void fillRasterBandMetaData(int i, helper::RasterBandMetaData& band) {
+		band.p_raster = this;
+		band.bandIndex = i;
 		band.p_band = getRasterBand(i);
 		band.type = getRasterBandType(i);
 		band.size = getRasterBandTypeSize(i); 
 		band.name = p_dataset->GetDescription();
 		band.nan = band.p_band->GetNoDataValue();
 		band.p_band->GetBlockSize(&band.xBlockSize, &band.yBlockSize);
+		
+		if (this->rasterBandRead[i]) {
+			band.p_buffer = this->rasterBandPointers[i];
+		}
 	}
 };
 

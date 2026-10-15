@@ -24,8 +24,15 @@
 #include <ogrsf_frmts.h>
 #include <ogr_core.h>
 
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__linux__)
+#include <sys/sysinfo.h>
+#endif
+
 #define MAXINT8		127
 #define MAXINT16	32767
+constexpr size_t SGSPY_GIGABYTE = 1024 * 1024 * 1024;
 
 namespace sgs {
 namespace helper {
@@ -53,13 +60,17 @@ struct Field {
  * The RasterBandMetaData struct stores information
  * on a particular raster band. It stores:
  *
+ * GDALRasterWrapper *p_raster:
+ * 	a pointer to the GDALRasterWrapper containing this band
+ *
+ * int bandIndex:
+ * 	the index of the band in the GDALRasterWrapper
+ *
  * GDALRasterBand *p_band: 
  * 	a pointer to the associated GDALRasterBand.
  *
  * void *p_buffer:
- * 	a pointer to the whole raster band as a buffer,
- * 	if the raster is a size where storing the whole band
- * 	is possible.
+ * 	a pointer to an allocated buffer for storing the entire raster band.
  *
  * GDALDataType:
  * 	the pixel type of the raster band.
@@ -74,10 +85,10 @@ struct Field {
  *	the bands particular no data value.
  *
  * int xBlockSize:
- * 	the x component of the raster bands block size.
+ * 	the x component of the GDALRasterBand() block.
  *
  * int yBlockSize:
- * 	the y component of hte raster bands block size.
+ * 	the y component of the GDALRasterBand() block.
  *
  * std::mutex *p_mutex:
  * 	a pointer to the mutex for the GDAL dataset
@@ -85,8 +96,14 @@ struct Field {
  * 	be locked/unlocked when reading/writing the band.
  */
 struct RasterBandMetaData {
+	GDALRasterWrapper *p_raster = nullptr;
+	int bandIndex = -1;
 	GDALRasterBand *p_band = nullptr;
 	void *p_buffer = nullptr;
+	int bufferXSize = -1;
+	int bufferYSize = -1;
+	int bufferXOffset = -1;
+	int bufferYOffset = -1;
 	GDALDataType type = GDT_Unknown;
 	size_t size = 0;
 	std::string name = "";
@@ -187,8 +204,6 @@ std::string generateTempFile(std::string& stem, std::string extension) {
 
 	return filename;
 }
-
-
 
 /**
  * @ingroup helper
@@ -531,13 +546,8 @@ addBandToMEMDataset(
 	GDALDataset *p_dataset,
 	RasterBandMetaData& band)
 {
-	//allocate data buffer if it has not been allocated yet
 	if (!band.p_buffer) {
-		band.p_buffer = VSIMalloc3(
-			p_dataset->GetRasterXSize(),
-			p_dataset->GetRasterYSize(),
-			band.size
-		);
+		throw std::runtime_error("A null band buffer was passed to addBandToMEMDataset(). This behavior should not be possible.")
 	}
 
 	CPLErr err;
@@ -1183,41 +1193,94 @@ inline std::pair<double, double> sample_to_point(double *GT, int xs, int ys) {
 
 /**
  * @ingroup helper
- * This function decides whether the output raster is qualified as being 'large'.
- * What this means is that it will always be processed in blocks, and will use
- * a VRT file in lieu of a MEM file if the user does not provide a filename.
+ * Determine whether a MEM or VRT dataset should be used. A MEM
+ * dataset should be used if the total number of bytes required
+ * for all input and output bands is 50% or less than the available
+ * physical memory. Otherwise a VRT dataset should be used.
+ * A VRT dataset should also be used if any of the (potentially large)
+ * memory allocations fail.
  *
- * If any 1 band is larger than a gigabyte, or all bands collectively are larger
- * than 4 gigabytes, then a raster is considered 'large', which will cause the 
- * algorithms to avoid very large memory allocations.
+ * This function will have different behavior in debug vs release builds.
+ * In debug builds, to facilitate easier testing of VRT datasets, a VRT
+ * dataset will be used if the total number of bytes required for all
+ * input and output bands is greater than 1GB.
  *
- * @param int width
- * @param int height
- * @param std::vector<size_t>& pixelSizesPerBand
+ * In the release version, we would rather allocate full raster bands
+ * for 2 reasons:
+ *  - 1, less function to RasterIO
  * @returns bool
  */
-bool isLargeRaster(int width, int height, std::vector<RasterBandMetaData>& bands) {
-	
-#if SGSPY_DEBUG
-	std::cout << "SGSPY_DEBUG is true" << std::endl;
-#else
-	std::cout << "SGSPY_DEBUG is false" << std::endl;
-#endif
-	size_t gigabyte = 1073741824;
-	size_t total = 0;
-
-	size_t w = static_cast<size_t>(width);
+bool allDataInMemory(int height, int width, GDALRasterWrapper *p_raster,
+		     std::vector<RasterBandMetaData>& dataBands,
+		     std::vector<RasterBandMetaData>& stratBands) 
+{
+	uint64_t total = 0;
+	uint64_t available = 0;
 	size_t h = static_cast<size_t>(height);
+	size_t w = static_cast<size_t>(width);
 
-	for (const RasterBandMetaData& band : bands) {
-		size_t bandSize = w * h * band.size;
-		total += bandSize;
-		if (bandSize > gigabyte) {
-			return true;
+	for (RasterBandMetaData& band : dataBands) {
+		//only count unallocated dataBands
+		if (std::is_null_pointer(band.p_buffer)) {
+			total += w * h * band.size;
 		}
 	}
 
-	return (total > gigabyte * 4);
+	for (RasterBandMetaData& band : stratBands) {
+		total += w * h * band.size;
+	}
+
+#if SGSPY_DEBUG
+	available = SGSPY_GIGABYTE;
+#else
+#if defined(_WIN32)
+	MEMORYSTATUSEX statex;
+	statex.dwLength = sizeof(statex);
+	available = (GlobalMemoryStatusEx(&statex) ? statex.ullAvailPhys : SGSPY_GIGABYTE * 4) / 2;
+#elif defined(__linux__)
+	struct sysinfo *info;
+	available = (sysinfo(info) ? info->freeram : SGSPY_GIGABYTE * 4) / 2;
+#else
+	available = SGSPY_GIGABYTE * 2;
+#endif
+#endif //SGSPY_DEBUG
+	
+	//check if physical ram is large enough to handle full raster bands
+	if (available >= total) {
+		//allocate any dataBands which aren't allocated
+		for (RasterBandMetaData& band : dataBands) {
+			if (!band.p_buffer) {
+				band.p_buffer = band.p_raster->getRasterBandBuffer(band.bandIndex);
+				if (!band.p_buffer) {
+					return false;
+				}
+			}
+		}
+		
+		//allocate all strat bands
+		bool error = false;
+		for (RasterBandMetaData& band : stratBands) {
+			band.p_buffer = VSIMalloc3(w, h, band.size);
+			if (!band.p_buffer) {
+				error = true;
+				break;
+			}
+		}
+
+		//if any strat band allocation failed, free all potential successes and return false
+		if (error) {
+			for(RasterBandMetaData& band : stratBands) {
+				VSIFree(band.p_buffer);
+			}
+			return false;
+		}
+
+		//all allocations succeeded
+		return true;
+	}
+
+	//not enough free ram	
+	return false;
 }
 
 } //namespace helper
