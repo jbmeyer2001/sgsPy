@@ -4,4 +4,4 @@ export PKG_CONFIG_PATH="${PWD}/sgspy/extern/vcpkg/installed/x64-linux/lib/pkgcon
 
 #run build command
 clear
-pip install .
+pip install . -Csetup-args=-Dbuildtype=debug -Csetup-args=-Dsgspy_debug=true

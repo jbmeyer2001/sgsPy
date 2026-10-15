@@ -50,8 +50,8 @@ test = [
 #license = "MIT"
 #license-files = [ 'LICENSE.txt' ]
 
-[tool.meson-python.args]
-setup = ['-Db_vscrt=md']
+#[tool.meson-python.args]
+#setup = ['-Db_vscrt=md']
 
 [tool.pytest.ini_options]
 pythonpath = "."

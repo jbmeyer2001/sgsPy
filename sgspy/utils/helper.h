@@ -1197,6 +1197,12 @@ inline std::pair<double, double> sample_to_point(double *GT, int xs, int ys) {
  * @returns bool
  */
 bool isLargeRaster(int width, int height, std::vector<RasterBandMetaData>& bands) {
+	
+#if SGSPY_DEBUG
+	std::cout << "SGSPY_DEBUG is true" << std::endl;
+#else
+	std::cout << "SGSPY_DEBUG is false" << std::endl;
+#endif
 	size_t gigabyte = 1073741824;
 	size_t total = 0;
 

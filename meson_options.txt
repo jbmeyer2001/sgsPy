@@ -1,0 +1,1 @@
+option('sgspy_debug', type: 'boolean', value: false)

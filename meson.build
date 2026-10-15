@@ -266,6 +266,14 @@ endif
 
 py.install_sources(required_files, subdir: 'sgspy')
 
+cpp_args = [
+  '-DMKL_ILP64',
+]
+
+if get_option('sgspy_debug')
+  cpp_args += '-DSGSPY_DEBUG'
+endif
+
 py.extension_module(
   '_sgs',
   'sgspy/pybind.cpp',
@@ -283,9 +291,7 @@ py.extension_module(
     xoshiro_inc_dir,
     inc_dir
   ],
-  cpp_args: [
-    '-DMKL_ILP64',
-  ],
+  cpp_args: cpp_args,
   install: true,
   subdir: 'sgspy',
 )
