@@ -24,76 +24,230 @@
 namespace sgs {
 namespace breaks {
 
-//TODO EDIT FOR BLOCK NOT PIXEL
-/**
- * @ingroup breaks
- * This is a helper function for processing a pixel of data
- * when a mapped stratification is being created.
- *
- * First, the value is read in as a double, and it is determined
- * whether the pixel is a nan pixel or not. The mapNan boolean 
- * is updated in addition to the isNan boolean, to ensure that
- * if one band within the raster is nan at a certain pixel
- * then the mapped raster (but not necessarily all output rasters)
- * is also nan at that pixel.
- *
- * Then, if it isn't a nan pixel the lower bound of the value 
- * within the vector of break values is found. For example,
- * if the value was 3 and the breaks vector was [2, 4, 6], the
- * lower bound would be 1, which is the index of 4, the first
- * value larger than 3 in the breaks vector. This lower bound
- * is the strata. This strata (or the nan value) is then written 
- * with the appropriate type to the strat raster band.
- *
- * @param size_t index
- * @param RasterBandMetaData& dataBand
- * @param void *p_dataBuffer
- * @param RasterBandMetaData& stratBand
- * @param void *p_stratBuffer
- * @param std::vector<double>& bandBreaks
- * @param size_t multiplier
- * @param bool& mapNan
- * @param size_t& mapStrat
- */
-inline void 
-processMapBlock(
-	int xValid,
-	int yValid,
-	size_t bandCount,
-	std::vector<RasterBandMetaData>& dataBands,
-	std::vector<RasterBandMetaData>& stratBands,
-	std::vector<void *>dataBuffers,
-	std::vector<void *>stratBuffers,
-	std::vector<double>& bandBreaks) 
-{
+{	
 	for (int y = 0; y < yValid; y++) {
 		size_t index = static_cast<size_t>(y * xBlockSize);
 		for (int x = 0; x < xValid; x++) {
 			bool mapNan = false;
-			size_t mapStrat = 0;
+			T mapStrat = 0;
 			
 			for (size_t band = 0; band < bandCount; band++) {
-				double val == helper::getPixelValueDependingOnType<double>(dataBands[band].type, dataBuffers[band], index);
-				bool isNan = std::isnan(val) || (double)val == dataBands[band].nan;
+				D val = dataBuffers[band][index];
+				bool isNan = std::isnan(val) || val == bandsnan[band];
 				mapNan |= isNan;
 	
-				size_t strat = 0;
 				if (!isNan) {
 					auto it = std::lower_bound(bandBreaks[band].begin(), bandBreaks[band].end(), val);
-					strat = (it == bandBreaks[band].end()) ? bandBreaks[band].size() : std::distance(bandBreaks[band].begin(), it);
+					size_t strat = (it == bandBreaks[band].end()) ? bandBreaks[band].size() : std::distance(bandBreaks[band].begin(), it);
+					stratBuffers[band][index] = static_cast<S>(strat);
 				}
-			
-				helper::setStrataPixelDependingOnType(stratBands[band].type, stratBuffers[band], index, isNan, strat);
-			
+				else {
+					stratBuffers[band][index] = stratNan;
+				}
+		
 				if (!mapNan) {
 					mapStrat += strat * multipliers[band];
 				}
 			}
-				
-			helper::setStrataPixelDependingOnType(stratBands.back().type, stratBuffers.back(), index, mapNan, mapStrat);
+			
+			stratBuffers.back()[index] = mapNan ? stratNan : mapStrat;
 			index++;
 		}
 	}
+}
+
+template <typename D, typename S>
+void
+stratifyMapped(
+	std::vector<RasterBandMetaData>& dataBands,
+	std::vector<RasterBandMetaData>& stratBands,
+	GDALDataType dataBandType,
+	GDALDataType stratBandType,
+	int height,
+	int width,
+	std::vector<std::vector<D>>& bandBreaks,
+	std::vector<size_t>& multipliers,
+	int threads) 
+{
+	pybind11::gil_scoped_acquire acquire;
+	boost::asio::thread_pool pool(threads);
+
+	std::vector<S> sMultipliers(multipliers.size());
+	for (size_t i = 0; i < multipliers.size(); i++) {
+		sMultipliers[i] = static_cast<S>(multipliers[i]);
+	}
+
+	std::vector<D> bandsNan(dataBands.size());
+	for (size_t i = 0; i < dataBands.size(); i++) {
+		bandsNan[i] = static_cast<D>(dataBands[i].nan);
+	}
+
+	S stratNan = -1;
+
+	//use the first raster band to determine block size
+	int xBlockSize = dataBands[0].xBlockSize;
+	int yBlockSize = dataBands[0].yBlockSize;
+
+	int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
+	int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
+	int chunkSize = yBlocks / threads;
+
+	for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
+		int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);
+	
+		boost::asio::post(pool, [
+			height,
+			width,
+			xBlockSize, 
+			xBlocks, 
+			yBlockSize, 
+			yBlockStart, 
+			yBlockEnd, 
+			&dataBands, 
+			&stratBands, 
+			&bandBreaks,
+			&sMultipliers
+			&bandsNan,
+			stratNan
+		] {
+			
+			if (allDataInMemory) {
+				for (int y = yBlockStart * yBlockSize; y < yBlockEnd * yBlockSize; y++) {
+					size_t i = static_cast<size_t>(y * xBlockSize);
+					for (int x = 0; x < width; x++) {
+						bool mapNan = false;
+						T mapStrat = 0;
+
+						for (size_t b = 0; b < dataBands.size(); b++) {
+							D val = reinterpret_cast<D *>(dataBuffers[b])[i];
+							bool isNan = std::isnan(val) || val == bandsNan[b];
+							mapNan |= isNan;
+
+							if (!isNan) {
+								auto it = std::lower_bound(
+									bandBreaks[b].begin(), 
+									bandBreaks[b].end(), 
+									val);
+								size_t strat = (it == bandBreaks[b].end()) ? 
+										bandBreaks[b].size() : 
+										std::distance(bandBreaks[b].begin(), it);
+								stratBuffers[b][i] = static_cast<S>(strat);
+							}
+							else {
+								stratBuffers[b][i] = stratNan;
+							}
+
+							if (!mapNan) {
+								mapStrat += strat * sMultipliers[band];
+							}
+						}
+
+						stratBuffers.back()[index] = mapNan ? stratNan : mapStrat;
+						i++;
+					}
+				}
+			}
+			else { //!allDataInMemory
+				std::vector<D *> dataBuffers(dataBands.size());
+				std::vector<S *> stratBuffers(stratBands.size());
+
+				for (size_t band = 0; band < dataBuffers.size(); band++) {
+					dataBuffers[band] = static_cast<D *>(
+						VSIMalloc3(xBlockSize, yBlockSize, dataPixelSize));
+					stratBuffers[band] = static_cast<S *>(
+						VSIMalloc3(xBlockSize, yBlockSize, stratBands[band].size));
+				}	
+				stratBuffers.back() = static_cast<S *>(
+					VSIMalloc3(xBlockSize, yBlockSize, stratBands.back().size));
+				
+				//process the raster in blocks, 
+				for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
+					for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+						int xValid, yValid;
+						dataBands[0].p_mutex->lock();
+						dataBands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+						dataBands[0].p_mutex->unlock();
+
+						//read raster band data into band buffers
+						for (size_t band = 0; band < bandCount; band++) {
+							helper::rasterBandIO(
+								dataBands[band], 
+								dataBuffers[band], 
+								xBlockSize, 
+								yBlockSize, 
+								xBlock, 
+								yBlock, 
+								xValid, 
+								yValid, 
+								true //read = true
+							);		
+						}
+
+						for (int y = 0; y < yValid; y++) {
+							size_t i = static_cast<size_t>(y * xBlockSize);
+							for (int x = 0; x < xValid; x++) {
+								bool mapNan = false;
+								T mapStrat = 0;
+
+								for (size_t b = 0; b < dataBands.size(); b++) {
+									D val = reinterpret_cast<D *>(dataBuffers[b])[i];
+									bool isNan = std::isnan(val) || val == bandsNan[b];
+									mapNan |= isNan;
+
+									if (!isNan) {
+										auto it = std::lower_bound(
+											bandBreaks[b].begin(), 
+											bandBreaks[b].end(), 
+											val);
+										size_t strat = (it == bandBreaks[b].end()) ? 
+												bandBreaks[b].size() : 
+												std::distance(bandBreaks[b].begin(), it);
+										stratBuffers[b][i] = static_cast<S>(strat);
+									}
+									else {
+										stratBuffers[b][i] = stratNan;
+									}
+
+									if (!mapNan) {
+										mapStrat += strat * sMultipliers[band];
+									}
+								}
+
+								stratBuffers.back()[index] = mapNan ? stratNan : mapStrat;
+								i++;
+							}
+						}
+	
+						//write strat band data
+						for (size_t band = 0; band <= bandCount; band++) {
+							helper::rasterBandIO(
+								stratBands[band],
+								stratBuffers[band],
+								xBlockSize,
+								yBlockSize,
+								xBlock,
+								yBlock,
+								xValid,
+								yValid,
+								false //read = false
+							);
+						}
+					}
+				}
+			}
+
+			if (!allDataInMemory) {
+				for (size_t band = 0; band < dataBuffers.size(); band++) {
+					VSIFree(dataBuffers[band]);
+					VSIFree(stratBuffers[band]);
+				}
+				VSIFree(stratBuffers.back());
+			}
+		});
+	}	
+
+	pool.join();
+	pybind11::gil_scoped_release release;
 }
 
 //TODO UPDATE TO BLOCK
@@ -148,6 +302,84 @@ processBlock(
 	}
 	
 	
+}
+
+template <typename D, typename S>
+void
+stratify() {
+	pybind11::gil_scoped_acquire acquire;
+	boost::asio::thread_pool pool(threads);
+
+	helper::RasterBandMetaData* p_dataBand = &dataBands[band];
+	helper::RasterBandMetaData* p_stratBand = &stratBands[band];
+
+	int xBlockSize = p_dataBand->xBlockSize;
+	int yBlockSize = p_dataBand->yBlockSize;
+				
+	int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
+	int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
+	int chunkSize = yBlocks / threads;
+			
+	for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
+		int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
+		std::vector<double> *p_breaks = &bandBreaks[band];
+				
+		boost::asio::post(pool, [
+			xBlockSize, 
+			yBlockSize, 
+			yBlockStart, 
+			yBlockEnd, 
+			xBlocks, 
+			p_dataBand, 
+			p_stratBand, 
+			p_breaks
+		] {
+			void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
+			void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
+
+			int xValid, yValid;
+			for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
+				for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
+					p_dataBand->p_mutex->lock();
+					p_dataBand->p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
+					p_dataBand->p_mutex->unlock();
+							
+					//read block into memory
+					helper::rasterBandIO(
+						*p_dataBand,
+						p_data,
+						xBlockSize,
+						yBlockSize,
+						xBlock,
+						yBlock,
+						xValid,
+						yValid,
+						true //read = true
+					);
+
+					//PROCESS BLOCK
+					
+					//write resulting stratifications to disk
+					helper::rasterBandIO(
+						*p_stratBand,
+						p_strat,
+						xBlockSize,
+						yBlockSize,
+						xBlock,
+						yBlock,
+						xValid,
+						yValid,
+						false //read = false
+					);
+				}
+			}
+			VSIFree(p_data);
+			VSIFree(p_strat);
+		});
+	}
+
+	pool.join();
+	pybind11::gil_scoped_release release;
 }
 
 /**
@@ -270,14 +502,23 @@ raster::GDALRasterWrapper *breaks(
 
 	bool onDisk = filename != "";
 
-	//allocate, read, and initialize raster data and breaks information
 	GDALDataType stratPixelType = GDT_Int8;
-	size_t stratPixelSize = 1;
+	size_t stratPixelSize = sizeof(uint8_t);
+	
+	GDALDataType dataPixelType = GDT_Float32;
+	size_t dataPixelSize = sizeof(float);
+	
+	//allocate, read, and initialize raster data and breaks information
 	size_t i = 0;
 	for (auto const& [key, val] : breaks) {
 		//get and store metadata from input raster band
 		p_raster->fillRasterBandMetaData(key, dataBands[i]);
 		dataBands[i].p_mutex = &dataBandMutex;
+
+		if (dataBands[i].type == GDT_Float64 && dataPixelType == GDT_Float32) {
+			dataPixelType = GDT_Float32;
+			dataPixelSize = sizeof(double);
+		}
 
 		//sort and add band breaks vector
 		std::vector<double> valCopy = val; //have to create copy to alter the band breaks in iteration loop
@@ -293,7 +534,7 @@ raster::GDALRasterWrapper *breaks(
 		stratBands[i].p_mutex = &stratBandMutex; //overwritten if VRT dataset
 
 		//if writing to file on disk, ensure type and size are the largest any single band requires
-		if (onDisk && stratPixelSize < stratBands[i].size) {
+		if (stratPixelSize < stratBands[i].size) {
 			stratPixelSize = stratBands[i].size;
 			stratPixelType = stratBands[i].type;
 		}
@@ -320,7 +561,7 @@ raster::GDALRasterWrapper *breaks(
 		
 		//type and size must be the same for all bands in an output file because of
 		//restrictions on GeoTiff files which aren't restricted in virtual types
-		if (onDisk && stratPixelSize < stratBands[index].size) {
+		if (stratPixelSize < stratBands[index].size) {
 			stratPixelSize = stratBands[index].size;
 			stratPixelType = stratBands[index].type;
 		}
@@ -328,17 +569,21 @@ raster::GDALRasterWrapper *breaks(
 
 	//if on disk (geotif), all bands of the raster MUST have the same type
 	//which is not a requirement of virtual file types.
-	if (onDisk) {
+	if (onDisk || map) {
 		for (size_t i = 0; i < stratBands.size(); i++) {
 			stratBands[i].size = stratPixelSize;
 			stratBands[i].type = stratPixelType;
 		}
 	}
 
-	bool allDataInMemory = onDisk ? false : helper::allDataInMemory(height, width, dataBands, stratBands);
-	bool isMEMDataset = allDataInMemory && !onDisk;
-	bool isVRTDataset = !allDataInMemory && !onDisk;
-
+	std::vector<void *> allocated;
+	bool allocatedWholeBands = onDisk ? false : 
+		helper::wholeBandsAllocated(height, width, dataPixelType, dataPixelSize,
+					    dataBands, stratBands, allocated);
+	
+	bool isMEMDataset = allocatedWholeBands && !onDisk;
+	bool isVRTDataset = !allocatedWholeBands && !onDisk;
+	
 	//construct mutexes for each VRT band dataset if required
 	std::vector<std::mutex> stratBandMutexes(isVRTDataset * (bandCount + map));
 
@@ -386,203 +631,66 @@ raster::GDALRasterWrapper *breaks(
 			driverOptions
 		);
 	}
-	
-	//iterate through all pixels and update the stratified raster bands
-	pybind11::gil_scoped_acquire acquire;
-	boost::asio::thread_pool pool(threads);
 
-	if (map) {
-		//use the first raster band to determine block size
-		int xBlockSize = dataBands[0].xBlockSize;
-		int yBlockSize = dataBands[0].yBlockSize;
+	//get pixel types as uint32_t to pass combination to case switch statement
+	uint32_t dataBandType = static_cast<uint32_t>(dataPixelType);
+	uint32_t stratBandType = static_cast<uint32_t>(stratPixelType);
 
-		int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
-		int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;
-		int chunkSize = yBlocks / threads;
+	//get gdal pixel types as uint32_t to pass combinations to case switch statement
+	uint32_t gdalf32 = static_cast<uint32_t>(GDT_Float32);
+	uint32_t gdalf64 = static_cast<uint32_t>(GDT_Float64);
+	uint32_t gdali8 = static_cast<uint32_t>(GDT_Int8);
+	uint32_t gdali16 = static_cast<uint32_t>(GDT_Int16);
+	uint32_t gdali32 = static_cast<uint32_t>(GDT_Int32);
 
-		for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
-			int yBlockEnd = std::min(yBlockStart + chunkSize, yBlocks);
-		
-			boost::asio::post(pool, [
-				height,
-				width,
-				bandCount,
-				xBlockSize, 
-				xBlocks, 
-				yBlockSize, 
-				yBlockStart, 
-				yBlockEnd, 
-				&dataBands, 
-				&stratBands, 
-				&bandBreaks,
-				&multipliers
-			] {
-				std::vector<void *> dataBuffers(dataBands.size());
-				std::vector<void *> stratBuffers(stratBands.size());
-
-				if (allDataInMemory) {
-					//get the number of indices to increment from the pointer at (0,0)
-					size_t indicesToAdd = static_cast<size_t>(yBlocks * yBlockStart) * static_cast<size_t>(width);
-					
-					//this all looks complicated, but is really just some pointer arithmetic to
-					//get the pointer to this chunks starting index.
-					for (size_t band = 0; band < dataBuffers.size(); band++) {
-						dataBuffers[band] = static_cast<void *>(
-							static_cast<size_t>(dataBands[band].p_buffer) + 
-							(indicesToAdd * dataBands[band].size)
-						);
-						stratBuffers[band] = static_cast<void *>(
-							static_cast<size_t>(stratBands[band].p_buffer) + 
-							(indicesToAdd * stratBands[band].size)
-						);
-					}
-					stratBuffers.back() = static_cast<void *>(
-						static_cast<size_t>(stratBands.back().p_buffer) +
-						(indicesToAdd * stratBands.back().size)
-					);
-				}
-				else { //!allDataInMemory
-					for (size_t band = 0; band < dataBuffers.size(); band++) {
-						dataBuffers[band] = VSIMalloc3(xBlockSize, yBlockSize, dataBands[band].size);
-						stratBuffers[band] = VSIMalloc3(xBlockSize, yBlockSize, stratBands[band].size);
-					}	
-					stratBuffers.back() = VSIMalloc3(xBlockSize, yBlockSize, stratBands.back().size);
-				}
-				
-				if (allDataInMemory) {
-					//process the whole raster with one call to processMapBlock where 
-					processMapBlock(, , bandCount, dataBands, stratBands,
-									dataBuffers, stratBuffers, bandBreaks);
-				}
-				else {
-					//process the raster in blocks, 
-					for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
-						for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
-							int xValid, yValid;
-							dataBands[0].p_mutex->lock();
-							dataBands[0].p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-							dataBands[0].p_mutex->unlock();
-	
-							//read raster band data into band buffers
-							for (size_t band = 0; band < bandCount; band++) {
-								helper::rasterBandIO(
-									dataBands[band], 
-									dataBuffers[band], 
-									xBlockSize, 
-									yBlockSize, 
-									xBlock, 
-									yBlock, 
-									xValid, 
-									yValid, 
-									true //read = true
-								);		
-							}
-	
-							//process the block
-							processMapBlock(xValid, yValid, bandCount, dataBands, stratBands,
-											dataBuffers, stratBuffers, bandBreaks);
-	
-							//write strat band data
-							for (size_t band = 0; band <= bandCount; band++) {
-								helper::rasterBandIO(
-									stratBands[band],
-									stratBuffers[band],
-									xBlockSize,
-									yBlockSize,
-									xBlock,
-									yBlock,
-									xValid,
-									yValid,
-									false //read = false
-								);
-							}
-						}
-					}
-				}
-
-				if (!allDataInMemory) {
-					for (size_t band = 0; band < dataBuffers.size(); band++) {
-						VSIFree(dataBuffers[band]);
-						VSIFree(stratBuffers[band]);
-					}
-					VSIFree(stratBuffers.back());
-				}
-			});
-		}	
-	}
-	else {	
-		for (size_t band = 0; band < bandCount; band++) {
-			helper::RasterBandMetaData* p_dataBand = &dataBands[band];
-			helper::RasterBandMetaData* p_stratBand = &stratBands[band];
-
-			int xBlockSize = p_dataBand->xBlockSize;
-			int yBlockSize = p_dataBand->yBlockSize;
-				
-			int xBlocks = (p_raster->getWidth() + xBlockSize - 1) / xBlockSize;
-			int yBlocks = (p_raster->getHeight() + yBlockSize - 1) / yBlockSize;			
-			int chunkSize = yBlocks / threads;
-			
-			for (int yBlockStart = 0; yBlockStart < yBlocks; yBlockStart += chunkSize) {
-				int yBlockEnd = std::min(yBlocks, yBlockStart + chunkSize);
-				std::vector<double> *p_breaks = &bandBreaks[band];
-				
-				boost::asio::post(pool, [
-					xBlockSize, 
-					yBlockSize, 
-					yBlockStart, 
-					yBlockEnd, 
-					xBlocks, 
-					p_dataBand, 
-					p_stratBand, 
-					p_breaks
-				] {
-					void *p_data = VSIMalloc3(xBlockSize, yBlockSize, p_dataBand->size);
-					void *p_strat = VSIMalloc3(xBlockSize, yBlockSize, p_stratBand->size);
-
-					int xValid, yValid;
-					for (int yBlock = yBlockStart; yBlock < yBlockEnd; yBlock++) {
-						for (int xBlock = 0; xBlock < xBlocks; xBlock++) {
-							p_dataBand->p_mutex->lock();
-							p_dataBand->p_band->GetActualBlockSize(xBlock, yBlock, &xValid, &yValid);
-							p_dataBand->p_mutex->unlock();
-							
-							//read block into memory
-							helper::rasterBandIO(
-								*p_dataBand,
-								p_data,
-								xBlockSize,
-								yBlockSize,
-								xBlock,
-								yBlock,
-								xValid,
-								yValid,
-								true //read = true
-							);
-
-							//PROCESS BLOCK
-							
-							//write resulting stratifications to disk
-							helper::rasterBandIO(
-								*p_stratBand,
-								p_strat,
-								xBlockSize,
-								yBlockSize,
-								xBlock,
-								yBlock,
-								xValid,
-								yValid,
-								false //read = false
-							);
-						}
-					}
-					VSIFree(p_data);
-					VSIFree(p_strat);
-				});
+	//create band breaks vectors for float if required
+	std::vector<std::vector<float>> fBandBreaks;
+	if (dataPixelType == GDT_Float32) {
+		fBandBreaks.resize(bandBreaks.size());
+		for (size_t b = 0; i < bandBreaks.size(); b++) {
+			fBandBreaks[b].resize(bandBreaks[b].size());
+			for (size_t i = 0; i < bandBreaks[b].size(); i++) {
+				fBandBreaks[b][i] = static_cast<float>(bandBreaks[b][i]);
 			}
 		}
 	}
-	pool.join();
-	pybind11::gil_scoped_release release;
+
+	//call the correct templated function depending on pixel types
+	if (map) {
+		switch (dataBandType | (stratBandType << 16)) {
+			case (gdalf32 | (gdali8 << 16)):
+				stratify<float, int8_t>(dataBands, stratBands, dataPixelType, stratPixelType,
+							height, width, fBandBreaks, multipliers, threads);
+				break;
+			case (gdalf32 | (gdali16 << 16)):
+				stratify<float, int16_t>(dataBands, stratBands, dataPixelType, stratPixelType,
+							height, width, fBandBreaks, multipliers, threads);
+				break;
+			case (gdalf32 | (gdali32 << 16)):
+				stratify<float, int32_t>(dataBands, stratBands, dataPixelType, stratPixelType,
+							height, width, fBandBreaks, multipliers, threads);
+				break;
+			case (gdalf64 | (gdali8 << 16)):
+				stratify<double, int8_t>(dataBands, stratBands, dataPixelType, stratPixelType,
+							height, width, bandBreaks, multipliers, threads);
+				break;
+			case (gdalf64 | (gdali16 << 16)):
+				stratify<double, int16_t>(dataBands, stratBands, dataPixelType, stratPixelType,
+							height, width, bandBreaks, multipliers, threads);
+				break;
+			case (gdalf64 | (gdali32 << 16)):
+				stratify<double, int32_t(dataBands, stratBands, dataPixelType, stratPixelType,
+							height, width, bandBreaks, multipliers, threads);
+				break;
+			default:
+				throw std::runtime_error("invalid combination of data band & strat band types. This is a bug.");
+		}
+	}
+	else {	
+			
+	}
+
+	//CLEAN UP allocated VECTOR!!!
 
 	//close and add all of the VRT sub datasets as bands
 	if (isVRTDataset) {

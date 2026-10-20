@@ -60,12 +60,6 @@ struct Field {
  * The RasterBandMetaData struct stores information
  * on a particular raster band. It stores:
  *
- * GDALRasterWrapper *p_raster:
- * 	a pointer to the GDALRasterWrapper containing this band
- *
- * int bandIndex:
- * 	the index of the band in the GDALRasterWrapper
- *
  * GDALRasterBand *p_band: 
  * 	a pointer to the associated GDALRasterBand.
  *
@@ -96,8 +90,6 @@ struct Field {
  * 	be locked/unlocked when reading/writing the band.
  */
 struct RasterBandMetaData {
-	GDALRasterWrapper *p_raster = nullptr;
-	int bandIndex = -1;
 	GDALRasterBand *p_band = nullptr;
 	void *p_buffer = nullptr;
 	int bufferXSize = -1;
@@ -233,88 +225,6 @@ setStratBandTypeAndSize(
 	else {
 		*p_type = GDT_Int32;
 		*p_size = sizeof(int32_t);
-	}
-}
-
-/**
- * @ingroup helper
- * Helper function for reading a particular pixel from a raster
- * data buffer. The data buffer is cast to the type corresponding
- * to the GDALDataType type parameter, then indexed. The resulting
- * value is then cast to the double type.
- *
- * @param GDALDataType type 
- * @param void *p_data
- * @param size_t index
- * @returns T
- */
-template <typename T>
-inline T
-getPixelValueDependingOnType(
-	GDALDataType type,
-	void *p_data,
-	size_t index
-) {
-	switch (type) {
-		case GDT_Int8:
-			return static_cast<T>(((int8_t *)p_data)[index]);
-		case GDT_UInt16:
-			return static_cast<T>(((uint16_t *)p_data)[index]);
-		case GDT_Int16:
-			return static_cast<T>(((int16_t *)p_data)[index]);
-		case GDT_UInt32:
-			return static_cast<T>(((uint32_t *)p_data)[index]);
-		case GDT_Int32:
-			return static_cast<T>(((int32_t *)p_data)[index]);
-		case GDT_Float32:
-			return static_cast<T>(((float *)p_data)[index]);
-		case GDT_Float64:
-			return static_cast<T>(((double *)p_data)[index]);
-		default:
-			throw std::runtime_error("raster pixel data type not supported.");
-	}
-}
-
-/**
- * @ingroup helper
- * Helper function for writing a particular pixel value to a strat
- * raster data buffer. The data buffer is cast to the type
- * corresponding to the GDALDataType type parameter. Then,
- * the value at the index provided is set to either 'strata' if isNan
- * is false, or -1 if isNan is true in the type required.
- *
- * @param GDALDataType type
- * @param void *p_data
- * @param size_t index
- * @param bool isNan
- * @param size_t strata
- */
-inline void
-setStrataPixelDependingOnType(
-	GDALDataType type,
-	void *p_data,
-	size_t index,
-	bool isNan,
-	size_t strata
-) {
-	switch(type) {
-		case GDT_Int8:
-			reinterpret_cast<int8_t *>(p_data)[index] = isNan ?
-				static_cast<int8_t>(-1) :
-				static_cast<int8_t>(strata);
-			break;
-		case GDT_Int16: 
-			reinterpret_cast<int16_t *>(p_data)[index] = isNan ?
-				static_cast<int16_t>(-1) :
-				static_cast<int16_t>(strata);
-			break;
-		case GDT_Int32: 
-			reinterpret_cast<int32_t *>(p_data)[index] = isNan ?
-				static_cast<int32_t>(-1) :
-				static_cast<int32_t>(strata);
-			break;
-		default:
-			throw std::runtime_error("strata pixel data type not supported.");
 	}
 }
 
@@ -1210,9 +1120,11 @@ inline std::pair<double, double> sample_to_point(double *GT, int xs, int ys) {
  *  - 1, less function to RasterIO
  * @returns bool
  */
-bool allDataInMemory(int height, int width, GDALRasterWrapper *p_raster,
+bool allocatedWholeBands(int height, int width,
+		     GDALDataType dataPixelType, size_t dataPixelSize,
 		     std::vector<RasterBandMetaData>& dataBands,
-		     std::vector<RasterBandMetaData>& stratBands) 
+		     std::vector<RasterBandMetaData>& stratBands,
+		     std::vector<void *>& allocated) 
 {
 	uint64_t total = 0;
 	uint64_t available = 0;
@@ -1222,7 +1134,7 @@ bool allDataInMemory(int height, int width, GDALRasterWrapper *p_raster,
 	for (RasterBandMetaData& band : dataBands) {
 		//only count unallocated dataBands
 		if (std::is_null_pointer(band.p_buffer)) {
-			total += w * h * band.size;
+			total += w * h * dataPixelSize;
 		}
 	}
 
@@ -1244,33 +1156,61 @@ bool allDataInMemory(int height, int width, GDALRasterWrapper *p_raster,
 	available = SGSPY_GIGABYTE * 2;
 #endif
 #endif //SGSPY_DEBUG
-	
+
 	//check if physical ram is large enough to handle full raster bands
 	if (available >= total) {
+		bool error = false;
+
 		//allocate any dataBands which aren't allocated
 		for (RasterBandMetaData& band : dataBands) {
-			if (!band.p_buffer) {
-				band.p_buffer = band.p_raster->getRasterBandBuffer(band.bandIndex);
+			//reallocating an existing band.p_buffer will not cause
+			//issues, because that buffer is controlled by the
+			//GDALRasterWrapper of that band
+			if (!band.p_buffer || band.type != dataPixelType) {
+				band.p_buffer = VSIMalloc3(h, w, dataPixelSize);
 				if (!band.p_buffer) {
-					return false;
+					error = true;
+					break;
+				}
+				else {
+					allocated.push_back(band.p_buffer);
+
+					CPLErr err = band.p_band->RasterIO(
+						GF_Read, 
+						0, 
+						0, 
+						w, 
+						h, 
+						band.p_buffer, 
+						w, 
+						h, 
+						dataPixelType
+					);
+					if (err) {
+						throw std::runtime_error("error reading from raster band.");
+					}
 				}
 			}
 		}
 		
 		//allocate all strat bands
-		bool error = false;
-		for (RasterBandMetaData& band : stratBands) {
-			band.p_buffer = VSIMalloc3(w, h, band.size);
-			if (!band.p_buffer) {
-				error = true;
-				break;
+		if (!error) {
+			for (RasterBandMetaData& band : stratBands) {
+				band.p_buffer = VSIMalloc3(h, w, band.size);
+			       	if (!band.p_buffer) {
+					error = True;
+					break;
+			       	}	      
+				else {
+					allocated.push_back(band.p_buffer);
+				}	
 			}
 		}
-
-		//if any strat band allocation failed, free all potential successes and return false
+		
+		//free all allocated bands if there was an error allocating any band
 		if (error) {
-			for(RasterBandMetaData& band : stratBands) {
-				VSIFree(band.p_buffer);
+			for(void * ptr : allocations) {
+				VSIFree(ptr);
 			}
 			return false;
 		}

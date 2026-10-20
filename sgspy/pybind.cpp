@@ -194,11 +194,11 @@ PYBIND11_MODULE(_sgs, m) {
 	m.def("breaks_cpp", &sgs::breaks::breaks);
 
 	// source code in sgspy/stratify/map/map_stratifications.h
-	m.def("map_cpp", &sgs::map::map);
+	//m.def("map_cpp", &sgs::map::map);
 
 	// source code in sgspy/stratify/poly/poly.h
-	m.def("poly_cpp", &sgs::poly::poly);
+	//m.def("poly_cpp", &sgs::poly::poly);
 
 	// source code in sgspy/stratify/quantiles/quantiles.h
-	m.def("quantiles_cpp", &sgs::quantiles::quantiles);
+	//m.def("quantiles_cpp", &sgs::quantiles::quantiles);
 }
